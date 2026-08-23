@@ -36,16 +36,10 @@ export class SelectionField extends SwcComponent<FieldProps> {
 
   private async loadOptions(): Promise<void> {
     const gen = this.asyncCtrl.begin();
-    const { field, readonly } = this.props;
+    const { field } = this.props;
 
     if (field.selection?.length) {
       this.options = field.selection.map(([value, label]) => ({ value, label }));
-      this.loaded = true;
-      this.asyncCtrl.finish(gen);
-      return;
-    }
-
-    if (readonly || field.readonly) {
       this.loaded = true;
       this.asyncCtrl.finish(gen);
       return;
@@ -108,7 +102,7 @@ export class SelectionField extends SwcComponent<FieldProps> {
         <option value="" disabled=${currentVal !== "" ? "disabled" : false} selected=${currentVal === "" ? "selected" : false}>${placeholder}</option>
         ${this.options.map(
           (opt) =>
-            html`<option value=${opt.value} selected=${opt.value === currentVal ? "selected" : ""}>
+            html`<option value=${opt.value} selected=${opt.value === currentVal ? "selected" : false}>
               ${opt.label}
             </option>`,
         )}

@@ -28,7 +28,7 @@ export class BooleanRadioField extends SwcComponent<FieldProps> {
             type="radio"
             name=${name}
             value="1"
-            checked=${checked ? "checked" : ""}
+            checked=${checked ? "checked" : false}
             disabled=${readonly || field.readonly ? "disabled" : undefined}
             @change=${() => !readonly && record.set(field.name, true)}
           />
@@ -39,7 +39,7 @@ export class BooleanRadioField extends SwcComponent<FieldProps> {
             type="radio"
             name=${name}
             value="0"
-            checked=${!checked ? "checked" : ""}
+            checked=${!checked ? "checked" : false}
             disabled=${readonly || field.readonly ? "disabled" : undefined}
             @change=${() => !readonly && record.set(field.name, false)}
           />

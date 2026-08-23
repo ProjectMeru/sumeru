@@ -36,7 +36,7 @@ export class BooleanField extends SwcComponent<FieldProps> {
         class="sum-field-input"
         name=${field.name}
         autocomplete="off"
-        checked=${checked ? "checked" : ""}
+        checked=${checked ? "checked" : false}
         @change=${(ev: Event) => record.set(field.name, (ev.target as HTMLInputElement).checked)}
       />`,
       { labelFor: id },

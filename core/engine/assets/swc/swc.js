@@ -1621,7 +1621,7 @@ var SumeruSWC = (() => {
           @change=${(ev) => record.set(field.name, ev.target.value)}
         >
           ${options.map(
-            (opt) => html`<option value=${opt.value} selected=${value === opt.value ? "selected" : ""}>
+            (opt) => html`<option value=${opt.value} selected=${value === opt.value ? "selected" : false}>
                 ${opt.label}
               </option>`
           )}
@@ -1688,7 +1688,7 @@ var SumeruSWC = (() => {
         class="sum-field-input"
         name=${field.name}
         autocomplete="off"
-        checked=${checked ? "checked" : ""}
+        checked=${checked ? "checked" : false}
         @change=${(ev) => record.set(field.name, ev.target.checked)}
       />`,
         { labelFor: id }
@@ -1735,14 +1735,9 @@ var SumeruSWC = (() => {
     }
     async loadOptions() {
       const gen = this.asyncCtrl.begin();
-      const { field, readonly } = this.props;
+      const { field } = this.props;
       if (field.selection?.length) {
         this.options = field.selection.map(([value, label]) => ({ value, label }));
-        this.loaded = true;
-        this.asyncCtrl.finish(gen);
-        return;
-      }
-      if (readonly || field.readonly) {
         this.loaded = true;
         this.asyncCtrl.finish(gen);
         return;
@@ -1797,7 +1792,7 @@ var SumeruSWC = (() => {
       >
         <option value="" disabled=${currentVal !== "" ? "disabled" : false} selected=${currentVal === "" ? "selected" : false}>${placeholder}</option>
         ${this.options.map(
-          (opt) => html`<option value=${opt.value} selected=${opt.value === currentVal ? "selected" : ""}>
+          (opt) => html`<option value=${opt.value} selected=${opt.value === currentVal ? "selected" : false}>
               ${opt.label}
             </option>`
         )}
@@ -1852,7 +1847,7 @@ var SumeruSWC = (() => {
             type="radio"
             name=${name}
             value="1"
-            checked=${checked ? "checked" : ""}
+            checked=${checked ? "checked" : false}
             disabled=${readonly || field.readonly ? "disabled" : void 0}
             @change=${() => !readonly && record.set(field.name, true)}
           />
@@ -1863,7 +1858,7 @@ var SumeruSWC = (() => {
             type="radio"
             name=${name}
             value="0"
-            checked=${!checked ? "checked" : ""}
+            checked=${!checked ? "checked" : false}
             disabled=${readonly || field.readonly ? "disabled" : void 0}
             @change=${() => !readonly && record.set(field.name, false)}
           />
@@ -1894,7 +1889,7 @@ var SumeruSWC = (() => {
           class="sum-field-input"
           name=${field.name}
           autocomplete="off"
-          checked=${checked ? "checked" : ""}
+          checked=${checked ? "checked" : false}
           disabled=${readonly || field.readonly ? "disabled" : void 0}
           @change=${(ev) => record.set(field.name, ev.target.checked)}
         />
@@ -2208,7 +2203,7 @@ var SumeruSWC = (() => {
           html`<input
           type="checkbox"
           class="sum-field-input"
-          checked=${checked ? "checked" : ""}
+          checked=${checked ? "checked" : false}
           @change=${(ev) => this.onCellInput(line.id, col, ev.target.checked)}
         />`,
           true
@@ -2222,7 +2217,7 @@ var SumeruSWC = (() => {
         >
           <option value="">—</option>
           ${col.selection.map(
-            ([v, label]) => html`<option value=${v} selected=${val === v ? "selected" : ""}>${label}</option>`
+            ([v, label]) => html`<option value=${v} selected=${val === v ? "selected" : false}>${label}</option>`
           )}
         </select>`,
           true
