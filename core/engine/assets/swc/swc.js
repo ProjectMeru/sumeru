@@ -1439,19 +1439,57 @@ var SumeruSWC = (() => {
   var Many2OneField = class extends SwcComponent {
     suggestions = [];
     open = false;
+    query = "";
     asyncCtrl = new AsyncFieldController(this);
     onWillUnmount() {
       this.asyncCtrl.cancel();
+    }
+    /**
+     * The default patch() swaps the whole subtree with replaceChild, which
+     * destroys the focused <input>. Restore focus and caret afterwards so the
+     * user can keep typing across asynchronous suggestion re-renders.
+     */
+    patch() {
+      const root = this.el;
+      const activeEl = document.activeElement;
+      const wasFocused = !!(root && activeEl && root.contains(activeEl));
+      const input = activeEl instanceof HTMLInputElement ? activeEl : null;
+      const caret = input ? input.selectionStart : null;
+      super.patch();
+      if (wasFocused && caret !== null) {
+        const next = this.el?.querySelector("input");
+        if (next) {
+          next.focus();
+          try {
+            next.setSelectionRange(caret, caret);
+          } catch {
+          }
+        }
+      }
     }
     async search(q) {
       const gen = this.asyncCtrl.begin();
       const comodel = this.props.field.relation ?? this.props.field.options?.relation ?? "";
       if (!comodel) return;
       const baseDomain = fieldDomain(this.props.field, this.props.record) ?? [];
-      const domain = q ? [...baseDomain, ["name", "ilike", q]] : baseDomain;
+      const domain = q ? [...baseDomain, ["name", "ilike", `%${q}%`]] : baseDomain;
       this.suggestions = await this.env.services.rpc.searchRead(comodel, domain, ["id", "name"], 20);
       this.open = true;
       this.asyncCtrl.finish(gen);
+    }
+    onInput(ev) {
+      const input = ev.target;
+      this.query = input.value;
+      void this.search(input.value);
+    }
+    select(row) {
+      const { field, record } = this.props;
+      record.set(field.name, row.id);
+      record.set(`${field.name}_name`, row.name);
+      record.notifyFieldChange(field.name);
+      this.open = false;
+      this.query = "";
+      this.asyncCtrl.refresh();
     }
     template() {
       const { field, record, readonly } = this.props;
@@ -1461,6 +1499,7 @@ var SumeruSWC = (() => {
       if (readonly || field.readonly) {
         return renderFieldShell(field, fieldReadonlyValue(String(display), placeholder), { labelFor: false });
       }
+      const value = this.query !== "" ? this.query : String(display);
       return renderFieldShell(
         field,
         html`<div class="sum-m2o-wrap">
@@ -1469,9 +1508,9 @@ var SumeruSWC = (() => {
           class="sum-field-input"
           name=${field.name}
           placeholder=${placeholder}
-          value=${String(display)}
+          value=${value}
           autocomplete="off"
-          @input=${(ev) => void this.search(ev.target.value)}
+          @input=${(ev) => this.onInput(ev)}
         />
         ${this.open ? html`<ul class="sum-m2o-suggest">
               ${this.suggestions.map(
@@ -1479,13 +1518,7 @@ var SumeruSWC = (() => {
                   <button
                     type="button"
                     class="sum-m2o-option"
-                    @click=${() => {
-            record.set(field.name, row.id);
-            record.set(`${field.name}_name`, row.name);
-            record.notifyFieldChange(field.name);
-            this.open = false;
-            this.asyncCtrl.refresh();
-          }}
+                    @click=${() => this.select(row)}
                   >
                     ${String(row.name ?? row.id)}
                   </button>
