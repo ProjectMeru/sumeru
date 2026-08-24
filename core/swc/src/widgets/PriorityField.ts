@@ -77,7 +77,7 @@ export class PriorityField extends SwcComponent<FieldProps> {
         >
           ${options.map(
             (opt) =>
-              html`<option value=${opt.value} selected=${value === opt.value ? "selected" : ""}>
+              html`<option value=${opt.value} selected=${value === opt.value ? "selected" : false}>
                 ${opt.label}
               </option>`,
           )}

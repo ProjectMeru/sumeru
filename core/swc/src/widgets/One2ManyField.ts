@@ -234,7 +234,7 @@ export class One2ManyField extends SwcComponent<FieldProps> {
         html`<input
           type="checkbox"
           class="sum-field-input"
-          checked=${checked ? "checked" : ""}
+          checked=${checked ? "checked" : false}
           @change=${(ev: Event) =>
             this.onCellInput(line.id, col, (ev.target as HTMLInputElement).checked)}
         />`,
@@ -252,7 +252,7 @@ export class One2ManyField extends SwcComponent<FieldProps> {
           <option value="">—</option>
           ${col.selection.map(
             ([v, label]) =>
-              html`<option value=${v} selected=${val === v ? "selected" : ""}>${label}</option>`,
+              html`<option value=${v} selected=${val === v ? "selected" : false}>${label}</option>`,
           )}
         </select>`,
         true,
