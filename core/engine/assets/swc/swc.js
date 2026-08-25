@@ -1229,14 +1229,27 @@ var SumeruSWC = (() => {
     fromPayload(model, id, data) {
       return new SwcRecord(model, id, data);
     }
+    /**
+     * Removes client-only display fields (e.g. `partner_id_name`) before an RPC
+     * write/create. The server whitelists real model fields and rejects unknown
+     * keys, so these display helpers must never be sent.
+     */
+    serverValues(values) {
+      const out = {};
+      for (const [k, v] of Object.entries(values)) {
+        if (k.endsWith("_name") || k.endsWith("_names")) continue;
+        out[k] = v;
+      }
+      return out;
+    }
     async save(rec) {
       if (rec.id <= 0) {
-        const newId = await this.rpc.create(rec.model, rec.data);
+        const newId = await this.rpc.create(rec.model, this.serverValues(rec.data));
         rec.clearDirty();
         return newId;
       }
       if (!rec.isDirty()) return rec.id;
-      await this.rpc.write(rec.model, [rec.id], rec.dirtyValues());
+      await this.rpc.write(rec.model, [rec.id], this.serverValues(rec.dirtyValues()));
       rec.clearDirty();
       return rec.id;
     }
@@ -1250,7 +1263,7 @@ var SumeruSWC = (() => {
         if (omit.includes(k)) continue;
         values[k] = v;
       }
-      return this.rpc.create(rec.model, values);
+      return this.rpc.create(rec.model, this.serverValues(values));
     }
     async applyOnchange(rec, field) {
       try {
@@ -1280,6 +1293,38 @@ var SumeruSWC = (() => {
       }
     }
   };
+
+  // src/model/pending-children.ts
+  var store = /* @__PURE__ */ new WeakMap();
+  function byField(record) {
+    let map = store.get(record);
+    if (!map) {
+      map = /* @__PURE__ */ new Map();
+      store.set(record, map);
+    }
+    return map;
+  }
+  function getPendingChildren(record, fieldName) {
+    return store.get(record)?.get(fieldName);
+  }
+  function setPendingChildren(record, fieldName, children) {
+    const map = byField(record);
+    if (children.length === 0) {
+      map.delete(fieldName);
+    } else {
+      map.set(fieldName, children);
+    }
+  }
+  function takePendingChildren(record) {
+    const map = store.get(record);
+    if (!map) return [];
+    const out = [];
+    for (const children of map.values()) {
+      out.push(...children);
+    }
+    store.delete(record);
+    return out;
+  }
 
   // src/widgets/field-events.ts
   function inputValueFromEvent(event) {
@@ -1496,14 +1541,14 @@ var SumeruSWC = (() => {
       main_components: /* @__PURE__ */ new Map()
     };
     category(name) {
-      const store = this.maps[name];
-      if (!store) throw new Error(`Unknown registry category: ${String(name)}`);
-      return new CategoryRegistry(store);
+      const store2 = this.maps[name];
+      if (!store2) throw new Error(`Unknown registry category: ${String(name)}`);
+      return new CategoryRegistry(store2);
     }
     get(category, key) {
-      const store = this.maps[category];
-      if (!store) throw new Error(`Unknown registry category: ${String(category)}`);
-      return store.get(key);
+      const store2 = this.maps[category];
+      if (!store2) throw new Error(`Unknown registry category: ${String(category)}`);
+      return store2.get(key);
     }
   };
   var registry = new Registry();
@@ -2377,9 +2422,21 @@ var SumeruSWC = (() => {
   function parseCellValue(col, raw) {
     if (raw === "") return null;
     if (col.type === "integer") return Number.parseInt(raw, 10);
-    if (col.type === "float" || col.type === "numeric") return Number.parseFloat(raw);
+    if (col.type === "float" || col.type === "float64" || col.type === "numeric") {
+      return Number.parseFloat(raw);
+    }
     if (col.type === "boolean") return raw === "true" || raw === "1";
     return raw;
+  }
+  function isNumericType(col) {
+    return col.type === "integer" || col.type === "float" || col.type === "float64" || col.type === "numeric";
+  }
+  function formatNumericValue(raw) {
+    const num = Number(raw);
+    if (!Number.isFinite(num)) return raw == null ? "" : String(raw);
+    const [intPart, decPart] = String(num).split(".");
+    const withSep = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return decPart !== void 0 ? `${withSep}.${decPart}` : withSep;
   }
   function displayCellValue(col, line) {
     const raw = line[col.name];
@@ -2389,7 +2446,18 @@ var SumeruSWC = (() => {
     if (col.type === "boolean") {
       return booleanFromUnknown(raw) ? "Yes" : "No";
     }
+    if (isNumericType(col)) return formatNumericValue(raw);
     return String(raw);
+  }
+  function serverLineValues(data) {
+    const out = {};
+    for (const [k, v] of Object.entries(data)) {
+      if (k === "id") continue;
+      if (k.endsWith("_name") || k.endsWith("_names")) continue;
+      if (v == null || v === "") continue;
+      out[k] = v;
+    }
+    return out;
   }
   var One2ManyField = class extends SwcComponent {
     lines = [];
@@ -2397,11 +2465,21 @@ var SumeruSWC = (() => {
     saving = false;
     asyncCtrl = new AsyncFieldController(this);
     writeTimers = /* @__PURE__ */ new Map();
+    m2oQueries = /* @__PURE__ */ new Map();
+    m2oSuggestions = /* @__PURE__ */ new Map();
+    m2oOpenKey = null;
+    m2oPopover = null;
+    m2oSearchSeq = 0;
+    onchangeSeq = 0;
     setup() {
       void this.loadLines();
+      document.addEventListener("mousedown", this.onDocumentM2oDown);
     }
     onWillUnmount() {
       this.asyncCtrl.cancel();
+      this.m2oSearchSeq += 1;
+      document.removeEventListener("mousedown", this.onDocumentM2oDown);
+      this.closeM2oPopover();
       for (const t of this.writeTimers.values()) clearTimeout(t);
       this.writeTimers.clear();
     }
@@ -2416,7 +2494,6 @@ var SumeruSWC = (() => {
     editable() {
       const { field, record, readonly } = this.props;
       if (isFieldReadonly(field, record, readonly)) return false;
-      if (record.id <= 0) return false;
       const mode = field.subview?.editable ?? "bottom";
       return mode === "bottom" || mode === "top";
     }
@@ -2425,7 +2502,16 @@ var SumeruSWC = (() => {
       const { field, record } = this.props;
       const comodel = this.comodel();
       const cols = columnsForField(field);
-      if (!comodel || record.id <= 0 || cols.length === 0) {
+      if (!comodel || cols.length === 0) {
+        this.loaded = true;
+        this.asyncCtrl.commitIfCurrent(gen);
+        return;
+      }
+      if (record.id <= 0) {
+        this.lines = (getPendingChildren(record, field.name) ?? []).map((child) => ({
+          id: nextTempId(),
+          data: { ...child.values }
+        }));
         this.loaded = true;
         this.asyncCtrl.commitIfCurrent(gen);
         return;
@@ -2437,8 +2523,9 @@ var SumeruSWC = (() => {
         [[inv, "=", record.id]],
         names,
         200
-      );
-      this.lines = (rows ?? []).map((row) => ({
+      ) ?? [];
+      await this.resolveM2oNames(cols, rows);
+      this.lines = rows.map((row) => ({
         id: Number(row.id ?? 0),
         data: { ...row }
       }));
@@ -2484,8 +2571,10 @@ var SumeruSWC = (() => {
       this.saving = true;
       this.asyncCtrl.refresh();
       try {
-        const vals = { ...line.data, [this.inverse()]: record.id };
-        delete vals.id;
+        const vals = {
+          ...serverLineValues(line.data),
+          [this.inverse()]: record.id
+        };
         const newId = await this.env.services.rpc.create(comodel, vals);
         line.id = newId;
         line.data.id = newId;
@@ -2494,33 +2583,103 @@ var SumeruSWC = (() => {
         this.asyncCtrl.refresh();
       }
     }
-    onCellInput(lineId, col, raw) {
+    async onCellInput(lineId, col, raw) {
       const value = typeof raw === "boolean" ? raw : parseCellValue(col, String(raw ?? ""));
       const line = this.lineById(lineId);
       if (!line) return;
       line.data[col.name] = value;
+      const derived = await this.applyLineOnchange(lineId, col.name);
+      if (this.props.record.id <= 0) {
+        this.syncPendingChildren();
+        return;
+      }
       if (line.id <= 0) {
         void this.createLine(lineId, col, value);
         return;
       }
       this.scheduleWrite(line.id, col, value);
-    }
-    async addRowViaDialog() {
-      const cols = columnsForField(this.props.field);
-      if (cols.length === 0) return;
-      const dialog = this.env.services.dialog;
-      if (dialog) {
-        const ok = await dialog.confirm(
-          "Add line",
-          `Add a new line to ${this.props.field.string ?? this.props.field.name}?`
-        );
-        if (!ok) return;
+      for (const name of derived) {
+        const dcol = this.columnByName(name);
+        if (dcol) this.scheduleWrite(line.id, dcol, line.data[name]);
       }
-      this.addRow();
+    }
+    /**
+     * Updates a readonly cell in place (without re-rendering the table) so the
+     * focused input keeps its caret position after a server onchange.
+     */
+    updateReadonlyCell(lineId, colName) {
+      if (!this.rootElement) return;
+      const row = this.rootElement.querySelector(`tr[data-line-id="${lineId}"]`);
+      if (!row) return;
+      const cell = row.querySelector(
+        `td[data-col="${CSS.escape(colName)}"]`
+      );
+      if (!cell) return;
+      const line = this.lineById(lineId);
+      const col = this.columnByName(colName);
+      if (line && col) {
+        cell.textContent = displayCellValue(col, line.data);
+      }
+    }
+    columnByName(name) {
+      return columnsForField(this.props.field).find((c) => c.name === name);
+    }
+    /**
+     * Asks the server to recompute derived fields for a line (business rules
+     * live server-side). Returns the names of the fields the server changed.
+     */
+    async applyLineOnchange(lineId, field) {
+      const line = this.lineById(lineId);
+      const comodel = this.comodel();
+      if (!line || !comodel) return [];
+      const seq = ++this.onchangeSeq;
+      let result = null;
+      try {
+        result = await this.env.services.rpc.onchange(
+          comodel,
+          serverLineValues(line.data),
+          field
+        );
+      } catch {
+        return [];
+      }
+      if (seq !== this.onchangeSeq) return [];
+      const value = result?.value;
+      if (!value) return [];
+      const changed = [];
+      for (const [name, v] of Object.entries(value)) {
+        if (line.data[name] === v) continue;
+        line.data[name] = v;
+        changed.push(name);
+        const col = this.columnByName(name);
+        if (col && col.readonly) this.updateReadonlyCell(lineId, name);
+      }
+      return changed;
+    }
+    pendingChildren() {
+      const children = [];
+      const comodel = this.comodel();
+      const inverse = this.inverse();
+      for (const line of this.lines) {
+        if (line.id > 0) continue;
+        const values = serverLineValues(line.data);
+        if (Object.keys(values).length === 0) continue;
+        children.push({ fieldName: this.props.field.name, comodel, inverse, values });
+      }
+      return children;
+    }
+    syncPendingChildren() {
+      const { record, field } = this.props;
+      if (record.id > 0) {
+        setPendingChildren(record, field.name, []);
+        return;
+      }
+      setPendingChildren(record, field.name, this.pendingChildren());
     }
     addRow() {
       const id = nextTempId();
       this.lines = [...this.lines, { id, data: {} }];
+      this.syncPendingChildren();
       this.asyncCtrl.refresh();
     }
     async deleteRow(lineId) {
@@ -2537,13 +2696,236 @@ var SumeruSWC = (() => {
         }
       }
       this.lines = this.lines.filter((l) => l.id !== lineId);
+      this.syncPendingChildren();
       this.asyncCtrl.refresh();
+    }
+    patch() {
+      const root = this.rootElement;
+      const active = document.activeElement;
+      const wasInside = !!(root && active instanceof HTMLElement && root.contains(active));
+      let focusKey = null;
+      let caret = null;
+      if (wasInside && active instanceof HTMLInputElement) {
+        focusKey = active.getAttribute("data-cell-key") ?? null;
+        caret = active.selectionStart;
+      }
+      super.patch();
+      if (focusKey) {
+        const next = this.rootElement?.querySelector(
+          `input[data-cell-key="${CSS.escape(focusKey)}"]`
+        );
+        if (next) {
+          next.focus();
+          if (caret !== null) {
+            try {
+              next.setSelectionRange(caret, caret);
+            } catch {
+            }
+          }
+        }
+      }
+      this.scheduleM2oPopover();
+    }
+    cellKey(lineId, col) {
+      return `${lineId}:${col.name}`;
+    }
+    m2oKeyParts(key) {
+      const idx = key.indexOf(":");
+      const lineId = Number(key.slice(0, idx));
+      const colName = key.slice(idx + 1);
+      return {
+        lineId,
+        col: columnsForField(this.props.field).find((c) => c.name === colName)
+      };
+    }
+    m2oComodel(col) {
+      return col.relation ?? col.options?.relation ?? "";
+    }
+    onM2oInput(lineId, col, raw) {
+      const key = this.cellKey(lineId, col);
+      this.m2oQueries.set(key, raw);
+      if (raw.trim() === "") {
+        this.closeM2oPopover();
+        return;
+      }
+      void this.searchM2o(key, lineId, col, raw);
+    }
+    onM2oFocus(lineId, col) {
+      const key = this.cellKey(lineId, col);
+      if ((this.m2oSuggestions.get(key) ?? []).length > 0) {
+        this.m2oOpenKey = key;
+        this.scheduleM2oPopover();
+      } else {
+        this.m2oOpenKey = null;
+      }
+    }
+    onDocumentM2oDown = (ev) => {
+      const target = ev.target;
+      if (!target) return;
+      if (this.m2oPopover && !this.m2oPopover.contains(target) && !target.closest("input[data-cell-key]")) {
+        this.m2oOpenKey = null;
+        this.closeM2oPopover();
+      }
+    };
+    async searchM2o(key, _lineId, col, q) {
+      const comodel = this.m2oComodel(col);
+      if (!comodel) return;
+      const seq = ++this.m2oSearchSeq;
+      const base = q.trim();
+      const domain = base ? [["name", "ilike", `%${base}%`]] : [];
+      let rows = [];
+      try {
+        rows = await this.env.services.rpc.searchRead(comodel, domain, ["id", "name"], 20) ?? [];
+      } catch {
+        return;
+      }
+      if (seq !== this.m2oSearchSeq) return;
+      this.m2oSuggestions.set(key, rows);
+      this.m2oOpenKey = key;
+      this.asyncCtrl.refresh();
+    }
+    selectM2o(key, row) {
+      const { lineId, col } = this.m2oKeyParts(key);
+      const line = this.lineById(lineId);
+      if (!line || !col) return;
+      line.data[col.name] = row.id;
+      line.data[`${col.name}_name`] = row.name;
+      let descCol;
+      let updatedDescription = false;
+      if (col.name === "product_id") {
+        descCol = this.columnByName("name");
+        if (descCol) {
+          line.data["name"] = String(row.name ?? "");
+          updatedDescription = true;
+        }
+      }
+      this.m2oQueries.set(key, "");
+      this.m2oSuggestions.delete(key);
+      this.m2oOpenKey = null;
+      this.closeM2oPopover();
+      if (this.props.record.id <= 0) {
+        this.syncPendingChildren();
+      } else if (line.id <= 0) {
+        void this.createLine(lineId, col, row.id);
+      } else {
+        this.scheduleWrite(line.id, col, row.id);
+        if (updatedDescription && descCol) {
+          this.scheduleWrite(line.id, descCol, line.data["name"]);
+        }
+      }
+      this.asyncCtrl.refresh();
+    }
+    scheduleM2oPopover() {
+      const key = this.m2oOpenKey;
+      if (!key) {
+        this.closeM2oPopover();
+        return;
+      }
+      const rows = this.m2oSuggestions.get(key) ?? [];
+      if (rows.length === 0) {
+        this.closeM2oPopover();
+        return;
+      }
+      const anchor = this.rootElement?.querySelector(
+        `input[data-cell-key="${CSS.escape(key)}"]`
+      );
+      if (!anchor) {
+        this.closeM2oPopover();
+        return;
+      }
+      this.openM2oPopover(anchor, key, rows);
+    }
+    openM2oPopover(anchor, key, rows) {
+      let pop = this.m2oPopover;
+      if (!pop) {
+        pop = document.createElement("ul");
+        pop.className = "sum-m2o-suggest sum-o2m-m2o-popover";
+        pop.style.position = "fixed";
+        pop.style.zIndex = "1000";
+        document.body.appendChild(pop);
+        this.m2oPopover = pop;
+      }
+      pop.textContent = "";
+      for (const row of rows) {
+        const li = document.createElement("li");
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "sum-m2o-option";
+        btn.textContent = String(row.name ?? row.id);
+        btn.addEventListener("mousedown", (ev) => {
+          ev.preventDefault();
+          this.selectM2o(key, row);
+        });
+        li.appendChild(btn);
+        pop.appendChild(li);
+      }
+      const rect = anchor.getBoundingClientRect();
+      const width = Math.max(Math.round(rect.width), 1);
+      pop.style.top = `${Math.round(rect.bottom + 2)}px`;
+      pop.style.left = `${Math.round(rect.left)}px`;
+      pop.style.width = `${width}px`;
+      pop.style.minWidth = `${width}px`;
+      pop.style.maxWidth = `${width}px`;
+    }
+    closeM2oPopover() {
+      this.m2oPopover?.remove();
+      this.m2oPopover = null;
+    }
+    async resolveM2oNames(cols, rows) {
+      for (const col of cols) {
+        if (col.type !== "many2one") continue;
+        const comodel = this.m2oComodel(col);
+        if (!comodel) continue;
+        const ids = rows.map((r) => Number(r[col.name])).filter((id) => Number.isFinite(id) && id > 0);
+        if (ids.length === 0) continue;
+        const uniq = Array.from(new Set(ids));
+        let refs = [];
+        try {
+          refs = await this.env.services.rpc.searchRead(
+            comodel,
+            [["id", "in", uniq]],
+            ["id", "name"],
+            uniq.length + 1
+          ) ?? [];
+        } catch {
+          continue;
+        }
+        const nameById = /* @__PURE__ */ new Map();
+        for (const ref of refs) {
+          nameById.set(Number(ref.id), String(ref.name ?? ""));
+        }
+        for (const r of rows) {
+          const id = Number(r[col.name]);
+          const name = nameById.get(id);
+          if (name !== void 0) r[`${col.name}_name`] = name;
+        }
+      }
     }
     renderCellEditor(col, line) {
       const fieldValue = String(line.data[col.name] ?? "");
-      const readonly = !this.editable();
+      const readonly = !this.editable() || col.readonly === true;
       if (readonly) {
         return html`<span>${displayCellValue(col, line.data)}</span>`;
+      }
+      if (col.type === "many2one") {
+        const key = this.cellKey(line.id, col);
+        const query = this.m2oQueries.get(key) ?? "";
+        const display = displayCellValue(col, line.data);
+        const value = query !== "" ? query : display;
+        return fieldControl(
+          html`<div class="sum-o2m-m2o">
+          <input
+            type="text"
+            class="sum-field-input"
+            data-cell-key=${key}
+            value=${value}
+            autocomplete="off"
+            @input=${(event) => this.onM2oInput(line.id, col, inputValueFromEvent(event))}
+            @focus=${() => this.onM2oFocus(line.id, col)}
+          />
+        </div>`,
+          true
+        );
       }
       if (col.type === "boolean") {
         const checked = booleanFromUnknown(line.data[col.name]);
@@ -2571,12 +2953,16 @@ var SumeruSWC = (() => {
           true
         );
       }
-      const inputType = col.type === "integer" || col.type === "float" || col.type === "numeric" ? "number" : col.type === "date" ? "date" : "text";
+      const isNumeric = col.type === "integer" || col.type === "float" || col.type === "float64" || col.type === "numeric";
+      const inputType = col.type === "date" ? "date" : "text";
+      const inputMode = isNumeric ? col.type === "integer" ? "numeric" : "decimal" : "";
       return fieldControl(
         html`<input
         type=${inputType}
         class="sum-field-input"
+        data-cell-key=${this.cellKey(line.id, col)}
         value=${fieldValue}
+        ${inputMode ? html`inputmode=${inputMode}` : ""}
         @input=${(event) => this.onCellInput(line.id, col, inputValueFromEvent(event))}
       />`,
         true
@@ -2584,12 +2970,14 @@ var SumeruSWC = (() => {
     }
     renderLineRow(line, cols, canEdit) {
       const cells = cols.map(
-        (col) => html`<td>${this.renderCellEditor(col, line)}</td>`
+        (col) => html`<td data-col=${col.name}>${this.renderCellEditor(col, line)}</td>`
       );
       if (canEdit) {
-        cells.push(html`<td class="sum-o2m-col-actions"><button type="button" .sum-o2m-delete-btn data-line-id=${String(line.id)} title="Remove line">×</button></td>`);
+        cells.push(
+          html`<td class="sum-o2m-col-actions"><button type="button" class="sum-o2m-delete-btn" data-line-id=${String(line.id)} title="Remove line">×</button></td>`
+        );
       }
-      return html`<tr class="sum-o2m-row">${cells}</tr>`;
+      return html`<tr class="sum-o2m-row" data-line-id=${String(line.id)}>${cells}</tr>`;
     }
     onTableClick(event) {
       const deleteButton = event.target.closest(".sum-o2m-delete-btn");
@@ -2599,11 +2987,11 @@ var SumeruSWC = (() => {
       void this.deleteRow(id);
     }
     template() {
-      const { field, record } = this.props;
+      const { field } = this.props;
       const label = field.string ?? field.name;
       const cols = columnsForField(field);
       const canEdit = this.editable();
-      const emptyMsg = !this.loaded ? "Loading\u2026" : record.id <= 0 ? "Save the record before adding lines." : cols.length === 0 ? "No columns configured." : "No lines";
+      const emptyMsg = !this.loaded ? "Loading\u2026" : cols.length === 0 ? "No columns configured." : "No lines";
       return renderFieldShell(
         field,
         html`<div class="sum-o2m-table-wrap">
@@ -2621,10 +3009,9 @@ var SumeruSWC = (() => {
                 </tr>` : this.lines.map((line) => this.renderLineRow(line, cols, canEdit))}
           </tbody>
         </table>
-        ${canEdit && cols.length > 0 ? html`<button type="button" class="sum-o2m-add-row" @click=${() => void this.addRowViaDialog()}>
+        ${canEdit && cols.length > 0 ? html`<button type="button" class="sum-o2m-add-row" @click=${() => this.addRow()}>
               + Add a line
             </button>` : ""}
-        ${!canEdit && record.id <= 0 && !this.props.readonly ? html`<p class="sum-o2m-hint">Save the parent record before editing lines.</p>` : ""}
       </div>`,
         { layout: "stack", showLabel: false }
       );
@@ -3856,10 +4243,14 @@ var SumeruSWC = (() => {
       try {
         const required = this.fields().filter((f) => f.required).map((f) => f.name);
         this.recordStore.validate(this.record, required);
-        const id = await this.recordStore.save(this.record);
-        this.env.services.notification.success("Saved", "Record saved successfully.");
         const payload = this.props.payload;
-        if (payload.recordId <= 0 && id > 0) {
+        const isNew = payload.recordId <= 0;
+        const id = await this.recordStore.save(this.record);
+        if (isNew && id > 0) {
+          await this.savePendingChildren(id);
+        }
+        this.env.services.notification.success("Saved", "Record saved successfully.");
+        if (isNew && id > 0) {
           this.env.services.action.openRecord({
             actionId: payload.actionId,
             menuId: payload.menuId,
@@ -3868,9 +4259,8 @@ var SumeruSWC = (() => {
           });
           return;
         }
-        this.snapshot = { ...this.record.data };
         this.editing = false;
-        this.rerender();
+        await this.reloadRecord();
       } catch (err) {
         const message = err instanceof SwcError ? err.message : String(err);
         if (err instanceof SwcError && err.code === "validation") {
@@ -3881,6 +4271,23 @@ var SumeruSWC = (() => {
       } finally {
         this.saving = false;
         this.rerender();
+      }
+    }
+    async savePendingChildren(parentId) {
+      const children = takePendingChildren(this.record);
+      for (const child of children) {
+        if (!child.comodel || !child.inverse) continue;
+        const values = { ...child.values };
+        values[child.inverse] = parentId;
+        try {
+          await this.env.services.rpc.create(child.comodel, values);
+        } catch (err) {
+          const message = err instanceof SwcError ? err.message : String(err);
+          this.env.services.notification.error(
+            "Save failed",
+            `Could not create ${child.comodel} line: ${message}`
+          );
+        }
       }
     }
     async deleteRecord() {

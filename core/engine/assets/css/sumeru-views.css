@@ -1317,6 +1317,21 @@ label.sum-form-label--hint {
   font-size: var(--sum-font-size-sm);
 }
 
+.sum-o2m-m2o {
+  position: relative;
+  min-width: 0;
+}
+
+.sum-o2m-m2o .sum-field-input {
+  width: 100%;
+}
+
+.sum-o2m-m2o-popover .sum-m2o-option {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .sum-o2m-col-actions {
   width: 2.5rem;
   text-align: center;
