@@ -87,9 +87,11 @@ func BuildWorkspacePayload(
 	}
 
 	if rec.Record != nil {
+		enrichMany2OneNames(ctx, rec.ResModel, []map[string]interface{}{rec.Record})
 		payload.Record = redactCopy(ctx, rec.ResModel, rec.Record)
 	}
 	if len(rec.ListRows) > 0 {
+		enrichMany2OneNames(ctx, rec.ResModel, rec.ListRows)
 		payload.Records = redactRows(ctx, rec.ResModel, rec.ListRows)
 	}
 	return payload
