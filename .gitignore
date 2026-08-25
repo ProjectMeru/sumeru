@@ -201,3 +201,4 @@ log/*
 logs.log
 log.log
 *.conf
+core/swc/node_modules/
