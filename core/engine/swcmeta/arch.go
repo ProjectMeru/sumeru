@@ -178,6 +178,9 @@ func enrichField(model string, f ArchField) ArchField {
 	if fd.Required {
 		f.Required = true
 	}
+	if fd.Readonly {
+		f.Readonly = true
+	}
 	if f.Widget == "" && fd.Widget != "" {
 		f.Widget = fd.Widget
 	}
@@ -235,12 +238,13 @@ func autoColumnsForComodel(parentModel, comodel string) []ArchField {
 			continue
 		}
 		switch fd.Type {
-		case orm.Char, orm.Text, orm.Integer, orm.Float, orm.Numeric,
+		case orm.Char, orm.Text, orm.Integer, orm.Float, orm.Float64, orm.Numeric,
 			orm.Selection, orm.Date, orm.DateTime, orm.Boolean, orm.Many2One:
 			out = append(out, enrichField(comodel, ArchField{
-				Name:   fd.Name,
-				String: fd.String,
-				Type:   string(fd.Type),
+				Name:     fd.Name,
+				String:   fd.String,
+				Type:     string(fd.Type),
+				Readonly: fd.Readonly,
 			}))
 		}
 		if len(out) >= 6 {
