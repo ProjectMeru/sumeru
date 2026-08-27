@@ -1007,6 +1007,19 @@ var SumeruSWC = (() => {
       }
       return await res.json();
     }
+    async delete(url) {
+      const res = await fetch(url, {
+        method: "DELETE",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "X-CSRF-Token": this.csrfToken
+        }
+      });
+      if (!res.ok) {
+        throw new SwcError(`DELETE ${url} failed: ${res.status}`, "http_delete");
+      }
+    }
   };
 
   // src/services/notification.ts
@@ -1125,16 +1138,24 @@ var SumeruSWC = (() => {
   var Q_SORT = "sort";
   var Q_OFFSET = "offset";
   var Q_GROUPBY = "groupby";
+  var Q_DOMAIN = "domain";
   var EDIT_ENABLED = "1";
   var VIEW_LIST = "list";
   var VIEW_FORM = "form";
   var VIEW_KANBAN = "kanban";
+  var VIEW_PIVOT = "pivot";
+  var VIEW_GRAPH = "graph";
+  var VIEW_CALENDAR = "calendar";
+  var VIEW_GANTT = "gantt";
+  var VIEW_MAP = "map";
+  var VIEW_COHORT = "cohort";
   var RECORD_UPDATED = "record.updated";
   var ACTION_CLOSED = "action.closed";
   var EXPORT_CSV_ROUTE = "/web/export/csv";
   var EXPORT_PDF_ROUTE = "/web/export/pdf";
   var BULK_TEMPLATE_ROUTE = "/web/bulk/template";
   var BULK_UPLOAD_ROUTE = "/web/bulk/upload";
+  var SAVED_SEARCHES_ROUTE = "/web/swc/saved-searches";
 
   // src/model/record.ts
   var SwcRecord = class {
@@ -1314,6 +1335,7 @@ var SumeruSWC = (() => {
       if (route.listSort) params.set(Q_SORT, route.listSort);
       if (route.listOffset) params.set(Q_OFFSET, String(route.listOffset));
       if (route.listGroupBy) params.set(Q_GROUPBY, route.listGroupBy);
+      if (route.listDomain) params.set(Q_DOMAIN, route.listDomain);
       if (route.shell) params.set(Q_SHELL, route.shell);
       return params;
     }
@@ -1334,6 +1356,7 @@ var SumeruSWC = (() => {
         listSort: q.get(Q_SORT) ?? "",
         listOffset: Number(q.get(Q_OFFSET) ?? "0"),
         listGroupBy: q.get(Q_GROUPBY) ?? "",
+        listDomain: q.get(Q_DOMAIN) ?? "",
         shell: q.get(Q_SHELL) ?? ""
       };
     }
@@ -1379,43 +1402,8 @@ var SumeruSWC = (() => {
     if (recordId > 0) params.set("id", String(recordId));
     return params;
   }
-  function renderSearchField(value, onSearch, onInput) {
-    return html`
-    <div class="sum-list-search-wrap">
-      <span class="sum-list-search-icon" aria-hidden="true">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="7" />
-          <path d="M20 20l-3-3" />
-        </svg>
-      </span>
-      <input
-        type="search"
-        class="sum-list-search"
-        placeholder="Search…"
-        value=${value}
-        @keydown=${(event) => event.key === "Enter" && onSearch()}
-        @input=${(event) => onInput(inputValueFromEvent(event))}
-      />
-    </div>
-  `;
-  }
   function renderNewButton(payload) {
     return linkButton(newRecordUrl(payload), "New", "sum-btn sum-list-btn-new");
-  }
-  function renderCollectionToolbar(options) {
-    const fields = exportFieldNamesCsv((options.payload.arch.fields ?? []).filter((f) => !f.invisible));
-    const reportActions = renderReportActions(options.payload, fields);
-    const toolbarClass = options.viewType === VIEW_KANBAN ? "sum-kanban-report-bar" : "sum-list-toolbar";
-    return html`
-    <div class="sum-view-toolbar ${toolbarClass}">
-      <div class="sum-view-toolbar-primary">
-        ${renderNewButton(options.payload)}
-        ${renderSearchField(options.search, options.onSearch, options.onInput)}
-        ${options.extraPrimary ?? ""}
-      </div>
-      ${reportActions ?? ""}
-    </div>
-  `;
   }
   function toolbarButton(label, className, onClick, disabled = false) {
     const button = document.createElement("button");
@@ -4742,35 +4730,6 @@ var SumeruSWC = (() => {
     </div>
   `;
   }
-  function renderSearchFilters(options) {
-    const domainFilters = options.filters.filter((f) => f.domain || !f.groupBy);
-    const groupFilters = options.filters.filter((f) => f.groupBy);
-    if (domainFilters.length === 0 && groupFilters.length === 0) return html``;
-    return html`
-    <div class="sum-search-filters">
-      ${domainFilters.map((f) => {
-      const on = options.active.includes(f.name);
-      return html`<button
-          type="button"
-          class=${on ? "sum-search-chip sum-search-chip--active" : "sum-search-chip"}
-          @click=${() => options.onToggle(f.name)}
-        >
-          ${f.string || f.name}
-        </button>`;
-    })}
-      ${groupFilters.length ? html`<span class="sum-search-filters-label">Group</span>${groupFilters.map((f) => {
-      const on = options.active.includes(f.name);
-      return html`<button
-              type="button"
-              class=${on ? "sum-search-chip sum-search-chip--active" : "sum-search-chip"}
-              @click=${() => options.onToggle(f.name)}
-            >
-              ${f.string || f.name}
-            </button>`;
-    })}` : ""}
-    </div>
-  `;
-  }
   function renderSortHeader(field, currentSort, onSort) {
     const name = field.name;
     const active = currentSort === name || currentSort === `-${name}`;
@@ -4843,6 +4802,492 @@ var SumeruSWC = (() => {
     return String(raw);
   }
 
+  // src/views/shared/collection-query.ts
+  function parseGroupByCSV(raw) {
+    return parseFilterCSV(raw);
+  }
+  function syncCollectionQuery(payload) {
+    return {
+      search: payload.listSearch ?? "",
+      presetFilters: parseFilterCSV(payload.listFilter),
+      customDomain: payload.listDomain ?? "",
+      groupBy: parseGroupByCSV(payload.listGroupBy)
+    };
+  }
+  function navigateCollectionQuery(env, payload, viewType, patch) {
+    const current = syncCollectionQuery(payload);
+    const next = {
+      search: patch.search ?? current.search,
+      presetFilters: patch.presetFilters ?? current.presetFilters,
+      customDomain: patch.customDomain ?? current.customDomain,
+      groupBy: patch.groupBy ?? current.groupBy
+    };
+    env.services.action.navigate(
+      env.services.router.workspaceUrl({
+        actionId: payload.actionId,
+        menuId: payload.menuId,
+        viewType,
+        listSearch: next.search,
+        listFilter: next.presetFilters.join(","),
+        listDomain: next.customDomain,
+        listGroupBy: next.groupBy.join(","),
+        listSort: patch.listSort ?? payload.listSort ?? "",
+        listOffset: patch.listOffset ?? payload.listOffset ?? 0,
+        model: payload.actionId ? "" : payload.model
+      })
+    );
+  }
+  function togglePresetFilter(filters, name) {
+    return toggleFilterName(filters, name);
+  }
+  function toggleGroupByField(active, field) {
+    return toggleFilterName(active, field);
+  }
+  function fieldLabel2(name, search) {
+    return search?.filterFields?.find((f) => f.name === name)?.string ?? search?.groupByFields?.find((f) => f.name === name)?.string ?? name;
+  }
+  function formatDomainTripleLabel(triple, filterFields) {
+    const [field, op, value] = triple;
+    const label = filterFields?.find((f) => f.name === field)?.string ?? field;
+    return `${label} ${op} ${String(value)}`;
+  }
+  function activeFilterTags(query, search) {
+    const tags = [];
+    const presets = search?.filters ?? [];
+    for (const name of query.presetFilters) {
+      const preset = presets.find((f) => f.name === name);
+      tags.push({ key: `preset:${name}`, label: preset?.string ?? name, kind: "preset" });
+    }
+    const triples = parseDomainJSON(query.customDomain);
+    for (let i = 0; i < triples.length; i++) {
+      tags.push({
+        key: `domain:${i}`,
+        label: formatDomainTripleLabel(triples[i], search?.filterFields),
+        kind: "domain"
+      });
+    }
+    for (const field of query.groupBy) {
+      const gb = presets.find((f) => f.groupBy === field)?.string ?? fieldLabel2(field, search);
+      tags.push({ key: `group:${field}`, label: `Group: ${gb}`, kind: "group" });
+    }
+    return tags;
+  }
+  function filterCount(query) {
+    return query.presetFilters.length + parseDomainJSON(query.customDomain).length;
+  }
+  function groupByCount(query) {
+    return query.groupBy.length;
+  }
+  function presetDomainFilters(filters = []) {
+    return filters.filter((f) => f.domain);
+  }
+  function presetGroupByFilters(filters = []) {
+    return filters.filter((f) => f.groupBy);
+  }
+  function parseDomainJSON(raw) {
+    const text = raw.trim();
+    if (!text || text === "[]") return [];
+    try {
+      const parsed = JSON.parse(text);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter(
+        (row) => Array.isArray(row) && row.length === 3 && typeof row[0] === "string" && typeof row[1] === "string"
+      );
+    } catch {
+      return [];
+    }
+  }
+  function stringifyDomain(triples) {
+    if (triples.length === 0) return "";
+    return JSON.stringify(triples);
+  }
+  function appendDomainTriple(raw, triple) {
+    const next = [...parseDomainJSON(raw), triple];
+    return stringifyDomain(next);
+  }
+  function removeDomainTriple(raw, index) {
+    const triples = parseDomainJSON(raw);
+    if (index < 0 || index >= triples.length) return raw;
+    triples.splice(index, 1);
+    return stringifyDomain(triples);
+  }
+  function removeFilterTag(query, tag) {
+    if (tag.kind === "preset") {
+      const name = tag.key.replace(/^preset:/, "");
+      return { ...query, presetFilters: query.presetFilters.filter((n) => n !== name) };
+    }
+    if (tag.kind === "domain") {
+      const index = Number(tag.key.replace(/^domain:/, ""));
+      return { ...query, customDomain: removeDomainTriple(query.customDomain, index) };
+    }
+    const field = tag.key.replace(/^group:/, "");
+    return { ...query, groupBy: query.groupBy.filter((f) => f !== field) };
+  }
+
+  // src/views/shared/collection-bar-host.ts
+  var OPERATORS_BY_TYPE = {
+    char: ["=", "!=", "ilike"],
+    text: ["=", "!=", "ilike"],
+    integer: ["=", "!=", ">", "<", ">=", "<="],
+    float: ["=", "!=", ">", "<", ">=", "<="],
+    boolean: ["=", "!="],
+    date: ["=", "!=", ">", "<", ">=", "<="],
+    datetime: ["=", "!=", ">", "<", ">=", "<="],
+    selection: ["=", "!="],
+    many2one: ["=", "!="]
+  };
+  var CollectionBarHost = class extends SwcComponent {
+    query;
+    panelOpen = null;
+    customField = "";
+    customOp = "=";
+    customValue = "";
+    saveName = "";
+    savingFavorite = false;
+    setup() {
+      this.syncQuery();
+    }
+    onPropsChanged(props) {
+      this.syncQuery();
+      void props;
+    }
+    syncQuery() {
+      this.query = syncCollectionQuery(this.props.payload);
+    }
+    searchMeta() {
+      return this.props.payload.arch.search;
+    }
+    applyQuery(patch) {
+      navigateCollectionQuery(this.env, this.props.payload, this.props.viewType, {
+        search: patch.search ?? this.query.search,
+        presetFilters: patch.presetFilters ?? this.query.presetFilters,
+        customDomain: patch.customDomain ?? this.query.customDomain,
+        groupBy: patch.groupBy ?? this.query.groupBy,
+        listOffset: 0
+      });
+    }
+    applySearch() {
+      this.applyQuery({ search: this.query.search });
+    }
+    togglePanel(kind) {
+      this.panelOpen = this.panelOpen === kind ? null : kind;
+      this.rerender();
+    }
+    closePanel() {
+      if (!this.panelOpen) return;
+      this.panelOpen = null;
+      this.rerender();
+    }
+    togglePreset(name) {
+      this.applyQuery({ presetFilters: togglePresetFilter(this.query.presetFilters, name) });
+    }
+    toggleGroupBy(field) {
+      this.applyQuery({ groupBy: toggleGroupByField(this.query.groupBy, field) });
+    }
+    applyCustomFilter() {
+      const field = this.customField.trim();
+      if (!field) return;
+      const triple = [field, this.customOp, this.coerceValue(field)];
+      this.applyQuery({ customDomain: appendDomainTriple(this.query.customDomain, triple) });
+      this.customValue = "";
+      this.panelOpen = null;
+      this.rerender();
+    }
+    coerceValue(fieldName) {
+      const field = this.filterFields().find((f) => f.name === fieldName);
+      const raw = this.customValue.trim();
+      if (field?.type === "boolean") return raw === "true" || raw === "1";
+      if (field?.type === "integer" || field?.type === "float") {
+        const n = Number(raw);
+        return Number.isNaN(n) ? raw : n;
+      }
+      return raw;
+    }
+    filterFields() {
+      return this.searchMeta()?.filterFields ?? [];
+    }
+    groupByFields() {
+      const meta = this.searchMeta();
+      const fromModel = meta?.groupByFields ?? [];
+      const extras = (meta?.filters ?? []).filter((f) => f.groupBy && !fromModel.some((m) => m.name === f.groupBy)).map((f) => ({ name: f.groupBy, string: f.string, type: "char" }));
+      return [...fromModel, ...extras];
+    }
+    operatorsForField(fieldName) {
+      const field = this.filterFields().find((f) => f.name === fieldName);
+      return OPERATORS_BY_TYPE[field?.type ?? "char"] ?? ["=", "!="];
+    }
+    removeTag(tag) {
+      const next = removeFilterTag(this.query, tag);
+      this.applyQuery(next);
+    }
+    applyFavorite(fav) {
+      this.applyQuery({
+        search: fav.search ?? "",
+        presetFilters: (fav.filter ?? "").split(",").map((s) => s.trim()).filter(Boolean),
+        customDomain: fav.domain ?? "",
+        groupBy: (fav.groupBy ?? "").split(",").map((s) => s.trim()).filter(Boolean)
+      });
+      this.panelOpen = null;
+      this.rerender();
+    }
+    async saveFavorite() {
+      const name = this.saveName.trim();
+      if (!name || this.savingFavorite) return;
+      this.savingFavorite = true;
+      this.rerender();
+      try {
+        const payload = this.props.payload;
+        await this.env.services.http.postJSON(SAVED_SEARCHES_ROUTE, {
+          actionId: payload.actionId,
+          model: payload.model,
+          name,
+          search: this.query.search,
+          filter: this.query.presetFilters.join(","),
+          domain: this.query.customDomain,
+          groupBy: this.query.groupBy.join(",")
+        });
+        this.saveName = "";
+        this.env.services.notification.success("Saved", "Search saved to favorites.");
+        this.panelOpen = null;
+      } catch (err) {
+        this.env.services.notification.error("Save failed", String(err));
+      } finally {
+        this.savingFavorite = false;
+        this.rerender();
+      }
+    }
+    async deleteFavorite(id) {
+      try {
+        await this.env.services.http.delete(`${SAVED_SEARCHES_ROUTE}?id=${id}`);
+        this.env.services.notification.success("Removed", "Favorite deleted.");
+        this.rerender();
+      } catch (err) {
+        this.env.services.notification.error("Delete failed", String(err));
+      }
+    }
+    renderBadge(count) {
+      if (count <= 0) return "";
+      return html`<span class="sum-control-bar-badge">${count}</span>`;
+    }
+    renderCheckmark(active) {
+      return html`<span class="sum-popover-check" aria-hidden="true">${active ? "\u2713" : ""}</span>`;
+    }
+    renderTag(tag) {
+      return html`<span class="sum-filter-tag">
+      ${tag.label}
+      <button type="button" class="sum-filter-tag-remove" aria-label="Remove" @click=${() => this.removeTag(tag)}>×</button>
+    </span>`;
+    }
+    renderPopoverItem(label, active, onClick) {
+      return html`<li>
+      <button
+        type="button"
+        class=${active ? "sum-popover-item sum-popover-item--active" : "sum-popover-item"}
+        @click=${onClick}
+      >
+        ${this.renderCheckmark(active)}
+        <span class="sum-popover-item-label">${label}</span>
+      </button>
+    </li>`;
+    }
+    renderFiltersPopover() {
+      const meta = this.searchMeta();
+      const domainPresets = presetDomainFilters(meta?.filters);
+      const fields = this.filterFields();
+      if (!this.customField && fields[0]) this.customField = fields[0].name;
+      return html`
+      <div class="sum-popover sum-popover--filters" @click=${(e) => e.stopPropagation()}>
+        <h3 class="sum-popover-heading">Filters</h3>
+        <ul class="sum-popover-list">
+          ${domainPresets.map(
+        (f) => this.renderPopoverItem(
+          f.string || f.name,
+          this.query.presetFilters.includes(f.name),
+          () => this.togglePreset(f.name)
+        )
+      )}
+        </ul>
+        <div class="sum-popover-custom">
+          <strong class="sum-popover-custom-title">Custom filter</strong>
+          <select class="sum-popover-select" @change=${(e) => {
+        this.customField = e.target.value;
+        this.customOp = this.operatorsForField(this.customField)[0] ?? "=";
+        this.rerender();
+      }}>
+            ${fields.map((f) => html`<option value=${f.name} selected=${f.name === this.customField ? "selected" : void 0}>${f.string || f.name}</option>`)}
+          </select>
+          <select class="sum-popover-select" @change=${(e) => {
+        this.customOp = e.target.value;
+      }}>
+            ${this.operatorsForField(this.customField).map((op) => html`<option value=${op} selected=${op === this.customOp ? "selected" : void 0}>${op}</option>`)}
+          </select>
+          <input
+            type="text"
+            class="sum-popover-input"
+            placeholder="Value"
+            value=${this.customValue}
+            @input=${(e) => {
+        this.customValue = inputValueFromEvent(e);
+      }}
+          />
+          <button type="button" class="sum-btn sum-btn--secondary" @click=${() => this.applyCustomFilter()}>Apply</button>
+        </div>
+      </div>
+    `;
+    }
+    renderGroupPopover() {
+      const meta = this.searchMeta();
+      const groupPresets = presetGroupByFilters(meta?.filters);
+      return html`
+      <div class="sum-popover sum-popover--group" @click=${(e) => e.stopPropagation()}>
+        <h3 class="sum-popover-heading">Group By</h3>
+        <ul class="sum-popover-list">
+          ${groupPresets.map(
+        (f) => this.renderPopoverItem(
+          f.string || f.name,
+          this.query.groupBy.includes(f.groupBy),
+          () => this.toggleGroupBy(f.groupBy)
+        )
+      )}
+          ${this.groupByFields().map(
+        (f) => this.renderPopoverItem(
+          f.string || f.name,
+          this.query.groupBy.includes(f.name),
+          () => this.toggleGroupBy(f.name)
+        )
+      )}
+        </ul>
+      </div>
+    `;
+    }
+    renderFavoritesPopover() {
+      const favorites = this.props.payload.favorites ?? [];
+      return html`
+      <div class="sum-popover sum-popover--favorites" @click=${(e) => e.stopPropagation()}>
+        <h3 class="sum-popover-heading">Favorites</h3>
+        <ul class="sum-popover-list">
+          ${favorites.map(
+        (f) => html`<li class="sum-popover-fav">
+              <button type="button" class="sum-popover-item" @click=${() => this.applyFavorite(f)}>
+                <span class="sum-popover-item-label">${f.name}</span>
+              </button>
+              <button type="button" class="sum-popover-fav-delete" @click=${() => void this.deleteFavorite(f.id)} title="Delete">×</button>
+            </li>`
+      )}
+        </ul>
+        <div class="sum-popover-custom">
+          <input
+            type="text"
+            class="sum-popover-input"
+            placeholder="Favorite name"
+            value=${this.saveName}
+            @input=${(e) => {
+        this.saveName = inputValueFromEvent(e);
+      }}
+          />
+          <button type="button" class="sum-btn sum-btn--secondary" disabled=${this.savingFavorite ? "disabled" : void 0} @click=${() => void this.saveFavorite()}>Save current search</button>
+        </div>
+      </div>
+    `;
+    }
+    renderActionButton(kind, label, icon, badgeCount) {
+      const open = this.panelOpen === kind;
+      return html`
+      <div class="sum-control-bar-popover-anchor">
+        <button
+          type="button"
+          class=${open ? "sum-control-bar-action-btn sum-control-bar-action-btn--active" : "sum-control-bar-action-btn"}
+          aria-expanded=${open ? "true" : "false"}
+          @click=${(e) => {
+        e.stopPropagation();
+        this.togglePanel(kind);
+      }}
+        >
+          ${icon}
+          <span class="sum-control-bar-action-label">${label}</span>
+          ${this.renderBadge(badgeCount)}
+        </button>
+        ${open ? kind === "filters" ? this.renderFiltersPopover() : kind === "group" ? this.renderGroupPopover() : this.renderFavoritesPopover() : ""}
+      </div>
+    `;
+    }
+    template() {
+      const payload = this.props.payload;
+      const fields = exportFieldNamesCsv((payload.arch.fields ?? []).filter((f) => !f.invisible));
+      const reportActions = renderReportActions(payload, fields);
+      const tags = activeFilterTags(this.query, this.searchMeta());
+      const fCount = filterCount(this.query);
+      const gCount = groupByCount(this.query);
+      const filterIcon = html`<svg class="sum-control-bar-action-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <path d="M3 4h18l-7 8v6l-4 2v-8L3 4z" />
+    </svg>`;
+      const groupIcon = html`<svg class="sum-control-bar-action-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
+    </svg>`;
+      const favIcon = html`<svg class="sum-control-bar-action-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+    </svg>`;
+      return html`
+      <div class="sum-control-bar-wrap" @click=${() => this.closePanel()}>
+        <div class="sum-control-bar sum-view-toolbar">
+          <div class="sum-view-toolbar-primary">
+            ${renderNewButton(payload)}
+            <div class="sum-control-bar-search-group">
+              <div class="sum-control-bar-search-wrap">
+                <span class="sum-list-search-icon" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="M20 20l-3-3" />
+                  </svg>
+                </span>
+                <input
+                  type="search"
+                  class="sum-control-bar-search sum-list-search"
+                  placeholder="Search…"
+                  value=${this.query.search}
+                  @keydown=${(event) => event.key === "Enter" && this.applySearch()}
+                  @input=${(event) => {
+        this.query.search = inputValueFromEvent(event);
+      }}
+                  @click=${(e) => e.stopPropagation()}
+                />
+              </div>
+              ${this.renderActionButton("filters", "Filters", filterIcon, fCount)}
+              ${this.renderActionButton("group", "Group By", groupIcon, gCount)}
+              <div class="sum-control-bar-popover-anchor">
+                <button
+                  type="button"
+                  class=${this.panelOpen === "favorites" ? "sum-control-bar-action-btn sum-control-bar-action-btn--icon-only sum-control-bar-action-btn--active" : "sum-control-bar-action-btn sum-control-bar-action-btn--icon-only"}
+                  title="Favorites"
+                  aria-expanded=${this.panelOpen === "favorites" ? "true" : "false"}
+                  @click=${(e) => {
+        e.stopPropagation();
+        this.togglePanel("favorites");
+      }}
+                >
+                  ${favIcon}
+                </button>
+                ${this.panelOpen === "favorites" ? this.renderFavoritesPopover() : ""}
+              </div>
+            </div>
+            ${this.props.extraPrimary ?? ""}
+          </div>
+          ${reportActions ?? ""}
+        </div>
+        ${tags.length > 0 ? html`<div class="sum-control-bar-tags">${tags.map((tag) => this.renderTag(tag))}</div>` : ""}
+      </div>
+    `;
+    }
+  };
+  function mountCollectionBar(payload, viewType, env, extraPrimary) {
+    const host = new CollectionBarHost({ payload, viewType, extraPrimary }, env);
+    host.callSetup();
+    return host;
+  }
+
   // src/views/list/ListView.ts
   var ListView = class extends SwcComponent {
     panelState = {
@@ -4854,12 +5299,18 @@ var SumeruSWC = (() => {
     };
     deleting = false;
     acting = false;
+    collectionBar;
     setup() {
       this.syncFromPayload(this.props.payload);
+      this.collectionBar = mountCollectionBar(this.props.payload, VIEW_LIST, this.env, this.listExtras());
     }
     onPropsChanged(props) {
       this.syncFromPayload(props.payload);
       this.panelState.selectedIds = /* @__PURE__ */ new Set();
+      this.collectionBar.updateProps({ payload: props.payload, viewType: VIEW_LIST, extraPrimary: this.listExtras() });
+    }
+    onWillUnmount() {
+      this.collectionBar.destroy();
     }
     syncFromPayload(payload) {
       this.panelState.search = payload.listSearch ?? "";
@@ -4867,42 +5318,51 @@ var SumeruSWC = (() => {
       this.panelState.order = payload.listSort ?? "";
       this.panelState.filters = parseFilterCSV(payload.listFilter);
     }
+    listExtras() {
+      return [
+        this.panelState.selectedIds.size > 0 ? html`<button
+            type="button"
+            class="sum-btn sum-btn--danger"
+            disabled=${this.toolbarBusy() ? "disabled" : void 0}
+            @click=${() => void this.bulkDelete()}
+          >
+            Delete (${this.panelState.selectedIds.size})
+          </button>` : "",
+        this.panelState.selectedIds.size >= 2 ? this.headerObjectButtons().map(
+          (archButton) => headerButton(
+            archButton.string || archButton.name,
+            archButton.class,
+            () => void this.runHeaderObject(archButton),
+            this.toolbarBusy()
+          )
+        ) : ""
+      ];
+    }
+    refreshBarExtras() {
+      this.collectionBar.updateProps({
+        payload: this.props.payload,
+        viewType: VIEW_LIST,
+        extraPrimary: this.listExtras()
+      });
+    }
     columns() {
       return this.props.payload.arch.fields.filter((f) => !f.invisible);
     }
     pageRows() {
       return [...this.props.payload.records ?? []];
     }
-    navigateList(patch) {
-      const payload = this.props.payload;
-      const url = this.env.services.router.workspaceUrl({
-        actionId: payload.actionId,
-        menuId: payload.menuId,
-        viewType: VIEW_LIST,
-        listSearch: patch.listSearch ?? this.panelState.search,
-        listOffset: patch.listOffset ?? 0,
-        listSort: patch.listSort ?? this.panelState.order ?? "",
-        listFilter: patch.listFilter ?? this.panelState.filters.join(","),
-        model: payload.actionId ? "" : payload.model
-      });
-      this.env.services.action.navigate(url);
-    }
     reloadCollection() {
-      this.navigateList({ listSearch: this.panelState.search, listOffset: 0 });
+      navigateCollectionQuery(this.env, this.props.payload, VIEW_LIST, { listOffset: 0 });
     }
     applyPage(offset) {
-      this.navigateList({ listOffset: offset });
+      navigateCollectionQuery(this.env, this.props.payload, VIEW_LIST, { listOffset: offset });
     }
     applySort(fieldName) {
       const current = this.panelState.order ?? "";
       let next = fieldName;
       if (current === fieldName) next = `-${fieldName}`;
       else if (current === `-${fieldName}`) next = "";
-      this.navigateList({ listSort: next, listOffset: 0 });
-    }
-    applyFilter(name) {
-      const next = toggleFilterName(this.panelState.filters, name);
-      this.navigateList({ listFilter: next.join(","), listOffset: 0 });
+      navigateCollectionQuery(this.env, this.props.payload, VIEW_LIST, { listSort: next, listOffset: 0 });
     }
     openRow(row) {
       const id = Number(row.id ?? 0);
@@ -4917,10 +5377,12 @@ var SumeruSWC = (() => {
     toggleRow(id, checked) {
       if (checked) this.panelState.selectedIds.add(id);
       else this.panelState.selectedIds.delete(id);
+      this.refreshBarExtras();
       this.rerender();
     }
     toggleAll(checked, ids) {
       this.panelState.selectedIds = checked ? new Set(ids) : /* @__PURE__ */ new Set();
+      this.refreshBarExtras();
       this.rerender();
     }
     toolbarBusy() {
@@ -4940,6 +5402,7 @@ var SumeruSWC = (() => {
       );
       if (!ok) return;
       this.deleting = true;
+      this.refreshBarExtras();
       this.rerender();
       try {
         await this.env.services.rpc.unlink(this.props.payload.model, ids);
@@ -4953,6 +5416,7 @@ var SumeruSWC = (() => {
         );
       } finally {
         this.deleting = false;
+        this.refreshBarExtras();
         this.rerender();
       }
     }
@@ -4960,6 +5424,7 @@ var SumeruSWC = (() => {
       const ids = [...this.panelState.selectedIds];
       if (ids.length === 0 || this.toolbarBusy()) return;
       this.acting = true;
+      this.refreshBarExtras();
       this.rerender();
       const navigated = await runObjectAction(this.env, {
         model: this.props.payload.model,
@@ -4970,9 +5435,11 @@ var SumeruSWC = (() => {
         onSuccess: () => this.reloadCollection()
       });
       this.acting = false;
-      if (!navigated) this.rerender();
+      if (!navigated) {
+        this.refreshBarExtras();
+        this.rerender();
+      }
     }
-    /** Data rows: one `<td>` per visible column with plain text values. */
     renderRow(row) {
       const id = Number(row.id ?? 0);
       const cols = this.columns();
@@ -4991,41 +5458,9 @@ var SumeruSWC = (() => {
       const rows = this.pageRows();
       const ids = rows.map((r) => Number(r.id ?? 0)).filter((id) => id > 0);
       const allSelected = ids.length > 0 && ids.every((id) => this.panelState.selectedIds.has(id));
-      const filters = payload.arch.search?.filters ?? [];
       return html`
-      <div class="sum-list-view">
-        ${renderCollectionToolbar({
-        payload,
-        viewType: VIEW_LIST,
-        search: this.panelState.search,
-        onSearch: () => this.reloadCollection(),
-        onInput: (next) => {
-          this.panelState.search = next;
-        },
-        extraPrimary: [
-          this.panelState.selectedIds.size > 0 ? html`<button
-                  type="button"
-                  class="sum-btn sum-btn--danger"
-                  disabled=${this.toolbarBusy() ? "disabled" : void 0}
-                  @click=${() => void this.bulkDelete()}
-                >
-                  Delete (${this.panelState.selectedIds.size})
-                </button>` : "",
-          this.panelState.selectedIds.size >= 2 ? this.headerObjectButtons().map(
-            (archButton) => headerButton(
-              archButton.string || archButton.name,
-              archButton.class,
-              () => void this.runHeaderObject(archButton),
-              this.toolbarBusy()
-            )
-          ) : ""
-        ]
-      })}
-        ${renderSearchFilters({
-        filters,
-        active: this.panelState.filters,
-        onToggle: (name) => this.applyFilter(name)
-      })}
+      <div class="sum-collection-view sum-list-view">
+        ${this.collectionBar.renderOrPatch()}
         ${renderControlPanel({
         payload,
         state: this.panelState,
@@ -6079,39 +6514,19 @@ var SumeruSWC = (() => {
 
   // src/views/kanban/KanbanView.ts
   var KanbanView = class extends SwcComponent {
-    search = "";
-    filters = [];
     drafts = {};
+    collectionBar;
     setup() {
-      this.syncFromPayload(this.props.payload);
+      this.collectionBar = mountCollectionBar(this.props.payload, VIEW_KANBAN, this.env);
     }
     onPropsChanged(props) {
-      this.syncFromPayload(props.payload);
+      this.collectionBar.updateProps({ payload: props.payload, viewType: VIEW_KANBAN });
     }
-    syncFromPayload(payload) {
-      this.search = payload.listSearch ?? "";
-      this.filters = parseFilterCSV(payload.listFilter);
+    onWillUnmount() {
+      this.collectionBar.destroy();
     }
     cardFields() {
       return this.props.payload.arch.fields.filter((f) => !f.invisible);
-    }
-    navigateKanban(patch) {
-      const payload = this.props.payload;
-      this.env.services.action.navigate(
-        this.env.services.router.workspaceUrl({
-          actionId: payload.actionId,
-          menuId: payload.menuId,
-          viewType: VIEW_KANBAN,
-          listSearch: patch.listSearch ?? this.search,
-          listFilter: patch.listFilter ?? this.filters.join(",")
-        })
-      );
-    }
-    applySearch() {
-      this.navigateKanban({ listSearch: this.search });
-    }
-    applyFilter(name) {
-      this.navigateKanban({ listFilter: toggleFilterName(this.filters, name).join(",") });
     }
     openCard(row) {
       const id = Number(row.id ?? 0);
@@ -6163,17 +6578,6 @@ var SumeruSWC = (() => {
         );
       }
     }
-    toolbar() {
-      return renderCollectionToolbar({
-        payload: this.props.payload,
-        viewType: VIEW_KANBAN,
-        search: this.search,
-        onSearch: () => this.applySearch(),
-        onInput: (next) => {
-          this.search = next;
-        }
-      });
-    }
     renderCard(row, fields, options = {}) {
       const draggable = Boolean(options.draggable);
       const dropValue = options.dropValue;
@@ -6196,17 +6600,11 @@ var SumeruSWC = (() => {
       const payload = this.props.payload;
       const kanban = payload.arch.kanban;
       const fields = this.cardFields();
-      const filters = payload.arch.search?.filters ?? [];
       if (!kanban?.columns?.length) {
         const rows = payload.records ?? [];
         return html`
-        <div class="sum-kanban-view">
-          ${this.toolbar()}
-          ${renderSearchFilters({
-          filters,
-          active: this.filters,
-          onToggle: (name) => this.applyFilter(name)
-        })}
+        <div class="sum-collection-view sum-kanban-view">
+          ${this.collectionBar.renderOrPatch()}
           <div class="sum-kanban-columns">
             ${rows.length === 0 ? html`<div class="sum-kanban-empty">No records</div>` : rows.map((row) => this.renderCard(row, fields))}
           </div>
@@ -6214,13 +6612,8 @@ var SumeruSWC = (() => {
       `;
       }
       return html`
-      <div class="sum-kanban-view">
-        ${this.toolbar()}
-        ${renderSearchFilters({
-        filters,
-        active: this.filters,
-        onToggle: (name) => this.applyFilter(name)
-      })}
+      <div class="sum-collection-view sum-kanban-view">
+        ${this.collectionBar.renderOrPatch()}
         <div class="sum-kanban-board sum-kanban-board--grouped">
           <div class="sum-kanban-stage-columns">
             ${kanban.columns.map(
@@ -6263,13 +6656,27 @@ var SumeruSWC = (() => {
 
   // src/views/pivot/PivotView.ts
   var PivotView = class extends SwcComponent {
+    collectionBar;
+    setup() {
+      this.collectionBar = mountCollectionBar(this.props.payload, VIEW_PIVOT, this.env);
+    }
+    onPropsChanged(props) {
+      this.collectionBar.updateProps({ payload: props.payload, viewType: VIEW_PIVOT });
+    }
+    onWillUnmount() {
+      this.collectionBar.destroy();
+    }
     template() {
       const pivot = this.props.payload.arch.pivot;
       if (!pivot) {
-        return html`<div class="sum-pivot-view sum-pivot-view--empty">No pivot data</div>`;
+        return html`<div class="sum-collection-view sum-pivot-view sum-pivot-view--empty">
+        ${this.collectionBar.renderOrPatch()}
+        No pivot data
+      </div>`;
       }
       return html`
-      <div class="sum-pivot-view">
+      <div class="sum-collection-view sum-pivot-view">
+        ${this.collectionBar.renderOrPatch()}
         <table class="sum-pivot-table">
           <thead>
             <tr>
@@ -6301,8 +6708,17 @@ var SumeruSWC = (() => {
     measureField = "id";
     groupField = "create_date";
     chart = "bar";
+    collectionBar;
     setup() {
+      this.collectionBar = mountCollectionBar(this.props.payload, VIEW_GRAPH, this.env);
       onWillStart(() => this.load());
+    }
+    onPropsChanged(props) {
+      this.collectionBar.updateProps({ payload: props.payload, viewType: VIEW_GRAPH });
+      void this.load();
+    }
+    onWillUnmount() {
+      this.collectionBar.destroy();
     }
     async load() {
       const payload = this.props.payload;
@@ -6338,7 +6754,8 @@ var SumeruSWC = (() => {
           stops.push(`${palette[index % palette.length]} ${start}% ${accumulatedPercent}%`);
         });
         return html`
-        <div class="sum-graph-view">
+        <div class="sum-collection-view sum-graph-view">
+          ${this.collectionBar.renderOrPatch()}
           <div class="sum-graph-pie" style=${`background:conic-gradient(${stops.join(",")})`}></div>
           <ul class="sum-graph-legend">
             ${this.groups.map(
@@ -6352,7 +6769,8 @@ var SumeruSWC = (() => {
       `;
       }
       return html`
-      <div class="sum-graph-view">
+      <div class="sum-collection-view sum-graph-view">
+        ${this.collectionBar.renderOrPatch()}
         ${this.groups.map((group) => {
         const label = this.labelOf(group);
         const fieldValue = Number(group[this.measureField] ?? 0);
@@ -6374,7 +6792,9 @@ var SumeruSWC = (() => {
     dateField = "date_deadline";
     year = 0;
     month = 0;
+    collectionBar;
     setup() {
+      this.collectionBar = mountCollectionBar(this.props.payload, VIEW_CALENDAR, this.env);
       const now = /* @__PURE__ */ new Date();
       this.year = now.getFullYear();
       this.month = now.getMonth();
@@ -6386,6 +6806,12 @@ var SumeruSWC = (() => {
         const dateField = fields.find((f) => f.type === "date" || f.type === "datetime");
         if (dateField) this.dateField = dateField.name;
       }
+    }
+    onPropsChanged(props) {
+      this.collectionBar.updateProps({ payload: props.payload, viewType: VIEW_CALENDAR });
+    }
+    onWillUnmount() {
+      this.collectionBar.destroy();
     }
     eventsByDay() {
       const map = /* @__PURE__ */ new Map();
@@ -6439,7 +6865,8 @@ var SumeruSWC = (() => {
         year: "numeric"
       });
       return html`
-      <div class="sum-calendar-view">
+      <div class="sum-collection-view sum-calendar-view">
+        ${this.collectionBar.renderOrPatch()}
         <div class="sum-calendar-toolbar">
           <button type="button" class="sum-btn sum-btn--ghost" @click=${() => this.shiftMonth(-1)}>Prev</button>
           <h2 class="sum-calendar-title">${this.props.payload.arch.title ?? title}</h2>
@@ -6476,6 +6903,16 @@ var SumeruSWC = (() => {
   }
   var GanttView = class extends SwcComponent {
     scale = "week";
+    collectionBar;
+    setup() {
+      this.collectionBar = mountCollectionBar(this.props.payload, VIEW_GANTT, this.env);
+    }
+    onPropsChanged(props) {
+      this.collectionBar.updateProps({ payload: props.payload, viewType: VIEW_GANTT });
+    }
+    onWillUnmount() {
+      this.collectionBar.destroy();
+    }
     setScale(next) {
       this.scale = next;
       this.rerender();
@@ -6523,7 +6960,8 @@ var SumeruSWC = (() => {
       const span = Math.max(end - start, 1);
       const rows = this.props.payload.records ?? [];
       return html`
-      <div class="sum-gantt-view">
+      <div class="sum-collection-view sum-gantt-view">
+        ${this.collectionBar.renderOrPatch()}
         <div class="sum-gantt-toolbar">
           <h2>${this.props.payload.arch.title ?? "Gantt"}</h2>
           <div class="sum-gantt-scale">
@@ -6561,6 +6999,7 @@ var SumeruSWC = (() => {
   };
 
   // src/views/map/MapView.ts
+  var OPEN_STREET_MAP_URL = "https://www.openstreetmap.org/";
   function numberField(row, name) {
     const raw = row[name];
     if (raw == null || raw === "") return null;
@@ -6568,6 +7007,23 @@ var SumeruSWC = (() => {
     return Number.isFinite(n) ? n : null;
   }
   var MapView = class extends SwcComponent {
+    collectionBar;
+    setup() {
+      this.collectionBar = mountCollectionBar(
+        this.props.payload,
+        VIEW_MAP,
+        this.env
+      );
+    }
+    onPropsChanged(props) {
+      this.collectionBar.updateProps({
+        payload: props.payload,
+        viewType: VIEW_MAP
+      });
+    }
+    onWillUnmount() {
+      this.collectionBar.destroy();
+    }
     latField() {
       return this.props.payload.arch.map?.latitude || this.props.payload.arch.fields.find((f) => /lat/i.test(f.name))?.name || "latitude";
     }
@@ -6593,23 +7049,37 @@ var SumeruSWC = (() => {
         const lng = numberField(row, lngName);
         if (lat == null || lng == null) return null;
         return { row, lat, lng };
-      }).filter((m) => m != null);
+      }).filter(
+        (m) => m != null
+      );
       return html`
-      <div class="sum-map-view">
+      <div class="sum-collection-view sum-map-view">
+        ${this.collectionBar.renderOrPatch()}
         <h2>${this.props.payload.arch.title ?? "Map"}</h2>
         <p class="sum-map-hint">${markers.length} located record(s).</p>
         <ul class="sum-map-list">
-          ${forEach(markers, (marker) => Number(marker.row.id ?? 0), (marker) => html`<li class="sum-map-item">
-              <button type="button" class="sum-map-name" @click=${() => this.openRecord(marker.row)}>
-                ${String(marker.row.name ?? marker.row.display_name ?? marker.row.id)}
-              </button>
-              <a
-                class="sum-map-link"
-                href=${`https://www.openstreetmap.org/?mlat=${marker.lat}&mlon=${marker.lng}#map=16/${marker.lat}/${marker.lng}`}
-                target="_blank"
-                rel="noopener"
-              >${marker.lat.toFixed(4)}, ${marker.lng.toFixed(4)}</a>
-            </li>`)}
+          ${forEach(
+        markers,
+        (marker) => Number(marker.row.id ?? 0),
+        (marker) => html`<li class="sum-map-item">
+                <button
+                  type="button"
+                  class="sum-map-name"
+                  @click=${() => this.openRecord(marker.row)}
+                >
+                  ${String(
+          marker.row.name ?? marker.row.display_name ?? marker.row.id
+        )}
+                </button>
+                <a
+                  class="sum-map-link"
+                  href=${`${OPEN_STREET_MAP_URL}?mlat=${marker.lat}&mlon=${marker.lng}#map=16/${marker.lat}/${marker.lng}`}
+                  target="_blank"
+                  rel="noopener"
+                  >${marker.lat.toFixed(4)}, ${marker.lng.toFixed(4)}</a
+                >
+              </li>`
+      )}
         </ul>
       </div>
     `;
@@ -6635,6 +7105,16 @@ var SumeruSWC = (() => {
     return `${tmp.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
   }
   var CohortView = class extends SwcComponent {
+    collectionBar;
+    setup() {
+      this.collectionBar = mountCollectionBar(this.props.payload, VIEW_COHORT, this.env);
+    }
+    onPropsChanged(props) {
+      this.collectionBar.updateProps({ payload: props.payload, viewType: VIEW_COHORT });
+    }
+    onWillUnmount() {
+      this.collectionBar.destroy();
+    }
     dateField() {
       return this.props.payload.arch.cohort?.dateStart || this.props.payload.arch.calendar?.dateStart || this.props.payload.arch.gantt?.dateStart || this.props.payload.arch.fields.find((f) => f.type === "date" || f.type === "datetime")?.name || "create_date";
     }
@@ -6671,7 +7151,8 @@ var SumeruSWC = (() => {
     template() {
       const { periods, rows } = this.table();
       return html`
-      <div class="sum-cohort-view">
+      <div class="sum-collection-view sum-cohort-view">
+        ${this.collectionBar.renderOrPatch()}
         <h2>${this.props.payload.arch.title ?? "Cohort"}</h2>
         <table class="sum-cohort-table">
           <thead>

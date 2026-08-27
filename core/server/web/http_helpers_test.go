@@ -20,6 +20,15 @@ func TestSplitCommaSeparatedValues(t *testing.T) {
 	}
 }
 
+func TestFirstGroupByField(t *testing.T) {
+	if got := web.FirstGroupByField(" state, user_id "); got != "state" {
+		t.Fatalf("got %q want state", got)
+	}
+	if got := web.FirstGroupByField(""); got != "" {
+		t.Fatalf("got %q want empty", got)
+	}
+}
+
 func TestSplitViewModesDelegatesToCommaSplit(t *testing.T) {
 	raw := "tree,form"
 	if strings.Join(web.SplitViewModes(raw), ",") != strings.Join(web.SplitCommaSeparatedValues(raw), ",") {
