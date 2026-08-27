@@ -1,6 +1,5 @@
 import { SwcComponent } from "./component.js";
 import { SwcEnv } from "./env.js";
-import { runMountCallbacks, runUnmountCallbacks } from "./hooks.js";
 import { html } from "../template/html.js";
 import { SwcError } from "./error.js";
 import { runWillStart } from "./lifecycle.js";
@@ -80,9 +79,8 @@ export class SwcApp {
     try {
       if (!this.component) {
         this.component = new this.Root({}, this.env);
-        this.component.setup?.();
-        await runWillStart();
-        runMountCallbacks();
+        this.component.callSetup();
+        await runWillStart(this.component);
         this.rootEl.replaceChildren(this.component.render());
       } else {
         this.component.patch();
@@ -94,14 +92,12 @@ export class SwcApp {
   }
 
   private retry(): void {
-    runUnmountCallbacks();
     this.component?.destroy();
     this.component = null;
     void this.renderRoot();
   }
 
   destroy(): void {
-    runUnmountCallbacks();
     this.component?.destroy();
     this.component = null;
     this.rootEl = null;

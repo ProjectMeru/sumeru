@@ -20,11 +20,11 @@ export class FieldHost {
 
   render(field: SwcArchField, record: SwcRecord, readonly: boolean): HTMLElement {
     const widgetName = resolveFieldWidget(field);
-    const key = field.name;
+    const key = `${record.id}:${field.name}`;
     const prev = this.entries.get(key);
 
     if (prev && prev.readonly === readonly && prev.widgetName === widgetName) {
-      return prev.widget.render();
+      return prev.widget.renderOrPatch();
     }
 
     prev?.widget.destroy();
@@ -39,10 +39,13 @@ export class FieldHost {
       this.clear();
       return;
     }
-    const prev = this.entries.get(fieldName);
-    if (!prev) return;
-    prev.widget.destroy();
-    this.entries.delete(fieldName);
+    const suffix = `:${fieldName}`;
+    for (const [key, entry] of [...this.entries]) {
+      if (key === fieldName || key.endsWith(suffix)) {
+        entry.widget.destroy();
+        this.entries.delete(key);
+      }
+    }
   }
 
   clear(): void {

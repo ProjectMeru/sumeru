@@ -26,24 +26,64 @@ var SumeruSWC = (() => {
     registry: () => registry
   });
 
-  // src/runtime/hooks.ts
-  var mountCallbacks = [];
-  var unmountCallbacks = [];
-  function runMountCallbacks() {
-    for (const fn of mountCallbacks.splice(0)) {
-      fn();
+  // src/runtime/scheduler.ts
+  var pending = /* @__PURE__ */ new Set();
+  var frameHandle = 0;
+  function queueFrame(callback) {
+    if (typeof requestAnimationFrame === "function") {
+      return requestAnimationFrame(callback);
+    }
+    return setTimeout(callback, 0);
+  }
+  function cancelFrame(handle) {
+    if (typeof cancelAnimationFrame === "function") {
+      cancelAnimationFrame(handle);
+      return;
+    }
+    clearTimeout(handle);
+  }
+  function scheduleRender(component) {
+    pending.add(component);
+    if (frameHandle) return;
+    frameHandle = queueFrame(flushScheduledRenders);
+  }
+  function flushScheduledRenders() {
+    if (frameHandle) {
+      cancelFrame(frameHandle);
+      frameHandle = 0;
+    }
+    const batch = [...pending];
+    pending.clear();
+    for (const component of batch) {
+      if (component.rootElement?.isConnected) component.patch();
     }
   }
-  function runUnmountCallbacks() {
-    for (const fn of unmountCallbacks.splice(0)) {
-      fn();
+
+  // src/runtime/hooks.ts
+  var activeHost = null;
+  function getActiveHost() {
+    return activeHost;
+  }
+  function requireActiveHost() {
+    if (!activeHost) {
+      throw new Error("Hooks must run inside callSetup()");
+    }
+    return activeHost;
+  }
+  function withActiveHost(host, fn) {
+    const previous = activeHost;
+    activeHost = host;
+    try {
+      return fn();
+    } finally {
+      activeHost = previous;
     }
   }
   function onMount(fn) {
-    mountCallbacks.push(fn);
+    requireActiveHost().mountEffects.push(fn);
   }
   function onWillUnmount(fn) {
-    unmountCallbacks.push(fn);
+    requireActiveHost().unmountEffects.push(fn);
   }
   function useEffect(fn) {
     onMount(() => {
@@ -53,20 +93,62 @@ var SumeruSWC = (() => {
       }
     });
   }
+  function useState(initial) {
+    const host = requireActiveHost();
+    const index = host.consumeHookSlot();
+    if (host.hookState[index] === void 0) {
+      host.hookState[index] = initial;
+    }
+    const box = {
+      get value() {
+        return host.hookState[index];
+      }
+    };
+    const setValue = (next) => {
+      const previous = host.hookState[index];
+      const value = typeof next === "function" ? next(previous) : next;
+      if (Object.is(value, previous)) return;
+      host.hookState[index] = value;
+      scheduleRender(host);
+    };
+    return [box, setValue];
+  }
+  function runMountEffects(host) {
+    for (const fn of host.mountEffects) {
+      fn();
+    }
+  }
+  function runUnmountEffects(host) {
+    for (const fn of host.unmountEffects) {
+      fn();
+    }
+  }
 
   // src/runtime/lifecycle.ts
-  var willStartCallbacks = [];
-  function onWillStart(fn) {
-    willStartCallbacks.push(fn);
+  function requireActiveHost2() {
+    const host = getActiveHost();
+    if (!host) {
+      throw new Error("Lifecycle hooks must run inside callSetup()");
+    }
+    return host;
   }
-  async function runWillStart() {
-    for (const fn of willStartCallbacks.splice(0)) {
+  function onWillStart(fn) {
+    requireActiveHost2().willStart.push(fn);
+  }
+  async function runWillStart(host) {
+    for (const fn of host.willStart) {
       await fn();
     }
   }
-  function runWillPatch() {
+  function runWillPatch(host) {
+    for (const fn of host.willPatch) {
+      fn();
+    }
   }
-  function runPatched() {
+  function runPatched(host) {
+    for (const fn of host.patched) {
+      fn();
+    }
   }
 
   // src/devtools/bridge.ts
@@ -113,15 +195,74 @@ var SumeruSWC = (() => {
     publish();
   }
 
+  // src/runtime/portals.ts
+  var originalParent = /* @__PURE__ */ new WeakMap();
+  var movedFromRoot = /* @__PURE__ */ new WeakMap();
+  function portalNodesUnder(root) {
+    const nodes = [...root.querySelectorAll("[data-portal]")];
+    if (root.matches("[data-portal]")) nodes.unshift(root);
+    return nodes;
+  }
+  function applyPortals(root) {
+    if (!root) return;
+    const tracked = movedFromRoot.get(root) ?? [];
+    for (const node of portalNodesUnder(root)) {
+      const selector = node.dataset.portal?.trim();
+      if (!selector) continue;
+      if (!originalParent.has(node)) {
+        originalParent.set(node, { parent: node.parentNode ?? root, next: node.nextSibling });
+      }
+      if (!tracked.includes(node)) tracked.push(node);
+      const target = document.querySelector(selector) ?? document.body;
+      if (node.parentNode !== target) {
+        target.appendChild(node);
+      }
+    }
+    movedFromRoot.set(root, tracked);
+  }
+  function restorePortals(root) {
+    if (!root) return;
+    const nodes = movedFromRoot.get(root) ?? portalNodesUnder(root);
+    movedFromRoot.delete(root);
+    for (const node of nodes) {
+      const origin = originalParent.get(node);
+      originalParent.delete(node);
+      if (!origin) {
+        node.remove();
+        continue;
+      }
+      origin.parent.insertBefore(node, origin.next);
+    }
+  }
+
   // src/runtime/component.ts
   var SwcComponent = class {
     props;
     env;
     rootElement = null;
     mounted = false;
+    hookState = [];
+    hookIndex = 0;
+    willStart = [];
+    willPatch = [];
+    patched = [];
+    mountEffects = [];
+    unmountEffects = [];
     constructor(props, env) {
       this.props = props;
       this.env = env;
+    }
+    consumeHookSlot() {
+      const index = this.hookIndex;
+      this.hookIndex += 1;
+      return index;
+    }
+    /** Run `setup` with this instance as the active hook host. */
+    callSetup() {
+      this.hookIndex = 0;
+      withActiveHost(this, () => {
+        this.setup?.();
+      });
     }
     /** Called when props are updated on an existing instance (SPA navigation). */
     onPropsChanged(_props) {
@@ -132,13 +273,13 @@ var SumeruSWC = (() => {
       this.onPropsChanged(next);
       this.patch();
     }
-    /** Re-render this component if it is still in the document. */
+    /** Queue a patch if this component is still in the document. */
     rerender() {
-      if (this.rootElement?.isConnected) this.patch();
+      if (this.rootElement?.isConnected) scheduleRender(this);
     }
-    /** Patch in place when mounted; otherwise produce a new root. */
+    /** Patch in place when a root already exists; otherwise produce a new root. */
     renderOrPatch() {
-      if (this.rootElement?.isConnected) {
+      if (this.rootElement) {
         this.patch();
         return this.rootElement;
       }
@@ -151,23 +292,30 @@ var SumeruSWC = (() => {
       if (!this.mounted) {
         this.mounted = true;
         registerComponent(this);
+        applyPortals(root);
+        runMountEffects(this);
         this.onMount?.();
       }
       return root;
     }
     patch() {
-      if (!this.rootElement?.parentElement) return;
-      runWillPatch();
-      const parent = this.rootElement.parentElement;
+      if (!this.rootElement) return;
+      runWillPatch(this);
       const previousRoot = this.rootElement;
-      const next = this.template().render();
-      parent.replaceChild(next, previousRoot);
+      const result = this.template();
+      const next = result.patch(previousRoot);
+      if (next !== previousRoot && previousRoot.parentNode) {
+        previousRoot.replaceWith(next);
+      }
       this.rootElement = next;
-      runPatched();
+      applyPortals(next);
+      runPatched(this);
       this.afterPatch?.();
     }
     destroy() {
+      runUnmountEffects(this);
       this.onWillUnmount?.();
+      restorePortals(this.rootElement);
       unregisterComponent(this);
       this.rootElement?.remove();
       this.rootElement = null;
@@ -175,7 +323,84 @@ var SumeruSWC = (() => {
     }
   };
 
+  // src/runtime/patch/keyed.ts
+  function collectKeyedChildren(container) {
+    const map = /* @__PURE__ */ new Map();
+    for (const child of container.children) {
+      if (!(child instanceof HTMLElement)) continue;
+      const key = child.dataset.swcKey;
+      if (key) map.set(key, child);
+    }
+    return map;
+  }
+  function patchKeyedChildren(container, items) {
+    const prev = collectKeyedChildren(container);
+    const nextKeys = /* @__PURE__ */ new Set();
+    const ordered = [];
+    for (const item of items) {
+      nextKeys.add(item.key);
+      let element = prev.get(item.key);
+      if (!element) {
+        element = item.render();
+        element.dataset.swcKey = item.key;
+      } else if (item.patch) {
+        element = item.patch(element);
+        element.dataset.swcKey = item.key;
+      }
+      ordered.push(element);
+    }
+    for (const [key, element] of prev) {
+      if (!nextKeys.has(key)) element.remove();
+    }
+    for (let index = 0; index < ordered.length; index++) {
+      const element = ordered[index];
+      const current = container.children[index];
+      if (current !== element) {
+        container.insertBefore(element, current ?? null);
+      }
+    }
+    while (container.children.length > ordered.length) {
+      container.lastElementChild?.remove();
+    }
+  }
+
   // src/template/html.ts
+  var ALLOWED_ATTRS = /* @__PURE__ */ new Set([
+    "id",
+    "for",
+    "href",
+    "type",
+    "name",
+    "value",
+    "placeholder",
+    "autocomplete",
+    "step",
+    "tabindex",
+    "aria-label",
+    "aria-labelledby",
+    "aria-controls",
+    "title",
+    "role",
+    "aria-selected",
+    "checked",
+    "src",
+    "alt",
+    "rows",
+    "selected",
+    "method",
+    "action",
+    "enctype",
+    "accept",
+    "open",
+    "hidden",
+    "disabled",
+    "target",
+    "rel"
+  ]);
+  var elementHandlers = /* @__PURE__ */ new WeakMap();
+  function isVNode(node) {
+    return typeof node === "object" && node !== null && !(node instanceof HTMLElement) && !isTemplateResult(node) && "tag" in node;
+  }
   var VOID_ELEMENTS = /* @__PURE__ */ new Set([
     "area",
     "base",
@@ -192,15 +417,15 @@ var SumeruSWC = (() => {
     "track",
     "wbr"
   ]);
-  function escapeHtml(text) {
-    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  function isTemplateResult(value) {
+    return typeof value === "object" && value !== null && "render" in value && typeof value.render === "function" && typeof value.patch === "function";
   }
   function flattenValues(values) {
     const out = [];
     for (const v of values) {
       if (v == null || v === false) continue;
-      if (typeof v === "object" && "render" in v && typeof v.render === "function") {
-        out.push(v.render());
+      if (isTemplateResult(v)) {
+        out.push(v);
         continue;
       }
       if (v instanceof HTMLElement) {
@@ -211,6 +436,7 @@ var SumeruSWC = (() => {
         out.push(...flattenValues(v));
         continue;
       }
+      if (typeof v === "function") continue;
       out.push(String(v));
     }
     return out;
@@ -381,27 +607,15 @@ var SumeruSWC = (() => {
     const vnodes = buildTree(strings, values);
     return {
       render() {
-        const root = document.createElement("div");
-        root.style.display = "contents";
-        for (const node of vnodes) {
-          if (typeof node === "string") {
-            root.appendChild(document.createTextNode(node));
-            continue;
-          }
-          if (node instanceof HTMLElement) {
-            root.appendChild(node);
-            continue;
-          }
-          root.appendChild(renderVNode(node));
-        }
-        if (root.childNodes.length === 1 && root.firstElementChild) {
-          return root.firstElementChild;
-        }
-        return root;
+        return materialize(vnodes);
+      },
+      patch(existing) {
+        return patchRoot(existing, vnodes);
       }
     };
   }
   function applyStyle(el, raw) {
+    el.style.cssText = "";
     for (const part of raw.split(";")) {
       const idx = part.indexOf(":");
       if (idx === -1) continue;
@@ -410,36 +624,180 @@ var SumeruSWC = (() => {
       if (prop) el.style.setProperty(prop, val);
     }
   }
-  function renderVNode(vn) {
-    const el = document.createElement(vn.tag);
-    if (vn.key) el.dataset.swcKey = vn.key;
-    for (const [k, v] of Object.entries(vn.attrs)) {
-      if (k.startsWith("@")) {
+  function applyAttrs(el, attrs, key) {
+    if (key) el.dataset.swcKey = key;
+    const nextNames = /* @__PURE__ */ new Set();
+    const classes = [];
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k.startsWith("@") || k === "key") continue;
+      if (k.startsWith(".")) {
+        classes.push(k.slice(1));
         continue;
       }
-      if (k.startsWith(".")) {
-        el.classList.add(k.slice(1));
-      } else if (k === "class" && v) {
+      if (k === "class") {
         for (const c of v.split(/\s+/)) {
-          if (c) el.classList.add(c);
+          if (c) classes.push(c);
         }
-      } else if (k === "style" && v) {
+        continue;
+      }
+      if (k === "style") {
         applyStyle(el, v);
-      } else if (k.startsWith("data-") || k === "id" || k === "for" || k === "href" || k === "type" || k === "name" || k === "value" || k === "placeholder" || k === "autocomplete" || k === "step" || k === "tabindex" || k === "aria-label" || k === "aria-labelledby" || k === "aria-controls" || k === "title" || k === "role" || k === "aria-selected" || k === "checked" || k === "src" || k === "alt" || k === "rows" || k === "selected" || k === "method" || k === "action" || k === "enctype" || k === "accept" || k === "open" || k === "hidden" || k === "disabled") {
+        nextNames.add("style");
+        continue;
+      }
+      if (k.startsWith("data-") || ALLOWED_ATTRS.has(k)) {
         el.setAttribute(k, v);
+        nextNames.add(k);
       }
     }
-    for (const [event, handler] of Object.entries(vn.handlers)) {
-      el.addEventListener(event, handler);
+    if (classes.length > 0) {
+      el.className = classes.join(" ");
+      nextNames.add("class");
+    } else if (el.className) {
+      el.removeAttribute("class");
     }
-    for (const child of vn.children) {
-      if (typeof child === "string") {
-        el.insertAdjacentHTML("beforeend", escapeHtml(child));
-      } else if (child instanceof HTMLElement) {
-        el.appendChild(child);
+    for (const name of [...el.getAttributeNames()]) {
+      if (name === "class" || name === "style" || name.startsWith("data-swc")) continue;
+      if (!nextNames.has(name) && (name.startsWith("data-") || ALLOWED_ATTRS.has(name))) {
+        el.removeAttribute(name);
+      }
+    }
+  }
+  function syncHandlers(el, next) {
+    const previous = elementHandlers.get(el) ?? {};
+    for (const [event, handler] of Object.entries(previous)) {
+      if (next[event] !== handler) el.removeEventListener(event, handler);
+    }
+    for (const [event, handler] of Object.entries(next)) {
+      if (previous[event] !== handler) el.addEventListener(event, handler);
+    }
+    elementHandlers.set(el, { ...next });
+  }
+  function renderChild(node) {
+    if (typeof node === "string") return document.createTextNode(node);
+    if (node instanceof HTMLElement) return node;
+    if (isTemplateResult(node)) return node.render();
+    return renderVNode(node);
+  }
+  function materialize(vnodes) {
+    const root = document.createElement("div");
+    root.style.display = "contents";
+    for (const node of vnodes) {
+      root.appendChild(renderChild(node));
+    }
+    if (root.childNodes.length === 1 && root.firstElementChild) {
+      return root.firstElementChild;
+    }
+    return root;
+  }
+  function childKey(node) {
+    if (typeof node === "string") return void 0;
+    if (node instanceof HTMLElement) return node.dataset.swcKey;
+    if (isTemplateResult(node)) return node.key;
+    return node.key;
+  }
+  function patchRoot(existing, vnodes) {
+    if (vnodes.length === 1) {
+      const only = vnodes[0];
+      if (isTemplateResult(only) && typeof only.patch === "function") {
+        return only.patch(existing);
+      }
+      if (only instanceof HTMLElement) {
+        if (only === existing) return existing;
+        return only;
+      }
+      if (isVNode(only) && existing.style.display !== "contents") {
+        if (existing.tagName.toLowerCase() === only.tag.toLowerCase()) {
+          patchVNode(existing, only);
+          return existing;
+        }
+      }
+    }
+    if (existing.style.display === "contents") {
+      patchChildren(existing, vnodes);
+      return existing;
+    }
+    return materialize(vnodes);
+  }
+  function patchVNode(el, vn) {
+    applyAttrs(el, vn.attrs, vn.key);
+    syncHandlers(el, vn.handlers);
+    patchChildren(el, vn.children);
+  }
+  function patchChildren(container, children) {
+    const meaningful = children.filter((c) => c !== "" && c != null);
+    const keys = meaningful.map(childKey);
+    if (meaningful.length > 0 && keys.every((k) => k)) {
+      patchKeyedChildren(
+        container,
+        meaningful.map((child, index2) => ({
+          key: keys[index2],
+          render: () => {
+            const node = renderChild(child);
+            return node instanceof HTMLElement ? node : wrapNode(node);
+          },
+          patch: (element) => patchChildElement(element, child)
+        }))
+      );
+      return;
+    }
+    const existingNodes = [...container.childNodes];
+    let index = 0;
+    for (const child of meaningful) {
+      const current = existingNodes[index];
+      const next = patchOrCreate(current, child);
+      if (current && next === current) {
+        index += 1;
+        continue;
+      }
+      if (current) {
+        container.replaceChild(next, current);
       } else {
-        el.appendChild(renderVNode(child));
+        container.appendChild(next);
       }
+      index += 1;
+    }
+    while (container.childNodes.length > index) {
+      container.lastChild?.remove();
+    }
+  }
+  function wrapNode(node) {
+    if (node instanceof HTMLElement) return node;
+    const span = document.createElement("span");
+    span.style.display = "contents";
+    span.appendChild(node);
+    return span;
+  }
+  function patchChildElement(existing, child) {
+    if (isTemplateResult(child)) return child.patch(existing);
+    if (child instanceof HTMLElement) return child;
+    if (isVNode(child) && existing.tagName.toLowerCase() === child.tag.toLowerCase()) {
+      patchVNode(existing, child);
+      return existing;
+    }
+    const rendered = renderChild(child);
+    return rendered instanceof HTMLElement ? rendered : wrapNode(rendered);
+  }
+  function patchOrCreate(current, child) {
+    if (!current) return renderChild(child);
+    if (typeof child === "string") {
+      if (current.nodeType === Node.TEXT_NODE) {
+        if (current.textContent !== child) current.textContent = child;
+        return current;
+      }
+      return document.createTextNode(child);
+    }
+    if (current instanceof HTMLElement) {
+      return patchChildElement(current, child);
+    }
+    return renderChild(child);
+  }
+  function renderVNode(vn) {
+    const el = document.createElement(vn.tag);
+    applyAttrs(el, vn.attrs, vn.key);
+    syncHandlers(el, vn.handlers);
+    for (const child of vn.children) {
+      el.appendChild(renderChild(child));
     }
     return el;
   }
@@ -517,9 +875,8 @@ var SumeruSWC = (() => {
       try {
         if (!this.component) {
           this.component = new this.Root({}, this.env);
-          this.component.setup?.();
-          await runWillStart();
-          runMountCallbacks();
+          this.component.callSetup();
+          await runWillStart(this.component);
           this.rootEl.replaceChildren(this.component.render());
         } else {
           this.component.patch();
@@ -530,13 +887,11 @@ var SumeruSWC = (() => {
       }
     }
     retry() {
-      runUnmountCallbacks();
       this.component?.destroy();
       this.component = null;
       void this.renderRoot();
     }
     destroy() {
-      runUnmountCallbacks();
       this.component?.destroy();
       this.component = null;
       this.rootEl = null;
@@ -603,17 +958,17 @@ var SumeruSWC = (() => {
     }
     searchRead(model, domain = [], fields = [], limit = 80) {
       const key = this.searchReadKey(model, domain, fields, limit);
-      let pending = this.searchReadCache.get(key);
-      if (!pending) {
-        pending = this.dispatch(model, "search_read", [domain, fields], {
+      let pending2 = this.searchReadCache.get(key);
+      if (!pending2) {
+        pending2 = this.dispatch(model, "search_read", [domain, fields], {
           limit
         });
-        this.searchReadCache.set(key, pending);
-        void pending.catch(() => {
+        this.searchReadCache.set(key, pending2);
+        void pending2.catch(() => {
           this.searchReadCache.delete(key);
         });
       }
-      return pending;
+      return pending2;
     }
     read(model, ids, fields = []) {
       return this.dispatch(model, "read", [ids, fields]);
@@ -2571,7 +2926,7 @@ var SumeruSWC = (() => {
     const key = resolveFieldWidget(field);
     const WidgetConstructor = registry.get("fields", key) ?? registry.get("fields", "default") ?? DefaultField;
     const widget = new WidgetConstructor({ field, record, readonly }, env);
-    widget.setup?.();
+    widget.callSetup();
     return widget;
   }
   function renderField(env, field, record, readonly) {
@@ -3189,10 +3544,10 @@ var SumeruSWC = (() => {
     }
     render(field, record, readonly) {
       const widgetName = resolveFieldWidget(field);
-      const key = field.name;
+      const key = `${record.id}:${field.name}`;
       const prev = this.entries.get(key);
       if (prev && prev.readonly === readonly && prev.widgetName === widgetName) {
-        return prev.widget.render();
+        return prev.widget.renderOrPatch();
       }
       prev?.widget.destroy();
       const widget = instantiateFieldWidget(this.env, field, record, readonly);
@@ -3205,10 +3560,13 @@ var SumeruSWC = (() => {
         this.clear();
         return;
       }
-      const prev = this.entries.get(fieldName);
-      if (!prev) return;
-      prev.widget.destroy();
-      this.entries.delete(fieldName);
+      const suffix = `:${fieldName}`;
+      for (const [key, entry] of [...this.entries]) {
+        if (key === fieldName || key.endsWith(suffix)) {
+          entry.widget.destroy();
+          this.entries.delete(key);
+        }
+      }
     }
     clear() {
       for (const { widget } of this.entries.values()) {
@@ -3382,7 +3740,7 @@ var SumeruSWC = (() => {
         },
         this.env
       );
-      this.chatterPanel.setup?.();
+      this.chatterPanel.callSetup();
     }
     onPropsChanged(props) {
       this.initRecordState(props.payload);
@@ -3785,7 +4143,7 @@ var SumeruSWC = (() => {
       );
       this.closeDialog();
       const view = new FormView({ payload, inDialog: true }, env);
-      view.setup?.();
+      view.callSetup();
       this.dialogView = view;
       const title = payload.arch.title || payload.arch.model || "Wizard";
       void env.services.dialog.openHost(title, view.render()).then(() => {
@@ -4081,8 +4439,14 @@ var SumeruSWC = (() => {
   // src/template/helpers.ts
   function keyedResult(key, result) {
     return {
+      key,
       render() {
         const element = result.render();
+        element.dataset.swcKey = key;
+        return element;
+      },
+      patch(existing) {
+        const element = result.patch(existing);
         element.dataset.swcKey = key;
         return element;
       }
@@ -4090,44 +4454,6 @@ var SumeruSWC = (() => {
   }
   function forEach(items, keyFn, renderFn) {
     return items.map((item, index) => keyedResult(String(keyFn(item, index)), renderFn(item, index)));
-  }
-
-  // src/runtime/patch/keyed.ts
-  function collectKeyedChildren(container) {
-    const map = /* @__PURE__ */ new Map();
-    for (const child of container.children) {
-      if (!(child instanceof HTMLElement)) continue;
-      const key = child.dataset.swcKey;
-      if (key) map.set(key, child);
-    }
-    return map;
-  }
-  function patchKeyedChildren(container, items) {
-    const prev = collectKeyedChildren(container);
-    const nextKeys = /* @__PURE__ */ new Set();
-    const ordered = [];
-    for (const item of items) {
-      nextKeys.add(item.key);
-      let element = prev.get(item.key);
-      if (!element) {
-        element = item.render();
-        element.dataset.swcKey = item.key;
-      }
-      ordered.push(element);
-    }
-    for (const [key, element] of prev) {
-      if (!nextKeys.has(key)) element.remove();
-    }
-    for (let index = 0; index < ordered.length; index++) {
-      const element = ordered[index];
-      const current = container.children[index];
-      if (current !== element) {
-        container.insertBefore(element, current ?? null);
-      }
-    }
-    while (container.children.length > ordered.length) {
-      container.lastElementChild?.remove();
-    }
   }
 
   // src/views/list/ListView.ts
@@ -4141,12 +4467,18 @@ var SumeruSWC = (() => {
     };
     deleting = false;
     acting = false;
+    fieldHost;
     setup() {
+      this.fieldHost = new FieldHost(this.env);
       this.syncFromPayload(this.props.payload);
     }
     onPropsChanged(props) {
       this.syncFromPayload(props.payload);
       this.panelState.selectedIds = /* @__PURE__ */ new Set();
+      this.fieldHost.clear();
+    }
+    onWillUnmount() {
+      this.fieldHost.clear();
     }
     syncFromPayload(payload) {
       this.panelState.search = payload.listSearch ?? "";
@@ -4259,10 +4591,11 @@ var SumeruSWC = (() => {
       this.acting = false;
       if (!navigated) this.rerender();
     }
-    /** List cells render display text; per-cell field widgets are a later product change. */
+    /** List cells use readonly field widgets via FieldHost. */
     renderRow(row) {
       const id = Number(row.id ?? 0);
       const cols = this.columns();
+      const record = new SwcRecord(this.props.payload.model, id, row);
       return html`<tr class="sum-list-row sum-list-row--click" @click=${() => this.openRow(row)}>
       ${renderRowCheckbox(
         id,
@@ -4270,25 +4603,9 @@ var SumeruSWC = (() => {
         (rid, checked) => this.toggleRow(rid, checked)
       )}
       ${cols.map((c) => {
-        const display = row[`${c.name}_name`] ?? row[c.name];
-        return html`<td class="sum-list-td">${String(display ?? "")}</td>`;
+        return html`<td class="sum-list-td">${this.fieldHost.render(c, record, true)}</td>`;
       })}
     </tr>`;
-    }
-    patch() {
-      const tbody = this.rootElement?.querySelector("tbody");
-      if (tbody) {
-        const rows = this.pageRows();
-        patchKeyedChildren(
-          tbody,
-          rows.map((row) => ({
-            key: String(row.id ?? 0),
-            render: () => this.renderRow(row).render()
-          }))
-        );
-        return;
-      }
-      super.patch();
     }
     template() {
       const payload = this.props.payload;
@@ -4592,8 +4909,8 @@ var SumeruSWC = (() => {
     createView(type, payload) {
       const ViewClass = registry.category("views").get(type) ?? ListView;
       const view = new ViewClass({ payload }, this.env);
-      view.setup?.();
-      void runWillStart().then(() => {
+      view.callSetup();
+      void runWillStart(view).then(() => {
         if (view.rootElement?.isConnected) view.patch();
         else this.rerender();
       });
@@ -4649,7 +4966,7 @@ var SumeruSWC = (() => {
     workspaceRouter;
     setup() {
       this.workspaceRouter = new WorkspaceRouter({}, this.env);
-      this.workspaceRouter.setup?.();
+      this.workspaceRouter.callSetup();
       if (this.env.bootstrap.busEnabled) {
         this.env.services.bus.connect();
       }
@@ -5762,30 +6079,232 @@ var SumeruSWC = (() => {
     }
   };
 
-  // src/views/advanced/stub-view.ts
-  function renderStubView(title, payload) {
-    const rows = payload.records ?? [];
-    return html`
-    <div class="sum-advanced-view">
-      <h2>${title}</h2>
-      <p class="sum-advanced-view-hint">${rows.length} record(s) loaded.</p>
-      <ul>
-        ${rows.slice(0, 20).map(
-      (row) => html`<li>${String(row.name ?? row.display_name ?? row.id ?? "")}</li>`
-    )}
-      </ul>
-    </div>
-  `;
+  // src/views/gantt/GanttView.ts
+  function parseDate(raw) {
+    const text = String(raw ?? "").trim();
+    if (!text) return null;
+    const date = new Date(text);
+    return Number.isNaN(date.getTime()) ? null : date;
   }
-  function titleFallback(type) {
-    const trimmed = type.trim();
-    if (!trimmed) return "View";
-    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
-  }
-  var StubView = class extends SwcComponent {
+  var GanttView = class extends SwcComponent {
+    scale;
+    setScale;
+    setup() {
+      const [scale, setScale] = useState("week");
+      this.scale = scale;
+      this.setScale = setScale;
+    }
+    dateStartField() {
+      return this.props.payload.arch.gantt?.dateStart || this.props.payload.arch.calendar?.dateStart || this.props.payload.arch.fields.find((f) => f.type === "date" || f.type === "datetime")?.name || "date_start";
+    }
+    dateStopField() {
+      return this.props.payload.arch.gantt?.dateStop || this.props.payload.arch.calendar?.dateStop || this.dateStartField();
+    }
+    openRecord(row) {
+      const id = Number(row.id ?? 0);
+      if (id <= 0) return;
+      const payload = this.props.payload;
+      this.env.services.action.openRecord({
+        actionId: payload.actionId,
+        menuId: payload.menuId,
+        recordId: id,
+        viewType: VIEW_FORM
+      });
+    }
+    range() {
+      const startField = this.dateStartField();
+      const stopField = this.dateStopField();
+      let min = Infinity;
+      let max = -Infinity;
+      for (const row of this.props.payload.records ?? []) {
+        const start = parseDate(row[startField])?.getTime();
+        const stop = parseDate(row[stopField])?.getTime() ?? start;
+        if (start == null) continue;
+        min = Math.min(min, start);
+        max = Math.max(max, stop ?? start);
+      }
+      if (!Number.isFinite(min)) {
+        const now = Date.now();
+        return { start: now, end: now + 864e5 * 7 };
+      }
+      const pad = this.scale.value === "day" ? 864e5 : this.scale.value === "week" ? 864e5 * 7 : 864e5 * 30;
+      return { start: min - pad, end: max + pad };
+    }
     template() {
-      const type = this.props.payload.arch.type ?? this.props.payload.viewType ?? "";
-      return renderStubView(this.props.payload.arch.title ?? titleFallback(type), this.props.payload);
+      const startField = this.dateStartField();
+      const stopField = this.dateStopField();
+      const { start, end } = this.range();
+      const span = Math.max(end - start, 1);
+      const rows = this.props.payload.records ?? [];
+      return html`
+      <div class="sum-gantt-view">
+        <div class="sum-gantt-toolbar">
+          <h2>${this.props.payload.arch.title ?? "Gantt"}</h2>
+          <div class="sum-gantt-scale">
+            ${["day", "week", "month"].map(
+        (scale) => html`<button
+                type="button"
+                class=${this.scale.value === scale ? "sum-btn sum-btn--secondary" : "sum-btn sum-btn--ghost"}
+                @click=${() => this.setScale(scale)}
+              >${scale}</button>`
+      )}
+          </div>
+        </div>
+        <ul class="sum-gantt-rows">
+          ${forEach(rows, (row) => Number(row.id ?? 0), (row) => {
+        const from = parseDate(row[startField])?.getTime();
+        const to = parseDate(row[stopField])?.getTime() ?? from;
+        if (from == null || to == null) {
+          return html`<li class="sum-gantt-row">
+                <span class="sum-gantt-label">${String(row.name ?? row.display_name ?? row.id)}</span>
+              </li>`;
+        }
+        const left = (from - start) / span * 100;
+        const width = Math.max((to - from) / span * 100, 0.8);
+        return html`<li class="sum-gantt-row" @click=${() => this.openRecord(row)}>
+              <span class="sum-gantt-label">${String(row.name ?? row.display_name ?? row.id)}</span>
+              <div class="sum-gantt-track">
+                <div class="sum-gantt-bar" style=${`left:${left}%;width:${width}%`}></div>
+              </div>
+            </li>`;
+      })}
+        </ul>
+      </div>
+    `;
+    }
+  };
+
+  // src/views/map/MapView.ts
+  function numberField(row, name) {
+    const raw = row[name];
+    if (raw == null || raw === "") return null;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  }
+  var MapView = class extends SwcComponent {
+    latField() {
+      return this.props.payload.arch.map?.latitude || this.props.payload.arch.fields.find((f) => /lat/i.test(f.name))?.name || "latitude";
+    }
+    lngField() {
+      return this.props.payload.arch.map?.longitude || this.props.payload.arch.fields.find((f) => /lng|lon/i.test(f.name))?.name || "longitude";
+    }
+    openRecord(row) {
+      const id = Number(row.id ?? 0);
+      if (id <= 0) return;
+      const payload = this.props.payload;
+      this.env.services.action.openRecord({
+        actionId: payload.actionId,
+        menuId: payload.menuId,
+        recordId: id,
+        viewType: VIEW_FORM
+      });
+    }
+    template() {
+      const latName = this.latField();
+      const lngName = this.lngField();
+      const markers = (this.props.payload.records ?? []).map((row) => {
+        const lat = numberField(row, latName);
+        const lng = numberField(row, lngName);
+        if (lat == null || lng == null) return null;
+        return { row, lat, lng };
+      }).filter((m) => m != null);
+      return html`
+      <div class="sum-map-view">
+        <h2>${this.props.payload.arch.title ?? "Map"}</h2>
+        <p class="sum-map-hint">${markers.length} located record(s).</p>
+        <ul class="sum-map-list">
+          ${forEach(markers, (marker) => Number(marker.row.id ?? 0), (marker) => html`<li class="sum-map-item">
+              <button type="button" class="sum-map-name" @click=${() => this.openRecord(marker.row)}>
+                ${String(marker.row.name ?? marker.row.display_name ?? marker.row.id)}
+              </button>
+              <a
+                class="sum-map-link"
+                href=${`https://www.openstreetmap.org/?mlat=${marker.lat}&mlon=${marker.lng}#map=16/${marker.lat}/${marker.lng}`}
+                target="_blank"
+                rel="noopener"
+              >${marker.lat.toFixed(4)}, ${marker.lng.toFixed(4)}</a>
+            </li>`)}
+        </ul>
+      </div>
+    `;
+    }
+  };
+
+  // src/views/cohort/CohortView.ts
+  function parseDate2(raw) {
+    const text = String(raw ?? "").trim();
+    if (!text) return null;
+    const date = new Date(text);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  function bucketKey(date, interval) {
+    if (interval === "month") {
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    }
+    const tmp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const day = tmp.getUTCDay() || 7;
+    tmp.setUTCDate(tmp.getUTCDate() + 4 - day);
+    const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
+    const week = Math.ceil(((tmp.getTime() - yearStart.getTime()) / 864e5 + 1) / 7);
+    return `${tmp.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
+  }
+  var CohortView = class extends SwcComponent {
+    dateField() {
+      return this.props.payload.arch.cohort?.dateStart || this.props.payload.arch.calendar?.dateStart || this.props.payload.arch.gantt?.dateStart || this.props.payload.arch.fields.find((f) => f.type === "date" || f.type === "datetime")?.name || "create_date";
+    }
+    measureField() {
+      return this.props.payload.arch.cohort?.measure || this.props.payload.arch.fields.find((f) => f.pivotType === "measure")?.name || "";
+    }
+    interval() {
+      const raw = (this.props.payload.arch.cohort?.interval ?? "month").toLowerCase();
+      return raw === "week" ? "week" : "month";
+    }
+    table() {
+      const dateField = this.dateField();
+      const measureField = this.measureField();
+      const interval = this.interval();
+      const groups = /* @__PURE__ */ new Map();
+      for (const row of this.props.payload.records ?? []) {
+        const date = parseDate2(row[dateField]);
+        if (!date) continue;
+        const key = bucketKey(date, interval);
+        const amount = measureField ? Number(row[measureField] ?? 0) : 1;
+        groups.set(key, (groups.get(key) ?? 0) + (Number.isFinite(amount) ? amount : 0));
+      }
+      const periods = [...groups.keys()].sort();
+      const rows = periods.map((cohort, index) => {
+        const values = periods.map((_, col) => {
+          if (col < index) return 0;
+          const later = periods[col];
+          return groups.get(later) ?? 0;
+        });
+        return { cohort, values };
+      });
+      return { periods, rows };
+    }
+    template() {
+      const { periods, rows } = this.table();
+      return html`
+      <div class="sum-cohort-view">
+        <h2>${this.props.payload.arch.title ?? "Cohort"}</h2>
+        <table class="sum-cohort-table">
+          <thead>
+            <tr>
+              <th>Cohort</th>
+              ${periods.map((p) => html`<th>${p}</th>`)}
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(
+        (row) => html`<tr>
+                <th>${row.cohort}</th>
+                ${row.values.map((value) => html`<td>${value === 0 ? "" : String(value)}</td>`)}
+              </tr>`
+      )}
+          </tbody>
+        </table>
+      </div>
+    `;
     }
   };
 
@@ -5807,9 +6326,9 @@ var SumeruSWC = (() => {
     pivot: PivotView,
     graph: GraphView,
     calendar: CalendarView,
-    gantt: StubView,
-    map: StubView,
-    cohort: StubView
+    gantt: GanttView,
+    map: MapView,
+    cohort: CohortView
   };
   function registerCore() {
     registerDefaultWidgets();

@@ -12,7 +12,7 @@ import { ACTION_CLOSED, RECORD_UPDATED, SWC_API_BASE } from "../../constants/rou
 import { RouterService } from "../../services/router.js";
 import { runWillStart } from "../../runtime/lifecycle.js";
 
-type ViewInstance = SwcComponent & { setup?: () => void; render(): HTMLElement };
+type ViewInstance = SwcComponent & { callSetup(): void; render(): HTMLElement };
 
 export class WorkspaceRouter extends SwcComponent {
   private payload: SwcWorkspacePayload | null = null;
@@ -73,8 +73,8 @@ export class WorkspaceRouter extends SwcComponent {
   private createView(type: string, payload: SwcWorkspacePayload): ViewInstance {
     const ViewClass = (registry.category("views").get(type) ?? ListView) as ViewConstructor;
     const view = new ViewClass({ payload }, this.env) as unknown as ViewInstance;
-    view.setup?.();
-    void runWillStart().then(() => {
+    view.callSetup();
+    void runWillStart(view).then(() => {
       if (view.rootElement?.isConnected) view.patch();
       else this.rerender();
     });

@@ -2,8 +2,14 @@ import { type TemplateResult, type TemplateValue } from "./html.js";
 
 function keyedResult(key: string, result: TemplateResult): TemplateResult {
   return {
+    key,
     render() {
       const element = result.render();
+      element.dataset.swcKey = key;
+      return element;
+    },
+    patch(existing: HTMLElement) {
+      const element = result.patch(existing);
       element.dataset.swcKey = key;
       return element;
     },

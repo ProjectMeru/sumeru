@@ -1,19 +1,24 @@
-/** Plain JS sum-template compiler for esbuild plugin (no TS import). */
+/** Load the TypeScript SUM compiler (codegen.ts) for the esbuild plugin. */
 
-export function compileSumXml(source, componentName, file) {
-  const body = source
-    .replace(/<\?xml[^?]*\?>/g, "")
-    .replace(/t-esc="([^"]+)"/g, "${$1}")
-    .replace(/t-if="([^"]+)"/g, "")
-    .trim();
-  const code = `import { html } from "../../template/html.js";
-import { forEach, when } from "../../template/helpers.js";
-import { mountComponent } from "../../runtime/component-host.js";
-import type { SwcEnv } from "../../runtime/env.js";
+import * as esbuild from "esbuild";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-export function template(props, env) {
-  return html\`${body.replace(/`/g, "\\`").replace(/\$/g, "\\$")}\`;
-}
-`;
-  return { code, meta: { component: componentName, file, snippet: body.slice(0, 200) } };
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+/** Bundle `src/template/sum/codegen.ts` and return `compileSumXml`. */
+export async function loadCompileSumXml() {
+  const dir = mkdtempSync(join(tmpdir(), "sum-compiler-"));
+  const outfile = join(dir, "codegen.mjs");
+  await esbuild.build({
+    entryPoints: [join(__dirname, "src/template/sum/codegen.ts")],
+    bundle: true,
+    format: "esm",
+    platform: "node",
+    outfile,
+  });
+  const mod = await import(pathToFileURL(outfile).href);
+  return mod.compileSumXml;
 }

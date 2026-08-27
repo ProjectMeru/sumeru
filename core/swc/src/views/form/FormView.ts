@@ -48,7 +48,7 @@ export class FormView extends SwcComponent<FormViewProps> {
       },
       this.env,
     );
-    this.chatterPanel.setup?.();
+    this.chatterPanel.callSetup();
   }
 
   override onPropsChanged(props: FormViewProps): void {

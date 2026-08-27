@@ -19,6 +19,9 @@ func WorkspaceViewTabs(ctx context.Context, resModel string, actionID int, menuI
 		{ViewModeGraph, "Graph"},
 		{ViewModePivot, "Pivot"},
 		{ViewModeCalendar, "Calendar"},
+		{ViewModeGantt, "Gantt"},
+		{ViewModeMap, "Map"},
+		{ViewModeCohort, "Cohort"},
 	}
 	sel := strings.ToLower(strings.TrimSpace(selectedMode))
 	menuID = strings.TrimSpace(menuID)

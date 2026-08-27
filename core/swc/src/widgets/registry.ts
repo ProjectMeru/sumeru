@@ -99,8 +99,9 @@ export function resolveFieldWidget(field: SwcArchField): string {
 
 export type FieldWidgetInstance = {
   render(): HTMLElement;
+  renderOrPatch(): HTMLElement;
   destroy(): void;
-  setup?(): void;
+  callSetup(): void;
 };
 
 export function instantiateFieldWidget(
@@ -113,7 +114,7 @@ export function instantiateFieldWidget(
   const WidgetConstructor =
     registry.get("fields", key) ?? registry.get("fields", "default") ?? DefaultField;
   const widget = new WidgetConstructor({ field, record, readonly }, env);
-  widget.setup?.();
+  widget.callSetup();
   return widget;
 }
 

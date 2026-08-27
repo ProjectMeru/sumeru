@@ -14,9 +14,10 @@ import {
   type ControlPanelState,
 } from "./control-panel.js";
 import { forEach } from "../../template/helpers.js";
-import { patchKeyedChildren } from "../../runtime/patch/keyed.js";
 import { VIEW_FORM, VIEW_LIST } from "../../constants/routes.js";
 import { runObjectAction } from "../shared/object-action.js";
+import { FieldHost } from "../../widgets/field-host.js";
+import { SwcRecord } from "../../model/record.js";
 
 interface ListViewProps {
   payload: SwcWorkspacePayload;
@@ -32,14 +33,21 @@ export class ListView extends SwcComponent<ListViewProps> {
   };
   private deleting = false;
   private acting = false;
+  private fieldHost!: FieldHost;
 
   override setup(): void {
+    this.fieldHost = new FieldHost(this.env);
     this.syncFromPayload(this.props.payload);
   }
 
   override onPropsChanged(props: ListViewProps): void {
     this.syncFromPayload(props.payload);
     this.panelState.selectedIds = new Set();
+    this.fieldHost.clear();
+  }
+
+  override onWillUnmount(): void {
+    this.fieldHost.clear();
   }
 
   private syncFromPayload(payload: SwcWorkspacePayload): void {
@@ -173,35 +181,19 @@ export class ListView extends SwcComponent<ListViewProps> {
     if (!navigated) this.rerender();
   }
 
-  /** List cells render display text; per-cell field widgets are a later product change. */
+  /** List cells use readonly field widgets via FieldHost. */
   private renderRow(row: Record<string, unknown>) {
     const id = Number(row.id ?? 0);
     const cols = this.columns();
+    const record = new SwcRecord(this.props.payload.model, id, row);
     return html`<tr class="sum-list-row sum-list-row--click" @click=${() => this.openRow(row)}>
       ${renderRowCheckbox(id, this.panelState.selectedIds.has(id), (rid, checked) =>
         this.toggleRow(rid, checked),
       )}
       ${cols.map((c) => {
-        const display = row[`${c.name}_name`] ?? row[c.name];
-        return html`<td class="sum-list-td">${String(display ?? "")}</td>`;
+        return html`<td class="sum-list-td">${this.fieldHost.render(c, record, true)}</td>`;
       })}
     </tr>`;
-  }
-
-  override patch(): void {
-    const tbody = this.rootElement?.querySelector("tbody");
-    if (tbody) {
-      const rows = this.pageRows();
-      patchKeyedChildren(
-        tbody,
-        rows.map((row) => ({
-          key: String(row.id ?? 0),
-          render: () => this.renderRow(row).render(),
-        })),
-      );
-      return;
-    }
-    super.patch();
   }
 
   override template() {

@@ -1,24 +1,42 @@
-type StartFn = () => void | Promise<void>;
+import { getActiveHost, type HookHost, type StartFn } from "./hooks.js";
 
-const willStartCallbacks: StartFn[] = [];
-
-/** Register async setup that SwcApp.mount and WorkspaceRouter await before first paint. */
-export function onWillStart(fn: StartFn): void {
-  willStartCallbacks.push(fn);
+function requireActiveHost(): HookHost {
+  const host = getActiveHost();
+  if (!host) {
+    throw new Error("Lifecycle hooks must run inside callSetup()");
+  }
+  return host;
 }
 
-export async function runWillStart(): Promise<void> {
-  for (const fn of willStartCallbacks.splice(0)) {
+/** Register async work that `runWillStart(host)` awaits before first paint. */
+export function onWillStart(fn: StartFn): void {
+  requireActiveHost().willStart.push(fn);
+}
+
+export function onWillPatch(fn: () => void): void {
+  requireActiveHost().willPatch.push(fn);
+}
+
+export function onPatched(fn: () => void): void {
+  requireActiveHost().patched.push(fn);
+}
+
+export async function runWillStart(host: HookHost): Promise<void> {
+  for (const fn of host.willStart) {
     await fn();
   }
 }
 
-export function runWillPatch(): void {
-  // Reserved for per-patch hooks; no registrars in core yet.
+export function runWillPatch(host: HookHost): void {
+  for (const fn of host.willPatch) {
+    fn();
+  }
 }
 
-export function runPatched(): void {
-  // Reserved for per-patch hooks; no registrars in core yet.
+export function runPatched(host: HookHost): void {
+  for (const fn of host.patched) {
+    fn();
+  }
 }
 
 export { onMount, onWillUnmount } from "./hooks.js";

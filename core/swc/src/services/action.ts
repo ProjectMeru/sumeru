@@ -155,7 +155,7 @@ export class ActionService {
     );
     this.closeDialog();
     const view = new FormView({ payload, inDialog: true }, env);
-    view.setup?.();
+    view.callSetup();
     this.dialogView = view;
     const title = payload.arch.title || payload.arch.model || "Wizard";
     void env.services.dialog.openHost(title, view.render()).then(() => {

@@ -7,7 +7,7 @@ export class ShellLayout extends SwcComponent {
 
   override setup(): void {
     this.workspaceRouter = new WorkspaceRouter({}, this.env);
-    this.workspaceRouter.setup?.();
+    this.workspaceRouter.callSetup();
 
     if (this.env.bootstrap.busEnabled) {
       this.env.services.bus.connect();

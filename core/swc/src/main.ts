@@ -21,7 +21,9 @@ import { KanbanView } from "./views/kanban/KanbanView.js";
 import { PivotView } from "./views/pivot/PivotView.js";
 import { GraphView } from "./views/graph/GraphView.js";
 import { CalendarView } from "./views/calendar/CalendarView.js";
-import { StubView } from "./views/advanced/stub-view.js";
+import { GanttView } from "./views/gantt/GanttView.js";
+import { MapView } from "./views/map/MapView.js";
+import { CohortView } from "./views/cohort/CohortView.js";
 import { loadTranslations } from "./i18n/translate.js";
 import { mountDebugPanel } from "./devtools/debug.js";
 import { initDevtoolsBridge } from "./devtools/bridge.js";
@@ -33,9 +35,9 @@ const VIEW_CONSTRUCTORS = {
   pivot: PivotView,
   graph: GraphView,
   calendar: CalendarView,
-  gantt: StubView,
-  map: StubView,
-  cohort: StubView,
+  gantt: GanttView,
+  map: MapView,
+  cohort: CohortView,
 } satisfies Record<string, ViewConstructor>;
 
 function registerCore(): void {

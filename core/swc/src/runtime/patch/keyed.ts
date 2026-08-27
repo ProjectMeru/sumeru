@@ -12,7 +12,11 @@ export function collectKeyedChildren(container: HTMLElement): Map<string, HTMLEl
 
 export function patchKeyedChildren(
   container: HTMLElement,
-  items: Array<{ key: string; render: () => HTMLElement }>,
+  items: Array<{
+    key: string;
+    render: () => HTMLElement;
+    patch?: (element: HTMLElement) => HTMLElement;
+  }>,
 ): void {
   const prev = collectKeyedChildren(container);
   const nextKeys = new Set<string>();
@@ -23,6 +27,9 @@ export function patchKeyedChildren(
     let element = prev.get(item.key);
     if (!element) {
       element = item.render();
+      element.dataset.swcKey = item.key;
+    } else if (item.patch) {
+      element = item.patch(element);
       element.dataset.swcKey = item.key;
     }
     ordered.push(element);
