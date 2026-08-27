@@ -20,6 +20,7 @@ const (
 	WorkspaceSortParam     = "sort"
 	WorkspaceOffsetParam   = "offset"
 	WorkspaceGroupByParam  = "groupby"
+	WorkspaceDomainParam   = "domain"
 )
 
 // Workspace view_type values.
@@ -49,6 +50,7 @@ type WorkspaceQuery struct {
 	Sort     string
 	Offset   string
 	GroupBy  string
+	Domain   string
 }
 
 func setWorkspaceQueryString(query url.Values, param, value string) {
@@ -73,6 +75,7 @@ func (q WorkspaceQuery) values() url.Values {
 	setWorkspaceQueryString(query, WorkspaceSortParam, q.Sort)
 	setWorkspaceQueryString(query, WorkspaceOffsetParam, q.Offset)
 	setWorkspaceQueryString(query, WorkspaceGroupByParam, q.GroupBy)
+	setWorkspaceQueryString(query, WorkspaceDomainParam, q.Domain)
 	return query
 }
 

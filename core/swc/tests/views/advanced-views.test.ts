@@ -63,6 +63,7 @@ describe("advanced views", () => {
       },
       testEnv(),
     );
+    view.callSetup();
     const el = view.render();
     const link = el.querySelector(".sum-map-link") as HTMLAnchorElement;
     expect(link.href).toContain("openstreetmap.org");
@@ -84,6 +85,7 @@ describe("advanced views", () => {
       },
       testEnv(),
     );
+    view.callSetup();
     const el = view.render();
     expect(el.querySelector(".sum-cohort-table")?.textContent).toContain("2026-01");
     expect(el.querySelector(".sum-cohort-table")?.textContent).toContain("2026-02");

@@ -23,6 +23,7 @@ type workspaceRequest struct {
 	listSearch  string
 	model       string
 	listFilter  string
+	listDomain  string
 	listSort    string
 	listOffset  int
 	listGroupBy string
@@ -43,6 +44,7 @@ func parseWorkspaceRequest(r *http.Request, actionID int) workspaceRequest {
 		listSearch:  listSearchQuery(r),
 		model:       strings.TrimSpace(query.Get(workspaceModelParam)),
 		listFilter:  strings.TrimSpace(query.Get(workspaceFilterParam)),
+		listDomain:  strings.TrimSpace(query.Get(workspaceDomainParam)),
 		listSort:    strings.TrimSpace(query.Get(workspaceSortParam)),
 		listOffset:  offset,
 		listGroupBy: strings.TrimSpace(query.Get(workspaceGroupByParam)),
@@ -271,16 +273,26 @@ func loadViewModeData(ctx context.Context, viewRecord *render.ViewRecordData, re
 		viewRecord.ListSort = req.listSort
 		viewRecord.ListOffset = req.listOffset
 		viewRecord.ListFilter = req.listFilter
+		viewRecord.ListDomain = req.listDomain
+		viewRecord.ListGroupBy = req.listGroupBy
 		return loadWorkspaceListData(ctx, viewRecord, resolved.targetModel, actionData, resolved.view, req)
 	case workspaceViewModeKanban:
 		viewRecord.ListSearchQuery = req.listSearch
 		viewRecord.ListFilter = req.listFilter
+		viewRecord.ListDomain = req.listDomain
+		viewRecord.ListGroupBy = req.listGroupBy
 		return loadWorkspaceKanbanData(ctx, viewRecord, resolved, actionData, req)
 	case workspaceViewModePivot:
+		viewRecord.ListSearchQuery = req.listSearch
+		viewRecord.ListFilter = req.listFilter
+		viewRecord.ListDomain = req.listDomain
+		viewRecord.ListGroupBy = req.listGroupBy
 		return loadWorkspacePivotData(ctx, viewRecord, resolved, actionData, req)
 	case workspaceViewModeGraph, workspaceViewModeCalendar, workspaceViewModeGantt, workspaceViewModeMap, workspaceViewModeCohort:
 		viewRecord.ListSearchQuery = req.listSearch
 		viewRecord.ListFilter = req.listFilter
+		viewRecord.ListDomain = req.listDomain
+		viewRecord.ListGroupBy = req.listGroupBy
 		return loadWorkspaceCollectionData(ctx, viewRecord, resolved.targetModel, actionData, resolved.view, req, maxWorkspaceListRows)
 	default:
 		return nil
@@ -327,8 +339,16 @@ func loadWorkspaceFormRecord(ctx context.Context, targetModel, recordIDRaw strin
 
 func loadWorkspaceListData(ctx context.Context, viewRecord *render.ViewRecordData, targetModel string, actionData map[string]interface{}, view *parser.View, req workspaceRequest) error {
 	searchView := loadSearchView(ctx, targetModel)
-	domain := workspaceListDomain(ctx, actionData, view, searchView, req.listSearch, req.listFilter)
+	domain := workspaceListDomain(ctx, actionData, view, searchView, req.listSearch, req.listFilter, req.listDomain)
 	orderBy := orderByFromSortParam(req.listSort)
+	if gbFields := splitCommaSeparatedValues(req.listGroupBy); len(gbFields) > 0 {
+		gbOrder := strings.Join(gbFields, ", ")
+		if orderBy == "" {
+			orderBy = gbOrder
+		} else {
+			orderBy = gbOrder + ", " + orderBy
+		}
+	}
 	rows, err := orm.SearchPage(ctx, targetModel, domain, workspaceListPageSize, req.listOffset, orderBy)
 	if err != nil {
 		return fmt.Errorf("list load: %w", err)
@@ -344,7 +364,7 @@ func loadWorkspaceListData(ctx context.Context, viewRecord *render.ViewRecordDat
 
 func loadWorkspaceCollectionData(ctx context.Context, viewRecord *render.ViewRecordData, targetModel string, actionData map[string]interface{}, view *parser.View, req workspaceRequest, rowLimit int) error {
 	searchView := loadSearchView(ctx, targetModel)
-	domain := workspaceListDomain(ctx, actionData, view, searchView, req.listSearch, req.listFilter)
+	domain := workspaceListDomain(ctx, actionData, view, searchView, req.listSearch, req.listFilter, req.listDomain)
 	rows, err := orm.SearchLimit(ctx, targetModel, domain, rowLimit)
 	if err != nil {
 		return fmt.Errorf("collection load: %w", err)
@@ -355,7 +375,7 @@ func loadWorkspaceCollectionData(ctx context.Context, viewRecord *render.ViewRec
 
 func loadWorkspaceKanbanData(ctx context.Context, viewRecord *render.ViewRecordData, resolved *resolvedWorkspaceView, actionData map[string]interface{}, req workspaceRequest) error {
 	searchView := loadSearchView(ctx, resolved.targetModel)
-	domain := workspaceListDomain(ctx, actionData, resolved.view, searchView, req.listSearch, req.listFilter)
+	domain := workspaceListDomain(ctx, actionData, resolved.view, searchView, req.listSearch, req.listFilter, req.listDomain)
 	rows, err := orm.SearchLimit(ctx, resolved.targetModel, domain, maxWorkspaceKanbanRows)
 	if err != nil {
 		return fmt.Errorf("kanban load: %w", err)
@@ -363,7 +383,8 @@ func loadWorkspaceKanbanData(ctx context.Context, viewRecord *render.ViewRecordD
 
 	viewRecord.ListRows = rows
 	viewRecord.KanbanModel = resolved.targetModel
-	if columns, groupField, draggable := swcmeta.BuildKanbanColumns(ctx, resolved.view, rows); groupField != "" {
+	groupOverride := firstGroupByField(req.listGroupBy)
+	if columns, groupField, draggable := swcmeta.BuildKanbanColumns(ctx, resolved.view, rows, groupOverride); groupField != "" {
 		viewRecord.KanbanColumns = nil
 		viewRecord.KanbanGroupField = groupField
 		viewRecord.KanbanDraggable = draggable
@@ -379,7 +400,7 @@ func loadWorkspaceKanbanData(ctx context.Context, viewRecord *render.ViewRecordD
 
 func loadWorkspacePivotData(ctx context.Context, viewRecord *render.ViewRecordData, resolved *resolvedWorkspaceView, actionData map[string]interface{}, req workspaceRequest) error {
 	searchView := loadSearchView(ctx, resolved.targetModel)
-	domain := workspaceListDomain(ctx, actionData, resolved.view, searchView, req.listSearch, req.listFilter)
+	domain := workspaceListDomain(ctx, actionData, resolved.view, searchView, req.listSearch, req.listFilter, req.listDomain)
 	rows, err := orm.SearchLimit(ctx, resolved.targetModel, domain, maxWorkspaceListRows)
 	if err != nil {
 		return fmt.Errorf("pivot load: %w", err)
@@ -394,7 +415,7 @@ func loadWorkspacePivotData(ctx context.Context, viewRecord *render.ViewRecordDa
 }
 
 func searchWorkspaceRowsWithSearch(ctx context.Context, targetModel string, actionData map[string]interface{}, view *parser.View, searchQuery string, rowLimit int) ([]map[string]interface{}, error) {
-	domain := workspaceListDomain(ctx, actionData, view, nil, searchQuery, "")
+	domain := workspaceListDomain(ctx, actionData, view, nil, searchQuery, "", "")
 	return orm.SearchLimit(ctx, targetModel, domain, rowLimit)
 }
 

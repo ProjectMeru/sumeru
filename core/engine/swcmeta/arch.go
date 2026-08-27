@@ -93,30 +93,7 @@ func SerializeViewForUser(ctx context.Context, view *parser.View) ViewArch {
 }
 
 func serializeSearch(view *parser.View) *SearchMeta {
-	if view == nil || len(view.SearchFilter) == 0 {
-		return nil
-	}
-	out := &SearchMeta{Filters: make([]SearchFilterMeta, 0, len(view.SearchFilter))}
-	for _, f := range view.SearchFilter {
-		name := strings.TrimSpace(f.Name)
-		if name == "" {
-			continue
-		}
-		label := strings.TrimSpace(f.String)
-		if label == "" {
-			label = name
-		}
-		out.Filters = append(out.Filters, SearchFilterMeta{
-			Name:    name,
-			String:  label,
-			Domain:  strings.TrimSpace(f.Domain),
-			GroupBy: strings.TrimSpace(f.GroupBy),
-		})
-	}
-	if len(out.Filters) == 0 {
-		return nil
-	}
-	return out
+	return BuildSearchMeta(context.Background(), strings.TrimSpace(view.Model), view)
 }
 
 func formMetaForModel(model string) *FormMeta {

@@ -195,6 +195,8 @@ type ViewRecordData struct {
 	ListSort        string
 	ListOffset      int
 	ListFilter      string
+	ListDomain      string
+	ListGroupBy     string
 }
 
 // PivotData holds aggregated pivot table cells for HTML rendering.

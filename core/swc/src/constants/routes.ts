@@ -13,6 +13,7 @@ export const Q_FILTER = "filter";
 export const Q_SORT = "sort";
 export const Q_OFFSET = "offset";
 export const Q_GROUPBY = "groupby";
+export const Q_DOMAIN = "domain";
 export const EDIT_ENABLED = "1";
 
 export const VIEW_LIST = "list";
@@ -32,3 +33,4 @@ export const EXPORT_CSV_ROUTE = "/web/export/csv";
 export const EXPORT_PDF_ROUTE = "/web/export/pdf";
 export const BULK_TEMPLATE_ROUTE = "/web/bulk/template";
 export const BULK_UPLOAD_ROUTE = "/web/bulk/upload";
+export const SAVED_SEARCHES_ROUTE = "/web/swc/saved-searches";

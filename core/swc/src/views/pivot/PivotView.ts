@@ -1,19 +1,39 @@
 import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
 import type { SwcWorkspacePayload } from "../../types/workspace.js";
+import { VIEW_PIVOT } from "../../constants/routes.js";
+import { CollectionBarHost, mountCollectionBar } from "../shared/collection-bar-host.js";
 
 interface PivotViewProps {
   payload: SwcWorkspacePayload;
 }
 
 export class PivotView extends SwcComponent<PivotViewProps> {
+  private collectionBar!: CollectionBarHost;
+
+  override setup(): void {
+    this.collectionBar = mountCollectionBar(this.props.payload, VIEW_PIVOT, this.env);
+  }
+
+  override onPropsChanged(props: PivotViewProps): void {
+    this.collectionBar.updateProps({ payload: props.payload, viewType: VIEW_PIVOT });
+  }
+
+  override onWillUnmount(): void {
+    this.collectionBar.destroy();
+  }
+
   override template() {
     const pivot = this.props.payload.arch.pivot;
     if (!pivot) {
-      return html`<div class="sum-pivot-view sum-pivot-view--empty">No pivot data</div>`;
+      return html`<div class="sum-collection-view sum-pivot-view sum-pivot-view--empty">
+        ${this.collectionBar.renderOrPatch()}
+        No pivot data
+      </div>`;
     }
     return html`
-      <div class="sum-pivot-view">
+      <div class="sum-collection-view sum-pivot-view">
+        ${this.collectionBar.renderOrPatch()}
         <table class="sum-pivot-table">
           <thead>
             <tr>

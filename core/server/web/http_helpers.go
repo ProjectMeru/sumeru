@@ -22,6 +22,14 @@ func splitCommaSeparatedValues(raw string) []string {
 	return values
 }
 
+func firstGroupByField(raw string) string {
+	fields := splitCommaSeparatedValues(raw)
+	if len(fields) == 0 {
+		return ""
+	}
+	return fields[0]
+}
+
 func normalizeViewMode(viewMode string) string {
 	return strings.ToLower(strings.TrimSpace(viewMode))
 }

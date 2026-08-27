@@ -49,4 +49,18 @@ export class HttpService {
     }
     return (await res.json()) as T;
   }
+
+  async delete(url: string): Promise<void> {
+    const res = await fetch(url, {
+      method: "DELETE",
+      credentials: "same-origin",
+      headers: {
+        Accept: "application/json",
+        "X-CSRF-Token": this.csrfToken,
+      },
+    });
+    if (!res.ok) {
+      throw new SwcError(`DELETE ${url} failed: ${res.status}`, "http_delete");
+    }
+  }
 }

@@ -2,6 +2,8 @@ import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
 import type { SwcWorkspacePayload } from "../../types/workspace.js";
 import { onWillStart } from "../../runtime/lifecycle.js";
+import { VIEW_GRAPH } from "../../constants/routes.js";
+import { CollectionBarHost, mountCollectionBar } from "../shared/collection-bar-host.js";
 
 interface GraphViewProps {
   payload: SwcWorkspacePayload;
@@ -13,9 +15,20 @@ export class GraphView extends SwcComponent<GraphViewProps> {
   private measureField = "id";
   private groupField = "create_date";
   private chart = "bar";
+  private collectionBar!: CollectionBarHost;
 
   override setup(): void {
+    this.collectionBar = mountCollectionBar(this.props.payload, VIEW_GRAPH, this.env);
     onWillStart(() => this.load());
+  }
+
+  override onPropsChanged(props: GraphViewProps): void {
+    this.collectionBar.updateProps({ payload: props.payload, viewType: VIEW_GRAPH });
+    void this.load();
+  }
+
+  override onWillUnmount(): void {
+    this.collectionBar.destroy();
   }
 
   private async load(): Promise<void> {
@@ -54,7 +67,8 @@ export class GraphView extends SwcComponent<GraphViewProps> {
         stops.push(`${palette[index % palette.length]} ${start}% ${accumulatedPercent}%`);
       });
       return html`
-        <div class="sum-graph-view">
+        <div class="sum-collection-view sum-graph-view">
+          ${this.collectionBar.renderOrPatch()}
           <div class="sum-graph-pie" style=${`background:conic-gradient(${stops.join(",")})`}></div>
           <ul class="sum-graph-legend">
             ${this.groups.map(
@@ -68,7 +82,8 @@ export class GraphView extends SwcComponent<GraphViewProps> {
       `;
     }
     return html`
-      <div class="sum-graph-view">
+      <div class="sum-collection-view sum-graph-view">
+        ${this.collectionBar.renderOrPatch()}
         ${this.groups.map((group) => {
           const label = this.labelOf(group);
           const fieldValue = Number(group[this.measureField] ?? 0);

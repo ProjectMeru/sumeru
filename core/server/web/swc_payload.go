@@ -39,6 +39,8 @@ func buildSwcWorkspacePayload(
 		ListSort:         viewRecord.ListSort,
 		ListOffset:       viewRecord.ListOffset,
 		ListFilter:       viewRecord.ListFilter,
+		ListDomain:       viewRecord.ListDomain,
+		ListGroupBy:      viewRecord.ListGroupBy,
 		Record:           viewRecord.Record,
 		ListRows:         viewRecord.ListRows,
 		KanbanGroupField: viewRecord.KanbanGroupField,

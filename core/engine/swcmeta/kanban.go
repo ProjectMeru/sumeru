@@ -26,11 +26,15 @@ func kanbanExpanderKey(model, groupField string) string {
 }
 
 // BuildKanbanColumns groups records into columns for a kanban view.
-func BuildKanbanColumns(ctx context.Context, view *parser.View, rows []map[string]interface{}) ([]KanbanColumn, string, bool) {
+// groupOverride, when set, replaces the view default_group_by field.
+func BuildKanbanColumns(ctx context.Context, view *parser.View, rows []map[string]interface{}, groupOverride string) ([]KanbanColumn, string, bool) {
 	if view == nil {
 		return nil, "", false
 	}
-	groupField := view.KanbanGroupField()
+	groupField := strings.TrimSpace(groupOverride)
+	if groupField == "" {
+		groupField = view.KanbanGroupField()
+	}
 	if groupField == "" {
 		return nil, "", false
 	}

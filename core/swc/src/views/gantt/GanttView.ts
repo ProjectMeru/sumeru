@@ -2,8 +2,8 @@ import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
 import { forEach } from "../../template/helpers.js";
 import type { SwcWorkspacePayload } from "../../types/workspace.js";
-import { VIEW_FORM } from "../../constants/routes.js";
-import { useState, type StateBox } from "../../runtime/hooks.js";
+import { VIEW_FORM, VIEW_GANTT } from "../../constants/routes.js";
+import { CollectionBarHost, mountCollectionBar } from "../shared/collection-bar-host.js";
 
 interface GanttViewProps {
   payload: SwcWorkspacePayload;
@@ -19,13 +19,24 @@ function parseDate(raw: unknown): Date | null {
 }
 
 export class GanttView extends SwcComponent<GanttViewProps> {
-  private scale!: StateBox<GanttScale>;
-  private setScale!: (next: GanttScale) => void;
+  private scale: GanttScale = "week";
+  private collectionBar!: CollectionBarHost;
 
   override setup(): void {
-    const [scale, setScale] = useState<GanttScale>("week");
-    this.scale = scale;
-    this.setScale = setScale;
+    this.collectionBar = mountCollectionBar(this.props.payload, VIEW_GANTT, this.env);
+  }
+
+  override onPropsChanged(props: GanttViewProps): void {
+    this.collectionBar.updateProps({ payload: props.payload, viewType: VIEW_GANTT });
+  }
+
+  override onWillUnmount(): void {
+    this.collectionBar.destroy();
+  }
+
+  private setScale(next: GanttScale): void {
+    this.scale = next;
+    this.rerender();
   }
 
   private dateStartField(): string {
@@ -69,7 +80,7 @@ export class GanttView extends SwcComponent<GanttViewProps> {
       const now = Date.now();
       return { start: now, end: now + 86400000 * 7 };
     }
-    const pad = this.scale.value === "day" ? 86400000 : this.scale.value === "week" ? 86400000 * 7 : 86400000 * 30;
+    const pad = this.scale === "day" ? 86400000 : this.scale === "week" ? 86400000 * 7 : 86400000 * 30;
     return { start: min - pad, end: max + pad };
   }
 
@@ -81,14 +92,15 @@ export class GanttView extends SwcComponent<GanttViewProps> {
     const rows = this.props.payload.records ?? [];
 
     return html`
-      <div class="sum-gantt-view">
+      <div class="sum-collection-view sum-gantt-view">
+        ${this.collectionBar.renderOrPatch()}
         <div class="sum-gantt-toolbar">
           <h2>${this.props.payload.arch.title ?? "Gantt"}</h2>
           <div class="sum-gantt-scale">
             ${(["day", "week", "month"] as GanttScale[]).map(
               (scale) => html`<button
                 type="button"
-                class=${this.scale.value === scale ? "sum-btn sum-btn--secondary" : "sum-btn sum-btn--ghost"}
+                class=${this.scale === scale ? "sum-btn sum-btn--secondary" : "sum-btn sum-btn--ghost"}
                 @click=${() => this.setScale(scale)}
               >${scale}</button>`,
             )}

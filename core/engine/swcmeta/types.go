@@ -20,6 +20,9 @@ type WorkspacePayload struct {
 	ListSort      string                   `json:"listSort,omitempty"`
 	ListOffset    int                      `json:"listOffset,omitempty"`
 	ListFilter    string                   `json:"listFilter,omitempty"`
+	ListDomain    string                   `json:"listDomain,omitempty"`
+	ListGroupBy   string                   `json:"listGroupBy,omitempty"`
+	Favorites     []SavedSearchMeta        `json:"favorites,omitempty"`
 	FormBaseQuery string                   `json:"formBaseQuery,omitempty"`
 	Defaults      map[string]interface{}   `json:"defaults,omitempty"`
 }
@@ -180,7 +183,20 @@ type SearchFilterMeta struct {
 }
 
 type SearchMeta struct {
-	Filters []SearchFilterMeta `json:"filters"`
+	Filters       []SearchFilterMeta `json:"filters,omitempty"`
+	SearchFields  []ArchField        `json:"searchFields,omitempty"`
+	FilterFields  []ArchField        `json:"filterFields,omitempty"`
+	GroupByFields []ArchField        `json:"groupByFields,omitempty"`
+}
+
+type SavedSearchMeta struct {
+	ID        int    `json:"id"`
+	Name      string `json:"name"`
+	Search    string `json:"search,omitempty"`
+	Filter    string `json:"filter,omitempty"`
+	Domain    string `json:"domain,omitempty"`
+	GroupBy   string `json:"groupBy,omitempty"`
+	IsDefault bool   `json:"isDefault,omitempty"`
 }
 
 type GraphMeta struct {

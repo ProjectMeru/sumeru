@@ -2,7 +2,6 @@ import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
 import type { SwcWorkspacePayload } from "../../types/workspace.js";
 import { ListView } from "../list/ListView.js";
-import { useEffect } from "../../runtime/hooks.js";
 import { SwcError } from "../../runtime/error.js";
 import { registry, type ViewConstructor } from "../../runtime/registry.js";
 import { logWorkspacePayload, logViewArch } from "../../devtools/debug.js";
@@ -20,48 +19,58 @@ export class WorkspaceRouter extends SwcComponent {
   private error = "";
   private activeView: ViewInstance | null = null;
   private activeViewType = "";
+  private onPopState: (() => void) | null = null;
+  private unsubActionClosed: (() => void) | null = null;
+  private unsubRecordUpdated: (() => void) | null = null;
 
   override setup(): void {
-    const load = async (): Promise<void> => {
-      this.loading = true;
-      this.error = "";
-      this.rerender();
-      try {
-        this.payload = await this.fetchWorkspace();
-        logWorkspacePayload("workspace", this.payload);
-        logViewArch(this.payload.arch);
-        syncWorkspaceViewTabs(this.payload.viewTabs);
-        this.syncView();
-      } catch (err) {
-        this.error = err instanceof SwcError ? err.message : String(err);
-      } finally {
-        this.loading = false;
-        this.rerender();
-      }
+    void this.load();
+  }
+
+  override onMount(): void {
+    this.onPopState = (): void => {
+      void this.load();
     };
-
-    void load();
-    useEffect(() => {
-      const onNav = (): void => void load();
-      window.addEventListener("popstate", onNav);
-      return () => window.removeEventListener("popstate", onNav);
+    window.addEventListener("popstate", this.onPopState);
+    this.unsubActionClosed = this.env.services.bus.subscribe(ACTION_CLOSED, () => {
+      void this.load();
     });
-
-    useEffect(() => {
-      return this.env.services.bus.subscribe(ACTION_CLOSED, () => {
-        void load();
-      });
+    this.unsubRecordUpdated = this.env.services.bus.subscribe(RECORD_UPDATED, (payload) => {
+      const msg = payload as { model?: string; id?: number };
+      if (!this.payload || !msg.model) return;
+      if (msg.model !== this.payload.model) return;
+      if (msg.id && this.payload.recordId && msg.id !== this.payload.recordId) return;
+      void this.load();
     });
+  }
 
-    useEffect(() => {
-      return this.env.services.bus.subscribe(RECORD_UPDATED, (payload) => {
-        const msg = payload as { model?: string; id?: number };
-        if (!this.payload || !msg.model) return;
-        if (msg.model !== this.payload.model) return;
-        if (msg.id && this.payload.recordId && msg.id !== this.payload.recordId) return;
-        void load();
-      });
-    });
+  override onWillUnmount(): void {
+    if (this.onPopState) {
+      window.removeEventListener("popstate", this.onPopState);
+      this.onPopState = null;
+    }
+    this.unsubActionClosed?.();
+    this.unsubActionClosed = null;
+    this.unsubRecordUpdated?.();
+    this.unsubRecordUpdated = null;
+  }
+
+  private async load(): Promise<void> {
+    this.loading = true;
+    this.error = "";
+    this.rerender();
+    try {
+      this.payload = await this.fetchWorkspace();
+      logWorkspacePayload("workspace", this.payload);
+      logViewArch(this.payload.arch);
+      syncWorkspaceViewTabs(this.payload.viewTabs);
+      this.syncView();
+    } catch (err) {
+      this.error = err instanceof SwcError ? err.message : String(err);
+    } finally {
+      this.loading = false;
+      this.rerender();
+    }
   }
 
   private async fetchWorkspace(): Promise<SwcWorkspacePayload> {

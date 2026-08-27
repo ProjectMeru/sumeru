@@ -58,10 +58,7 @@
 
 /* Legacy list container (if used by embedded markup). */
 .sum-list-view {
-  background: var(--sum-surface);
-  border-radius: var(--sum-radius-sm);
-  box-shadow: var(--sum-shadow-sm);
-  overflow: hidden;
+  background: var(--sum-bg);
 }
 
 .sum-list-view table {
@@ -71,29 +68,23 @@
 
 .sum-list-view table th {
   background: var(--sum-surface-alt);
-  padding: 0.75rem 1rem;
+  padding: 0.6rem 0.75rem;
   text-align: left;
   font-weight: var(--sum-font-weight-bold);
   font-size: var(--sum-font-size-sm);
-  text-transform: uppercase;
-  letter-spacing: var(--sum-letter-spacing-ui);
-  color: var(--sum-muted);
+  color: var(--sum-text);
   border-bottom: 1px solid var(--sum-line);
 }
 
 .sum-list-view table td {
-  padding: 0.75rem 1rem;
+  padding: 0.55rem 0.75rem;
   border-bottom: 1px solid var(--sum-line);
   font-size: var(--sum-font-size-root);
+  color: var(--sum-text);
 }
 
 .sum-list-view table tr:hover td {
   background-color: var(--sum-list-row-hover-bg);
-}
-
-.sum-list-view table tr:hover td:first-child {
-  box-shadow: inset 3px 0 0
-    color-mix(in srgb, var(--sum-header) 40%, transparent);
 }
 
 .sum-notebook {

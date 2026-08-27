@@ -1,7 +1,8 @@
 import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
 import type { SwcWorkspacePayload } from "../../types/workspace.js";
-import { VIEW_FORM } from "../../constants/routes.js";
+import { VIEW_CALENDAR, VIEW_FORM } from "../../constants/routes.js";
+import { CollectionBarHost, mountCollectionBar } from "../shared/collection-bar-host.js";
 
 interface CalendarViewProps {
   payload: SwcWorkspacePayload;
@@ -13,8 +14,10 @@ export class CalendarView extends SwcComponent<CalendarViewProps> {
   private dateField = "date_deadline";
   private year = 0;
   private month = 0;
+  private collectionBar!: CollectionBarHost;
 
   override setup(): void {
+    this.collectionBar = mountCollectionBar(this.props.payload, VIEW_CALENDAR, this.env);
     const now = new Date();
     this.year = now.getFullYear();
     this.month = now.getMonth();
@@ -26,6 +29,14 @@ export class CalendarView extends SwcComponent<CalendarViewProps> {
       const dateField = fields.find((f) => f.type === "date" || f.type === "datetime");
       if (dateField) this.dateField = dateField.name;
     }
+  }
+
+  override onPropsChanged(props: CalendarViewProps): void {
+    this.collectionBar.updateProps({ payload: props.payload, viewType: VIEW_CALENDAR });
+  }
+
+  override onWillUnmount(): void {
+    this.collectionBar.destroy();
   }
 
   private eventsByDay(): Map<string, Record<string, unknown>[]> {
@@ -85,7 +96,8 @@ export class CalendarView extends SwcComponent<CalendarViewProps> {
       year: "numeric",
     });
     return html`
-      <div class="sum-calendar-view">
+      <div class="sum-collection-view sum-calendar-view">
+        ${this.collectionBar.renderOrPatch()}
         <div class="sum-calendar-toolbar">
           <button type="button" class="sum-btn sum-btn--ghost" @click=${() => this.shiftMonth(-1)}>Prev</button>
           <h2 class="sum-calendar-title">${this.props.payload.arch.title ?? title}</h2>
