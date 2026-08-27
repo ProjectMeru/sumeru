@@ -1,23 +1,15 @@
 import { SwcComponent } from "../runtime/component.js";
 import { html } from "../template/html.js";
-import type { SwcArchField } from "../types/workspace.js";
-import type { SwcRecord } from "../model/record.js";
 import { fieldInputId, renderFieldShell } from "./field-shell.js";
+import type { FieldWidgetProps } from "./field-props.js";
+import { booleanFromUnknown } from "./field-value.js";
+import { checkboxCheckedFromEvent } from "./field-events.js";
+import { isFieldReadonly } from "../model/modifiers.js";
 
-interface FieldProps {
-  field: SwcArchField;
-  record: SwcRecord;
-  readonly: boolean;
-}
-
-function isChecked(val: unknown): boolean {
-  return val === true || val === 1 || val === "1" || val === "true";
-}
-
-export class BooleanToggleField extends SwcComponent<FieldProps> {
-  template() {
+export class BooleanToggleField extends SwcComponent<FieldWidgetProps> {
+  override template() {
     const { field, record, readonly } = this.props;
-    const checked = isChecked(record.get(field.name));
+    const checked = booleanFromUnknown(record.get(field.name));
     const id = fieldInputId(field);
 
     return renderFieldShell(
@@ -30,9 +22,9 @@ export class BooleanToggleField extends SwcComponent<FieldProps> {
           class="sum-field-input"
           name=${field.name}
           autocomplete="off"
-          checked=${checked ? "checked" : false}
-          disabled=${readonly || field.readonly ? "disabled" : undefined}
-          @change=${(ev: Event) => record.set(field.name, (ev.target as HTMLInputElement).checked)}
+          checked=${checked ? "checked" : ""}
+          disabled=${isFieldReadonly(field, record, readonly) ? "disabled" : undefined}
+          @change=${(event: Event) => record.set(field.name, checkboxCheckedFromEvent(event))}
         />
         <span>${checked ? "On" : "Off"}</span>
       </label>`,

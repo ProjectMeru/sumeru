@@ -1,4 +1,4 @@
-import { initPasswordMatchGroups } from "../../login/password-match.js";
+import { initPasswordMatchGroups } from "../../widgets/password-match.js";
 
 function onNotebookKeydown(ev: Event): void {
   if (!(ev instanceof KeyboardEvent)) return;

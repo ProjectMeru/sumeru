@@ -55,10 +55,27 @@ func SerializeViewForUser(ctx context.Context, view *parser.View) ViewArch {
 	if strings.EqualFold(view.Type, "graph") {
 		arch.Graph = &GraphMeta{Chart: view.GraphChart()}
 	}
-	if strings.EqualFold(view.Type, "calendar") || strings.TrimSpace(view.DateStart) != "" {
+	switch strings.ToLower(strings.TrimSpace(view.Type)) {
+	case "calendar":
 		arch.Calendar = &CalendarMeta{
 			DateStart: strings.TrimSpace(view.DateStart),
 			DateStop:  strings.TrimSpace(view.DateStop),
+		}
+	case "gantt":
+		arch.Gantt = &GanttMeta{
+			DateStart: strings.TrimSpace(view.DateStart),
+			DateStop:  strings.TrimSpace(view.DateStop),
+		}
+	case "map":
+		arch.Map = &MapMeta{
+			Latitude:  strings.TrimSpace(view.Latitude),
+			Longitude: strings.TrimSpace(view.Longitude),
+		}
+	case "cohort":
+		arch.Cohort = &CohortMeta{
+			DateStart: strings.TrimSpace(view.DateStart),
+			Interval:  strings.TrimSpace(view.Interval),
+			Measure:   strings.TrimSpace(view.Measure),
 		}
 	}
 	if len(view.SearchFilter) > 0 {

@@ -9,7 +9,3 @@ export class SwcError extends Error {
     this.details = details;
   }
 }
-
-export function isSwcError(err: unknown): err is SwcError {
-  return err instanceof SwcError;
-}

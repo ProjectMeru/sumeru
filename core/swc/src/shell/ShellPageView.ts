@@ -13,7 +13,7 @@ function appHref(action: string): string {
 }
 
 export class ShellPageView extends SwcComponent<ShellPageProps> {
-  template() {
+  override template() {
     const { boot, page } = this.props;
     if (page === "apps") {
       return html`<div class="sum-shell-page sum-shell-apps">

@@ -1,3 +1,5 @@
+import { patchKeyedChildren } from "../runtime/patch/keyed.js";
+
 export type TemplateValue =
   | string
   | number
@@ -11,10 +13,12 @@ export type TemplateValue =
 
 export type ComponentProps = Record<string, unknown>;
 
-export type EventHandler = (ev: Event) => void;
+export type EventHandler = (event: Event) => void;
 
 export interface TemplateResult {
   render(): HTMLElement;
+  patch(existing: HTMLElement): HTMLElement;
+  key?: string;
 }
 
 interface VNode {
@@ -25,7 +29,52 @@ interface VNode {
   key?: string;
 }
 
-type VNodeChild = VNode | string | HTMLElement;
+type VNodeChild = VNode | string | HTMLElement | TemplateResult;
+
+const ALLOWED_ATTRS = new Set([
+  "id",
+  "for",
+  "href",
+  "type",
+  "name",
+  "value",
+  "placeholder",
+  "autocomplete",
+  "step",
+  "tabindex",
+  "aria-label",
+  "aria-labelledby",
+  "aria-controls",
+  "title",
+  "role",
+  "aria-selected",
+  "checked",
+  "src",
+  "alt",
+  "rows",
+  "selected",
+  "method",
+  "action",
+  "enctype",
+  "accept",
+  "open",
+  "hidden",
+  "disabled",
+  "target",
+  "rel",
+]);
+
+const elementHandlers = new WeakMap<HTMLElement, Record<string, EventHandler>>();
+
+function isVNode(node: VNodeChild): node is VNode {
+  return (
+    typeof node === "object" &&
+    node !== null &&
+    !(node instanceof HTMLElement) &&
+    !isTemplateResult(node) &&
+    "tag" in node
+  );
+}
 
 const VOID_ELEMENTS = new Set([
   "area",
@@ -44,20 +93,22 @@ const VOID_ELEMENTS = new Set([
   "wbr",
 ]);
 
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+export function isTemplateResult(value: unknown): value is TemplateResult {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "render" in value &&
+    typeof (value as TemplateResult).render === "function" &&
+    typeof (value as TemplateResult).patch === "function"
+  );
 }
 
 function flattenValues(values: TemplateValue[]): VNodeChild[] {
   const out: VNodeChild[] = [];
   for (const v of values) {
     if (v == null || v === false) continue;
-    if (typeof v === "object" && "render" in v && typeof (v as TemplateResult).render === "function") {
-      out.push((v as TemplateResult).render());
+    if (isTemplateResult(v)) {
+      out.push(v);
       continue;
     }
     if (v instanceof HTMLElement) {
@@ -68,6 +119,7 @@ function flattenValues(values: TemplateValue[]): VNodeChild[] {
       out.push(...flattenValues(v as TemplateValue[]));
       continue;
     }
+    if (typeof v === "function") continue;
     out.push(String(v));
   }
   return out;
@@ -275,28 +327,16 @@ export function html(strings: TemplateStringsArray, ...values: TemplateValue[]):
 
   return {
     render(): HTMLElement {
-      const root = document.createElement("div");
-      root.style.display = "contents";
-      for (const node of vnodes) {
-        if (typeof node === "string") {
-          root.appendChild(document.createTextNode(node));
-          continue;
-        }
-        if (node instanceof HTMLElement) {
-          root.appendChild(node);
-          continue;
-        }
-        root.appendChild(renderVNode(node));
-      }
-      if (root.childNodes.length === 1 && root.firstElementChild) {
-        return root.firstElementChild as HTMLElement;
-      }
-      return root;
+      return materialize(vnodes);
+    },
+    patch(existing: HTMLElement): HTMLElement {
+      return patchRoot(existing, vnodes);
     },
   };
 }
 
 function applyStyle(el: HTMLElement, raw: string): void {
+  el.style.cssText = "";
   for (const part of raw.split(";")) {
     const idx = part.indexOf(":");
     if (idx === -1) continue;
@@ -306,66 +346,192 @@ function applyStyle(el: HTMLElement, raw: string): void {
   }
 }
 
-function renderVNode(vn: VNode): HTMLElement {
-  const el = document.createElement(vn.tag);
-  if (vn.key) el.dataset.swcKey = vn.key;
-  for (const [k, v] of Object.entries(vn.attrs)) {
-    if (k.startsWith("@")) {
+function applyAttrs(el: HTMLElement, attrs: Record<string, string>, key?: string): void {
+  if (key) el.dataset.swcKey = key;
+  const nextNames = new Set<string>();
+  const classes: string[] = [];
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k.startsWith("@") || k === "key") continue;
+    if (k.startsWith(".")) {
+      classes.push(k.slice(1));
       continue;
     }
-    if (k.startsWith(".")) {
-      el.classList.add(k.slice(1));
-    } else if (k === "class" && v) {
+    if (k === "class") {
       for (const c of v.split(/\s+/)) {
-        if (c) el.classList.add(c);
+        if (c) classes.push(c);
       }
-    } else if (k === "style" && v) {
+      continue;
+    }
+    if (k === "style") {
       applyStyle(el, v);
-    } else if (
-      k.startsWith("data-") ||
-      k === "id" ||
-      k === "for" ||
-      k === "href" ||
-      k === "type" ||
-      k === "name" ||
-      k === "value" ||
-      k === "placeholder" ||
-      k === "autocomplete" ||
-      k === "step" ||
-      k === "tabindex" ||
-      k === "aria-label" ||
-      k === "aria-labelledby" ||
-      k === "aria-controls" ||
-      k === "title" ||
-      k === "role" ||
-      k === "aria-selected" ||
-      k === "checked" ||
-      k === "src" ||
-      k === "alt" ||
-      k === "rows" ||
-      k === "selected" ||
-      k === "method" ||
-      k === "action" ||
-      k === "enctype" ||
-      k === "accept" ||
-      k === "open" ||
-      k === "hidden" ||
-      k === "disabled"
-    ) {
+      nextNames.add("style");
+      continue;
+    }
+    if (k.startsWith("data-") || ALLOWED_ATTRS.has(k)) {
       el.setAttribute(k, v);
+      nextNames.add(k);
     }
   }
-  for (const [event, handler] of Object.entries(vn.handlers)) {
-    el.addEventListener(event, handler);
+  if (classes.length > 0) {
+    el.className = classes.join(" ");
+    nextNames.add("class");
+  } else if (el.className) {
+    el.removeAttribute("class");
   }
-  for (const child of vn.children) {
-    if (typeof child === "string") {
-      el.insertAdjacentHTML("beforeend", escapeHtml(child));
-    } else if (child instanceof HTMLElement) {
-      el.appendChild(child);
+  for (const name of [...el.getAttributeNames()]) {
+    if (name === "class" || name === "style" || name.startsWith("data-swc")) continue;
+    if (!nextNames.has(name) && (name.startsWith("data-") || ALLOWED_ATTRS.has(name))) {
+      el.removeAttribute(name);
+    }
+  }
+}
+
+function syncHandlers(el: HTMLElement, next: Record<string, EventHandler>): void {
+  const previous = elementHandlers.get(el) ?? {};
+  for (const [event, handler] of Object.entries(previous)) {
+    if (next[event] !== handler) el.removeEventListener(event, handler);
+  }
+  for (const [event, handler] of Object.entries(next)) {
+    if (previous[event] !== handler) el.addEventListener(event, handler);
+  }
+  elementHandlers.set(el, { ...next });
+}
+
+function renderChild(node: VNodeChild): Node {
+  if (typeof node === "string") return document.createTextNode(node);
+  if (node instanceof HTMLElement) return node;
+  if (isTemplateResult(node)) return node.render();
+  return renderVNode(node);
+}
+
+function materialize(vnodes: VNodeChild[]): HTMLElement {
+  const root = document.createElement("div");
+  root.style.display = "contents";
+  for (const node of vnodes) {
+    root.appendChild(renderChild(node));
+  }
+  if (root.childNodes.length === 1 && root.firstElementChild) {
+    return root.firstElementChild as HTMLElement;
+  }
+  return root;
+}
+
+function childKey(node: VNodeChild): string | undefined {
+  if (typeof node === "string") return undefined;
+  if (node instanceof HTMLElement) return node.dataset.swcKey;
+  if (isTemplateResult(node)) return node.key;
+  return node.key;
+}
+
+function patchRoot(existing: HTMLElement, vnodes: VNodeChild[]): HTMLElement {
+  if (vnodes.length === 1) {
+    const only = vnodes[0];
+    if (isTemplateResult(only) && typeof only.patch === "function") {
+      return only.patch(existing);
+    }
+    if (only instanceof HTMLElement) {
+      if (only === existing) return existing;
+      return only;
+    }
+    if (isVNode(only) && existing.style.display !== "contents") {
+      if (existing.tagName.toLowerCase() === only.tag.toLowerCase()) {
+        patchVNode(existing, only);
+        return existing;
+      }
+    }
+  }
+  if (existing.style.display === "contents") {
+    patchChildren(existing, vnodes);
+    return existing;
+  }
+  return materialize(vnodes);
+}
+
+function patchVNode(el: HTMLElement, vn: VNode): void {
+  applyAttrs(el, vn.attrs, vn.key);
+  syncHandlers(el, vn.handlers);
+  patchChildren(el, vn.children);
+}
+
+function patchChildren(container: HTMLElement, children: VNodeChild[]): void {
+  const meaningful = children.filter((c) => c !== "" && c != null);
+  const keys = meaningful.map(childKey);
+  if (meaningful.length > 0 && keys.every((k) => k)) {
+    patchKeyedChildren(
+      container,
+      meaningful.map((child, index) => ({
+        key: keys[index] as string,
+        render: () => {
+          const node = renderChild(child);
+          return node instanceof HTMLElement ? node : wrapNode(node);
+        },
+        patch: (element: HTMLElement) => patchChildElement(element, child),
+      })),
+    );
+    return;
+  }
+
+  const existingNodes = [...container.childNodes];
+  let index = 0;
+  for (const child of meaningful) {
+    const current = existingNodes[index];
+    const next = patchOrCreate(current, child);
+    if (current && next === current) {
+      index += 1;
+      continue;
+    }
+    if (current) {
+      container.replaceChild(next, current);
     } else {
-      el.appendChild(renderVNode(child));
+      container.appendChild(next);
     }
+    index += 1;
+  }
+  while (container.childNodes.length > index) {
+    container.lastChild?.remove();
+  }
+}
+
+function wrapNode(node: Node): HTMLElement {
+  if (node instanceof HTMLElement) return node;
+  const span = document.createElement("span");
+  span.style.display = "contents";
+  span.appendChild(node);
+  return span;
+}
+
+function patchChildElement(existing: HTMLElement, child: VNodeChild): HTMLElement {
+  if (isTemplateResult(child)) return child.patch(existing);
+  if (child instanceof HTMLElement) return child;
+  if (isVNode(child) && existing.tagName.toLowerCase() === child.tag.toLowerCase()) {
+    patchVNode(existing, child);
+    return existing;
+  }
+  const rendered = renderChild(child);
+  return rendered instanceof HTMLElement ? rendered : wrapNode(rendered);
+}
+
+function patchOrCreate(current: ChildNode | undefined, child: VNodeChild): Node {
+  if (!current) return renderChild(child);
+  if (typeof child === "string") {
+    if (current.nodeType === Node.TEXT_NODE) {
+      if (current.textContent !== child) current.textContent = child;
+      return current;
+    }
+    return document.createTextNode(child);
+  }
+  if (current instanceof HTMLElement) {
+    return patchChildElement(current, child);
+  }
+  return renderChild(child);
+}
+
+function renderVNode(vn: VNode): HTMLElement {
+  const el = document.createElement(vn.tag);
+  applyAttrs(el, vn.attrs, vn.key);
+  syncHandlers(el, vn.handlers);
+  for (const child of vn.children) {
+    el.appendChild(renderChild(child));
   }
   return el;
 }

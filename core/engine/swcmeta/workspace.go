@@ -59,7 +59,7 @@ func BuildWorkspacePayload(
 	if rec.Pivot != nil {
 		arch.Pivot = rec.Pivot
 	}
-	if selectedMode == "list" || selectedMode == "kanban" || selectedMode == "graph" || selectedMode == "calendar" || selectedMode == "pivot" {
+	if selectedMode == "list" || selectedMode == "kanban" || selectedMode == "graph" || selectedMode == "calendar" || selectedMode == "pivot" || selectedMode == "gantt" || selectedMode == "map" || selectedMode == "cohort" {
 		if arch.Search == nil {
 			arch.Search = loadSearchMeta(ctx, rec.ResModel)
 		}

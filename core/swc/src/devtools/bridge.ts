@@ -1,7 +1,7 @@
 import type { TemplateSourceMeta } from "../template/sum/meta.js";
 
 export interface DevtoolsComponent {
-  el: HTMLElement | null;
+  rootElement: HTMLElement | null;
   constructor: { name: string };
   props: object;
 }
@@ -16,8 +16,8 @@ export interface ComponentRecord {
 export interface SwcDevtoolsGlobal {
   apps: unknown[];
   components: ComponentRecord[];
-  getComponentForElement(el: Element): ComponentRecord | null;
-  getTemplateSource(comp: ComponentRecord): TemplateSourceMeta | null;
+  getComponentForElement(element: Element): ComponentRecord | null;
+  getTemplateSource(component: ComponentRecord): TemplateSourceMeta | null;
 }
 
 let nextId = 1;
@@ -30,34 +30,34 @@ declare global {
   }
 }
 
-export function registerComponent(comp: DevtoolsComponent, parentId: number | null = null): number {
+export function registerComponent(component: DevtoolsComponent, parentId: number | null = null): number {
   const id = nextId++;
-  const name = comp.constructor.name || "Anonymous";
-  const record: ComponentRecord = { id, name, component: comp, parentId };
+  const name = component.constructor.name || "Anonymous";
+  const record: ComponentRecord = { id, name, component, parentId };
   components.set(id, record);
-  if (comp.el) byElement.set(comp.el, id);
+  if (component.rootElement) byElement.set(component.rootElement, id);
   publish();
   return id;
 }
 
-export function unregisterComponent(comp: DevtoolsComponent): void {
-  for (const [id, rec] of components) {
-    if (rec.component === comp) {
+export function unregisterComponent(component: DevtoolsComponent): void {
+  for (const [id, record] of components) {
+    if (record.component === component) {
       components.delete(id);
-      if (comp.el) byElement.delete(comp.el);
+      if (component.rootElement) byElement.delete(component.rootElement);
       publish();
       return;
     }
   }
 }
 
-export function getComponentForElement(el: Element): ComponentRecord | null {
-  const id = byElement.get(el);
+export function getComponentForElement(element: Element): ComponentRecord | null {
+  const id = byElement.get(element);
   if (id === undefined) return null;
   return components.get(id) ?? null;
 }
 
-export function getTemplateSource(_comp: ComponentRecord): TemplateSourceMeta | null {
+export function getTemplateSource(_component: ComponentRecord): TemplateSourceMeta | null {
   return null;
 }
 

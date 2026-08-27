@@ -1,0 +1,7 @@
+<div class="sum-demo">
+  <span t-if="n === 1">one</span>
+  <span t-elif="n === 2">two</span>
+  <span t-else="">other</span>
+  <section t-out="markup"></section>
+  <input t-model="name" />
+</div>

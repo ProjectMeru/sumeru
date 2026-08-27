@@ -24,6 +24,35 @@ func TestSerializeViewListArch(t *testing.T) {
 	}
 }
 
+func TestSerializeGanttMapCohortArch(t *testing.T) {
+	gantt, err := parser.ParseViewFromArch(`<gantt date_start="date_start" date_stop="date_end"><field name="name"/></gantt>`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ganttOut := swcmeta.SerializeView(gantt)
+	if ganttOut.Gantt == nil || ganttOut.Gantt.DateStart != "date_start" || ganttOut.Calendar != nil {
+		t.Fatalf("gantt meta: %+v", ganttOut)
+	}
+
+	mp, err := parser.ParseViewFromArch(`<map latitude="lat" longitude="lng"><field name="name"/></map>`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mapOut := swcmeta.SerializeView(mp)
+	if mapOut.Map == nil || mapOut.Map.Latitude != "lat" || mapOut.Map.Longitude != "lng" {
+		t.Fatalf("map meta: %+v", mapOut)
+	}
+
+	cohort, err := parser.ParseViewFromArch(`<cohort date_start="create_date" interval="week" measure="amount"><field name="name"/></cohort>`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cohortOut := swcmeta.SerializeView(cohort)
+	if cohortOut.Cohort == nil || cohortOut.Cohort.Interval != "week" || cohortOut.Cohort.Measure != "amount" {
+		t.Fatalf("cohort meta: %+v", cohortOut)
+	}
+}
+
 func TestBuildWorkspacePayloadRedacts(t *testing.T) {
 	ctx := context.Background()
 	rec := swcmeta.ViewRecordInput{

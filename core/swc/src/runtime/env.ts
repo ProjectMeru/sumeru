@@ -25,8 +25,4 @@ export class SwcEnv {
     this.bootstrap = bootstrap;
     this.services = services;
   }
-
-  get<T extends keyof SwcServices>(name: T): SwcServices[T] {
-    return this.services[name];
-  }
 }
