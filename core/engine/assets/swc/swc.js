@@ -5014,21 +5014,6 @@ var SumeruSWC = (() => {
       })}
     </tr>`;
     }
-    patch() {
-      const tbody = this.rootElement?.querySelector("tbody");
-      if (tbody) {
-        const rows = this.pageRows();
-        patchKeyedChildren(
-          tbody,
-          rows.map((row) => ({
-            key: String(row.id ?? 0),
-            render: () => this.renderRow(row).render()
-          }))
-        );
-        return;
-      }
-      super.patch();
-    }
     template() {
       const payload = this.props.payload;
       const cols = this.columns();
