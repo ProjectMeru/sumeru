@@ -26,12 +26,6 @@ func rpcOnchange(ctx context.Context, model string, args json.RawMessage) (inter
 	if field == "" {
 		return nil, newRPCError(CodeInvalidArgs, "field name is required", map[string]interface{}{"method": "onchange"})
 	}
-	// A field without a registered onchange handler is a normal no-op, not an
-	// error. Return an empty result so the client can apply onchange on every
-	// field change without tripping over missing handlers.
-	if !orm.HasOnchange(model, field) {
-		return orm.OnchangeResult{}, nil
-	}
 	result, err := orm.RunOnchange(ctx, model, field, values)
 	if err != nil {
 		return nil, newRPCError(CodeMethodNotAllowed, err.Error(), map[string]interface{}{"method": "onchange", "field": field})
