@@ -26,51 +26,9 @@ var SumeruSWC = (() => {
     registry: () => registry
   });
 
-  // src/runtime/patch/keyed.ts
-  function collectKeyedChildren(container) {
-    const map = /* @__PURE__ */ new Map();
-    for (const child of container.children) {
-      if (!(child instanceof HTMLElement)) continue;
-      const key = child.dataset.swcKey;
-      if (key) map.set(key, child);
-    }
-    return map;
-  }
-  function patchKeyedChildren(container, items) {
-    const prev = collectKeyedChildren(container);
-    const nextKeys = /* @__PURE__ */ new Set();
-    const ordered = [];
-    for (const item of items) {
-      nextKeys.add(item.key);
-      let el = prev.get(item.key);
-      if (!el) {
-        el = item.render();
-        el.dataset.swcKey = item.key;
-      }
-      ordered.push(el);
-    }
-    for (const [key, el] of prev) {
-      if (!nextKeys.has(key)) el.remove();
-    }
-    for (let i = 0; i < ordered.length; i++) {
-      const el = ordered[i];
-      const current = container.children[i];
-      if (current !== el) {
-        container.insertBefore(el, current ?? null);
-      }
-    }
-    while (container.children.length > ordered.length) {
-      container.lastElementChild?.remove();
-    }
-  }
-
   // src/runtime/hooks.ts
   var mountCallbacks = [];
   var unmountCallbacks = [];
-  var activeComponent = null;
-  function setActiveComponent(comp) {
-    activeComponent = comp;
-  }
   function runMountCallbacks() {
     for (const fn of mountCallbacks.splice(0)) {
       fn();
@@ -87,14 +45,6 @@ var SumeruSWC = (() => {
   function onWillUnmount(fn) {
     unmountCallbacks.push(fn);
   }
-  function useState(initial) {
-    let value = initial;
-    const set = (next) => {
-      value = typeof next === "function" ? next(value) : next;
-      activeComponent?.schedulePatch();
-    };
-    return [() => value, set];
-  }
   function useEffect(fn) {
     onMount(() => {
       const cleanup = fn();
@@ -105,59 +55,49 @@ var SumeruSWC = (() => {
   }
 
   // src/runtime/lifecycle.ts
-  var willPatchCallbacks = [];
-  var patchedCallbacks = [];
   var willStartCallbacks = [];
-  var willUpdatePropsCallbacks = [];
-  var activeLifecycle = null;
-  function lifecycleTarget() {
-    return activeLifecycle ?? {
-      willPatch: willPatchCallbacks,
-      patched: patchedCallbacks,
-      willStart: willStartCallbacks,
-      willUpdateProps: willUpdatePropsCallbacks
-    };
+  function onWillStart(fn) {
+    willStartCallbacks.push(fn);
+  }
+  async function runWillStart() {
+    for (const fn of willStartCallbacks.splice(0)) {
+      await fn();
+    }
   }
   function runWillPatch() {
-    for (const fn of lifecycleTarget().willPatch.splice(0)) {
-      fn();
-    }
   }
   function runPatched() {
-    for (const fn of lifecycleTarget().patched.splice(0)) {
-      fn();
-    }
   }
 
   // src/devtools/bridge.ts
   var nextId = 1;
   var components = /* @__PURE__ */ new Map();
   var byElement = /* @__PURE__ */ new WeakMap();
-  function registerComponent(comp, parentId = null) {
+  function registerComponent(component, parentId = null) {
     const id = nextId++;
-    const name = comp.constructor.name || "Anonymous";
-    const record = { id, name, component: comp, parentId };
+    const name = component.constructor.name || "Anonymous";
+    const record = { id, name, component, parentId };
     components.set(id, record);
-    if (comp.el) byElement.set(comp.el, id);
+    if (component.rootElement) byElement.set(component.rootElement, id);
     publish();
     return id;
   }
-  function unregisterComponent(comp) {
-    for (const [id, rec] of components) {
-      if (rec.component === comp) {
+  function unregisterComponent(component) {
+    for (const [id, record] of components) {
+      if (record.component === component) {
         components.delete(id);
-        if (comp.el) byElement.delete(comp.el);
+        if (component.rootElement) byElement.delete(component.rootElement);
         publish();
         return;
       }
     }
   }
-  function getComponentForElement(el) {
-    const id = byElement.get(el);
+  function getComponentForElement(element) {
+    const id = byElement.get(element);
     if (id === void 0) return null;
     return components.get(id) ?? null;
   }
-  function getTemplateSource(_comp) {
+  function getTemplateSource(_component) {
     return null;
   }
   function publish() {
@@ -177,7 +117,7 @@ var SumeruSWC = (() => {
   var SwcComponent = class {
     props;
     env;
-    el = null;
+    rootElement = null;
     mounted = false;
     constructor(props, env) {
       this.props = props;
@@ -192,10 +132,22 @@ var SumeruSWC = (() => {
       this.onPropsChanged(next);
       this.patch();
     }
+    /** Re-render this component if it is still in the document. */
+    rerender() {
+      if (this.rootElement?.isConnected) this.patch();
+    }
+    /** Patch in place when mounted; otherwise produce a new root. */
+    renderOrPatch() {
+      if (this.rootElement?.isConnected) {
+        this.patch();
+        return this.rootElement;
+      }
+      return this.render();
+    }
     render() {
       const result = this.template();
       const root = result.render();
-      this.el = root;
+      this.rootElement = root;
       if (!this.mounted) {
         this.mounted = true;
         registerComponent(this);
@@ -203,27 +155,22 @@ var SumeruSWC = (() => {
       }
       return root;
     }
-    /** Patch keyed tbody/list regions in-place when possible. */
-    patchKeyedTbody(tbody, rows) {
-      if (!tbody) return false;
-      patchKeyedChildren(tbody, rows);
-      return true;
-    }
     patch() {
-      if (!this.el?.parentElement) return;
+      if (!this.rootElement?.parentElement) return;
       runWillPatch();
-      const parent = this.el.parentElement;
-      const oldEl = this.el;
+      const parent = this.rootElement.parentElement;
+      const previousRoot = this.rootElement;
       const next = this.template().render();
-      parent.replaceChild(next, oldEl);
-      this.el = next;
+      parent.replaceChild(next, previousRoot);
+      this.rootElement = next;
       runPatched();
+      this.afterPatch?.();
     }
     destroy() {
       this.onWillUnmount?.();
       unregisterComponent(this);
-      this.el?.remove();
-      this.el = null;
+      this.rootElement?.remove();
+      this.rootElement = null;
       this.mounted = false;
     }
   };
@@ -552,39 +499,29 @@ var SumeruSWC = (() => {
     Root;
     rootEl = null;
     component = null;
-    scheduled = false;
     constructor(env, Root) {
       this.env = env;
       this.Root = Root;
     }
     static start(mountEl, env, Root) {
       const app = new _SwcApp(env, Root);
-      app.mount(mountEl);
+      void app.mount(mountEl);
       return app;
     }
-    mount(el) {
-      this.rootEl = el;
-      this.renderRoot();
+    async mount(element) {
+      this.rootEl = element;
+      await this.renderRoot();
     }
-    schedulePatch() {
-      if (this.scheduled) return;
-      this.scheduled = true;
-      requestAnimationFrame(() => {
-        this.scheduled = false;
-        this.renderRoot();
-      });
-    }
-    renderRoot() {
+    async renderRoot() {
       if (!this.rootEl) return;
       try {
         if (!this.component) {
           this.component = new this.Root({}, this.env);
           this.component.setup?.();
-          setActiveComponent({ schedulePatch: () => this.schedulePatch() });
+          await runWillStart();
           runMountCallbacks();
           this.rootEl.replaceChildren(this.component.render());
         } else {
-          setActiveComponent({ schedulePatch: () => this.schedulePatch() });
           this.component.patch();
         }
       } catch (err) {
@@ -596,7 +533,7 @@ var SumeruSWC = (() => {
       runUnmountCallbacks();
       this.component?.destroy();
       this.component = null;
-      this.renderRoot();
+      void this.renderRoot();
     }
     destroy() {
       runUnmountCallbacks();
@@ -613,9 +550,6 @@ var SumeruSWC = (() => {
     constructor(bootstrap2, services) {
       this.bootstrap = bootstrap2;
       this.services = services;
-    }
-    get(name) {
-      return this.services[name];
     }
   };
 
@@ -992,6 +926,19 @@ var SumeruSWC = (() => {
     }
   };
 
+  // src/widgets/field-events.ts
+  function inputValueFromEvent(event) {
+    const target = event.target;
+    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) {
+      return target.value;
+    }
+    return "";
+  }
+  function checkboxCheckedFromEvent(event) {
+    const target = event.target;
+    return target instanceof HTMLInputElement ? target.checked : false;
+  }
+
   // src/services/router.ts
   var RouterService = class _RouterService {
     static searchParams(route) {
@@ -1013,8 +960,8 @@ var SumeruSWC = (() => {
     static buildUrl(route) {
       return `${WEB_ROUTE}?${_RouterService.searchParams(route).toString()}`;
     }
-    parse(location = window.location) {
-      const q = new URLSearchParams(location.search);
+    parse(location2 = window.location) {
+      const q = new URLSearchParams(location2.search);
       return {
         actionId: Number(q.get(Q_ACTION) ?? "0"),
         menuId: q.get(Q_MENU_ID) ?? "",
@@ -1054,7 +1001,7 @@ var SumeruSWC = (() => {
     a.textContent = label;
     return a;
   }
-  function visibleFieldNames(fields) {
+  function exportFieldNamesCsv(fields) {
     return fields.map((f) => f.name).filter(Boolean).join(",");
   }
   function newRecordUrl(payload) {
@@ -1086,8 +1033,8 @@ var SumeruSWC = (() => {
         class="sum-list-search"
         placeholder="Search…"
         value=${value}
-        @keydown=${(ev) => ev.key === "Enter" && onSearch()}
-        @input=${(ev) => onInput(ev.target.value)}
+        @keydown=${(event) => event.key === "Enter" && onSearch()}
+        @input=${(event) => onInput(inputValueFromEvent(event))}
       />
     </div>
   `;
@@ -1095,29 +1042,29 @@ var SumeruSWC = (() => {
   function renderNewButton(payload) {
     return linkButton(newRecordUrl(payload), "New", "sum-btn sum-list-btn-new");
   }
-  function renderCollectionToolbar(opts) {
-    const fields = visibleFieldNames((opts.payload.arch.fields ?? []).filter((f) => !f.invisible));
-    const reportActions = renderReportActions(opts.payload, fields);
-    const toolbarClass = opts.viewType === VIEW_KANBAN ? "sum-kanban-report-bar" : "sum-list-toolbar";
+  function renderCollectionToolbar(options) {
+    const fields = exportFieldNamesCsv((options.payload.arch.fields ?? []).filter((f) => !f.invisible));
+    const reportActions = renderReportActions(options.payload, fields);
+    const toolbarClass = options.viewType === VIEW_KANBAN ? "sum-kanban-report-bar" : "sum-list-toolbar";
     return html`
     <div class="sum-view-toolbar ${toolbarClass}">
       <div class="sum-view-toolbar-primary">
-        ${renderNewButton(opts.payload)}
-        ${renderSearchField(opts.search, opts.onSearch, opts.onInput)}
-        ${opts.extraPrimary ?? ""}
+        ${renderNewButton(options.payload)}
+        ${renderSearchField(options.search, options.onSearch, options.onInput)}
+        ${options.extraPrimary ?? ""}
       </div>
       ${reportActions ?? ""}
     </div>
   `;
   }
   function toolbarButton(label, className, onClick, disabled = false) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = className;
-    btn.textContent = label;
-    btn.disabled = disabled;
-    btn.addEventListener("click", onClick);
-    return btn;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = className;
+    button.textContent = label;
+    button.disabled = disabled;
+    button.addEventListener("click", onClick);
+    return button;
   }
   function resolveHeaderButtonClass(archClass) {
     const base = "sum-header-btn";
@@ -1150,7 +1097,7 @@ var SumeruSWC = (() => {
         <input type="hidden" name="fields" value=${fields} />
         <label class="sum-btn sum-btn--secondary sum-list-upload-label">
           Import CSV
-          <input type="file" name="file" accept=".csv,text/csv" class="sum-list-upload-input" @change=${(ev) => ev.target.form?.requestSubmit()} />
+          <input type="file" name="file" accept=".csv,text/csv" class="sum-list-upload-input" @change=${(event) => event.target.form?.requestSubmit()} />
         </label>
       </form>`
       );
@@ -1165,24 +1112,18 @@ var SumeruSWC = (() => {
   }
 
   // src/runtime/registry.ts
-  var Registry = class {
-    entries = /* @__PURE__ */ new Map();
-    category(name) {
-      if (!this.entries.has(name)) {
-        this.entries.set(name, /* @__PURE__ */ new Map());
-      }
-      return new CategoryRegistry(this.entries.get(name));
-    }
-    get(category, key) {
-      return this.entries.get(category)?.get(key);
-    }
-  };
+  function debugDuplicatesEnabled() {
+    return typeof location !== "undefined" && /(?:^|[?&])debug=1(?:&|$)/.test(location.search);
+  }
   var CategoryRegistry = class {
     constructor(map) {
       this.map = map;
     }
     map;
     add(key, value) {
+      if (this.map.has(key) && debugDuplicatesEnabled()) {
+        throw new Error(`Registry already has "${key}"`);
+      }
       this.map.set(key, value);
     }
     get(key) {
@@ -1190,6 +1131,24 @@ var SumeruSWC = (() => {
     }
     keys() {
       return [...this.map.keys()];
+    }
+  };
+  var Registry = class {
+    maps = {
+      fields: /* @__PURE__ */ new Map(),
+      views: /* @__PURE__ */ new Map(),
+      services: /* @__PURE__ */ new Map(),
+      main_components: /* @__PURE__ */ new Map()
+    };
+    category(name) {
+      const store = this.maps[name];
+      if (!store) throw new Error(`Unknown registry category: ${String(name)}`);
+      return new CategoryRegistry(store);
+    }
+    get(category, key) {
+      const store = this.maps[category];
+      if (!store) throw new Error(`Unknown registry category: ${String(category)}`);
+      return store.get(key);
     }
   };
   var registry = new Registry();
@@ -1296,83 +1255,14 @@ var SumeruSWC = (() => {
   </div>`;
   }
 
-  // src/widgets/DefaultField.ts
-  function inputTypeForField(field) {
-    if (field.widget === "email") return "email";
-    if (field.type === "integer" || field.type === "float" || field.type === "numeric") return "number";
-    if (field.type === "date") return "date";
-    if (field.type === "datetime") return "datetime-local";
-    return "text";
+  // src/widgets/field-value.ts
+  function booleanFromUnknown(value) {
+    return value === true || value === 1 || value === "1" || value === "true";
   }
-  function stepForField(field) {
-    if (field.type === "integer") return "1";
-    if (field.type === "float" || field.type === "numeric") return "any";
-    return void 0;
+  function stringFromUnknown(value) {
+    if (value == null || value === false) return "";
+    return String(value);
   }
-  function parseNumericValue(field, raw) {
-    if (raw === "") return null;
-    if (field.type === "integer") return Number.parseInt(raw, 10);
-    if (field.type === "float" || field.type === "numeric") return Number.parseFloat(raw);
-    return raw;
-  }
-  var DefaultField = class extends SwcComponent {
-    template() {
-      const { field, record, readonly } = this.props;
-      const val = String(record.get(field.name) ?? "");
-      const placeholder = fieldPlaceholder(field);
-      const inputType = inputTypeForField(field);
-      const step = stepForField(field);
-      const id = fieldInputId(field);
-      if (readonly || field.readonly) {
-        return renderFieldShell(
-          field,
-          field.type === "integer" || field.type === "float" || field.type === "numeric" ? fieldReadonlyInput(field, val, "text") : fieldReadonlyInput(field, val, inputType === "text" ? "text" : inputType),
-          { labelFor: id }
-        );
-      }
-      return renderFieldShell(
-        field,
-        html`<input
-        id=${id}
-        type=${inputType}
-        class="sum-field-input"
-        name=${field.name}
-        placeholder=${placeholder}
-        value=${val}
-        autocomplete=${fieldAutocomplete(field)}
-        ${step ? html`step=${step}` : ""}
-        @input=${(ev) => record.set(field.name, parseNumericValue(field, ev.target.value))}
-        @change=${() => record.notifyFieldChange(field.name)}
-      />`,
-        { labelFor: id }
-      );
-    }
-  };
-
-  // src/widgets/field-async.ts
-  var AsyncFieldController = class {
-    constructor(comp) {
-      this.comp = comp;
-    }
-    comp;
-    generation = 0;
-    begin() {
-      this.generation += 1;
-      return this.generation;
-    }
-    cancel() {
-      this.generation += 1;
-    }
-    refresh() {
-      if (this.comp.el?.parentElement) {
-        this.comp.patch();
-      }
-    }
-    finish(gen) {
-      if (gen !== this.generation) return;
-      this.refresh();
-    }
-  };
   function recordDisplayName(record, fieldName) {
     const named = record.get(`${fieldName}_name`);
     if (named != null && named !== "") return String(named);
@@ -1408,6 +1298,9 @@ var SumeruSWC = (() => {
   function isFieldVisible(field, record) {
     return !fieldModifiers(field, record).invisible;
   }
+  function isFieldReadonly(field, record, viewReadonly) {
+    return viewReadonly || fieldModifiers(field, record).readonly;
+  }
   function fieldDomain(field, record) {
     const fromRecord = record?.fieldDomains.get(field.name);
     if (fromRecord) return fromRecord;
@@ -1435,71 +1328,139 @@ var SumeruSWC = (() => {
     });
   }
 
+  // src/widgets/DefaultField.ts
+  function inputTypeForField(field) {
+    if (field.widget === "email") return "email";
+    if (field.type === "integer" || field.type === "float" || field.type === "numeric") return "number";
+    if (field.type === "date") return "date";
+    if (field.type === "datetime") return "datetime-local";
+    return "text";
+  }
+  function stepForField(field) {
+    if (field.type === "integer") return "1";
+    if (field.type === "float" || field.type === "numeric") return "any";
+    return void 0;
+  }
+  function parseNumericValue(field, raw) {
+    if (raw === "") return null;
+    if (field.type === "integer") return Number.parseInt(raw, 10);
+    if (field.type === "float" || field.type === "numeric") return Number.parseFloat(raw);
+    return raw;
+  }
+  var DefaultField = class extends SwcComponent {
+    template() {
+      const { field, record, readonly } = this.props;
+      const fieldValue = stringFromUnknown(record.get(field.name));
+      const placeholder = fieldPlaceholder(field);
+      const inputType = inputTypeForField(field);
+      const step = stepForField(field);
+      const id = fieldInputId(field);
+      if (isFieldReadonly(field, record, readonly)) {
+        return renderFieldShell(
+          field,
+          field.type === "integer" || field.type === "float" || field.type === "numeric" ? fieldReadonlyInput(field, fieldValue, "text") : fieldReadonlyInput(field, fieldValue, inputType === "text" ? "text" : inputType),
+          { labelFor: id }
+        );
+      }
+      return renderFieldShell(
+        field,
+        html`<input
+        id=${id}
+        type=${inputType}
+        class="sum-field-input"
+        name=${field.name}
+        placeholder=${placeholder}
+        value=${fieldValue}
+        autocomplete=${fieldAutocomplete(field)}
+        ${step ? html`step=${step}` : ""}
+        @input=${(event) => record.set(field.name, parseNumericValue(field, inputValueFromEvent(event)))}
+        @change=${() => record.notifyFieldChange(field.name)}
+      />`,
+        { labelFor: id }
+      );
+    }
+  };
+
+  // src/widgets/field-async.ts
+  var AsyncFieldController = class {
+    constructor(component) {
+      this.component = component;
+    }
+    component;
+    generation = 0;
+    begin() {
+      this.generation += 1;
+      return this.generation;
+    }
+    cancel() {
+      this.generation += 1;
+    }
+    refresh() {
+      if (this.component.rootElement?.isConnected) {
+        this.component.patch();
+      }
+    }
+    commitIfCurrent(generation) {
+      if (generation !== this.generation) return;
+      this.refresh();
+    }
+  };
+
   // src/widgets/Many2OneField.ts
   var Many2OneField = class extends SwcComponent {
     suggestions = [];
     open = false;
-    query = "";
+    highlightIndex = 0;
     asyncCtrl = new AsyncFieldController(this);
     onWillUnmount() {
       this.asyncCtrl.cancel();
     }
-    /**
-     * The default patch() swaps the whole subtree with replaceChild, which
-     * destroys the focused <input>. Restore focus and caret afterwards so the
-     * user can keep typing across asynchronous suggestion re-renders.
-     */
-    patch() {
-      const root = this.el;
-      const activeEl = document.activeElement;
-      const wasFocused = !!(root && activeEl && root.contains(activeEl));
-      const input = activeEl instanceof HTMLInputElement ? activeEl : null;
-      const caret = input ? input.selectionStart : null;
-      super.patch();
-      if (wasFocused && caret !== null) {
-        const next = this.el?.querySelector("input");
-        if (next) {
-          next.focus();
-          try {
-            next.setSelectionRange(caret, caret);
-          } catch {
-          }
-        }
-      }
-    }
-    async search(q) {
+    async search(query) {
       const gen = this.asyncCtrl.begin();
       const comodel = this.props.field.relation ?? this.props.field.options?.relation ?? "";
       if (!comodel) return;
       const baseDomain = fieldDomain(this.props.field, this.props.record) ?? [];
-      const domain = q ? [...baseDomain, ["name", "ilike", `%${q}%`]] : baseDomain;
+      const domain = query ? [...baseDomain, ["name", "ilike", query]] : baseDomain;
       this.suggestions = await this.env.services.rpc.searchRead(comodel, domain, ["id", "name"], 20);
       this.open = true;
-      this.asyncCtrl.finish(gen);
+      this.highlightIndex = 0;
+      this.asyncCtrl.commitIfCurrent(gen);
     }
-    onInput(ev) {
-      const input = ev.target;
-      this.query = input.value;
-      void this.search(input.value);
-    }
-    select(row) {
+    pick(row) {
       const { field, record } = this.props;
       record.set(field.name, row.id);
       record.set(`${field.name}_name`, row.name);
       record.notifyFieldChange(field.name);
       this.open = false;
-      this.query = "";
       this.asyncCtrl.refresh();
+    }
+    onKeydown(event) {
+      if (!this.open || this.suggestions.length === 0) return;
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        this.highlightIndex = (this.highlightIndex + 1) % this.suggestions.length;
+        this.asyncCtrl.refresh();
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        this.highlightIndex = (this.highlightIndex - 1 + this.suggestions.length) % this.suggestions.length;
+        this.asyncCtrl.refresh();
+      } else if (event.key === "Enter") {
+        event.preventDefault();
+        const row = this.suggestions[this.highlightIndex];
+        if (row) this.pick(row);
+      } else if (event.key === "Escape") {
+        this.open = false;
+        this.asyncCtrl.refresh();
+      }
     }
     template() {
       const { field, record, readonly } = this.props;
-      const display = record.get(`${field.name}_name`) ?? (record.get(field.name) ? `#${record.get(field.name)}` : "");
+      const display = recordDisplayName(record, field.name);
       const id = fieldInputId(field);
       const placeholder = fieldPlaceholder(field);
-      if (readonly || field.readonly) {
-        return renderFieldShell(field, fieldReadonlyValue(String(display), placeholder), { labelFor: false });
+      if (isFieldReadonly(field, record, readonly)) {
+        return renderFieldShell(field, fieldReadonlyValue(display, placeholder), { labelFor: false });
       }
-      const value = this.query !== "" ? this.query : String(display);
       return renderFieldShell(
         field,
         html`<div class="sum-m2o-wrap">
@@ -1508,17 +1469,18 @@ var SumeruSWC = (() => {
           class="sum-field-input"
           name=${field.name}
           placeholder=${placeholder}
-          value=${value}
+          value=${display}
           autocomplete="off"
-          @input=${(ev) => this.onInput(ev)}
+          @input=${(event) => void this.search(inputValueFromEvent(event))}
+          @keydown=${(event) => this.onKeydown(event)}
         />
         ${this.open ? html`<ul class="sum-m2o-suggest">
               ${this.suggestions.map(
-          (row) => html`<li>
+          (row, index) => html`<li>
                   <button
                     type="button"
-                    class="sum-m2o-option"
-                    @click=${() => this.select(row)}
+                    class=${index === this.highlightIndex ? "sum-m2o-option sum-m2o-option--active" : "sum-m2o-option"}
+                    @click=${() => this.pick(row)}
                   >
                     ${String(row.name ?? row.id)}
                   </button>
@@ -1552,7 +1514,7 @@ var SumeruSWC = (() => {
       if (field.selection?.length) {
         this.stages = field.selection.map(([value, label]) => ({ id: value, label }));
         this.loaded = true;
-        this.asyncCtrl.finish(gen);
+        this.asyncCtrl.commitIfCurrent(gen);
         return;
       }
       const comodel = field.relation ?? field.options?.relation ?? "";
@@ -1560,7 +1522,7 @@ var SumeruSWC = (() => {
         const fallback = (field.options?.states ?? "draft,done").split(",").map((s) => s.trim()).filter(Boolean);
         this.stages = fallback.map((s) => ({ id: s, label: s }));
         this.loaded = true;
-        this.asyncCtrl.finish(gen);
+        this.asyncCtrl.commitIfCurrent(gen);
         return;
       }
       const rows = await this.env.services.rpc.searchRead(comodel, [], ["id", "name", "sequence"], 200);
@@ -1570,18 +1532,18 @@ var SumeruSWC = (() => {
         label: String(row.name ?? row.id)
       }));
       this.loaded = true;
-      this.asyncCtrl.finish(gen);
+      this.asyncCtrl.commitIfCurrent(gen);
     }
     currentId() {
       const { field, record } = this.props;
-      const raw = record.get(field.name);
-      if (raw == null || raw === "") return "";
-      return field.type === "many2one" || field.relation ? Number(raw) : String(raw);
+      const rawValue = record.get(field.name);
+      if (rawValue == null || rawValue === "") return "";
+      return field.type === "many2one" || field.relation ? Number(rawValue) : String(rawValue);
     }
     template() {
       const { field, record, readonly } = this.props;
       const current = this.currentId();
-      const clickable = isClickable(field) && !readonly && !field.readonly;
+      const clickable = isClickable(field) && !isFieldReadonly(field, record, readonly);
       return html`<div class="sum-statusbar-stages" role="group" aria-label=${field.string ?? field.name}>
       ${this.stages.map((stage) => {
         const active = stage.id === current || String(stage.id) === String(current);
@@ -1616,13 +1578,13 @@ var SumeruSWC = (() => {
     return field.selection.map(([value, label]) => ({ value, label }));
   }
   function currentValue(field, record) {
-    const raw = record.get(field.name);
-    if (raw == null || raw === "") return selectionOptions(field)[0]?.value ?? "0";
-    return String(raw);
+    const rawValue = record.get(field.name);
+    if (rawValue == null || rawValue === "") return selectionOptions(field)[0]?.value ?? "0";
+    return String(rawValue);
   }
   function numericLevel(value) {
-    const n = Number.parseInt(value, 10);
-    return Number.isNaN(n) ? 0 : Math.max(0, n);
+    const parsed = Number.parseInt(value, 10);
+    return Number.isNaN(parsed) ? 0 : Math.max(0, parsed);
   }
   function starCount(field) {
     const fromOpt = Number(field.options?.stars ?? field.options?.max ?? 0);
@@ -1636,8 +1598,8 @@ var SumeruSWC = (() => {
       const options = selectionOptions(field);
       const value = currentValue(field, record);
       const mode = priorityMode(field);
-      if (readonly || field.readonly) {
-        const label = options.find((o) => o.value === value)?.label ?? value;
+      if (isFieldReadonly(field, record, readonly)) {
+        const label = options.find((option) => option.value === value)?.label ?? value;
         if (mode === "select") {
           return renderFieldShell(field, fieldReadonlyValue(label), { labelFor: false });
         }
@@ -1651,11 +1613,11 @@ var SumeruSWC = (() => {
           id=${id}
           class="sum-field-select sum-priority-select"
           name=${field.name}
-          @change=${(ev) => record.set(field.name, ev.target.value)}
+          @change=${(event) => record.set(field.name, inputValueFromEvent(event))}
         >
           ${options.map(
-            (opt) => html`<option value=${opt.value} selected=${value === opt.value ? "selected" : false}>
-                ${opt.label}
+            (option) => html`<option value=${option.value} selected=${value === option.value ? "selected" : ""}>
+                ${option.label}
               </option>`
           )}
         </select>`,
@@ -1676,19 +1638,19 @@ var SumeruSWC = (() => {
       const count = starCount(field);
       const capped = Math.min(level, count);
       const out = [];
-      for (let i = 0; i < count; i += 1) {
-        const starIndex = i + 1;
+      for (let index = 0; index < count; index += 1) {
+        const starIndex = index + 1;
         const filled = starIndex <= capped;
-        const opt = options[Math.min(starIndex, options.length - 1)];
+        const option = options[Math.min(starIndex, options.length - 1)];
         const click = () => {
           if (disabled) return;
           const next = capped === starIndex ? starIndex - 1 : starIndex;
           onPick?.(Math.max(0, next));
         };
         if (filled) {
-          out.push(html`<button type="button" class="sum-priority-star sum-priority-star--on" disabled=${disabled ? "disabled" : void 0} title=${opt?.label ?? `Level ${starIndex}`} aria-label=${opt?.label ?? `Priority ${starIndex}`} @click=${click}>★</button>`);
+          out.push(html`<button type="button" class="sum-priority-star sum-priority-star--on" disabled=${disabled ? "disabled" : void 0} title=${option?.label ?? `Level ${starIndex}`} aria-label=${option?.label ?? `Priority ${starIndex}`} @click=${click}>★</button>`);
         } else {
-          out.push(html`<button type="button" class="sum-priority-star" disabled=${disabled ? "disabled" : void 0} title=${opt?.label ?? `Level ${starIndex}`} aria-label=${opt?.label ?? `Priority ${starIndex}`} @click=${click}>★</button>`);
+          out.push(html`<button type="button" class="sum-priority-star" disabled=${disabled ? "disabled" : void 0} title=${option?.label ?? `Level ${starIndex}`} aria-label=${option?.label ?? `Priority ${starIndex}`} @click=${click}>★</button>`);
         }
       }
       return out;
@@ -1702,15 +1664,12 @@ var SumeruSWC = (() => {
   };
 
   // src/widgets/BooleanField.ts
-  function isChecked(val) {
-    return val === true || val === 1 || val === "1" || val === "true";
-  }
   var BooleanField = class extends SwcComponent {
     template() {
       const { field, record, readonly } = this.props;
-      const checked = isChecked(record.get(field.name));
+      const checked = booleanFromUnknown(record.get(field.name));
       const id = fieldInputId(field);
-      if (readonly || field.readonly) {
+      if (isFieldReadonly(field, record, readonly)) {
         return renderFieldShell(field, fieldReadonlyValue(checked ? "Yes" : "No"), { labelFor: false });
       }
       return renderFieldShell(
@@ -1721,8 +1680,8 @@ var SumeruSWC = (() => {
         class="sum-field-input"
         name=${field.name}
         autocomplete="off"
-        checked=${checked ? "checked" : false}
-        @change=${(ev) => record.set(field.name, ev.target.checked)}
+        checked=${checked ? "checked" : ""}
+        @change=${(event) => record.set(field.name, checkboxCheckedFromEvent(event))}
       />`,
         { labelFor: id }
       );
@@ -1733,11 +1692,11 @@ var SumeruSWC = (() => {
   var TextareaField = class extends SwcComponent {
     template() {
       const { field, record, readonly } = this.props;
-      const val = String(record.get(field.name) ?? "");
+      const fieldValue = stringFromUnknown(record.get(field.name));
       const placeholder = fieldPlaceholder(field);
       const id = fieldInputId(field);
-      if (readonly || field.readonly) {
-        return renderFieldShell(field, fieldReadonlyValue(val, placeholder), { labelFor: false });
+      if (isFieldReadonly(field, record, readonly)) {
+        return renderFieldShell(field, fieldReadonlyValue(fieldValue, placeholder), { labelFor: false });
       }
       return renderFieldShell(
         field,
@@ -1748,8 +1707,8 @@ var SumeruSWC = (() => {
         placeholder=${placeholder}
         autocomplete=${fieldAutocomplete(field)}
         rows="5"
-        @input=${(ev) => record.set(field.name, ev.target.value)}
-      >${val}</textarea>`,
+        @input=${(event) => record.set(field.name, inputValueFromEvent(event))}
+      >${fieldValue}</textarea>`,
         { labelFor: id }
       );
     }
@@ -1768,17 +1727,22 @@ var SumeruSWC = (() => {
     }
     async loadOptions() {
       const gen = this.asyncCtrl.begin();
-      const { field } = this.props;
+      const { field, record, readonly } = this.props;
       if (field.selection?.length) {
         this.options = field.selection.map(([value, label]) => ({ value, label }));
         this.loaded = true;
-        this.asyncCtrl.finish(gen);
+        this.asyncCtrl.commitIfCurrent(gen);
+        return;
+      }
+      if (isFieldReadonly(field, record, readonly)) {
+        this.loaded = true;
+        this.asyncCtrl.commitIfCurrent(gen);
         return;
       }
       const comodel = field.relation ?? field.options?.relation ?? "";
       if (!comodel) {
         this.loaded = true;
-        this.asyncCtrl.finish(gen);
+        this.asyncCtrl.commitIfCurrent(gen);
         return;
       }
       const rows = await this.env.services.rpc.searchRead(comodel, [], ["id", "name"], 200);
@@ -1787,16 +1751,16 @@ var SumeruSWC = (() => {
         label: String(row.name ?? row.id ?? "")
       }));
       this.loaded = true;
-      this.asyncCtrl.finish(gen);
+      this.asyncCtrl.commitIfCurrent(gen);
     }
     displayValue() {
       const { field, record } = this.props;
-      const raw = record.get(field.name);
-      const id = raw == null || raw === "" ? "" : String(raw);
+      const rawValue = record.get(field.name);
+      const id = rawValue == null || rawValue === "" ? "" : String(rawValue);
       if (!id) return "";
       const named = record.get(`${field.name}_name`);
       if (named) return String(named);
-      const match = this.options.find((o) => o.value === id);
+      const match = this.options.find((option) => option.value === id);
       return match?.label ?? recordDisplayName(record, field.name);
     }
     template() {
@@ -1805,7 +1769,7 @@ var SumeruSWC = (() => {
       const currentVal = current == null || current === "" ? "" : String(current);
       const id = fieldInputId(field);
       const placeholder = fieldPlaceholder(field);
-      if (readonly || field.readonly) {
+      if (isFieldReadonly(field, record, readonly)) {
         return renderFieldShell(field, fieldReadonlyValue(this.displayValue(), placeholder), { labelFor: false });
       }
       return renderFieldShell(
@@ -1815,18 +1779,18 @@ var SumeruSWC = (() => {
         class="sum-field-input sum-field-select"
         name=${field.name}
         autocomplete="off"
-        @change=${(ev) => {
-          const val = ev.target.value;
-          const opt = this.options.find((o) => o.value === val);
-          record.set(field.name, val ? Number(val) || val : null);
-          if (opt) record.set(`${field.name}_name`, opt.label);
+        @change=${(event) => {
+          const fieldValue = inputValueFromEvent(event);
+          const option = this.options.find((o) => o.value === fieldValue);
+          record.set(field.name, fieldValue ? Number(fieldValue) || fieldValue : null);
+          if (option) record.set(`${field.name}_name`, option.label);
           this.asyncCtrl.refresh();
         }}
       >
         <option value="" disabled=${currentVal !== "" ? "disabled" : false} selected=${currentVal === "" ? "selected" : false}>${placeholder}</option>
         ${this.options.map(
-          (opt) => html`<option value=${opt.value} selected=${opt.value === currentVal ? "selected" : false}>
-              ${opt.label}
+          (option) => html`<option value=${option.value} selected=${option.value === currentVal ? "selected" : ""}>
+              ${option.label}
             </option>`
         )}
       </select>
@@ -1840,11 +1804,11 @@ var SumeruSWC = (() => {
   var PhoneField = class extends SwcComponent {
     template() {
       const { field, record, readonly } = this.props;
-      const val = String(record.get(field.name) ?? "");
+      const fieldValue = stringFromUnknown(record.get(field.name));
       const placeholder = fieldPlaceholder(field);
       const id = fieldInputId(field);
-      if (readonly || field.readonly) {
-        return renderFieldShell(field, fieldReadonlyValue(val, placeholder), { labelFor: false });
+      if (isFieldReadonly(field, record, readonly)) {
+        return renderFieldShell(field, fieldReadonlyValue(fieldValue, placeholder), { labelFor: false });
       }
       return renderFieldShell(
         field,
@@ -1854,9 +1818,9 @@ var SumeruSWC = (() => {
         class="sum-field-input sum-field-phone"
         name=${field.name}
         placeholder=${placeholder}
-        value=${val}
+        value=${fieldValue}
         autocomplete=${fieldAutocomplete(field)}
-        @input=${(ev) => record.set(field.name, ev.target.value)}
+        @input=${(event) => record.set(field.name, inputValueFromEvent(event))}
       />`,
         { labelFor: id }
       );
@@ -1864,14 +1828,12 @@ var SumeruSWC = (() => {
   };
 
   // src/widgets/BooleanRadioField.ts
-  function isChecked2(val) {
-    return val === true || val === 1 || val === "1" || val === "true";
-  }
   var BooleanRadioField = class extends SwcComponent {
     template() {
       const { field, record, readonly } = this.props;
-      const checked = isChecked2(record.get(field.name));
+      const checked = booleanFromUnknown(record.get(field.name));
       const name = field.name;
+      const fieldReadonly = isFieldReadonly(field, record, readonly);
       return renderFieldShell(
         field,
         html`<div class="sum-field-radio-group" role="radiogroup" aria-labelledby=${fieldLabelId(field)}>
@@ -1880,9 +1842,9 @@ var SumeruSWC = (() => {
             type="radio"
             name=${name}
             value="1"
-            checked=${checked ? "checked" : false}
-            disabled=${readonly || field.readonly ? "disabled" : void 0}
-            @change=${() => !readonly && record.set(field.name, true)}
+            checked=${checked ? "checked" : ""}
+            disabled=${fieldReadonly ? "disabled" : void 0}
+            @change=${() => !fieldReadonly && record.set(field.name, true)}
           />
           Yes
         </label>
@@ -1891,9 +1853,9 @@ var SumeruSWC = (() => {
             type="radio"
             name=${name}
             value="0"
-            checked=${!checked ? "checked" : false}
-            disabled=${readonly || field.readonly ? "disabled" : void 0}
-            @change=${() => !readonly && record.set(field.name, false)}
+            checked=${!checked ? "checked" : ""}
+            disabled=${fieldReadonly ? "disabled" : void 0}
+            @change=${() => !fieldReadonly && record.set(field.name, false)}
           />
           No
         </label>
@@ -1904,13 +1866,10 @@ var SumeruSWC = (() => {
   };
 
   // src/widgets/BooleanToggleField.ts
-  function isChecked3(val) {
-    return val === true || val === 1 || val === "1" || val === "true";
-  }
   var BooleanToggleField = class extends SwcComponent {
     template() {
       const { field, record, readonly } = this.props;
-      const checked = isChecked3(record.get(field.name));
+      const checked = booleanFromUnknown(record.get(field.name));
       const id = fieldInputId(field);
       return renderFieldShell(
         field,
@@ -1922,9 +1881,9 @@ var SumeruSWC = (() => {
           class="sum-field-input"
           name=${field.name}
           autocomplete="off"
-          checked=${checked ? "checked" : false}
-          disabled=${readonly || field.readonly ? "disabled" : void 0}
-          @change=${(ev) => record.set(field.name, ev.target.checked)}
+          checked=${checked ? "checked" : ""}
+          disabled=${isFieldReadonly(field, record, readonly) ? "disabled" : void 0}
+          @change=${(event) => record.set(field.name, checkboxCheckedFromEvent(event))}
         />
         <span>${checked ? "On" : "Off"}</span>
       </label>`,
@@ -1935,15 +1894,15 @@ var SumeruSWC = (() => {
 
   // src/widgets/Many2ManyTagsField.ts
   function tagIds(record, fieldName) {
-    const raw = record.get(fieldName);
-    if (!Array.isArray(raw)) return [];
-    return raw.map((v) => Number(v)).filter((n) => !Number.isNaN(n));
+    const rawValue = record.get(fieldName);
+    if (!Array.isArray(rawValue)) return [];
+    return rawValue.map((v) => Number(v)).filter((n) => !Number.isNaN(n));
   }
   function tagNamesFromRecord(record, fieldName) {
     const out = /* @__PURE__ */ new Map();
-    const raw = record.get(`${fieldName}_names`);
-    if (Array.isArray(raw)) {
-      for (const item of raw) {
+    const rawValue = record.get(`${fieldName}_names`);
+    if (Array.isArray(rawValue)) {
+      for (const item of rawValue) {
         if (item && typeof item === "object") {
           const row = item;
           const id = Number(row.id);
@@ -1965,29 +1924,29 @@ var SumeruSWC = (() => {
     }
     async loadCatalog() {
       const gen = this.asyncCtrl.begin();
-      const { field, readonly } = this.props;
-      if (readonly || field.readonly) {
+      const { field, record, readonly } = this.props;
+      if (isFieldReadonly(field, record, readonly)) {
         this.loaded = true;
-        this.asyncCtrl.finish(gen);
+        this.asyncCtrl.commitIfCurrent(gen);
         return;
       }
       const comodel = field.relation ?? field.options?.relation ?? "";
       if (!comodel) {
         this.loaded = true;
-        this.asyncCtrl.finish(gen);
+        this.asyncCtrl.commitIfCurrent(gen);
         return;
       }
       const rows = await this.env.services.rpc.searchRead(comodel, [], ["id", "name"], 500);
       this.catalog = rows.map((row) => ({ id: Number(row.id), name: String(row.name ?? row.id) }));
       this.loaded = true;
-      this.asyncCtrl.finish(gen);
+      this.asyncCtrl.commitIfCurrent(gen);
     }
     selectedTags() {
       const { field, record } = this.props;
       const ids = tagIds(record, field.name);
       const names = tagNamesFromRecord(record, field.name);
       return ids.map((id) => {
-        const fromCatalog = this.catalog.find((t) => t.id === id);
+        const fromCatalog = this.catalog.find((tag) => tag.id === id);
         if (fromCatalog) return fromCatalog;
         const fromRecord = names.get(id);
         if (fromRecord) return { id, name: fromRecord };
@@ -1999,10 +1958,10 @@ var SumeruSWC = (() => {
       this.asyncCtrl.refresh();
     }
     template() {
-      const { field, readonly } = this.props;
+      const { field, record, readonly } = this.props;
       const selected = this.selectedTags();
-      const selectedSet = new Set(selected.map((t) => t.id));
-      if (readonly || field.readonly) {
+      const selectedSet = new Set(selected.map((tag) => tag.id));
+      if (isFieldReadonly(field, record, readonly)) {
         return renderFieldShell(
           field,
           html`<div class="sum-multi-select-tags sum-multi-select-tags--readonly sum-field-tags">
@@ -2026,15 +1985,16 @@ var SumeruSWC = (() => {
         <select
           id=${id}
           class="sum-multi-select-add sum-field-select"
-          @change=${(ev) => {
-          const val = Number(ev.target.value);
-          ev.target.value = "";
-          if (!val || selectedSet.has(val)) return;
-          this.setIds([...selected.map((t) => t.id), val]);
+          @change=${(event) => {
+          const fieldValue = Number(inputValueFromEvent(event));
+          const select = event.target;
+          select.value = "";
+          if (!fieldValue || selectedSet.has(fieldValue)) return;
+          this.setIds([...selected.map((tag) => tag.id), fieldValue]);
         }}
         >
           <option value="">Add tag…</option>
-          ${this.catalog.filter((t) => !selectedSet.has(t.id)).map((t) => html`<option value=${String(t.id)}>${t.name}</option>`)}
+          ${this.catalog.filter((tag) => !selectedSet.has(tag.id)).map((tag) => html`<option value=${String(tag.id)}>${tag.name}</option>`)}
         </select>
         ${!this.loaded ? html`<span class="sum-field-hint">Loading…</span>` : ""}
       </div>`,
@@ -2072,7 +2032,7 @@ var SumeruSWC = (() => {
     const named = line[`${col.name}_name`];
     if (named != null && String(named) !== "") return String(named);
     if (col.type === "boolean") {
-      return raw === true || raw === 1 || raw === "1" || raw === "true" ? "Yes" : "No";
+      return booleanFromUnknown(raw) ? "Yes" : "No";
     }
     return String(raw);
   }
@@ -2100,7 +2060,7 @@ var SumeruSWC = (() => {
     }
     editable() {
       const { field, record, readonly } = this.props;
-      if (readonly || field.readonly) return false;
+      if (isFieldReadonly(field, record, readonly)) return false;
       if (record.id <= 0) return false;
       const mode = field.subview?.editable ?? "bottom";
       return mode === "bottom" || mode === "top";
@@ -2112,7 +2072,7 @@ var SumeruSWC = (() => {
       const cols = columnsForField(field);
       if (!comodel || record.id <= 0 || cols.length === 0) {
         this.loaded = true;
-        this.asyncCtrl.finish(gen);
+        this.asyncCtrl.commitIfCurrent(gen);
         return;
       }
       const inv = this.inverse();
@@ -2128,7 +2088,7 @@ var SumeruSWC = (() => {
         data: { ...row }
       }));
       this.loaded = true;
-      this.asyncCtrl.finish(gen);
+      this.asyncCtrl.commitIfCurrent(gen);
     }
     lineById(id) {
       return this.lines.find((l) => l.id === id);
@@ -2225,19 +2185,19 @@ var SumeruSWC = (() => {
       this.asyncCtrl.refresh();
     }
     renderCellEditor(col, line) {
-      const val = String(line.data[col.name] ?? "");
+      const fieldValue = String(line.data[col.name] ?? "");
       const readonly = !this.editable();
       if (readonly) {
         return html`<span>${displayCellValue(col, line.data)}</span>`;
       }
       if (col.type === "boolean") {
-        const checked = line.data[col.name] === true || line.data[col.name] === 1;
+        const checked = booleanFromUnknown(line.data[col.name]);
         return fieldControl(
           html`<input
           type="checkbox"
           class="sum-field-input"
-          checked=${checked ? "checked" : false}
-          @change=${(ev) => this.onCellInput(line.id, col, ev.target.checked)}
+          checked=${checked ? "checked" : ""}
+          @change=${(event) => this.onCellInput(line.id, col, checkboxCheckedFromEvent(event))}
         />`,
           true
         );
@@ -2246,11 +2206,11 @@ var SumeruSWC = (() => {
         return fieldControl(
           html`<select
           class="sum-field-select"
-          @change=${(ev) => this.onCellInput(line.id, col, ev.target.value)}
+          @change=${(event) => this.onCellInput(line.id, col, inputValueFromEvent(event))}
         >
           <option value="">—</option>
           ${col.selection.map(
-            ([v, label]) => html`<option value=${v} selected=${val === v ? "selected" : false}>${label}</option>`
+            ([v, label]) => html`<option value=${v} selected=${fieldValue === v ? "selected" : ""}>${label}</option>`
           )}
         </select>`,
           true
@@ -2261,8 +2221,8 @@ var SumeruSWC = (() => {
         html`<input
         type=${inputType}
         class="sum-field-input"
-        value=${val}
-        @input=${(ev) => this.onCellInput(line.id, col, ev.target.value)}
+        value=${fieldValue}
+        @input=${(event) => this.onCellInput(line.id, col, inputValueFromEvent(event))}
       />`,
         true
       );
@@ -2276,10 +2236,10 @@ var SumeruSWC = (() => {
       }
       return html`<tr class="sum-o2m-row">${cells}</tr>`;
     }
-    onTableClick(ev) {
-      const btn = ev.target.closest(".sum-o2m-delete-btn");
-      if (!btn) return;
-      const id = Number(btn.getAttribute("data-line-id"));
+    onTableClick(event) {
+      const deleteButton = event.target.closest(".sum-o2m-delete-btn");
+      if (!deleteButton) return;
+      const id = Number(deleteButton.getAttribute("data-line-id"));
       if (!Number.isFinite(id)) return;
       void this.deleteRow(id);
     }
@@ -2300,7 +2260,7 @@ var SumeruSWC = (() => {
               ${canEdit ? html`<th class="sum-o2m-col-actions"></th>` : ""}
             </tr>
           </thead>
-          <tbody @click=${(ev) => this.onTableClick(ev)}>
+          <tbody @click=${(event) => this.onTableClick(event)}>
             ${this.lines.length === 0 ? html`<tr>
                   <td colspan=${String(cols.length + (canEdit ? 1 : 0))}>${emptyMsg}</td>
                 </tr>` : this.lines.map((line) => this.renderLineRow(line, cols, canEdit))}
@@ -2360,13 +2320,13 @@ var SumeruSWC = (() => {
   var DateField = class extends SwcComponent {
     template() {
       const { field, record, readonly } = this.props;
-      const raw = record.get(field.name);
-      const native = toNativeValue(field, raw);
-      const display = formatDisplay(field, raw);
+      const rawValue = record.get(field.name);
+      const native = toNativeValue(field, rawValue);
+      const display = formatDisplay(field, rawValue);
       const placeholder = fieldPlaceholder(field);
       const id = fieldInputId(field);
       const inputType = isDateTime(field) ? "datetime-local" : "date";
-      if (readonly || field.readonly) {
+      if (isFieldReadonly(field, record, readonly)) {
         return renderFieldShell(field, fieldReadonlyInput(field, display, "text"), { labelFor: id });
       }
       return renderFieldShell(
@@ -2380,12 +2340,12 @@ var SumeruSWC = (() => {
           value=${native}
           placeholder=${placeholder}
           autocomplete="off"
-          @input=${(ev) => {
-          record.set(field.name, ev.target.value || null);
+          @input=${(event) => {
+          record.set(field.name, inputValueFromEvent(event) || null);
           this.patch();
         }}
-          @change=${(ev) => {
-          record.set(field.name, ev.target.value || null);
+          @change=${(event) => {
+          record.set(field.name, inputValueFromEvent(event) || null);
           record.notifyFieldChange(field.name);
         }}
         />
@@ -2423,14 +2383,15 @@ var SumeruSWC = (() => {
   var ImageField = class extends SwcComponent {
     template() {
       const { field, record, readonly } = this.props;
-      const image = String(record.get(field.name) ?? "");
+      const image = stringFromUnknown(record.get(field.name));
       const hasImage = image.length > 0;
       const id = fieldInputId(field);
+      const fieldReadonly = isFieldReadonly(field, record, readonly);
       return renderFieldShell(
         field,
         html`<div data-sum-avatar>
         ${hasImage ? html`<div class="sum-image-thumb"><img class="sum-image-thumb-img" src=${image} alt="" /></div>` : html`<div class="sum-image-thumb sum-image-thumb--empty">No image</div>`}
-        ${readonly || field.readonly ? html`<input type="hidden" data-sum-image-value name=${field.name} value=${image} />` : html`<label class="sum-form-avatar-upload">
+        ${fieldReadonly ? html`<input type="hidden" data-sum-image-value name=${field.name} value=${image} />` : html`<label class="sum-form-avatar-upload">
               Upload
               <input id=${id} type="file" accept="image/*" />
               <input
@@ -2438,11 +2399,11 @@ var SumeruSWC = (() => {
                 data-sum-image-value
                 name=${field.name}
                 value=${image}
-                @input=${(ev) => record.set(field.name, ev.target.value)}
+                @input=${(event) => record.set(field.name, inputValueFromEvent(event))}
               />
             </label>`}
       </div>`,
-        { modifiers: ["sum-field-widget--image"], labelFor: readonly || field.readonly ? false : id }
+        { modifiers: ["sum-field-widget--image"], labelFor: fieldReadonly ? false : id }
       );
     }
   };
@@ -2452,9 +2413,11 @@ var SumeruSWC = (() => {
     template() {
       const { field, record, readonly } = this.props;
       const symbol = field.options?.currency_symbol ?? "\xA4";
-      const val = String(record.get(field.name) ?? "");
-      if (readonly || field.readonly) {
-        return renderFieldShell(field, fieldReadonlyValue(val ? `${symbol} ${val}` : ""), { labelFor: false });
+      const fieldValue = stringFromUnknown(record.get(field.name));
+      if (isFieldReadonly(field, record, readonly)) {
+        return renderFieldShell(field, fieldReadonlyValue(fieldValue ? `${symbol} ${fieldValue}` : ""), {
+          labelFor: false
+        });
       }
       return super.template();
     }
@@ -2462,8 +2425,8 @@ var SumeruSWC = (() => {
   var HtmlField = class extends DefaultField {
     template() {
       const { field, record, readonly } = this.props;
-      const raw = String(record.get(field.name) ?? "");
-      if (readonly || field.readonly) {
+      const raw = stringFromUnknown(record.get(field.name));
+      if (isFieldReadonly(field, record, readonly)) {
         const text = raw.replace(/<[^>]+>/g, " ").trim();
         return renderFieldShell(field, fieldReadonlyValue(text), { labelFor: false });
       }
@@ -2473,7 +2436,7 @@ var SumeruSWC = (() => {
   var BinaryField = class extends SwcComponent {
     template() {
       const { field, record } = this.props;
-      const name = String(record.get(`${field.name}_name`) ?? record.get(field.name) ?? "Download");
+      const name = stringFromUnknown(record.get(`${field.name}_name`) ?? record.get(field.name) ?? "Download");
       return renderFieldShell(
         field,
         html`<a class="sum-field-link" href="/web/content/${field.name}/${record.id}" download>${name}</a>`,
@@ -2481,14 +2444,12 @@ var SumeruSWC = (() => {
       );
     }
   };
-  var ReferenceField = class extends DefaultField {
-  };
   var ColorField = class extends DefaultField {
     template() {
       const { field, record, readonly } = this.props;
-      const val = Number(record.get(field.name) ?? 0);
-      const swatch = `hsl(${val * 47 % 360} 70% 45%)`;
-      if (readonly || field.readonly) {
+      const fieldValue = Number(record.get(field.name) ?? 0);
+      const swatch = `hsl(${fieldValue * 47 % 360} 70% 45%)`;
+      if (isFieldReadonly(field, record, readonly)) {
         return renderFieldShell(
           field,
           html`<span class="sum-color-swatch" style=${`background:${swatch}`}></span>`,
@@ -2501,11 +2462,11 @@ var SumeruSWC = (() => {
   var UrlField = class extends DefaultField {
     template() {
       const { field, record, readonly } = this.props;
-      const val = String(record.get(field.name) ?? "");
-      if ((readonly || field.readonly) && val) {
+      const fieldValue = stringFromUnknown(record.get(field.name));
+      if (isFieldReadonly(field, record, readonly) && fieldValue) {
         return renderFieldShell(
           field,
-          html`<a class="sum-field-link" href=${val} target="_blank" rel="noopener">${val}</a>`,
+          html`<a class="sum-field-link" href=${fieldValue} target="_blank" rel="noopener">${fieldValue}</a>`,
           { labelFor: false }
         );
       }
@@ -2515,13 +2476,13 @@ var SumeruSWC = (() => {
   var ProgressField = class extends DefaultField {
     template() {
       const { field, record, readonly } = this.props;
-      const val = Math.min(100, Math.max(0, Number(record.get(field.name) ?? 0)));
-      if (readonly || field.readonly) {
+      const fieldValue = Math.min(100, Math.max(0, Number(record.get(field.name) ?? 0)));
+      if (isFieldReadonly(field, record, readonly)) {
         return renderFieldShell(
           field,
           html`<div class="sum-progress">
-          <div class="sum-progress-bar" style=${`width:${val}%`}></div>
-          <span>${val}%</span>
+          <div class="sum-progress-bar" style=${`width:${fieldValue}%`}></div>
+          <span>${fieldValue}%</span>
         </div>`,
           { labelFor: false }
         );
@@ -2541,59 +2502,46 @@ var SumeruSWC = (() => {
   };
 
   // src/widgets/registry.ts
+  var FIELD_CONSTRUCTORS = {
+    default: DefaultField,
+    char: DefaultField,
+    email: DefaultField,
+    integer: DefaultField,
+    float: DefaultField,
+    numeric: DefaultField,
+    date: DateField,
+    datetime: DateField,
+    json: TextareaField,
+    many2one: Many2OneField,
+    one2many: One2ManyField,
+    many2many: Many2ManyTagsField,
+    selection: SelectionField,
+    boolean: BooleanField,
+    text: TextareaField,
+    statusbar: StatusbarField,
+    priority: PriorityField,
+    phone: PhoneField,
+    radio: BooleanRadioField,
+    boolean_toggle: BooleanToggleField,
+    many2many_tags: Many2ManyTagsField,
+    image: ImageField,
+    monetary: MonetaryField,
+    html: HtmlField,
+    binary: BinaryField,
+    reference: DefaultField,
+    color: ColorField,
+    url: UrlField,
+    progress: ProgressField,
+    handle: HandleField
+  };
   function registerDefaultWidgets() {
     const fields = registry.category("fields");
-    const add = (key, Ctor) => fields.add(key, Ctor);
-    add("default", DefaultField);
-    add("char", DefaultField);
-    add("email", DefaultField);
-    add("integer", DefaultField);
-    add("float", DefaultField);
-    add("numeric", DefaultField);
-    add("date", DateField);
-    add("datetime", DateField);
-    add("json", TextareaField);
-    add("many2one", Many2OneField);
-    add("one2many", One2ManyField);
-    add("many2many", Many2ManyTagsField);
-    add("selection", SelectionField);
-    add("boolean", BooleanField);
-    add("text", TextareaField);
-    add("statusbar", StatusbarField);
-    add("priority", PriorityField);
-    add("phone", PhoneField);
-    add("radio", BooleanRadioField);
-    add("boolean_toggle", BooleanToggleField);
-    add("many2many_tags", Many2ManyTagsField);
-    add("image", ImageField);
-    add("monetary", MonetaryField);
-    add("html", HtmlField);
-    add("binary", BinaryField);
-    add("reference", ReferenceField);
-    add("color", ColorField);
-    add("url", UrlField);
-    add("progress", ProgressField);
-    add("handle", HandleField);
+    for (const [key, WidgetConstructor] of Object.entries(FIELD_CONSTRUCTORS)) {
+      fields.add(key, WidgetConstructor);
+    }
   }
-  var WIDGET_MAP = {
-    many2many_tags: "many2many_tags",
-    boolean_toggle: "boolean_toggle",
-    radio: "radio",
-    phone: "phone",
-    image: "image",
-    selection: "selection",
-    email: "email",
-    statusbar: "statusbar",
-    priority: "priority",
-    monetary: "monetary",
-    html: "html",
-    binary: "binary",
-    reference: "reference",
-    color: "color",
-    url: "url",
-    progressbar: "progress",
-    progress: "progress",
-    handle: "handle"
+  var WIDGET_ALIASES = {
+    progressbar: "progress"
   };
   var TYPE_MAP = {
     boolean: "boolean",
@@ -2609,16 +2557,22 @@ var SumeruSWC = (() => {
     numeric: "numeric"
   };
   function resolveFieldWidget(field) {
-    if (field.widget && WIDGET_MAP[field.widget]) return WIDGET_MAP[field.widget];
-    if (field.type && TYPE_MAP[field.type]) return TYPE_MAP[field.type];
-    return field.widget ?? field.type ?? "default";
+    const widget = field.widget ?? "";
+    if (widget && widget in WIDGET_ALIASES) {
+      return WIDGET_ALIASES[widget];
+    }
+    if (widget) return widget;
+    if (field.type && field.type in TYPE_MAP) {
+      return TYPE_MAP[field.type];
+    }
+    return field.type ?? "default";
   }
   function instantiateFieldWidget(env, field, record, readonly) {
     const key = resolveFieldWidget(field);
-    const Ctor = registry.get("fields", key) ?? registry.get("fields", "default");
-    const comp = new Ctor({ field, record, readonly }, env);
-    comp.setup?.();
-    return comp;
+    const WidgetConstructor = registry.get("fields", key) ?? registry.get("fields", "default") ?? DefaultField;
+    const widget = new WidgetConstructor({ field, record, readonly }, env);
+    widget.setup?.();
+    return widget;
   }
   function renderField(env, field, record, readonly) {
     return instantiateFieldWidget(env, field, record, readonly).render();
@@ -2691,7 +2645,7 @@ var SumeruSWC = (() => {
     const val = String(record.get(field.name) ?? "");
     const placeholder = fieldPlaceholder(field);
     const hasValue = val.trim() !== "";
-    if (readonly || field.readonly) {
+    if (isFieldReadonly(field, record, readonly)) {
       const text = hasValue ? val : placeholder;
       const cls = hasValue ? "sum-form-hero-input sum-form-hero-input--bold" : "sum-form-hero-input sum-form-hero-input--bold sum-form-hero-input--placeholder";
       return html`<h1><div class=${cls}>${text}</div></h1>`;
@@ -2705,7 +2659,7 @@ var SumeruSWC = (() => {
       value=${val}
       autocomplete=${fieldAutocomplete(field)}
       aria-label=${placeholder}
-      @input=${(ev) => record.set(field.name, ev.target.value)}
+      @input=${(event) => record.set(field.name, inputValueFromEvent(event))}
     />
   </h1>`;
   }
@@ -2714,7 +2668,7 @@ var SumeruSWC = (() => {
     const label = field.string ?? field.name;
     const placeholder = fieldPlaceholder(field);
     const inputType = field.widget === "email" ? "email" : "text";
-    if (readonly || field.readonly) {
+    if (isFieldReadonly(field, record, readonly)) {
       const text = val.trim() !== "" ? val : placeholder;
       const cls = val.trim() !== "" ? "sum-form-inline-input" : "sum-form-inline-input sum-form-inline-input--placeholder";
       return html`<div class="sum-form-contact-item">
@@ -2730,7 +2684,7 @@ var SumeruSWC = (() => {
       name=${field.name}
       placeholder=${placeholder}
       value=${val}
-      @input=${(ev) => record.set(field.name, ev.target.value)}
+      @input=${(event) => record.set(field.name, inputValueFromEvent(event))}
     />
   </div>`;
   }
@@ -2755,7 +2709,7 @@ var SumeruSWC = (() => {
             name="image"
             data-sum-avatar-value
             value=${image}
-            @input=${(ev) => record.set("image", ev.target.value)}
+            @input=${(event) => record.set("image", inputValueFromEvent(event))}
           />
           <label class="sum-form-avatar-upload">
             Upload
@@ -2782,8 +2736,8 @@ var SumeruSWC = (() => {
       const buttons = div.buttons ?? [];
       return html`<div class="sum-form-button-box ${cls}">
       ${buttons.map(
-        (btn) => html`<button type="button" class="sum-stat-button ${btn.class ?? ""}" data-action=${btn.name} @click=${() => onStatButton?.(btn.name)}>
-          ${btn.string || btn.name}
+        (archButton) => html`<button type="button" class="sum-stat-button ${archButton.class ?? ""}" data-action=${archButton.name} @click=${() => onStatButton?.(archButton.name)}>
+          ${archButton.string || archButton.name}
         </button>`
       )}
     </div>`;
@@ -2792,18 +2746,10 @@ var SumeruSWC = (() => {
     if (!isTitle) {
       return html`<div class=${cls}>${renderFields(rf, div.fields ?? [], record, readonly)}</div>`;
     }
-    const h1Fields = visibleFields(div.h1Fields ?? []);
-    const legacySingle = h1Fields.length === 0 && visibleFields(div.fields ?? []).length === 1;
-    const titleField2 = h1Fields[0] ?? (legacySingle ? visibleFields(div.fields ?? [])[0] : void 0);
     if (hasImageField) {
       return html`<div class="sum-form-split-layout sum-form-split-layout--compact" data-sum-form-split>
       <aside class="sum-form-split-left sum-form-split-left--avatar">${renderAvatar(record, readonly)}</aside>
       <div class="sum-form-split-main">${renderTitleBody(rf, div, record, readonly)}</div>
-    </div>`;
-    }
-    if (titleField2) {
-      return html`<div class="sum-form-title-row sum-form-title-row--sheet">
-      ${renderTitleBody(rf, div, record, readonly)}
     </div>`;
     }
     return html`<div class="sum-form-title-row sum-form-title-row--sheet">
@@ -2909,7 +2855,7 @@ var SumeruSWC = (() => {
     </div>
   </div>`;
   }
-  function renderFormSheet(opts) {
+  function renderFormSheet(options) {
     const {
       env,
       sheet,
@@ -2920,7 +2866,7 @@ var SumeruSWC = (() => {
       onNotebookTab,
       renderField: renderFieldOpt,
       onStatButton
-    } = opts;
+    } = options;
     const rf = renderFieldOpt ?? ((f, r, ro) => renderField(env, f, r, ro));
     if (!sheet) {
       return html`<div class="sum-form-sheet"></div>`;
@@ -2953,7 +2899,7 @@ var SumeruSWC = (() => {
     return html`<div class="sum-form-sheet">${parts}</div>`;
   }
 
-  // src/login/password-match.ts
+  // src/widgets/password-match.ts
   var DEFAULT_MESSAGE = "Passwords do not match.";
   function resolveHint(confirm, hint) {
     if (hint) {
@@ -3242,20 +3188,31 @@ var SumeruSWC = (() => {
       this.env = env;
     }
     render(field, record, readonly) {
-      const widget = resolveFieldWidget(field);
+      const widgetName = resolveFieldWidget(field);
       const key = field.name;
       const prev = this.entries.get(key);
-      if (prev && prev.readonly === readonly && prev.widget === widget) {
-        return prev.comp.render();
+      if (prev && prev.readonly === readonly && prev.widgetName === widgetName) {
+        return prev.widget.render();
       }
-      prev?.comp.destroy();
-      const comp = instantiateFieldWidget(this.env, field, record, readonly);
-      this.entries.set(key, { comp, readonly, widget });
-      return comp.render();
+      prev?.widget.destroy();
+      const widget = instantiateFieldWidget(this.env, field, record, readonly);
+      this.entries.set(key, { widget, readonly, widgetName });
+      return widget.render();
+    }
+    /** Drop one field widget after onchange, or all widgets when `fieldName` is omitted. */
+    invalidate(fieldName) {
+      if (!fieldName) {
+        this.clear();
+        return;
+      }
+      const prev = this.entries.get(fieldName);
+      if (!prev) return;
+      prev.widget.destroy();
+      this.entries.delete(fieldName);
     }
     clear() {
-      for (const { comp } of this.entries.values()) {
-        comp.destroy();
+      for (const { widget } of this.entries.values()) {
+        widget.destroy();
       }
       this.entries.clear();
     }
@@ -3271,20 +3228,17 @@ var SumeruSWC = (() => {
     enabled = true;
     tab = "messages";
     setup() {
-      const [, bump] = useState(0);
-      this.bump = () => bump((n) => n + 1);
       void this.load();
     }
-    bump = null;
     async load() {
       const { model, recordId } = this.props;
       if (recordId <= 0) {
         this.loading = false;
-        this.bump?.();
+        this.rerender();
         return;
       }
       this.loading = true;
-      this.bump?.();
+      this.rerender();
       try {
         const base = this.env.bootstrap.swcApiBase || SWC_API_BASE;
         const data = await this.env.services.http.getJSON(
@@ -3295,14 +3249,14 @@ var SumeruSWC = (() => {
         this.enabled = data.enabled !== false;
       } finally {
         this.loading = false;
-        this.bump?.();
+        this.rerender();
       }
     }
     async post() {
       const body = this.draft.trim();
       if (!body || this.props.recordId <= 0) return;
       this.posting = true;
-      this.bump?.();
+      this.rerender();
       try {
         await this.env.services.http.postForm("/web/chatter/post", {
           model: this.props.model,
@@ -3318,7 +3272,7 @@ var SumeruSWC = (() => {
         });
       } finally {
         this.posting = false;
-        this.bump?.();
+        this.rerender();
       }
     }
     template() {
@@ -3334,11 +3288,11 @@ var SumeruSWC = (() => {
         <div class="sum-chatter-tabs">
           <button type="button" class="sum-chatter-tab${this.tab === "messages" ? " sum-chatter-tab--active" : ""}" @click=${() => {
         this.tab = "messages";
-        this.bump?.();
+        this.rerender();
       }}>Messages</button>
           <button type="button" class="sum-chatter-tab${this.tab === "attachments" ? " sum-chatter-tab--active" : ""}" @click=${() => {
         this.tab = "attachments";
-        this.bump?.();
+        this.rerender();
       }}>Attachments (${this.attachments.length})</button>
         </div>
         ${this.tab === "attachments" ? html`<ul class="sum-chatter-attachments">
@@ -3352,9 +3306,9 @@ var SumeruSWC = (() => {
             placeholder="Write a message…"
             rows="3"
             value=${this.draft}
-            @input=${(ev) => {
-        this.draft = ev.target.value;
-        this.bump?.();
+            @input=${(event) => {
+        this.draft = inputValueFromEvent(event);
+        this.rerender();
       }}
           ></textarea>
           <button
@@ -3379,6 +3333,30 @@ var SumeruSWC = (() => {
     }
   };
 
+  // src/views/shared/object-action.ts
+  async function runObjectAction(env, options) {
+    try {
+      const result = await env.services.rpc.callMethod(
+        options.model,
+        options.methodName,
+        options.recordId,
+        options.extraArgs
+      );
+      if (await env.services.action.applyCallResult(result)) {
+        return true;
+      }
+      env.services.notification.success(options.buttonLabel, "Action completed.");
+      await options.onSuccess?.();
+      return false;
+    } catch (error) {
+      env.services.notification.error(
+        options.buttonLabel,
+        error instanceof SwcError ? error.message : String(error)
+      );
+      return false;
+    }
+  }
+
   // src/views/form/FormView.ts
   var FormView = class extends SwcComponent {
     recordStore;
@@ -3396,9 +3374,6 @@ var SumeruSWC = (() => {
       this.recordStore = new RecordStore(this.env.services.rpc);
       this.fieldHost = new FieldHost(this.env);
       this.initRecordState(this.props.payload);
-      this.bump = () => {
-        if (this.el?.isConnected) this.patch();
-      };
       this.chatterPanel = new ChatterPanel(
         {
           model: this.props.payload.model,
@@ -3418,13 +3393,11 @@ var SumeruSWC = (() => {
       });
       this.fieldHost.clear();
     }
-    initRecordState(p) {
-      this.editing = p.formEdit || p.recordId <= 0;
-      this.snapshot = { ...p.record ?? {} };
-      this.record = this.recordStore.fromPayload(p.model, p.recordId, this.snapshot);
-      this.record.onFieldChange = (field) => void this.handleFieldChange(field);
+    initRecordState(payload) {
+      this.editing = payload.formEdit || payload.recordId <= 0;
+      this.snapshot = { ...payload.record ?? {} };
+      this.bindRecord(this.recordStore.fromPayload(payload.model, payload.recordId, this.snapshot));
     }
-    bump = null;
     onMount() {
       this.bindFormInteractions();
     }
@@ -3436,18 +3409,19 @@ var SumeruSWC = (() => {
     }
     patch() {
       this.teardownInteractions?.();
-      if (!this.el?.parentElement) return;
-      const parent = this.el.parentElement;
-      const oldEl = this.el;
-      const next = this.template().render();
-      parent.replaceChild(next, oldEl);
-      this.el = next;
+      super.patch();
+    }
+    afterPatch() {
       this.bindFormInteractions();
     }
     bindFormInteractions() {
-      if (this.el) {
-        this.teardownInteractions = initFormInteractions(this.el);
+      if (this.rootElement) {
+        this.teardownInteractions = initFormInteractions(this.rootElement);
       }
+    }
+    bindRecord(record) {
+      this.record = record;
+      this.record.onFieldChange = (field) => void this.handleFieldChange(field);
     }
     async handleFieldChange(field) {
       if (this.isReadonly()) return;
@@ -3455,14 +3429,14 @@ var SumeruSWC = (() => {
       if (result?.warning) {
         this.env.services.notification.warning(result.warning.title, result.warning.message);
       }
-      this.fieldHost.clear();
-      this.bump?.();
+      this.fieldHost.invalidate(field);
+      this.rerender();
     }
     renderFieldCached = (field, record, readonly) => {
       if (!isFieldVisible(field, record)) {
-        const el = document.createElement("div");
-        el.hidden = true;
-        return el;
+        const element = document.createElement("div");
+        element.hidden = true;
+        return element;
       }
       return this.fieldHost.render(field, record, readonly);
     };
@@ -3482,14 +3456,14 @@ var SumeruSWC = (() => {
     startEdit() {
       this.editing = true;
       this.error = "";
-      this.bump?.();
+      this.rerender();
     }
     cancelEdit() {
-      const p = this.props.payload;
-      if (p.recordId <= 0) {
+      const payload = this.props.payload;
+      if (payload.recordId <= 0) {
         const url = this.env.services.router.workspaceUrl({
-          actionId: p.actionId,
-          menuId: p.menuId,
+          actionId: payload.actionId,
+          menuId: payload.menuId,
           viewType: VIEW_LIST,
           recordId: 0,
           formEdit: false
@@ -3497,42 +3471,40 @@ var SumeruSWC = (() => {
         this.env.services.action.navigate(url);
         return;
       }
-      this.record = this.recordStore.fromPayload(p.model, p.recordId, { ...this.snapshot });
-      this.record.onFieldChange = (field) => void this.handleFieldChange(field);
+      this.bindRecord(this.recordStore.fromPayload(payload.model, payload.recordId, { ...this.snapshot }));
       this.editing = false;
       this.error = "";
-      this.bump?.();
+      this.rerender();
     }
     async reloadRecord() {
-      const p = this.props.payload;
-      if (p.recordId <= 0) return;
+      const payload = this.props.payload;
+      if (payload.recordId <= 0) return;
       const fieldNames = this.fields().map((f) => f.name);
-      const rows = await this.env.services.rpc.read(p.model, [p.recordId], fieldNames);
+      const rows = await this.env.services.rpc.read(payload.model, [payload.recordId], fieldNames);
       if (!rows[0]) return;
       this.snapshot = { ...rows[0] };
-      this.record = this.recordStore.fromPayload(p.model, p.recordId, this.snapshot);
-      this.record.onFieldChange = (field) => void this.handleFieldChange(field);
-      this.bump?.();
+      this.bindRecord(this.recordStore.fromPayload(payload.model, payload.recordId, this.snapshot));
+      this.rerender();
     }
     async save() {
-      if (this.el && !validatePasswordMatchGroups(this.el)) {
+      if (this.rootElement && !validatePasswordMatchGroups(this.rootElement)) {
         this.error = "Passwords do not match.";
-        this.bump?.();
+        this.rerender();
         return;
       }
       this.saving = true;
       this.error = "";
-      this.bump?.();
+      this.rerender();
       try {
         const required = this.fields().filter((f) => f.required).map((f) => f.name);
         this.recordStore.validate(this.record, required);
         const id = await this.recordStore.save(this.record);
         this.env.services.notification.success("Saved", "Record saved successfully.");
-        const p = this.props.payload;
-        if (p.recordId <= 0 && id > 0) {
+        const payload = this.props.payload;
+        if (payload.recordId <= 0 && id > 0) {
           this.env.services.action.openRecord({
-            actionId: p.actionId,
-            menuId: p.menuId,
+            actionId: payload.actionId,
+            menuId: payload.menuId,
             recordId: id,
             viewType: VIEW_FORM
           });
@@ -3540,7 +3512,7 @@ var SumeruSWC = (() => {
         }
         this.snapshot = { ...this.record.data };
         this.editing = false;
-        this.bump?.();
+        this.rerender();
       } catch (err) {
         const message = err instanceof SwcError ? err.message : String(err);
         if (err instanceof SwcError && err.code === "validation") {
@@ -3550,12 +3522,12 @@ var SumeruSWC = (() => {
         }
       } finally {
         this.saving = false;
-        this.bump?.();
+        this.rerender();
       }
     }
     async deleteRecord() {
-      const p = this.props.payload;
-      if (p.recordId <= 0) return;
+      const payload = this.props.payload;
+      if (payload.recordId <= 0) return;
       const ok = await this.env.services.dialog.confirm("Delete record", "This cannot be undone.");
       if (!ok) return;
       try {
@@ -3563,8 +3535,8 @@ var SumeruSWC = (() => {
         this.env.services.notification.success("Deleted", "Record deleted.");
         this.env.services.action.navigate(
           this.env.services.router.workspaceUrl({
-            actionId: p.actionId,
-            menuId: p.menuId,
+            actionId: payload.actionId,
+            menuId: payload.menuId,
             viewType: VIEW_LIST,
             recordId: 0
           })
@@ -3577,14 +3549,14 @@ var SumeruSWC = (() => {
       }
     }
     async duplicateRecord() {
-      const p = this.props.payload;
-      if (p.recordId <= 0) return;
+      const payload = this.props.payload;
+      if (payload.recordId <= 0) return;
       try {
         const newId = await this.recordStore.duplicate(this.record);
         this.env.services.notification.success("Duplicated", "Record duplicated.");
         this.env.services.action.openRecord({
-          actionId: p.actionId,
-          menuId: p.menuId,
+          actionId: payload.actionId,
+          menuId: payload.menuId,
           recordId: newId,
           viewType: VIEW_FORM
         });
@@ -3595,36 +3567,29 @@ var SumeruSWC = (() => {
         );
       }
     }
-    async runObjectButton(btn) {
-      const p = this.props.payload;
-      if (btn.type !== "object" || p.recordId <= 0) return;
+    async runObjectButton(archButton) {
+      const payload = this.props.payload;
+      if (archButton.type !== "object" || payload.recordId <= 0) return;
       this.acting = true;
       this.error = "";
-      this.bump?.();
-      try {
-        const result = await this.env.services.rpc.callMethod(p.model, btn.name, p.recordId);
-        if (await this.env.services.action.applyCallResult(result)) {
-          return;
-        }
-        this.env.services.notification.success(btn.string || btn.name, "Action completed.");
-        await this.reloadRecord();
-      } catch (err) {
-        this.env.services.notification.error(
-          btn.string || btn.name,
-          err instanceof SwcError ? err.message : String(err)
-        );
-      } finally {
-        this.acting = false;
-        this.bump?.();
-      }
+      this.rerender();
+      const navigated = await runObjectAction(this.env, {
+        model: payload.model,
+        methodName: archButton.name,
+        recordId: payload.recordId,
+        buttonLabel: archButton.string || archButton.name,
+        onSuccess: () => this.reloadRecord()
+      });
+      this.acting = false;
+      if (!navigated) this.rerender();
     }
     renderToolbarPrimary() {
-      const p = this.props.payload;
+      const payload = this.props.payload;
       const busy = this.toolbarBusy();
       const items = [];
-      if (p.recordId > 0 && this.isReadonly()) {
+      if (payload.recordId > 0 && this.isReadonly()) {
         if (!this.props.inDialog) {
-          items.push(renderNewButton(p));
+          items.push(renderNewButton(payload));
           items.push(headerButton("Edit", void 0, () => this.startEdit(), busy));
           items.push(headerButton("Duplicate", void 0, () => void this.duplicateRecord(), busy));
           items.push(
@@ -3637,38 +3602,43 @@ var SumeruSWC = (() => {
         items.push(headerButton("Save", "sum_highlight", () => void this.save(), busy));
         items.push(headerButton("Cancel", void 0, () => this.cancelEdit(), busy || this.saving));
       }
-      for (const btn of this.headerButtons()) {
-        if (btn.type !== "object") continue;
+      for (const archButton of this.headerButtons()) {
+        if (archButton.type !== "object") continue;
         items.push(
-          headerButton(btn.string || btn.name, btn.class, () => void this.runObjectButton(btn), busy)
+          headerButton(
+            archButton.string || archButton.name,
+            archButton.class,
+            () => void this.runObjectButton(archButton),
+            busy
+          )
         );
       }
       return items;
     }
     template() {
-      const p = this.props.payload;
+      const payload = this.props.payload;
       const readonly = this.isReadonly();
-      const headerFields = p.arch.header?.fields ?? [];
-      const exportFields = visibleFieldNames(this.fields());
-      const reportActions = p.recordId > 0 ? renderReportActions(p, exportFields, p.recordId) : null;
+      const headerFields = payload.arch.header?.fields ?? [];
+      const exportFields = exportFieldNamesCsv(this.fields());
+      const reportActions = payload.recordId > 0 ? renderReportActions(payload, exportFields, payload.recordId) : null;
       const toolbarItems = this.renderToolbarPrimary();
       const busy = this.toolbarBusy();
       const sheet = renderFormSheet({
         env: this.env,
-        sheet: p.arch.sheet,
+        sheet: payload.arch.sheet,
         record: this.record,
         readonly,
-        hasImageField: p.arch.formMeta?.hasImageField ?? false,
+        hasImageField: payload.arch.formMeta?.hasImageField ?? false,
         activeNotebookPages: this.activeNotebookPages,
         onNotebookTab: (notebookIndex, pageIndex) => {
           this.activeNotebookPages = { ...this.activeNotebookPages, [notebookIndex]: pageIndex };
-          this.bump?.();
+          this.rerender();
         },
         renderField: this.renderFieldCached,
         onStatButton: (name) => void this.runObjectButton({ name, string: name, type: "object" })
       });
-      const footerButtons = p.arch.footer?.buttons ?? [];
-      const showChatter = p.arch.hasChatter && p.recordId > 0;
+      const footerButtons = payload.arch.footer?.buttons ?? [];
+      const showChatter = payload.arch.hasChatter && payload.recordId > 0;
       return html`
       <div class="sum-form-view sum-form-view--workspace-chrome${readonly ? " sum-form-view--readonly" : ""}">
         <div class="sum-ws-record-toolbar sum-view-toolbar sum-form-toolbar">
@@ -3684,10 +3654,10 @@ var SumeruSWC = (() => {
             ${sheet}
             ${footerButtons.length > 0 ? html`<div class="sum-form-footer">
                   ${footerButtons.map(
-        (btn) => headerButton(
-          btn.string || btn.name,
-          btn.class,
-          () => void this.runObjectButton(btn),
+        (archButton) => headerButton(
+          archButton.string || archButton.name,
+          archButton.class,
+          () => void this.runObjectButton(archButton),
           busy
         )
       )}
@@ -3926,7 +3896,7 @@ var SumeruSWC = (() => {
         this.bindDismiss(layer);
       });
     }
-    open(opts) {
+    open(options) {
       this.close();
       return new Promise((resolve) => {
         this.pendingResolve = resolve;
@@ -3941,22 +3911,22 @@ var SumeruSWC = (() => {
         const title = document.createElement("h2");
         title.id = "sum-dialog-title";
         title.className = "sum-dialog-title";
-        title.textContent = opts.title;
+        title.textContent = options.title;
         const body = document.createElement("p");
         body.className = "sum-dialog-body";
-        body.textContent = opts.body;
+        body.textContent = options.body;
         const actions = document.createElement("div");
         actions.className = "sum-dialog-actions";
-        const buttons = opts.buttons ?? [{ label: "Close", primary: true, value: true }];
-        for (const btn of buttons) {
+        const buttons = options.buttons ?? [{ label: "Close", primary: true, value: true }];
+        for (const archButton of buttons) {
           const el = document.createElement("button");
           el.type = "button";
-          el.textContent = btn.label;
+          el.textContent = archButton.label;
           el.className = "sum-dialog-btn";
-          if (btn.primary) el.classList.add("sum-dialog-btn--primary");
-          if (btn.danger) el.classList.add("sum-dialog-btn--danger");
+          if (archButton.primary) el.classList.add("sum-dialog-btn--primary");
+          if (archButton.danger) el.classList.add("sum-dialog-btn--danger");
           el.addEventListener("click", () => {
-            this.close(btn.value ?? true);
+            this.close(archButton.value ?? true);
           });
           actions.appendChild(el);
         }
@@ -3969,16 +3939,16 @@ var SumeruSWC = (() => {
       });
     }
     bindDismiss(layer) {
-      const onKey = (ev) => {
-        if (ev.key === "Escape") {
+      const onKey = (event) => {
+        if (event.key === "Escape") {
           this.close(false);
         }
       };
       document.addEventListener("keydown", onKey, true);
       layer.addEventListener(
         "click",
-        (ev) => {
-          if (ev.target === layer) {
+        (event) => {
+          if (event.target === layer) {
             this.close(false);
           }
         },
@@ -4002,8 +3972,8 @@ var SumeruSWC = (() => {
   // src/services/service-registry.ts
   function registerCoreServices(services) {
     const cat = registry.category("services");
-    for (const [key, svc] of Object.entries(services)) {
-      cat.add(key, svc);
+    for (const [key, instance] of Object.entries(services)) {
+      cat.add(key, instance);
     }
   }
 
@@ -4015,8 +3985,8 @@ var SumeruSWC = (() => {
     if (active.includes(name)) return active.filter((n) => n !== name);
     return [...active, name];
   }
-  function renderControlPanel(opts) {
-    const { payload, state, onPage } = opts;
+  function renderControlPanel(options) {
+    const { payload, state, onPage } = options;
     const rows = payload.records ?? [];
     const total = payload.listTotal ?? rows.length;
     const page = Math.floor(state.offset / state.limit) + 1;
@@ -4047,28 +4017,28 @@ var SumeruSWC = (() => {
     </div>
   `;
   }
-  function renderSearchFilters(opts) {
-    const domainFilters = opts.filters.filter((f) => f.domain || !f.groupBy);
-    const groupFilters = opts.filters.filter((f) => f.groupBy);
+  function renderSearchFilters(options) {
+    const domainFilters = options.filters.filter((f) => f.domain || !f.groupBy);
+    const groupFilters = options.filters.filter((f) => f.groupBy);
     if (domainFilters.length === 0 && groupFilters.length === 0) return html``;
     return html`
     <div class="sum-search-filters">
       ${domainFilters.map((f) => {
-      const on = opts.active.includes(f.name);
+      const on = options.active.includes(f.name);
       return html`<button
           type="button"
           class=${on ? "sum-search-chip sum-search-chip--active" : "sum-search-chip"}
-          @click=${() => opts.onToggle(f.name)}
+          @click=${() => options.onToggle(f.name)}
         >
           ${f.string || f.name}
         </button>`;
     })}
       ${groupFilters.length ? html`<span class="sum-search-filters-label">Group</span>${groupFilters.map((f) => {
-      const on = opts.active.includes(f.name);
+      const on = options.active.includes(f.name);
       return html`<button
               type="button"
               class=${on ? "sum-search-chip sum-search-chip--active" : "sum-search-chip"}
-              @click=${() => opts.onToggle(f.name)}
+              @click=${() => options.onToggle(f.name)}
             >
               ${f.string || f.name}
             </button>`;
@@ -4089,11 +4059,11 @@ var SumeruSWC = (() => {
   </th>`;
   }
   function renderRowCheckbox(id, selected, onToggle) {
-    return html`<td class="sum-list-select-cell" @click=${(ev) => ev.stopPropagation()}>
+    return html`<td class="sum-list-select-cell" @click=${(event) => event.stopPropagation()}>
     <input
       type="checkbox"
       checked=${selected ? "checked" : void 0}
-      @change=${(ev) => onToggle(id, ev.target.checked)}
+      @change=${(event) => onToggle(id, checkboxCheckedFromEvent(event))}
     />
   </td>`;
   }
@@ -4103,7 +4073,7 @@ var SumeruSWC = (() => {
       type="checkbox"
       title="Select all"
       checked=${allSelected ? "checked" : void 0}
-      @change=${(ev) => onToggleAll(ev.target.checked)}
+      @change=${(event) => onToggleAll(checkboxCheckedFromEvent(event))}
     />
   </th>`;
   }
@@ -4112,14 +4082,52 @@ var SumeruSWC = (() => {
   function keyedResult(key, result) {
     return {
       render() {
-        const el = result.render();
-        el.dataset.swcKey = key;
-        return el;
+        const element = result.render();
+        element.dataset.swcKey = key;
+        return element;
       }
     };
   }
   function forEach(items, keyFn, renderFn) {
     return items.map((item, index) => keyedResult(String(keyFn(item, index)), renderFn(item, index)));
+  }
+
+  // src/runtime/patch/keyed.ts
+  function collectKeyedChildren(container) {
+    const map = /* @__PURE__ */ new Map();
+    for (const child of container.children) {
+      if (!(child instanceof HTMLElement)) continue;
+      const key = child.dataset.swcKey;
+      if (key) map.set(key, child);
+    }
+    return map;
+  }
+  function patchKeyedChildren(container, items) {
+    const prev = collectKeyedChildren(container);
+    const nextKeys = /* @__PURE__ */ new Set();
+    const ordered = [];
+    for (const item of items) {
+      nextKeys.add(item.key);
+      let element = prev.get(item.key);
+      if (!element) {
+        element = item.render();
+        element.dataset.swcKey = item.key;
+      }
+      ordered.push(element);
+    }
+    for (const [key, element] of prev) {
+      if (!nextKeys.has(key)) element.remove();
+    }
+    for (let index = 0; index < ordered.length; index++) {
+      const element = ordered[index];
+      const current = container.children[index];
+      if (current !== element) {
+        container.insertBefore(element, current ?? null);
+      }
+    }
+    while (container.children.length > ordered.length) {
+      container.lastElementChild?.remove();
+    }
   }
 
   // src/views/list/ListView.ts
@@ -4135,19 +4143,16 @@ var SumeruSWC = (() => {
     acting = false;
     setup() {
       this.syncFromPayload(this.props.payload);
-      const [, bump] = useState(0);
-      this.bump = () => bump((n) => n + 1);
     }
     onPropsChanged(props) {
       this.syncFromPayload(props.payload);
       this.panelState.selectedIds = /* @__PURE__ */ new Set();
     }
-    bump = null;
-    syncFromPayload(p) {
-      this.panelState.search = p.listSearch ?? "";
-      this.panelState.offset = p.listOffset ?? 0;
-      this.panelState.order = p.listSort ?? "";
-      this.panelState.filters = parseFilterCSV(p.listFilter);
+    syncFromPayload(payload) {
+      this.panelState.search = payload.listSearch ?? "";
+      this.panelState.offset = payload.listOffset ?? 0;
+      this.panelState.order = payload.listSort ?? "";
+      this.panelState.filters = parseFilterCSV(payload.listFilter);
     }
     columns() {
       return this.props.payload.arch.fields.filter((f) => !f.invisible);
@@ -4156,20 +4161,20 @@ var SumeruSWC = (() => {
       return [...this.props.payload.records ?? []];
     }
     navigateList(patch) {
-      const p = this.props.payload;
+      const payload = this.props.payload;
       const url = this.env.services.router.workspaceUrl({
-        actionId: p.actionId,
-        menuId: p.menuId,
+        actionId: payload.actionId,
+        menuId: payload.menuId,
         viewType: VIEW_LIST,
         listSearch: patch.listSearch ?? this.panelState.search,
         listOffset: patch.listOffset ?? 0,
         listSort: patch.listSort ?? this.panelState.order ?? "",
         listFilter: patch.listFilter ?? this.panelState.filters.join(","),
-        model: p.actionId ? "" : p.model
+        model: payload.actionId ? "" : payload.model
       });
       this.env.services.action.navigate(url);
     }
-    applySearch() {
+    reloadCollection() {
       this.navigateList({ listSearch: this.panelState.search, listOffset: 0 });
     }
     applyPage(offset) {
@@ -4199,17 +4204,19 @@ var SumeruSWC = (() => {
     toggleRow(id, checked) {
       if (checked) this.panelState.selectedIds.add(id);
       else this.panelState.selectedIds.delete(id);
-      this.bump?.();
+      this.rerender();
     }
     toggleAll(checked, ids) {
       this.panelState.selectedIds = checked ? new Set(ids) : /* @__PURE__ */ new Set();
-      this.bump?.();
+      this.rerender();
     }
     toolbarBusy() {
       return this.deleting || this.acting;
     }
     headerObjectButtons() {
-      return (this.props.payload.arch.header?.buttons ?? []).filter((btn) => btn.type === "object");
+      return (this.props.payload.arch.header?.buttons ?? []).filter(
+        (archButton) => archButton.type === "object"
+      );
     }
     async bulkDelete() {
       const ids = [...this.panelState.selectedIds];
@@ -4220,12 +4227,12 @@ var SumeruSWC = (() => {
       );
       if (!ok) return;
       this.deleting = true;
-      this.bump?.();
+      this.rerender();
       try {
         await this.env.services.rpc.unlink(this.props.payload.model, ids);
         this.panelState.selectedIds = /* @__PURE__ */ new Set();
         this.env.services.notification.success("Deleted", `${ids.length} record(s) removed.`);
-        this.applySearch();
+        this.reloadCollection();
       } catch (err) {
         this.env.services.notification.error(
           "Delete failed",
@@ -4233,33 +4240,26 @@ var SumeruSWC = (() => {
         );
       } finally {
         this.deleting = false;
-        this.bump?.();
+        this.rerender();
       }
     }
-    async runHeaderObject(btn) {
+    async runHeaderObject(archButton) {
       const ids = [...this.panelState.selectedIds];
       if (ids.length === 0 || this.toolbarBusy()) return;
       this.acting = true;
-      this.bump?.();
-      try {
-        const result = await this.env.services.rpc.callMethod(this.props.payload.model, btn.name, ids[0], {
-          active_ids: ids.join(",")
-        });
-        if (await this.env.services.action.applyCallResult(result)) {
-          return;
-        }
-        this.env.services.notification.success(btn.string || btn.name, "Action completed.");
-        this.applySearch();
-      } catch (err) {
-        this.env.services.notification.error(
-          btn.string || btn.name,
-          err instanceof SwcError ? err.message : String(err)
-        );
-      } finally {
-        this.acting = false;
-        this.bump?.();
-      }
+      this.rerender();
+      const navigated = await runObjectAction(this.env, {
+        model: this.props.payload.model,
+        methodName: archButton.name,
+        recordId: ids[0],
+        extraArgs: { active_ids: ids.join(",") },
+        buttonLabel: archButton.string || archButton.name,
+        onSuccess: () => this.reloadCollection()
+      });
+      this.acting = false;
+      if (!navigated) this.rerender();
     }
+    /** List cells render display text; per-cell field widgets are a later product change. */
     renderRow(row) {
       const id = Number(row.id ?? 0);
       const cols = this.columns();
@@ -4276,7 +4276,7 @@ var SumeruSWC = (() => {
     </tr>`;
     }
     patch() {
-      const tbody = this.el?.querySelector("tbody");
+      const tbody = this.rootElement?.querySelector("tbody");
       if (tbody) {
         const rows = this.pageRows();
         patchKeyedChildren(
@@ -4291,19 +4291,19 @@ var SumeruSWC = (() => {
       super.patch();
     }
     template() {
-      const p = this.props.payload;
+      const payload = this.props.payload;
       const cols = this.columns();
       const rows = this.pageRows();
       const ids = rows.map((r) => Number(r.id ?? 0)).filter((id) => id > 0);
       const allSelected = ids.length > 0 && ids.every((id) => this.panelState.selectedIds.has(id));
-      const filters = p.arch.search?.filters ?? [];
+      const filters = payload.arch.search?.filters ?? [];
       return html`
       <div class="sum-list-view">
         ${renderCollectionToolbar({
-        payload: p,
+        payload,
         viewType: VIEW_LIST,
         search: this.panelState.search,
-        onSearch: () => this.applySearch(),
+        onSearch: () => this.reloadCollection(),
         onInput: (next) => {
           this.panelState.search = next;
         },
@@ -4317,10 +4317,10 @@ var SumeruSWC = (() => {
                   Delete (${this.panelState.selectedIds.size})
                 </button>` : "",
           this.panelState.selectedIds.size >= 2 ? this.headerObjectButtons().map(
-            (btn) => headerButton(
-              btn.string || btn.name,
-              btn.class,
-              () => void this.runHeaderObject(btn),
+            (archButton) => headerButton(
+              archButton.string || archButton.name,
+              archButton.class,
+              () => void this.runHeaderObject(archButton),
               this.toolbarBusy()
             )
           ) : ""
@@ -4332,7 +4332,7 @@ var SumeruSWC = (() => {
         onToggle: (name) => this.applyFilter(name)
       })}
         ${renderControlPanel({
-        payload: p,
+        payload,
         state: this.panelState,
         onPage: (o) => this.applyPage(o)
       })}
@@ -4546,12 +4546,10 @@ var SumeruSWC = (() => {
     activeView = null;
     activeViewType = "";
     setup() {
-      const [, bump] = useState(0);
-      this.bump = () => bump((n) => n + 1);
       const load = async () => {
         this.loading = true;
         this.error = "";
-        this.bump?.();
+        this.rerender();
         try {
           this.payload = await this.fetchWorkspace();
           logWorkspacePayload("workspace", this.payload);
@@ -4562,7 +4560,7 @@ var SumeruSWC = (() => {
           this.error = err instanceof SwcError ? err.message : String(err);
         } finally {
           this.loading = false;
-          this.bump?.();
+          this.rerender();
         }
       };
       void load();
@@ -4586,16 +4584,19 @@ var SumeruSWC = (() => {
         });
       });
     }
-    bump = null;
     async fetchWorkspace() {
       const params = RouterService.searchParams(this.env.services.router.parse());
       const base = this.env.bootstrap.swcApiBase || SWC_API_BASE;
       return this.env.services.http.getJSON(`${base}/workspace?${params.toString()}`);
     }
     createView(type, payload) {
-      const Ctor = registry.category("views").get(type) ?? ListView;
-      const view = new Ctor({ payload }, this.env);
+      const ViewClass = registry.category("views").get(type) ?? ListView;
+      const view = new ViewClass({ payload }, this.env);
       view.setup?.();
+      void runWillStart().then(() => {
+        if (view.rootElement?.isConnected) view.patch();
+        else this.rerender();
+      });
       return view;
     }
     syncView() {
@@ -4611,11 +4612,7 @@ var SumeruSWC = (() => {
     }
     renderView() {
       if (!this.payload || !this.activeView) return document.createElement("div");
-      if (this.activeView.el?.isConnected) {
-        this.activeView.patch();
-        return this.activeView.el;
-      }
-      return this.activeView.render();
+      return this.activeView.renderOrPatch();
     }
     /** Reload workspace payload (e.g. after bus event). */
     reload() {
@@ -4658,11 +4655,7 @@ var SumeruSWC = (() => {
       }
     }
     workspaceView() {
-      if (this.workspaceRouter.el?.isConnected) {
-        this.workspaceRouter.patch();
-        return this.workspaceRouter.el;
-      }
-      return this.workspaceRouter.render();
+      return this.workspaceRouter.renderOrPatch();
     }
     template() {
       return html`
@@ -5390,19 +5383,19 @@ var SumeruSWC = (() => {
     onPropsChanged(props) {
       this.syncFromPayload(props.payload);
     }
-    syncFromPayload(p) {
-      this.search = p.listSearch ?? "";
-      this.filters = parseFilterCSV(p.listFilter);
+    syncFromPayload(payload) {
+      this.search = payload.listSearch ?? "";
+      this.filters = parseFilterCSV(payload.listFilter);
     }
     cardFields() {
       return this.props.payload.arch.fields.filter((f) => !f.invisible);
     }
     navigateKanban(patch) {
-      const p = this.props.payload;
+      const payload = this.props.payload;
       this.env.services.action.navigate(
         this.env.services.router.workspaceUrl({
-          actionId: p.actionId,
-          menuId: p.menuId,
+          actionId: payload.actionId,
+          menuId: payload.menuId,
           viewType: VIEW_KANBAN,
           listSearch: patch.listSearch ?? this.search,
           listFilter: patch.listFilter ?? this.filters.join(",")
@@ -5418,10 +5411,10 @@ var SumeruSWC = (() => {
     openCard(row) {
       const id = Number(row.id ?? 0);
       if (id <= 0) return;
-      const p = this.props.payload;
+      const payload = this.props.payload;
       this.env.services.action.openRecord({
-        actionId: p.actionId,
-        menuId: p.menuId,
+        actionId: payload.actionId,
+        menuId: payload.menuId,
         recordId: id,
         viewType: VIEW_FORM
       });
@@ -5476,18 +5469,18 @@ var SumeruSWC = (() => {
         }
       });
     }
-    renderCard(row, fields, opts = {}) {
-      const draggable = Boolean(opts.draggable);
-      const dropValue = opts.dropValue;
+    renderCard(row, fields, options = {}) {
+      const draggable = Boolean(options.draggable);
+      const dropValue = options.dropValue;
       return html`<div
       class="sum-kanban-card"
       draggable=${draggable ? "true" : void 0}
       @click=${() => this.openCard(row)}
-      @dragstart=${draggable ? (ev) => ev.dataTransfer?.setData("text/plain", String(row.id)) : void 0}
-      @dragover=${dropValue !== void 0 ? (ev) => ev.preventDefault() : void 0}
-      @drop=${dropValue !== void 0 ? (ev) => {
-        ev.preventDefault();
-        const id = Number(ev.dataTransfer?.getData("text/plain"));
+      @dragstart=${draggable ? (event) => event.dataTransfer?.setData("text/plain", String(row.id)) : void 0}
+      @dragover=${dropValue !== void 0 ? (event) => event.preventDefault() : void 0}
+      @drop=${dropValue !== void 0 ? (event) => {
+        event.preventDefault();
+        const id = Number(event.dataTransfer?.getData("text/plain"));
         if (id) void this.moveCard(id, dropValue);
       } : void 0}
     >
@@ -5495,12 +5488,12 @@ var SumeruSWC = (() => {
     </div>`;
     }
     template() {
-      const p = this.props.payload;
-      const kanban = p.arch.kanban;
+      const payload = this.props.payload;
+      const kanban = payload.arch.kanban;
       const fields = this.cardFields();
-      const filters = p.arch.search?.filters ?? [];
+      const filters = payload.arch.search?.filters ?? [];
       if (!kanban?.columns?.length) {
-        const rows = p.records ?? [];
+        const rows = payload.records ?? [];
         return html`
         <div class="sum-kanban-view">
           ${this.toolbar()}
@@ -5538,8 +5531,8 @@ var SumeruSWC = (() => {
                 </div>
                 ${kanban.quickCreate ? html`<form
                       class="sum-kanban-quick-create"
-                      @submit=${(ev) => {
-          ev.preventDefault();
+                      @submit=${(event) => {
+          event.preventDefault();
           void this.quickCreate(col.value);
         }}
                     >
@@ -5548,8 +5541,8 @@ var SumeruSWC = (() => {
                         class="sum-kanban-quick-input"
                         placeholder="Add…"
                         value=${this.drafts[String(col.value)] ?? ""}
-                        @input=${(ev) => {
-          this.drafts[String(col.value)] = ev.target.value;
+                        @input=${(event) => {
+          this.drafts[String(col.value)] = inputValueFromEvent(event);
         }}
                       />
                       <button type="submit" class="sum-btn sum-btn--ghost">Add</button>
@@ -5584,8 +5577,8 @@ var SumeruSWC = (() => {
         (row) => html`<tr>
                 <th>${row}</th>
                 ${pivot.colLabels.map((col) => {
-          const val = pivot.values[row]?.[col] ?? 0;
-          return html`<td>${String(val)}</td>`;
+          const fieldValue = pivot.values[row]?.[col] ?? 0;
+          return html`<td>${String(fieldValue)}</td>`;
         })}
               </tr>`
       )}
@@ -5604,54 +5597,49 @@ var SumeruSWC = (() => {
     groupField = "create_date";
     chart = "bar";
     setup() {
-      const [, bump] = useState(0);
-      this.bump = () => bump((n) => n + 1);
-      useEffect(() => {
-        void this.load();
-      });
+      onWillStart(() => this.load());
     }
-    bump = null;
     async load() {
-      const p = this.props.payload;
-      this.chart = (p.arch.graph?.chart || "bar").toLowerCase();
-      this.groupField = p.arch.fields.find((f) => f.pivotType === "row")?.name ?? "create_date";
-      this.measureField = p.arch.fields.find((f) => f.pivotType === "measure")?.name ?? "id";
+      const payload = this.props.payload;
+      this.chart = (payload.arch.graph?.chart || "bar").toLowerCase();
+      this.groupField = payload.arch.fields.find((f) => f.pivotType === "row")?.name ?? "create_date";
+      this.measureField = payload.arch.fields.find((f) => f.pivotType === "measure")?.name ?? "id";
       this.groups = await this.env.services.rpc.readGroup(
-        p.model,
+        payload.model,
         [],
         [this.measureField],
         [this.groupField],
         40
       );
-      this.bump?.();
+      this.rerender();
     }
-    labelOf(g) {
+    labelOf(group) {
       const nameKey = `${this.groupField}_name`;
-      if (g[nameKey] != null) return String(g[nameKey]);
-      if (g[this.groupField] != null) return String(g[this.groupField]);
-      return String(g.name ?? "");
+      if (group[nameKey] != null) return String(group[nameKey]);
+      if (group[this.groupField] != null) return String(group[this.groupField]);
+      return String(group.name ?? "");
     }
     template() {
       const max = Math.max(...this.groups.map((g) => Number(g[this.measureField] ?? 0)), 1);
       if (this.chart === "pie") {
-        let acc = 0;
-        const total = this.groups.reduce((s, g) => s + Number(g[this.measureField] ?? 0), 0) || 1;
+        let accumulatedPercent = 0;
+        const total = this.groups.reduce((sum, g) => sum + Number(g[this.measureField] ?? 0), 0) || 1;
         const stops = [];
         const palette = ["#2563eb", "#16a34a", "#f59e0b", "#dc2626", "#7c3aed", "#0891b2"];
-        this.groups.forEach((g, i) => {
-          const val = Number(g[this.measureField] ?? 0);
-          const start = acc;
-          acc += val / total * 100;
-          stops.push(`${palette[i % palette.length]} ${start}% ${acc}%`);
+        this.groups.forEach((group, index) => {
+          const fieldValue = Number(group[this.measureField] ?? 0);
+          const start = accumulatedPercent;
+          accumulatedPercent += fieldValue / total * 100;
+          stops.push(`${palette[index % palette.length]} ${start}% ${accumulatedPercent}%`);
         });
         return html`
         <div class="sum-graph-view">
           <div class="sum-graph-pie" style=${`background:conic-gradient(${stops.join(",")})`}></div>
           <ul class="sum-graph-legend">
             ${this.groups.map(
-          (g, i) => html`<li>
-                <span class="sum-graph-swatch" style=${`background:${["#2563eb", "#16a34a", "#f59e0b", "#dc2626", "#7c3aed", "#0891b2"][i % 6]}`}></span>
-                ${this.labelOf(g)} (${String(g[this.measureField] ?? 0)})
+          (group, index) => html`<li>
+                <span class="sum-graph-swatch" style=${`background:${["#2563eb", "#16a34a", "#f59e0b", "#dc2626", "#7c3aed", "#0891b2"][index % 6]}`}></span>
+                ${this.labelOf(group)} (${String(group[this.measureField] ?? 0)})
               </li>`
         )}
           </ul>
@@ -5660,14 +5648,14 @@ var SumeruSWC = (() => {
       }
       return html`
       <div class="sum-graph-view">
-        ${this.groups.map((g) => {
-        const label = this.labelOf(g);
-        const val = Number(g[this.measureField] ?? 0);
-        const pct = Math.round(val / max * 100);
+        ${this.groups.map((group) => {
+        const label = this.labelOf(group);
+        const fieldValue = Number(group[this.measureField] ?? 0);
+        const pct = Math.round(fieldValue / max * 100);
         return html`<div class="sum-graph-bar-row">
             <span class="sum-graph-label">${label}</span>
             <div class=${this.chart === "line" ? "sum-graph-bar sum-graph-bar--line" : "sum-graph-bar"} style="width:${pct}%"></div>
-            <span class="sum-graph-value">${val}</span>
+            <span class="sum-graph-value">${fieldValue}</span>
           </div>`;
       })}
       </div>
@@ -5693,10 +5681,7 @@ var SumeruSWC = (() => {
         const dateField = fields.find((f) => f.type === "date" || f.type === "datetime");
         if (dateField) this.dateField = dateField.name;
       }
-      const [, bump] = useState(0);
-      this.bump = () => bump((n) => n + 1);
     }
-    bump = null;
     eventsByDay() {
       const map = /* @__PURE__ */ new Map();
       for (const row of this.props.payload.records ?? []) {
@@ -5710,10 +5695,10 @@ var SumeruSWC = (() => {
     openRecord(row) {
       const id = Number(row.id ?? 0);
       if (id <= 0) return;
-      const p = this.props.payload;
+      const payload = this.props.payload;
       this.env.services.action.openRecord({
-        actionId: p.actionId,
-        menuId: p.menuId,
+        actionId: payload.actionId,
+        menuId: payload.menuId,
         recordId: id,
         viewType: VIEW_FORM
       });
@@ -5722,16 +5707,16 @@ var SumeruSWC = (() => {
       const d = new Date(this.year, this.month + delta, 1);
       this.year = d.getFullYear();
       this.month = d.getMonth();
-      this.bump?.();
+      this.rerender();
     }
     cells() {
       const first = new Date(this.year, this.month, 1);
       const start = new Date(first);
       start.setDate(1 - first.getDay());
       const out = [];
-      for (let i = 0; i < 42; i++) {
+      for (let index = 0; index < 42; index++) {
         const d = new Date(start);
-        d.setDate(start.getDate() + i);
+        d.setDate(start.getDate() + index);
         out.push({ date: d, inMonth: d.getMonth() === this.month });
       }
       return out;
@@ -5815,18 +5800,23 @@ var SumeruSWC = (() => {
   }
 
   // src/main.ts
+  var VIEW_CONSTRUCTORS = {
+    list: ListView,
+    form: FormView,
+    kanban: KanbanView,
+    pivot: PivotView,
+    graph: GraphView,
+    calendar: CalendarView,
+    gantt: StubView,
+    map: StubView,
+    cohort: StubView
+  };
   function registerCore() {
     registerDefaultWidgets();
     const views = registry.category("views");
-    views.add("list", ListView);
-    views.add("form", FormView);
-    views.add("kanban", KanbanView);
-    views.add("pivot", PivotView);
-    views.add("graph", GraphView);
-    views.add("calendar", CalendarView);
-    views.add("gantt", StubView);
-    views.add("map", StubView);
-    views.add("cohort", StubView);
+    for (const [name, ViewClass] of Object.entries(VIEW_CONSTRUCTORS)) {
+      views.add(name, ViewClass);
+    }
     const main = registry.category("main_components");
     main.add("shell", ShellLayout);
   }
