@@ -3,7 +3,10 @@ import type { SwcRecord } from "./record.js";
 
 type ModifierTriplet = { invisible: boolean; readonly: boolean; required: boolean };
 
-/** Evaluate a dynamic modifier expression against record values. */
+/**
+ * Evaluate a dynamic modifier expression against record values.
+ * Expressions come from trusted view arch only (`new Function` + `with`).
+ */
 export function evalModifierExpr(expr: string | undefined, record?: SwcRecord): boolean | undefined {
   if (!expr || !record) return undefined;
   const trimmed = expr.trim();
@@ -37,6 +40,14 @@ export function fieldModifiers(
 
 export function isFieldVisible(field: SwcArchField, record?: SwcRecord): boolean {
   return !fieldModifiers(field, record).invisible;
+}
+
+export function isFieldReadonly(
+  field: SwcArchField,
+  record: SwcRecord | undefined,
+  viewReadonly: boolean,
+): boolean {
+  return viewReadonly || fieldModifiers(field, record).readonly;
 }
 
 export function fieldDomain(field: SwcArchField, record?: SwcRecord): unknown[] | undefined {

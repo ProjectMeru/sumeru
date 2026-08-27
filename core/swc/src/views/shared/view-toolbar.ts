@@ -1,5 +1,6 @@
 import { html, type TemplateResult, type TemplateValue } from "../../template/html.js";
 import type { SwcArchField, SwcWorkspacePayload } from "../../types/workspace.js";
+import { inputValueFromEvent } from "../../widgets/field-events.js";
 import {
   BULK_TEMPLATE_ROUTE,
   BULK_UPLOAD_ROUTE,
@@ -18,7 +19,7 @@ function linkButton(href: string, label: string, className = "sum-btn sum-btn--s
   return a;
 }
 
-export function visibleFieldNames(fields: SwcArchField[]): string {
+export function exportFieldNamesCsv(fields: SwcArchField[]): string {
   return fields
     .map((f) => f.name)
     .filter(Boolean)
@@ -64,8 +65,8 @@ export function renderSearchField(
         class="sum-list-search"
         placeholder="Search…"
         value=${value}
-        @keydown=${(ev: Event) => (ev as KeyboardEvent).key === "Enter" && onSearch()}
-        @input=${(ev: Event) => onInput((ev.target as HTMLInputElement).value)}
+        @keydown=${(event: Event) => (event as KeyboardEvent).key === "Enter" && onSearch()}
+        @input=${(event: Event) => onInput(inputValueFromEvent(event))}
       />
     </div>
   `;
@@ -75,7 +76,7 @@ export function renderNewButton(payload: SwcWorkspacePayload): HTMLElement {
   return linkButton(newRecordUrl(payload), "New", "sum-btn sum-list-btn-new");
 }
 
-export function renderCollectionToolbar(opts: {
+export function renderCollectionToolbar(options: {
   payload: SwcWorkspacePayload;
   viewType: string;
   search: string;
@@ -83,15 +84,15 @@ export function renderCollectionToolbar(opts: {
   onInput: (next: string) => void;
   extraPrimary?: TemplateValue;
 }): TemplateResult {
-  const fields = visibleFieldNames((opts.payload.arch.fields ?? []).filter((f) => !f.invisible));
-  const reportActions = renderReportActions(opts.payload, fields);
-  const toolbarClass = opts.viewType === VIEW_KANBAN ? "sum-kanban-report-bar" : "sum-list-toolbar";
+  const fields = exportFieldNamesCsv((options.payload.arch.fields ?? []).filter((f) => !f.invisible));
+  const reportActions = renderReportActions(options.payload, fields);
+  const toolbarClass = options.viewType === VIEW_KANBAN ? "sum-kanban-report-bar" : "sum-list-toolbar";
   return html`
     <div class="sum-view-toolbar ${toolbarClass}">
       <div class="sum-view-toolbar-primary">
-        ${renderNewButton(opts.payload)}
-        ${renderSearchField(opts.search, opts.onSearch, opts.onInput)}
-        ${opts.extraPrimary ?? ""}
+        ${renderNewButton(options.payload)}
+        ${renderSearchField(options.search, options.onSearch, options.onInput)}
+        ${options.extraPrimary ?? ""}
       </div>
       ${reportActions ?? ""}
     </div>
@@ -104,13 +105,13 @@ export function toolbarButton(
   onClick: () => void,
   disabled = false,
 ): HTMLElement {
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = className;
-  btn.textContent = label;
-  btn.disabled = disabled;
-  btn.addEventListener("click", onClick);
-  return btn;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = className;
+  button.textContent = label;
+  button.disabled = disabled;
+  button.addEventListener("click", onClick);
+  return button;
 }
 
 /** Maps arch button class (e.g. sum_highlight) to pre-SWC header button modifiers. */
@@ -160,7 +161,7 @@ export function renderReportActions(
         <input type="hidden" name="fields" value=${fields} />
         <label class="sum-btn sum-btn--secondary sum-list-upload-label">
           Import CSV
-          <input type="file" name="file" accept=".csv,text/csv" class="sum-list-upload-input" @change=${(ev: Event) => (ev.target as HTMLInputElement).form?.requestSubmit()} />
+          <input type="file" name="file" accept=".csv,text/csv" class="sum-list-upload-input" @change=${(event: Event) => (event.target as HTMLInputElement).form?.requestSubmit()} />
         </label>
       </form>`,
     );

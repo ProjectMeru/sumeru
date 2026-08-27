@@ -1,22 +1,19 @@
 import { SwcComponent } from "../runtime/component.js";
 import { html } from "../template/html.js";
-import type { SwcArchField } from "../types/workspace.js";
-import type { SwcRecord } from "../model/record.js";
 import { fieldInputId, renderFieldShell } from "./field-shell.js";
+import type { FieldWidgetProps } from "./field-props.js";
+import { stringFromUnknown } from "./field-value.js";
+import { inputValueFromEvent } from "./field-events.js";
+import { isFieldReadonly } from "../model/modifiers.js";
 
-interface FieldProps {
-  field: SwcArchField;
-  record: SwcRecord;
-  readonly: boolean;
-}
-
-export class ImageField extends SwcComponent<FieldProps> {
-  template() {
+export class ImageField extends SwcComponent<FieldWidgetProps> {
+  override template() {
     const { field, record, readonly } = this.props;
-    const image = String(record.get(field.name) ?? "");
+    const image = stringFromUnknown(record.get(field.name));
     const hasImage = image.length > 0;
 
     const id = fieldInputId(field);
+    const fieldReadonly = isFieldReadonly(field, record, readonly);
 
     return renderFieldShell(
       field,
@@ -24,7 +21,7 @@ export class ImageField extends SwcComponent<FieldProps> {
         ${hasImage
           ? html`<div class="sum-image-thumb"><img class="sum-image-thumb-img" src=${image} alt="" /></div>`
           : html`<div class="sum-image-thumb sum-image-thumb--empty">No image</div>`}
-        ${readonly || field.readonly
+        ${fieldReadonly
           ? html`<input type="hidden" data-sum-image-value name=${field.name} value=${image} />`
           : html`<label class="sum-form-avatar-upload">
               Upload
@@ -34,11 +31,11 @@ export class ImageField extends SwcComponent<FieldProps> {
                 data-sum-image-value
                 name=${field.name}
                 value=${image}
-                @input=${(ev: Event) => record.set(field.name, (ev.target as HTMLInputElement).value)}
+                @input=${(event: Event) => record.set(field.name, inputValueFromEvent(event))}
               />
             </label>`}
       </div>`,
-      { modifiers: ["sum-field-widget--image"], labelFor: readonly || field.readonly ? false : id },
+      { modifiers: ["sum-field-widget--image"], labelFor: fieldReadonly ? false : id },
     );
   }
 }

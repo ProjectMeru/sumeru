@@ -1,7 +1,5 @@
 import { SwcComponent } from "../runtime/component.js";
 import { html } from "../template/html.js";
-import type { SwcArchField } from "../types/workspace.js";
-import type { SwcRecord } from "../model/record.js";
 import {
   fieldInputId,
   fieldPlaceholder,
@@ -9,22 +7,20 @@ import {
   fieldReadonlyValue,
   renderFieldShell,
 } from "./field-shell.js";
+import type { FieldWidgetProps } from "./field-props.js";
+import { stringFromUnknown } from "./field-value.js";
+import { inputValueFromEvent } from "./field-events.js";
+import { isFieldReadonly } from "../model/modifiers.js";
 
-interface FieldProps {
-  field: SwcArchField;
-  record: SwcRecord;
-  readonly: boolean;
-}
-
-export class TextareaField extends SwcComponent<FieldProps> {
-  template() {
+export class TextareaField extends SwcComponent<FieldWidgetProps> {
+  override template() {
     const { field, record, readonly } = this.props;
-    const val = String(record.get(field.name) ?? "");
+    const fieldValue = stringFromUnknown(record.get(field.name));
     const placeholder = fieldPlaceholder(field);
     const id = fieldInputId(field);
 
-    if (readonly || field.readonly) {
-      return renderFieldShell(field, fieldReadonlyValue(val, placeholder), { labelFor: false });
+    if (isFieldReadonly(field, record, readonly)) {
+      return renderFieldShell(field, fieldReadonlyValue(fieldValue, placeholder), { labelFor: false });
     }
 
     return renderFieldShell(
@@ -36,8 +32,8 @@ export class TextareaField extends SwcComponent<FieldProps> {
         placeholder=${placeholder}
         autocomplete=${fieldAutocomplete(field)}
         rows="5"
-        @input=${(ev: Event) => record.set(field.name, (ev.target as HTMLTextAreaElement).value)}
-      >${val}</textarea>`,
+        @input=${(event: Event) => record.set(field.name, inputValueFromEvent(event))}
+      >${fieldValue}</textarea>`,
       { labelFor: id },
     );
   }

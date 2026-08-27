@@ -1,7 +1,5 @@
 import { SwcComponent } from "../runtime/component.js";
 import { html } from "../template/html.js";
-import type { SwcArchField } from "../types/workspace.js";
-import type { SwcRecord } from "../model/record.js";
 import {
   fieldInputId,
   fieldPlaceholder,
@@ -9,46 +7,49 @@ import {
   renderFieldShell,
 } from "./field-shell.js";
 import { AsyncFieldController, recordDisplayName } from "./field-async.js";
-
-interface FieldProps {
-  field: SwcArchField;
-  record: SwcRecord;
-  readonly: boolean;
-}
+import type { FieldWidgetProps } from "./field-props.js";
+import { inputValueFromEvent } from "./field-events.js";
+import { isFieldReadonly } from "../model/modifiers.js";
 
 interface SelectOption {
   value: string;
   label: string;
 }
 
-export class SelectionField extends SwcComponent<FieldProps> {
+export class SelectionField extends SwcComponent<FieldWidgetProps> {
   private options: SelectOption[] = [];
   private loaded = false;
   private readonly asyncCtrl = new AsyncFieldController(this);
 
-  setup(): void {
+  override setup(): void {
     void this.loadOptions();
   }
 
-  onWillUnmount(): void {
+  override onWillUnmount(): void {
     this.asyncCtrl.cancel();
   }
 
   private async loadOptions(): Promise<void> {
     const gen = this.asyncCtrl.begin();
-    const { field } = this.props;
+    const { field, record, readonly } = this.props;
 
     if (field.selection?.length) {
       this.options = field.selection.map(([value, label]) => ({ value, label }));
       this.loaded = true;
-      this.asyncCtrl.finish(gen);
+      this.asyncCtrl.commitIfCurrent(gen);
+      return;
+    }
+
+    if (isFieldReadonly(field, record, readonly)) {
+      this.loaded = true;
+      this.asyncCtrl.commitIfCurrent(gen);
       return;
     }
 
     const comodel = field.relation ?? field.options?.relation ?? "";
     if (!comodel) {
       this.loaded = true;
-      this.asyncCtrl.finish(gen);
+      this.asyncCtrl.commitIfCurrent(gen);
       return;
     }
 
@@ -58,21 +59,21 @@ export class SelectionField extends SwcComponent<FieldProps> {
       label: String(row.name ?? row.id ?? ""),
     }));
     this.loaded = true;
-    this.asyncCtrl.finish(gen);
+    this.asyncCtrl.commitIfCurrent(gen);
   }
 
   private displayValue(): string {
     const { field, record } = this.props;
-    const raw = record.get(field.name);
-    const id = raw == null || raw === "" ? "" : String(raw);
+    const rawValue = record.get(field.name);
+    const id = rawValue == null || rawValue === "" ? "" : String(rawValue);
     if (!id) return "";
     const named = record.get(`${field.name}_name`);
     if (named) return String(named);
-    const match = this.options.find((o) => o.value === id);
+    const match = this.options.find((option) => option.value === id);
     return match?.label ?? recordDisplayName(record, field.name);
   }
 
-  template() {
+  override template() {
     const { field, record, readonly } = this.props;
     const current = record.get(field.name);
     const currentVal = current == null || current === "" ? "" : String(current);
@@ -80,7 +81,7 @@ export class SelectionField extends SwcComponent<FieldProps> {
 
     const placeholder = fieldPlaceholder(field);
 
-    if (readonly || field.readonly) {
+    if (isFieldReadonly(field, record, readonly)) {
       return renderFieldShell(field, fieldReadonlyValue(this.displayValue(), placeholder), { labelFor: false });
     }
 
@@ -91,19 +92,19 @@ export class SelectionField extends SwcComponent<FieldProps> {
         class="sum-field-input sum-field-select"
         name=${field.name}
         autocomplete="off"
-        @change=${(ev: Event) => {
-          const val = (ev.target as HTMLSelectElement).value;
-          const opt = this.options.find((o) => o.value === val);
-          record.set(field.name, val ? Number(val) || val : null);
-          if (opt) record.set(`${field.name}_name`, opt.label);
+        @change=${(event: Event) => {
+          const fieldValue = inputValueFromEvent(event);
+          const option = this.options.find((o) => o.value === fieldValue);
+          record.set(field.name, fieldValue ? Number(fieldValue) || fieldValue : null);
+          if (option) record.set(`${field.name}_name`, option.label);
           this.asyncCtrl.refresh();
         }}
       >
         <option value="" disabled=${currentVal !== "" ? "disabled" : false} selected=${currentVal === "" ? "selected" : false}>${placeholder}</option>
         ${this.options.map(
-          (opt) =>
-            html`<option value=${opt.value} selected=${opt.value === currentVal ? "selected" : false}>
-              ${opt.label}
+          (option) =>
+            html`<option value=${option.value} selected=${option.value === currentVal ? "selected" : ""}>
+              ${option.label}
             </option>`,
         )}
       </select>

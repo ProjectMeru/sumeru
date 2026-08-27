@@ -11,7 +11,7 @@ export type TemplateValue =
 
 export type ComponentProps = Record<string, unknown>;
 
-export type EventHandler = (ev: Event) => void;
+export type EventHandler = (event: Event) => void;
 
 export interface TemplateResult {
   render(): HTMLElement;

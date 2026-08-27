@@ -1,15 +1,12 @@
 import { SwcComponent } from "../runtime/component.js";
 import { html, type TemplateResult } from "../template/html.js";
 import type { SwcArchField } from "../types/workspace.js";
-import type { SwcRecord } from "../model/record.js";
 import { fieldControl, renderFieldShell } from "./field-shell.js";
 import { AsyncFieldController } from "./field-async.js";
-
-interface FieldProps {
-  field: SwcArchField;
-  record: SwcRecord;
-  readonly: boolean;
-}
+import type { FieldWidgetProps } from "./field-props.js";
+import { booleanFromUnknown } from "./field-value.js";
+import { checkboxCheckedFromEvent, inputValueFromEvent } from "./field-events.js";
+import { isFieldReadonly } from "../model/modifiers.js";
 
 interface O2MLine {
   id: number;
@@ -50,23 +47,23 @@ function displayCellValue(col: SwcArchField, line: Record<string, unknown>): str
   const named = line[`${col.name}_name`];
   if (named != null && String(named) !== "") return String(named);
   if (col.type === "boolean") {
-    return raw === true || raw === 1 || raw === "1" || raw === "true" ? "Yes" : "No";
+    return booleanFromUnknown(raw) ? "Yes" : "No";
   }
   return String(raw);
 }
 
-export class One2ManyField extends SwcComponent<FieldProps> {
+export class One2ManyField extends SwcComponent<FieldWidgetProps> {
   private lines: O2MLine[] = [];
   private loaded = false;
   private saving = false;
   private readonly asyncCtrl = new AsyncFieldController(this);
   private readonly writeTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
-  setup(): void {
+  override setup(): void {
     void this.loadLines();
   }
 
-  onWillUnmount(): void {
+  override onWillUnmount(): void {
     this.asyncCtrl.cancel();
     for (const t of this.writeTimers.values()) clearTimeout(t);
     this.writeTimers.clear();
@@ -84,7 +81,7 @@ export class One2ManyField extends SwcComponent<FieldProps> {
 
   private editable(): boolean {
     const { field, record, readonly } = this.props;
-    if (readonly || field.readonly) return false;
+    if (isFieldReadonly(field, record, readonly)) return false;
     if (record.id <= 0) return false;
     const mode = field.subview?.editable ?? "bottom";
     return mode === "bottom" || mode === "top";
@@ -97,7 +94,7 @@ export class One2ManyField extends SwcComponent<FieldProps> {
     const cols = columnsForField(field);
     if (!comodel || record.id <= 0 || cols.length === 0) {
       this.loaded = true;
-      this.asyncCtrl.finish(gen);
+      this.asyncCtrl.commitIfCurrent(gen);
       return;
     }
     const inv = this.inverse();
@@ -113,7 +110,7 @@ export class One2ManyField extends SwcComponent<FieldProps> {
       data: { ...row },
     }));
     this.loaded = true;
-    this.asyncCtrl.finish(gen);
+    this.asyncCtrl.commitIfCurrent(gen);
   }
 
   private lineById(id: number): O2MLine | undefined {
@@ -221,7 +218,7 @@ export class One2ManyField extends SwcComponent<FieldProps> {
   }
 
   private renderCellEditor(col: SwcArchField, line: O2MLine): ReturnType<typeof html> {
-    const val = String(line.data[col.name] ?? "");
+    const fieldValue = String(line.data[col.name] ?? "");
     const readonly = !this.editable();
 
     if (readonly) {
@@ -229,14 +226,14 @@ export class One2ManyField extends SwcComponent<FieldProps> {
     }
 
     if (col.type === "boolean") {
-      const checked = line.data[col.name] === true || line.data[col.name] === 1;
+      const checked = booleanFromUnknown(line.data[col.name]);
       return fieldControl(
         html`<input
           type="checkbox"
           class="sum-field-input"
-          checked=${checked ? "checked" : false}
-          @change=${(ev: Event) =>
-            this.onCellInput(line.id, col, (ev.target as HTMLInputElement).checked)}
+          checked=${checked ? "checked" : ""}
+          @change=${(event: Event) =>
+            this.onCellInput(line.id, col, checkboxCheckedFromEvent(event))}
         />`,
         true,
       );
@@ -246,13 +243,13 @@ export class One2ManyField extends SwcComponent<FieldProps> {
       return fieldControl(
         html`<select
           class="sum-field-select"
-          @change=${(ev: Event) =>
-            this.onCellInput(line.id, col, (ev.target as HTMLSelectElement).value)}
+          @change=${(event: Event) =>
+            this.onCellInput(line.id, col, inputValueFromEvent(event))}
         >
           <option value="">—</option>
           ${col.selection.map(
             ([v, label]) =>
-              html`<option value=${v} selected=${val === v ? "selected" : false}>${label}</option>`,
+              html`<option value=${v} selected=${fieldValue === v ? "selected" : ""}>${label}</option>`,
           )}
         </select>`,
         true,
@@ -270,9 +267,9 @@ export class One2ManyField extends SwcComponent<FieldProps> {
       html`<input
         type=${inputType}
         class="sum-field-input"
-        value=${val}
-        @input=${(ev: Event) =>
-          this.onCellInput(line.id, col, (ev.target as HTMLInputElement).value)}
+        value=${fieldValue}
+        @input=${(event: Event) =>
+          this.onCellInput(line.id, col, inputValueFromEvent(event))}
       />`,
       true,
     );
@@ -288,15 +285,15 @@ export class One2ManyField extends SwcComponent<FieldProps> {
     return html`<tr class="sum-o2m-row">${cells}</tr>`;
   }
 
-  private onTableClick(ev: Event): void {
-    const btn = (ev.target as HTMLElement).closest(".sum-o2m-delete-btn");
-    if (!btn) return;
-    const id = Number(btn.getAttribute("data-line-id"));
+  private onTableClick(event: Event): void {
+    const deleteButton = (event.target as HTMLElement).closest(".sum-o2m-delete-btn");
+    if (!deleteButton) return;
+    const id = Number(deleteButton.getAttribute("data-line-id"));
     if (!Number.isFinite(id)) return;
     void this.deleteRow(id);
   }
 
-  template() {
+  override template() {
     const { field, record } = this.props;
     const label = field.string ?? field.name;
     const cols = columnsForField(field);
@@ -320,7 +317,7 @@ export class One2ManyField extends SwcComponent<FieldProps> {
               ${canEdit ? html`<th class="sum-o2m-col-actions"></th>` : ""}
             </tr>
           </thead>
-          <tbody @click=${(ev: Event) => this.onTableClick(ev)}>
+          <tbody @click=${(event: Event) => this.onTableClick(event)}>
             ${this.lines.length === 0
               ? html`<tr>
                   <td colspan=${String(cols.length + (canEdit ? 1 : 0))}>${emptyMsg}</td>
