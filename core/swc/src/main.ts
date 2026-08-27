@@ -13,7 +13,7 @@ import { ShellLayout } from "./shell/ShellLayout.js";
 import { initShellChrome } from "./shell/shell-chrome.js";
 import { initAppLauncher } from "./shell/app-launcher.js";
 import { registerDefaultWidgets } from "./widgets/registry.js";
-import { registry, type RegistryEntry } from "./runtime/registry.js";
+import { registry, type ViewConstructor, type MainComponentConstructor } from "./runtime/registry.js";
 import { AddonLoader } from "./addon/loader.js";
 import { ListView } from "./views/list/ListView.js";
 import { FormView } from "./views/form/FormView.js";
@@ -26,20 +26,26 @@ import { loadTranslations } from "./i18n/translate.js";
 import { mountDebugPanel } from "./devtools/debug.js";
 import { initDevtoolsBridge } from "./devtools/bridge.js";
 
+const VIEW_CONSTRUCTORS = {
+  list: ListView,
+  form: FormView,
+  kanban: KanbanView,
+  pivot: PivotView,
+  graph: GraphView,
+  calendar: CalendarView,
+  gantt: StubView,
+  map: StubView,
+  cohort: StubView,
+} satisfies Record<string, ViewConstructor>;
+
 function registerCore(): void {
   registerDefaultWidgets();
   const views = registry.category("views");
-  views.add("list", ListView as unknown as RegistryEntry);
-  views.add("form", FormView as unknown as RegistryEntry);
-  views.add("kanban", KanbanView as unknown as RegistryEntry);
-  views.add("pivot", PivotView as unknown as RegistryEntry);
-  views.add("graph", GraphView as unknown as RegistryEntry);
-  views.add("calendar", CalendarView as unknown as RegistryEntry);
-  views.add("gantt", StubView as unknown as RegistryEntry);
-  views.add("map", StubView as unknown as RegistryEntry);
-  views.add("cohort", StubView as unknown as RegistryEntry);
+  for (const [name, ViewClass] of Object.entries(VIEW_CONSTRUCTORS)) {
+    views.add(name, ViewClass);
+  }
   const main = registry.category("main_components");
-  main.add("shell", ShellLayout as unknown as RegistryEntry);
+  main.add("shell", ShellLayout as MainComponentConstructor);
 }
 
 function buildEnv(boot: ReturnType<typeof readBootstrap>): SwcEnv {

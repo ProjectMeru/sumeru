@@ -1,11 +1,12 @@
 import { SwcComponent } from "./component.js";
 import { SwcEnv } from "./env.js";
-import { setActiveComponent, runMountCallbacks, runUnmountCallbacks } from "./hooks.js";
+import { runMountCallbacks, runUnmountCallbacks } from "./hooks.js";
 import { html } from "../template/html.js";
 import { SwcError } from "./error.js";
+import { runWillStart } from "./lifecycle.js";
 
 class ErrorBoundary extends SwcComponent<{ error: SwcError; retry: () => void }> {
-  template() {
+  override template() {
     const { error, retry } = this.props;
     return html`
       <div class="sum-flash sum-flash--error">
@@ -53,7 +54,6 @@ export class SwcApp {
   private readonly Root: new (props: Record<string, unknown>, env: SwcEnv) => SwcComponent;
   private rootEl: HTMLElement | null = null;
   private component: SwcComponent | null = null;
-  private scheduled = false;
 
   constructor(env: SwcEnv, Root: new (props: Record<string, unknown>, env: SwcEnv) => SwcComponent) {
     this.env = env;
@@ -66,35 +66,25 @@ export class SwcApp {
     Root: new (props: Record<string, unknown>, env: SwcEnv) => SwcComponent,
   ): SwcApp {
     const app = new SwcApp(env, Root);
-    app.mount(mountEl);
+    void app.mount(mountEl);
     return app;
   }
 
-  mount(el: HTMLElement): void {
-    this.rootEl = el;
-    this.renderRoot();
+  async mount(element: HTMLElement): Promise<void> {
+    this.rootEl = element;
+    await this.renderRoot();
   }
 
-  private schedulePatch(): void {
-    if (this.scheduled) return;
-    this.scheduled = true;
-    requestAnimationFrame(() => {
-      this.scheduled = false;
-      this.renderRoot();
-    });
-  }
-
-  private renderRoot(): void {
+  private async renderRoot(): Promise<void> {
     if (!this.rootEl) return;
     try {
       if (!this.component) {
         this.component = new this.Root({}, this.env);
         this.component.setup?.();
-        setActiveComponent({ schedulePatch: () => this.schedulePatch() });
+        await runWillStart();
         runMountCallbacks();
         this.rootEl.replaceChildren(this.component.render());
       } else {
-        setActiveComponent({ schedulePatch: () => this.schedulePatch() });
         this.component.patch();
       }
     } catch (err) {
@@ -107,7 +97,7 @@ export class SwcApp {
     runUnmountCallbacks();
     this.component?.destroy();
     this.component = null;
-    this.renderRoot();
+    void this.renderRoot();
   }
 
   destroy(): void {
