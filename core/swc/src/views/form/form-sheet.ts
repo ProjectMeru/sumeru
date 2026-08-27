@@ -12,6 +12,8 @@ import type {
 import type { SwcRecord } from "../../model/record.js";
 import { renderField as defaultRenderField } from "../../widgets/registry.js";
 import { fieldInputId, fieldPlaceholder, fieldAutocomplete } from "../../widgets/field-shell.js";
+import { inputValueFromEvent } from "../../widgets/field-events.js";
+import { isFieldReadonly } from "../../model/modifiers.js";
 
 export type RenderFieldFn = (
   field: SwcArchField,
@@ -105,7 +107,7 @@ function renderHeroField(
   const val = String(record.get(field.name) ?? "");
   const placeholder = fieldPlaceholder(field);
   const hasValue = val.trim() !== "";
-  if (readonly || field.readonly) {
+  if (isFieldReadonly(field, record, readonly)) {
     const text = hasValue ? val : placeholder;
     const cls = hasValue
       ? "sum-form-hero-input sum-form-hero-input--bold"
@@ -121,7 +123,7 @@ function renderHeroField(
       value=${val}
       autocomplete=${fieldAutocomplete(field)}
       aria-label=${placeholder}
-      @input=${(ev: Event) => record.set(field.name, (ev.target as HTMLInputElement).value)}
+      @input=${(event: Event) => record.set(field.name, inputValueFromEvent(event))}
     />
   </h1>`;
 }
@@ -135,7 +137,7 @@ function renderContactItem(
   const label = field.string ?? field.name;
   const placeholder = fieldPlaceholder(field);
   const inputType = field.widget === "email" ? "email" : "text";
-  if (readonly || field.readonly) {
+  if (isFieldReadonly(field, record, readonly)) {
     const text = val.trim() !== "" ? val : placeholder;
     const cls = val.trim() !== "" ? "sum-form-inline-input" : "sum-form-inline-input sum-form-inline-input--placeholder";
     return html`<div class="sum-form-contact-item">
@@ -151,7 +153,7 @@ function renderContactItem(
       name=${field.name}
       placeholder=${placeholder}
       value=${val}
-      @input=${(ev: Event) => record.set(field.name, (ev.target as HTMLInputElement).value)}
+      @input=${(event: Event) => record.set(field.name, inputValueFromEvent(event))}
     />
   </div>`;
 }
@@ -182,7 +184,7 @@ function renderAvatar(record: SwcRecord, readonly: boolean): TemplateResult {
             name="image"
             data-sum-avatar-value
             value=${image}
-            @input=${(ev: Event) => record.set("image", (ev.target as HTMLInputElement).value)}
+            @input=${(event: Event) => record.set("image", inputValueFromEvent(event))}
           />
           <label class="sum-form-avatar-upload">
             Upload
@@ -228,8 +230,8 @@ function renderTitleDiv(
     const buttons = div.buttons ?? [];
     return html`<div class="sum-form-button-box ${cls}">
       ${buttons.map(
-        (btn) => html`<button type="button" class="sum-stat-button ${btn.class ?? ""}" data-action=${btn.name} @click=${() => onStatButton?.(btn.name)}>
-          ${btn.string || btn.name}
+        (archButton) => html`<button type="button" class="sum-stat-button ${archButton.class ?? ""}" data-action=${archButton.name} @click=${() => onStatButton?.(archButton.name)}>
+          ${archButton.string || archButton.name}
         </button>`,
       )}
     </div>`;
@@ -240,20 +242,10 @@ function renderTitleDiv(
     return html`<div class=${cls}>${renderFields(rf, div.fields ?? [], record, readonly)}</div>`;
   }
 
-  const h1Fields = visibleFields(div.h1Fields ?? []);
-  const legacySingle = h1Fields.length === 0 && visibleFields(div.fields ?? []).length === 1;
-  const titleField = h1Fields[0] ?? (legacySingle ? visibleFields(div.fields ?? [])[0] : undefined);
-
   if (hasImageField) {
     return html`<div class="sum-form-split-layout sum-form-split-layout--compact" data-sum-form-split>
       <aside class="sum-form-split-left sum-form-split-left--avatar">${renderAvatar(record, readonly)}</aside>
       <div class="sum-form-split-main">${renderTitleBody(rf, div, record, readonly)}</div>
-    </div>`;
-  }
-
-  if (titleField) {
-    return html`<div class="sum-form-title-row sum-form-title-row--sheet">
-      ${renderTitleBody(rf, div, record, readonly)}
     </div>`;
   }
 
@@ -410,7 +402,7 @@ export interface RenderFormSheetOptions {
   onStatButton?: (name: string) => void;
 }
 
-export function renderFormSheet(opts: RenderFormSheetOptions): TemplateResult {
+export function renderFormSheet(options: RenderFormSheetOptions): TemplateResult {
   const {
     env,
     sheet,
@@ -421,7 +413,7 @@ export function renderFormSheet(opts: RenderFormSheetOptions): TemplateResult {
     onNotebookTab,
     renderField: renderFieldOpt,
     onStatButton,
-  } = opts;
+  } = options;
   const rf: RenderFieldFn =
     renderFieldOpt ?? ((f, r, ro) => defaultRenderField(env, f, r, ro));
   if (!sheet) {

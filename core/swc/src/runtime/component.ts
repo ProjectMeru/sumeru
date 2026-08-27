@@ -1,5 +1,4 @@
 import type { ComponentProps } from "../template/html.js";
-import { patchKeyedChildren } from "./patch/keyed.js";
 import { runWillPatch, runPatched } from "./lifecycle.js";
 import { registerComponent, unregisterComponent } from "../devtools/bridge.js";
 
@@ -11,7 +10,7 @@ export type ComponentConstructor<P extends object = ComponentProps> = new (
 export abstract class SwcComponent<P extends object = ComponentProps> {
   readonly props: P;
   readonly env: import("./env.js").SwcEnv;
-  el: HTMLElement | null = null;
+  rootElement: HTMLElement | null = null;
   private mounted = false;
 
   constructor(props: P, env: import("./env.js").SwcEnv) {
@@ -26,6 +25,9 @@ export abstract class SwcComponent<P extends object = ComponentProps> {
   onMount?(): void;
   onWillUnmount?(): void;
 
+  /** Called after the root node is replaced in the DOM. */
+  afterPatch?(): void;
+
   /** Called when props are updated on an existing instance (SPA navigation). */
   onPropsChanged(_props: P): void {
     // override in subclasses
@@ -38,10 +40,24 @@ export abstract class SwcComponent<P extends object = ComponentProps> {
     this.patch();
   }
 
+  /** Re-render this component if it is still in the document. */
+  rerender(): void {
+    if (this.rootElement?.isConnected) this.patch();
+  }
+
+  /** Patch in place when mounted; otherwise produce a new root. */
+  renderOrPatch(): HTMLElement {
+    if (this.rootElement?.isConnected) {
+      this.patch();
+      return this.rootElement;
+    }
+    return this.render();
+  }
+
   render(): HTMLElement {
     const result = this.template();
     const root = result.render();
-    this.el = root;
+    this.rootElement = root;
     if (!this.mounted) {
       this.mounted = true;
       registerComponent(this);
@@ -50,29 +66,23 @@ export abstract class SwcComponent<P extends object = ComponentProps> {
     return root;
   }
 
-  /** Patch keyed tbody/list regions in-place when possible. */
-  protected patchKeyedTbody(tbody: HTMLTableSectionElement, rows: Array<{ key: string; render: () => HTMLElement }>): boolean {
-    if (!tbody) return false;
-    patchKeyedChildren(tbody, rows);
-    return true;
-  }
-
   patch(): void {
-    if (!this.el?.parentElement) return;
+    if (!this.rootElement?.parentElement) return;
     runWillPatch();
-    const parent = this.el.parentElement;
-    const oldEl = this.el;
+    const parent = this.rootElement.parentElement;
+    const previousRoot = this.rootElement;
     const next = this.template().render();
-    parent.replaceChild(next, oldEl);
-    this.el = next;
+    parent.replaceChild(next, previousRoot);
+    this.rootElement = next;
     runPatched();
+    this.afterPatch?.();
   }
 
   destroy(): void {
     this.onWillUnmount?.();
     unregisterComponent(this);
-    this.el?.remove();
-    this.el = null;
+    this.rootElement?.remove();
+    this.rootElement = null;
     this.mounted = false;
   }
 }
