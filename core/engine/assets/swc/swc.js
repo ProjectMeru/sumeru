@@ -64,12 +64,6 @@ var SumeruSWC = (() => {
   function getActiveHost() {
     return activeHost;
   }
-  function requireActiveHost() {
-    if (!activeHost) {
-      throw new Error("Hooks must run inside callSetup()");
-    }
-    return activeHost;
-  }
   function withActiveHost(host, fn) {
     const previous = activeHost;
     activeHost = host;
@@ -78,40 +72,6 @@ var SumeruSWC = (() => {
     } finally {
       activeHost = previous;
     }
-  }
-  function onMount(fn) {
-    requireActiveHost().mountEffects.push(fn);
-  }
-  function onWillUnmount(fn) {
-    requireActiveHost().unmountEffects.push(fn);
-  }
-  function useEffect(fn) {
-    onMount(() => {
-      const cleanup = fn();
-      if (typeof cleanup === "function") {
-        onWillUnmount(cleanup);
-      }
-    });
-  }
-  function useState(initial) {
-    const host = requireActiveHost();
-    const index = host.consumeHookSlot();
-    if (host.hookState[index] === void 0) {
-      host.hookState[index] = initial;
-    }
-    const box = {
-      get value() {
-        return host.hookState[index];
-      }
-    };
-    const setValue = (next) => {
-      const previous = host.hookState[index];
-      const value = typeof next === "function" ? next(previous) : next;
-      if (Object.is(value, previous)) return;
-      host.hookState[index] = value;
-      scheduleRender(host);
-    };
-    return [box, setValue];
   }
   function runMountEffects(host) {
     for (const fn of host.mountEffects) {
@@ -125,7 +85,7 @@ var SumeruSWC = (() => {
   }
 
   // src/runtime/lifecycle.ts
-  function requireActiveHost2() {
+  function requireActiveHost() {
     const host = getActiveHost();
     if (!host) {
       throw new Error("Lifecycle hooks must run inside callSetup()");
@@ -133,7 +93,7 @@ var SumeruSWC = (() => {
     return host;
   }
   function onWillStart(fn) {
-    requireActiveHost2().willStart.push(fn);
+    requireActiveHost().willStart.push(fn);
   }
   async function runWillStart(host) {
     for (const fn of host.willStart) {
@@ -4863,6 +4823,26 @@ var SumeruSWC = (() => {
     return items.map((item, index) => keyedResult(String(keyFn(item, index)), renderFn(item, index)));
   }
 
+  // src/views/shared/field-display.ts
+  function formatFieldValue(row, field) {
+    if (field.type === "boolean") {
+      const raw2 = row[field.name];
+      if (raw2 === true) return "Yes";
+      if (raw2 === false) return "No";
+      return "";
+    }
+    if (field.type === "selection" && field.selection?.length) {
+      const raw2 = row[field.name];
+      if (raw2 == null || raw2 === "") return "";
+      const key = String(raw2);
+      const match = field.selection.find(([value]) => value === key);
+      return match?.[1] ?? key;
+    }
+    const raw = row[`${field.name}_name`] ?? row[field.name];
+    if (raw == null || raw === false) return "";
+    return String(raw);
+  }
+
   // src/views/list/ListView.ts
   var ListView = class extends SwcComponent {
     panelState = {
@@ -4874,18 +4854,12 @@ var SumeruSWC = (() => {
     };
     deleting = false;
     acting = false;
-    fieldHost;
     setup() {
-      this.fieldHost = new FieldHost(this.env);
       this.syncFromPayload(this.props.payload);
     }
     onPropsChanged(props) {
       this.syncFromPayload(props.payload);
       this.panelState.selectedIds = /* @__PURE__ */ new Set();
-      this.fieldHost.clear();
-    }
-    onWillUnmount() {
-      this.fieldHost.clear();
     }
     syncFromPayload(payload) {
       this.panelState.search = payload.listSearch ?? "";
@@ -4998,20 +4972,17 @@ var SumeruSWC = (() => {
       this.acting = false;
       if (!navigated) this.rerender();
     }
-    /** List cells use readonly field widgets via FieldHost. */
+    /** Data rows: one `<td>` per visible column with plain text values. */
     renderRow(row) {
       const id = Number(row.id ?? 0);
       const cols = this.columns();
-      const record = new SwcRecord(this.props.payload.model, id, row);
       return html`<tr class="sum-list-row sum-list-row--click" @click=${() => this.openRow(row)}>
       ${renderRowCheckbox(
         id,
         this.panelState.selectedIds.has(id),
         (rid, checked) => this.toggleRow(rid, checked)
       )}
-      ${cols.map((c) => {
-        return html`<td class="sum-list-td">${this.fieldHost.render(c, record, true)}</td>`;
-      })}
+      ${cols.map((c) => html`<td class="sum-list-td">${formatFieldValue(row, c)}</td>`)}
     </tr>`;
     }
     template() {
@@ -5269,44 +5240,54 @@ var SumeruSWC = (() => {
     error = "";
     activeView = null;
     activeViewType = "";
+    onPopState = null;
+    unsubActionClosed = null;
+    unsubRecordUpdated = null;
     setup() {
-      const load = async () => {
-        this.loading = true;
-        this.error = "";
-        this.rerender();
-        try {
-          this.payload = await this.fetchWorkspace();
-          logWorkspacePayload("workspace", this.payload);
-          logViewArch(this.payload.arch);
-          syncWorkspaceViewTabs(this.payload.viewTabs);
-          this.syncView();
-        } catch (err) {
-          this.error = err instanceof SwcError ? err.message : String(err);
-        } finally {
-          this.loading = false;
-          this.rerender();
-        }
+      void this.load();
+    }
+    onMount() {
+      this.onPopState = () => {
+        void this.load();
       };
-      void load();
-      useEffect(() => {
-        const onNav = () => void load();
-        window.addEventListener("popstate", onNav);
-        return () => window.removeEventListener("popstate", onNav);
+      window.addEventListener("popstate", this.onPopState);
+      this.unsubActionClosed = this.env.services.bus.subscribe(ACTION_CLOSED, () => {
+        void this.load();
       });
-      useEffect(() => {
-        return this.env.services.bus.subscribe(ACTION_CLOSED, () => {
-          void load();
-        });
+      this.unsubRecordUpdated = this.env.services.bus.subscribe(RECORD_UPDATED, (payload) => {
+        const msg = payload;
+        if (!this.payload || !msg.model) return;
+        if (msg.model !== this.payload.model) return;
+        if (msg.id && this.payload.recordId && msg.id !== this.payload.recordId) return;
+        void this.load();
       });
-      useEffect(() => {
-        return this.env.services.bus.subscribe(RECORD_UPDATED, (payload) => {
-          const msg = payload;
-          if (!this.payload || !msg.model) return;
-          if (msg.model !== this.payload.model) return;
-          if (msg.id && this.payload.recordId && msg.id !== this.payload.recordId) return;
-          void load();
-        });
-      });
+    }
+    onWillUnmount() {
+      if (this.onPopState) {
+        window.removeEventListener("popstate", this.onPopState);
+        this.onPopState = null;
+      }
+      this.unsubActionClosed?.();
+      this.unsubActionClosed = null;
+      this.unsubRecordUpdated?.();
+      this.unsubRecordUpdated = null;
+    }
+    async load() {
+      this.loading = true;
+      this.error = "";
+      this.rerender();
+      try {
+        this.payload = await this.fetchWorkspace();
+        logWorkspacePayload("workspace", this.payload);
+        logViewArch(this.payload.arch);
+        syncWorkspaceViewTabs(this.payload.viewTabs);
+        this.syncView();
+      } catch (err) {
+        this.error = err instanceof SwcError ? err.message : String(err);
+      } finally {
+        this.loading = false;
+        this.rerender();
+      }
     }
     async fetchWorkspace() {
       const params = RouterService.searchParams(this.env.services.router.parse());
@@ -6494,12 +6475,10 @@ var SumeruSWC = (() => {
     return Number.isNaN(date.getTime()) ? null : date;
   }
   var GanttView = class extends SwcComponent {
-    scale;
-    setScale;
-    setup() {
-      const [scale, setScale] = useState("week");
-      this.scale = scale;
-      this.setScale = setScale;
+    scale = "week";
+    setScale(next) {
+      this.scale = next;
+      this.rerender();
     }
     dateStartField() {
       return this.props.payload.arch.gantt?.dateStart || this.props.payload.arch.calendar?.dateStart || this.props.payload.arch.fields.find((f) => f.type === "date" || f.type === "datetime")?.name || "date_start";
@@ -6534,7 +6513,7 @@ var SumeruSWC = (() => {
         const now = Date.now();
         return { start: now, end: now + 864e5 * 7 };
       }
-      const pad = this.scale.value === "day" ? 864e5 : this.scale.value === "week" ? 864e5 * 7 : 864e5 * 30;
+      const pad = this.scale === "day" ? 864e5 : this.scale === "week" ? 864e5 * 7 : 864e5 * 30;
       return { start: min - pad, end: max + pad };
     }
     template() {
@@ -6551,7 +6530,7 @@ var SumeruSWC = (() => {
             ${["day", "week", "month"].map(
         (scale) => html`<button
                 type="button"
-                class=${this.scale.value === scale ? "sum-btn sum-btn--secondary" : "sum-btn sum-btn--ghost"}
+                class=${this.scale === scale ? "sum-btn sum-btn--secondary" : "sum-btn sum-btn--ghost"}
                 @click=${() => this.setScale(scale)}
               >${scale}</button>`
       )}
