@@ -2,6 +2,7 @@ import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
 import type { SwcArchButton, SwcWorkspacePayload } from "../../types/workspace.js";
 import { RecordStore, SwcRecord } from "../../model/record.js";
+import { takePendingChildren } from "../../model/pending-children.js";
 import { SwcError } from "../../runtime/error.js";
 import {
   headerButton,
@@ -186,10 +187,14 @@ export class FormView extends SwcComponent<FormViewProps> {
     try {
       const required = this.fields().filter((f) => f.required).map((f) => f.name);
       this.recordStore.validate(this.record, required);
-      const id = await this.recordStore.save(this.record);
-      this.env.services.notification.success("Saved", "Record saved successfully.");
       const payload = this.props.payload;
-      if (payload.recordId <= 0 && id > 0) {
+      const isNew = payload.recordId <= 0;
+      const id = await this.recordStore.save(this.record);
+      if (isNew && id > 0) {
+        await this.savePendingChildren(id);
+      }
+      this.env.services.notification.success("Saved", "Record saved successfully.");
+      if (isNew && id > 0) {
         this.env.services.action.openRecord({
           actionId: payload.actionId,
           menuId: payload.menuId,
@@ -198,9 +203,10 @@ export class FormView extends SwcComponent<FormViewProps> {
         });
         return;
       }
-      this.snapshot = { ...this.record.data };
       this.editing = false;
-      this.rerender();
+      // Re-fetch the record so server-recomputed fields (e.g. invoice totals
+      // after line edits) are reflected in the UI.
+      await this.reloadRecord();
     } catch (err) {
       const message = err instanceof SwcError ? err.message : String(err);
       if (err instanceof SwcError && err.code === "validation") {
@@ -211,6 +217,24 @@ export class FormView extends SwcComponent<FormViewProps> {
     } finally {
       this.saving = false;
       this.rerender();
+    }
+  }
+
+  private async savePendingChildren(parentId: number): Promise<void> {
+    const children = takePendingChildren(this.record);
+    for (const child of children) {
+      if (!child.comodel || !child.inverse) continue;
+      const values: Record<string, unknown> = { ...child.values };
+      values[child.inverse] = parentId;
+      try {
+        await this.env.services.rpc.create(child.comodel, values);
+      } catch (err) {
+        const message = err instanceof SwcError ? err.message : String(err);
+        this.env.services.notification.error(
+          "Save failed",
+          `Could not create ${child.comodel} line: ${message}`,
+        );
+      }
     }
   }
 
