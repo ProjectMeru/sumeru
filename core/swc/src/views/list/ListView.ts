@@ -14,6 +14,7 @@ import {
   type ControlPanelState,
 } from "./control-panel.js";
 import { forEach } from "../../template/helpers.js";
+import { patchKeyedChildren } from "../../runtime/patch/keyed.js";
 import { VIEW_FORM, VIEW_LIST } from "../../constants/routes.js";
 import { runObjectAction } from "../shared/object-action.js";
 import { FieldHost } from "../../widgets/field-host.js";
@@ -194,6 +195,22 @@ export class ListView extends SwcComponent<ListViewProps> {
         return html`<td class="sum-list-td">${this.fieldHost.render(c, record, true)}</td>`;
       })}
     </tr>`;
+  }
+
+  override patch(): void {
+    const tbody = this.rootElement?.querySelector("tbody");
+    if (tbody) {
+      const rows = this.pageRows();
+      patchKeyedChildren(
+        tbody,
+        rows.map((row) => ({
+          key: String(row.id ?? 0),
+          render: () => this.renderRow(row).render(),
+        })),
+      );
+      return;
+    }
+    super.patch();
   }
 
   override template() {
