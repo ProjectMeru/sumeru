@@ -1,11 +1,15 @@
 import { SwcComponent } from "../runtime/component.js";
 import { html } from "../template/html.js";
+import type { SwcArchField } from "../types/workspace.js";
+import type { SwcRecord } from "../model/record.js";
 import { fieldInputId, renderFieldShell } from "./field-shell.js";
 import { AsyncFieldController } from "./field-async.js";
-import type { FieldWidgetProps } from "./field-props.js";
-import type { SwcRecord } from "../model/record.js";
-import { inputValueFromEvent } from "./field-events.js";
-import { isFieldReadonly } from "../model/modifiers.js";
+
+interface FieldProps {
+  field: SwcArchField;
+  record: SwcRecord;
+  readonly: boolean;
+}
 
 interface TagRow {
   id: number;
@@ -13,16 +17,16 @@ interface TagRow {
 }
 
 function tagIds(record: SwcRecord, fieldName: string): number[] {
-  const rawValue = record.get(fieldName);
-  if (!Array.isArray(rawValue)) return [];
-  return rawValue.map((v) => Number(v)).filter((n) => !Number.isNaN(n));
+  const raw = record.get(fieldName);
+  if (!Array.isArray(raw)) return [];
+  return raw.map((v) => Number(v)).filter((n) => !Number.isNaN(n));
 }
 
 function tagNamesFromRecord(record: SwcRecord, fieldName: string): Map<number, string> {
   const out = new Map<number, string>();
-  const rawValue = record.get(`${fieldName}_names`);
-  if (Array.isArray(rawValue)) {
-    for (const item of rawValue) {
+  const raw = record.get(`${fieldName}_names`);
+  if (Array.isArray(raw)) {
+    for (const item of raw) {
       if (item && typeof item === "object") {
         const row = item as Record<string, unknown>;
         const id = Number(row.id);
@@ -33,40 +37,40 @@ function tagNamesFromRecord(record: SwcRecord, fieldName: string): Map<number, s
   return out;
 }
 
-export class Many2ManyTagsField extends SwcComponent<FieldWidgetProps> {
+export class Many2ManyTagsField extends SwcComponent<FieldProps> {
   private catalog: TagRow[] = [];
   private loaded = false;
   private readonly asyncCtrl = new AsyncFieldController(this);
 
-  override setup(): void {
+  setup(): void {
     void this.loadCatalog();
   }
 
-  override onWillUnmount(): void {
+  onWillUnmount(): void {
     this.asyncCtrl.cancel();
   }
 
   private async loadCatalog(): Promise<void> {
     const gen = this.asyncCtrl.begin();
-    const { field, record, readonly } = this.props;
+    const { field, readonly } = this.props;
 
-    if (isFieldReadonly(field, record, readonly)) {
+    if (readonly || field.readonly) {
       this.loaded = true;
-      this.asyncCtrl.commitIfCurrent(gen);
+      this.asyncCtrl.finish(gen);
       return;
     }
 
     const comodel = field.relation ?? field.options?.relation ?? "";
     if (!comodel) {
       this.loaded = true;
-      this.asyncCtrl.commitIfCurrent(gen);
+      this.asyncCtrl.finish(gen);
       return;
     }
 
     const rows = await this.env.services.rpc.searchRead(comodel, [], ["id", "name"], 500);
     this.catalog = rows.map((row) => ({ id: Number(row.id), name: String(row.name ?? row.id) }));
     this.loaded = true;
-    this.asyncCtrl.commitIfCurrent(gen);
+    this.asyncCtrl.finish(gen);
   }
 
   private selectedTags(): TagRow[] {
@@ -74,7 +78,7 @@ export class Many2ManyTagsField extends SwcComponent<FieldWidgetProps> {
     const ids = tagIds(record, field.name);
     const names = tagNamesFromRecord(record, field.name);
     return ids.map((id) => {
-      const fromCatalog = this.catalog.find((tag) => tag.id === id);
+      const fromCatalog = this.catalog.find((t) => t.id === id);
       if (fromCatalog) return fromCatalog;
       const fromRecord = names.get(id);
       if (fromRecord) return { id, name: fromRecord };
@@ -87,12 +91,12 @@ export class Many2ManyTagsField extends SwcComponent<FieldWidgetProps> {
     this.asyncCtrl.refresh();
   }
 
-  override template() {
-    const { field, record, readonly } = this.props;
+  template() {
+    const { field, readonly } = this.props;
     const selected = this.selectedTags();
-    const selectedSet = new Set(selected.map((tag) => tag.id));
+    const selectedSet = new Set(selected.map((t) => t.id));
 
-    if (isFieldReadonly(field, record, readonly)) {
+    if (readonly || field.readonly) {
       return renderFieldShell(
         field,
         html`<div class="sum-multi-select-tags sum-multi-select-tags--readonly sum-field-tags">
@@ -119,18 +123,17 @@ export class Many2ManyTagsField extends SwcComponent<FieldWidgetProps> {
         <select
           id=${id}
           class="sum-multi-select-add sum-field-select"
-          @change=${(event: Event) => {
-            const fieldValue = Number(inputValueFromEvent(event));
-            const select = event.target as HTMLSelectElement;
-            select.value = "";
-            if (!fieldValue || selectedSet.has(fieldValue)) return;
-            this.setIds([...selected.map((tag) => tag.id), fieldValue]);
+          @change=${(ev: Event) => {
+            const val = Number((ev.target as HTMLSelectElement).value);
+            (ev.target as HTMLSelectElement).value = "";
+            if (!val || selectedSet.has(val)) return;
+            this.setIds([...selected.map((t) => t.id), val]);
           }}
         >
           <option value="">Add tag…</option>
           ${this.catalog
-            .filter((tag) => !selectedSet.has(tag.id))
-            .map((tag) => html`<option value=${String(tag.id)}>${tag.name}</option>`)}
+            .filter((t) => !selectedSet.has(t.id))
+            .map((t) => html`<option value=${String(t.id)}>${t.name}</option>`)}
         </select>
         ${!this.loaded ? html`<span class="sum-field-hint">Loading…</span>` : ""}
       </div>`,

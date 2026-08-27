@@ -213,9 +213,6 @@ const (
 	workspaceViewModePivot    = render.ViewModePivot
 	workspaceViewModeGraph    = render.ViewModeGraph
 	workspaceViewModeCalendar = render.ViewModeCalendar
-	workspaceViewModeGantt    = render.ViewModeGantt
-	workspaceViewModeMap      = render.ViewModeMap
-	workspaceViewModeCohort   = render.ViewModeCohort
 	maxWorkspaceListRows      = 500
 	maxWorkspaceKanbanRows    = 200
 	workspaceListPageSize     = 40

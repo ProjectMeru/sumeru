@@ -147,9 +147,6 @@ func createTable(model Model) error {
 		}
 
 		defVal := field.DefaultVal
-		if isRuntimeDefaultToken(defVal) {
-			defVal = nil
-		}
 		if defVal != nil {
 			if s, ok := defVal.(string); ok {
 				if strings.Contains(s, ";") || strings.Contains(s, "--") || strings.Contains(s, "/*") {

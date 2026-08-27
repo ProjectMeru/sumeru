@@ -7,7 +7,7 @@ interface PivotViewProps {
 }
 
 export class PivotView extends SwcComponent<PivotViewProps> {
-  override template() {
+  template() {
     const pivot = this.props.payload.arch.pivot;
     if (!pivot) {
       return html`<div class="sum-pivot-view sum-pivot-view--empty">No pivot data</div>`;
@@ -26,8 +26,8 @@ export class PivotView extends SwcComponent<PivotViewProps> {
               (row) => html`<tr>
                 <th>${row}</th>
                 ${pivot.colLabels.map((col) => {
-                  const fieldValue = pivot.values[row]?.[col] ?? 0;
-                  return html`<td>${String(fieldValue)}</td>`;
+                  const val = pivot.values[row]?.[col] ?? 0;
+                  return html`<td>${String(val)}</td>`;
                 })}
               </tr>`,
             )}

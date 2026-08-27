@@ -55,27 +55,10 @@ func SerializeViewForUser(ctx context.Context, view *parser.View) ViewArch {
 	if strings.EqualFold(view.Type, "graph") {
 		arch.Graph = &GraphMeta{Chart: view.GraphChart()}
 	}
-	switch strings.ToLower(strings.TrimSpace(view.Type)) {
-	case "calendar":
+	if strings.EqualFold(view.Type, "calendar") || strings.TrimSpace(view.DateStart) != "" {
 		arch.Calendar = &CalendarMeta{
 			DateStart: strings.TrimSpace(view.DateStart),
 			DateStop:  strings.TrimSpace(view.DateStop),
-		}
-	case "gantt":
-		arch.Gantt = &GanttMeta{
-			DateStart: strings.TrimSpace(view.DateStart),
-			DateStop:  strings.TrimSpace(view.DateStop),
-		}
-	case "map":
-		arch.Map = &MapMeta{
-			Latitude:  strings.TrimSpace(view.Latitude),
-			Longitude: strings.TrimSpace(view.Longitude),
-		}
-	case "cohort":
-		arch.Cohort = &CohortMeta{
-			DateStart: strings.TrimSpace(view.DateStart),
-			Interval:  strings.TrimSpace(view.Interval),
-			Measure:   strings.TrimSpace(view.Measure),
 		}
 	}
 	if len(view.SearchFilter) > 0 {
@@ -178,9 +161,6 @@ func enrichField(model string, f ArchField) ArchField {
 	if fd.Required {
 		f.Required = true
 	}
-	if fd.Readonly {
-		f.Readonly = true
-	}
 	if f.Widget == "" && fd.Widget != "" {
 		f.Widget = fd.Widget
 	}
@@ -238,13 +218,12 @@ func autoColumnsForComodel(parentModel, comodel string) []ArchField {
 			continue
 		}
 		switch fd.Type {
-		case orm.Char, orm.Text, orm.Integer, orm.Float, orm.Float64, orm.Numeric,
+		case orm.Char, orm.Text, orm.Integer, orm.Float, orm.Numeric,
 			orm.Selection, orm.Date, orm.DateTime, orm.Boolean, orm.Many2One:
 			out = append(out, enrichField(comodel, ArchField{
-				Name:     fd.Name,
-				String:   fd.String,
-				Type:     string(fd.Type),
-				Readonly: fd.Readonly,
+				Name:   fd.Name,
+				String: fd.String,
+				Type:   string(fd.Type),
 			}))
 		}
 		if len(out) >= 6 {

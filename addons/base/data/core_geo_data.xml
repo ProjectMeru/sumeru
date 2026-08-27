@@ -22,7 +22,6 @@
         <record id="country_sa" model="core.country"><field name="name">Saudi Arabia</field><field name="code">SA</field><field name="phone_code">966</field><field name="active">True</field></record>
         <record id="country_kr" model="core.country"><field name="name">South Korea</field><field name="code">KR</field><field name="phone_code">82</field><field name="active">True</field></record>
         <record id="country_ie" model="core.country"><field name="name">Ireland</field><field name="code">IE</field><field name="phone_code">353</field><field name="active">True</field></record>
-        <record id="country_id" model="core.country"><field name="name">Indonesia</field><field name="code">ID</field><field name="phone_code">62</field><field name="active">True</field></record>
 
         <!-- India states / UTs -->
         <record id="state_in_an" model="core.country.state"><field name="name">Andaman and Nicobar Islands</field><field name="code">AN</field><field name="country_id" ref="base.country_in"/><field name="active">True</field></record>
@@ -69,46 +68,6 @@
         <record id="state_us_wa" model="core.country.state"><field name="name">Washington</field><field name="code">WA</field><field name="country_id" ref="base.country_us"/><field name="active">True</field></record>
         <record id="state_us_il" model="core.country.state"><field name="name">Illinois</field><field name="code">IL</field><field name="country_id" ref="base.country_us"/><field name="active">True</field></record>
 
-        <!-- Indonesia Provinces -->
-        <record id="state_id_ac" model="core.country.state"><field name="name">Aceh</field><field name="code">AC</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_su" model="core.country.state"><field name="name">Sumatera Utara</field><field name="code">SU</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_sb" model="core.country.state"><field name="name">Sumatera Barat</field><field name="code">SB</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_ri" model="core.country.state"><field name="name">Riau</field><field name="code">RI</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_kr" model="core.country.state"><field name="name">Kepulauan Riau</field><field name="code">KR</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_ja" model="core.country.state"><field name="name">Jambi</field><field name="code">JA</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_ss" model="core.country.state"><field name="name">Sumatera Selatan</field><field name="code">SS</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_bb" model="core.country.state"><field name="name">Kepulauan Bangka Belitung</field><field name="code">BB</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_be" model="core.country.state"><field name="name">Bengkulu</field><field name="code">BE</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_la" model="core.country.state"><field name="name">Lampung</field><field name="code">LA</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_jk" model="core.country.state"><field name="name">DKI Jakarta</field><field name="code">JK</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_jb" model="core.country.state"><field name="name">Jawa Barat</field><field name="code">JB</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_jt" model="core.country.state"><field name="name">Jawa Tengah</field><field name="code">JT</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_yo" model="core.country.state"><field name="name">DI Yogyakarta</field><field name="code">YO</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_ji" model="core.country.state"><field name="name">Jawa Timur</field><field name="code">JI</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_bt" model="core.country.state"><field name="name">Banten</field><field name="code">BT</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_ba" model="core.country.state"><field name="name">Bali</field><field name="code">BA</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_nb" model="core.country.state"><field name="name">Nusa Tenggara Barat</field><field name="code">NB</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_nt" model="core.country.state"><field name="name">Nusa Tenggara Timur</field><field name="code">NT</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_kb" model="core.country.state"><field name="name">Kalimantan Barat</field><field name="code">KB</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_kt" model="core.country.state"><field name="name">Kalimantan Tengah</field><field name="code">KT</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_ks" model="core.country.state"><field name="name">Kalimantan Selatan</field><field name="code">KS</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_ki" model="core.country.state"><field name="name">Kalimantan Timur</field><field name="code">KI</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_ku" model="core.country.state"><field name="name">Kalimantan Utara</field><field name="code">KU</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_sr" model="core.country.state"><field name="name">Sulawesi Barat</field><field name="code">SR</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_sn" model="core.country.state"><field name="name">Sulawesi Selatan</field><field name="code">SN</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_st" model="core.country.state"><field name="name">Sulawesi Tengah</field><field name="code">ST</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_sa" model="core.country.state"><field name="name">Sulawesi Utara</field><field name="code">SA</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_sg" model="core.country.state"><field name="name">Sulawesi Tenggara</field><field name="code">SG</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_go" model="core.country.state"><field name="name">Gorontalo</field><field name="code">GO</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_ma" model="core.country.state"><field name="name">Maluku</field><field name="code">MA</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_mu" model="core.country.state"><field name="name">Maluku Utara</field><field name="code">MU</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_pa" model="core.country.state"><field name="name">Papua</field><field name="code">PA</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_pb" model="core.country.state"><field name="name">Papua Barat</field><field name="code">PB</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_ps" model="core.country.state"><field name="name">Papua Selatan</field><field name="code">PS</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_pt" model="core.country.state"><field name="name">Papua Tengah</field><field name="code">PT</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_pp" model="core.country.state"><field name="name">Papua Pegunungan</field><field name="code">PP</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="state_id_pd" model="core.country.state"><field name="name">Papua Barat Daya</field><field name="code">PD</field><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-
         <!-- Sample cities -->
         <record id="city_in_mumbai" model="core.city"><field name="name">Mumbai</field><field name="state_id" ref="base.state_in_mh"/><field name="country_id" ref="base.country_in"/><field name="active">True</field></record>
         <record id="city_in_pune" model="core.city"><field name="name">Pune</field><field name="state_id" ref="base.state_in_mh"/><field name="country_id" ref="base.country_in"/><field name="active">True</field></record>
@@ -124,29 +83,5 @@
         <record id="city_gb_london" model="core.city"><field name="name">London</field><field name="country_id" ref="base.country_gb"/><field name="active">True</field></record>
         <record id="city_ae_dubai" model="core.city"><field name="name">Dubai</field><field name="country_id" ref="base.country_ae"/><field name="active">True</field></record>
         <record id="city_sg_singapore" model="core.city"><field name="name">Singapore</field><field name="country_id" ref="base.country_sg"/><field name="active">True</field></record>
-
-        <!-- Sample city in Indonesia -->
-        <record id="city_id_jakarta_pusat" model="core.city"><field name="name">Jakarta Pusat</field><field name="state_id" ref="base.state_id_jk"/><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="city_id_jakarta_utara" model="core.city"><field name="name">Jakarta Utara</field><field name="state_id" ref="base.state_id_jk"/><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="city_id_jakarta_selatan" model="core.city"><field name="name">Jakarta Selatan</field><field name="state_id" ref="base.state_id_jk"/><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="city_id_jakarta_timur" model="core.city"><field name="name">Jakarta Timur</field><field name="state_id" ref="base.state_id_jk"/><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="city_id_jakarta_barat" model="core.city"><field name="name">Jakarta Barat</field><field name="state_id" ref="base.state_id_jk"/><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="city_id_bandung" model="core.city"><field name="name">Bandung</field><field name="state_id" ref="base.state_id_jb"/><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="city_id_bekasi" model="core.city"><field name="name">Bekasi</field><field name="state_id" ref="base.state_id_jb"/><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="city_id_depok" model="core.city"><field name="name">Depok</field><field name="state_id" ref="base.state_id_jb"/><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="city_id_bogor" model="core.city"><field name="name">Bogor</field><field name="state_id" ref="base.state_id_jb"/><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="city_id_semarang" model="core.city"><field name="name">Semarang</field><field name="state_id" ref="base.state_id_jt"/><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="city_id_surakarta" model="core.city"><field name="name">Surakarta</field><field name="state_id" ref="base.state_id_jt"/><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="city_id_yogyakarta" model="core.city"><field name="name">Yogyakarta</field><field name="state_id" ref="base.state_id_yo"/><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="city_id_surabaya" model="core.city"><field name="name">Surabaya</field><field name="state_id" ref="base.state_id_ji"/><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="city_id_malang" model="core.city"><field name="name">Malang</field><field name="state_id" ref="base.state_id_ji"/><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="city_id_denpasar" model="core.city"><field name="name">Denpasar</field><field name="state_id" ref="base.state_id_ba"/><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="city_id_medan" model="core.city"><field name="name">Medan</field><field name="state_id" ref="base.state_id_su"/><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="city_id_pekanbaru" model="core.city"><field name="name">Pekanbaru</field><field name="state_id" ref="base.state_id_ri"/><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="city_id_palembang" model="core.city"><field name="name">Palembang</field><field name="state_id" ref="base.state_id_ss"/><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="city_id_samarinda" model="core.city"><field name="name">Samarinda</field><field name="state_id" ref="base.state_id_ki"/><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="city_id_balikpapan" model="core.city"><field name="name">Balikpapan</field><field name="state_id" ref="base.state_id_ki"/><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="city_id_makassar" model="core.city"><field name="name">Makassar</field><field name="state_id" ref="base.state_id_sn"/><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
-        <record id="city_id_jayapura" model="core.city"><field name="name">Jayapura</field><field name="state_id" ref="base.state_id_pa"/><field name="country_id" ref="base.country_id"/><field name="active">True</field></record>
     </data>
 </sumeru>

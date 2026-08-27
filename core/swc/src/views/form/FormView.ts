@@ -2,22 +2,20 @@ import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
 import type { SwcArchButton, SwcWorkspacePayload } from "../../types/workspace.js";
 import { RecordStore, SwcRecord } from "../../model/record.js";
-import { takePendingChildren } from "../../model/pending-children.js";
 import { SwcError } from "../../runtime/error.js";
 import {
   headerButton,
   renderNewButton,
   renderReportActions,
-  exportFieldNamesCsv,
+  visibleFieldNames,
 } from "../shared/view-toolbar.js";
 import { collectFormFields, renderFormSheet } from "./form-sheet.js";
 import { initFormInteractions } from "./form-interactions.js";
-import { validatePasswordMatchGroups } from "../../widgets/password-match.js";
+import { validatePasswordMatchGroups } from "../../login/password-match.js";
 import { FieldHost } from "../../widgets/field-host.js";
 import { ChatterPanel } from "../chatter/ChatterPanel.js";
 import { isFieldVisible } from "../../model/modifiers.js";
 import { VIEW_FORM, VIEW_LIST } from "../../constants/routes.js";
-import { runObjectAction } from "../shared/object-action.js";
 
 interface FormViewProps {
   payload: SwcWorkspacePayload;
@@ -37,10 +35,13 @@ export class FormView extends SwcComponent<FormViewProps> {
   private fieldHost!: FieldHost;
   private chatterPanel!: ChatterPanel;
 
-  override setup(): void {
+  setup(): void {
     this.recordStore = new RecordStore(this.env.services.rpc);
     this.fieldHost = new FieldHost(this.env);
     this.initRecordState(this.props.payload);
+    this.bump = () => {
+      if (this.el?.isConnected) this.patch();
+    };
     this.chatterPanel = new ChatterPanel(
       {
         model: this.props.payload.model,
@@ -49,10 +50,10 @@ export class FormView extends SwcComponent<FormViewProps> {
       },
       this.env,
     );
-    this.chatterPanel.callSetup();
+    this.chatterPanel.setup?.();
   }
 
-  override onPropsChanged(props: FormViewProps): void {
+  onPropsChanged(props: FormViewProps): void {
     this.initRecordState(props.payload);
     this.chatterPanel.updateProps({
       model: props.payload.model,
@@ -62,41 +63,41 @@ export class FormView extends SwcComponent<FormViewProps> {
     this.fieldHost.clear();
   }
 
-  private initRecordState(payload: SwcWorkspacePayload): void {
-    this.editing = payload.formEdit || payload.recordId <= 0;
-    this.snapshot = { ...(payload.record ?? {}) };
-    this.bindRecord(this.recordStore.fromPayload(payload.model, payload.recordId, this.snapshot));
+  private initRecordState(p: SwcWorkspacePayload): void {
+    this.editing = p.formEdit || p.recordId <= 0;
+    this.snapshot = { ...(p.record ?? {}) };
+    this.record = this.recordStore.fromPayload(p.model, p.recordId, this.snapshot);
+    this.record.onFieldChange = (field) => void this.handleFieldChange(field);
   }
 
-  override onMount(): void {
+  private bump: (() => void) | null = null;
+
+  onMount(): void {
     this.bindFormInteractions();
   }
 
-  override onWillUnmount(): void {
+  onWillUnmount(): void {
     this.teardownInteractions?.();
     this.teardownInteractions = null;
     this.fieldHost.clear();
     this.chatterPanel.destroy();
   }
 
-  override patch(): void {
+  patch(): void {
     this.teardownInteractions?.();
-    super.patch();
-  }
-
-  override afterPatch(): void {
+    if (!this.el?.parentElement) return;
+    const parent = this.el.parentElement;
+    const oldEl = this.el;
+    const next = this.template().render();
+    parent.replaceChild(next, oldEl);
+    this.el = next;
     this.bindFormInteractions();
   }
 
   private bindFormInteractions(): void {
-    if (this.rootElement) {
-      this.teardownInteractions = initFormInteractions(this.rootElement);
+    if (this.el) {
+      this.teardownInteractions = initFormInteractions(this.el);
     }
-  }
-
-  private bindRecord(record: SwcRecord): void {
-    this.record = record;
-    this.record.onFieldChange = (field) => void this.handleFieldChange(field);
   }
 
   private async handleFieldChange(field: string): Promise<void> {
@@ -105,8 +106,8 @@ export class FormView extends SwcComponent<FormViewProps> {
     if (result?.warning) {
       this.env.services.notification.warning(result.warning.title, result.warning.message);
     }
-    this.fieldHost.invalidate(field);
-    this.rerender();
+    this.fieldHost.clear();
+    this.bump?.();
   }
 
   private renderFieldCached = (
@@ -115,9 +116,9 @@ export class FormView extends SwcComponent<FormViewProps> {
     readonly: boolean,
   ): HTMLElement => {
     if (!isFieldVisible(field, record)) {
-      const element = document.createElement("div");
-      element.hidden = true;
-      return element;
+      const el = document.createElement("div");
+      el.hidden = true;
+      return el;
     }
     return this.fieldHost.render(field, record, readonly);
   };
@@ -142,15 +143,15 @@ export class FormView extends SwcComponent<FormViewProps> {
   private startEdit(): void {
     this.editing = true;
     this.error = "";
-    this.rerender();
+    this.bump?.();
   }
 
   private cancelEdit(): void {
-    const payload = this.props.payload;
-    if (payload.recordId <= 0) {
+    const p = this.props.payload;
+    if (p.recordId <= 0) {
       const url = this.env.services.router.workspaceUrl({
-        actionId: payload.actionId,
-        menuId: payload.menuId,
+        actionId: p.actionId,
+        menuId: p.menuId,
         viewType: VIEW_LIST,
         recordId: 0,
         formEdit: false,
@@ -158,55 +159,52 @@ export class FormView extends SwcComponent<FormViewProps> {
       this.env.services.action.navigate(url);
       return;
     }
-    this.bindRecord(this.recordStore.fromPayload(payload.model, payload.recordId, { ...this.snapshot }));
+    this.record = this.recordStore.fromPayload(p.model, p.recordId, { ...this.snapshot });
+    this.record.onFieldChange = (field) => void this.handleFieldChange(field);
     this.editing = false;
     this.error = "";
-    this.rerender();
+    this.bump?.();
   }
 
   private async reloadRecord(): Promise<void> {
-    const payload = this.props.payload;
-    if (payload.recordId <= 0) return;
+    const p = this.props.payload;
+    if (p.recordId <= 0) return;
     const fieldNames = this.fields().map((f) => f.name);
-    const rows = await this.env.services.rpc.read(payload.model, [payload.recordId], fieldNames);
+    const rows = await this.env.services.rpc.read(p.model, [p.recordId], fieldNames);
     if (!rows[0]) return;
     this.snapshot = { ...rows[0] };
-    this.bindRecord(this.recordStore.fromPayload(payload.model, payload.recordId, this.snapshot));
-    this.rerender();
+    this.record = this.recordStore.fromPayload(p.model, p.recordId, this.snapshot);
+    this.record.onFieldChange = (field) => void this.handleFieldChange(field);
+    this.bump?.();
   }
 
   private async save(): Promise<void> {
-    if (this.rootElement && !validatePasswordMatchGroups(this.rootElement)) {
+    if (this.el && !validatePasswordMatchGroups(this.el)) {
       this.error = "Passwords do not match.";
-      this.rerender();
+      this.bump?.();
       return;
     }
     this.saving = true;
     this.error = "";
-    this.rerender();
+    this.bump?.();
     try {
       const required = this.fields().filter((f) => f.required).map((f) => f.name);
       this.recordStore.validate(this.record, required);
-      const payload = this.props.payload;
-      const isNew = payload.recordId <= 0;
       const id = await this.recordStore.save(this.record);
-      if (isNew && id > 0) {
-        await this.savePendingChildren(id);
-      }
       this.env.services.notification.success("Saved", "Record saved successfully.");
-      if (isNew && id > 0) {
+      const p = this.props.payload;
+      if (p.recordId <= 0 && id > 0) {
         this.env.services.action.openRecord({
-          actionId: payload.actionId,
-          menuId: payload.menuId,
+          actionId: p.actionId,
+          menuId: p.menuId,
           recordId: id,
           viewType: VIEW_FORM,
         });
         return;
       }
+      this.snapshot = { ...this.record.data };
       this.editing = false;
-      // Re-fetch the record so server-recomputed fields (e.g. invoice totals
-      // after line edits) are reflected in the UI.
-      await this.reloadRecord();
+      this.bump?.();
     } catch (err) {
       const message = err instanceof SwcError ? err.message : String(err);
       if (err instanceof SwcError && err.code === "validation") {
@@ -216,31 +214,13 @@ export class FormView extends SwcComponent<FormViewProps> {
       }
     } finally {
       this.saving = false;
-      this.rerender();
-    }
-  }
-
-  private async savePendingChildren(parentId: number): Promise<void> {
-    const children = takePendingChildren(this.record);
-    for (const child of children) {
-      if (!child.comodel || !child.inverse) continue;
-      const values: Record<string, unknown> = { ...child.values };
-      values[child.inverse] = parentId;
-      try {
-        await this.env.services.rpc.create(child.comodel, values);
-      } catch (err) {
-        const message = err instanceof SwcError ? err.message : String(err);
-        this.env.services.notification.error(
-          "Save failed",
-          `Could not create ${child.comodel} line: ${message}`,
-        );
-      }
+      this.bump?.();
     }
   }
 
   private async deleteRecord(): Promise<void> {
-    const payload = this.props.payload;
-    if (payload.recordId <= 0) return;
+    const p = this.props.payload;
+    if (p.recordId <= 0) return;
     const ok = await this.env.services.dialog.confirm("Delete record", "This cannot be undone.");
     if (!ok) return;
     try {
@@ -248,8 +228,8 @@ export class FormView extends SwcComponent<FormViewProps> {
       this.env.services.notification.success("Deleted", "Record deleted.");
       this.env.services.action.navigate(
         this.env.services.router.workspaceUrl({
-          actionId: payload.actionId,
-          menuId: payload.menuId,
+          actionId: p.actionId,
+          menuId: p.menuId,
           viewType: VIEW_LIST,
           recordId: 0,
         }),
@@ -263,14 +243,14 @@ export class FormView extends SwcComponent<FormViewProps> {
   }
 
   private async duplicateRecord(): Promise<void> {
-    const payload = this.props.payload;
-    if (payload.recordId <= 0) return;
+    const p = this.props.payload;
+    if (p.recordId <= 0) return;
     try {
       const newId = await this.recordStore.duplicate(this.record);
       this.env.services.notification.success("Duplicated", "Record duplicated.");
       this.env.services.action.openRecord({
-        actionId: payload.actionId,
-        menuId: payload.menuId,
+        actionId: p.actionId,
+        menuId: p.menuId,
         recordId: newId,
         viewType: VIEW_FORM,
       });
@@ -282,31 +262,38 @@ export class FormView extends SwcComponent<FormViewProps> {
     }
   }
 
-  private async runObjectButton(archButton: SwcArchButton): Promise<void> {
-    const payload = this.props.payload;
-    if (archButton.type !== "object" || payload.recordId <= 0) return;
+  private async runObjectButton(btn: SwcArchButton): Promise<void> {
+    const p = this.props.payload;
+    if (btn.type !== "object" || p.recordId <= 0) return;
     this.acting = true;
     this.error = "";
-    this.rerender();
-    const navigated = await runObjectAction(this.env, {
-      model: payload.model,
-      methodName: archButton.name,
-      recordId: payload.recordId,
-      buttonLabel: archButton.string || archButton.name,
-      onSuccess: () => this.reloadRecord(),
-    });
-    this.acting = false;
-    if (!navigated) this.rerender();
+    this.bump?.();
+    try {
+      const result = await this.env.services.rpc.callMethod(p.model, btn.name, p.recordId);
+      if (await this.env.services.action.applyCallResult(result)) {
+        return;
+      }
+      this.env.services.notification.success(btn.string || btn.name, "Action completed.");
+      await this.reloadRecord();
+    } catch (err) {
+      this.env.services.notification.error(
+        btn.string || btn.name,
+        err instanceof SwcError ? err.message : String(err),
+      );
+    } finally {
+      this.acting = false;
+      this.bump?.();
+    }
   }
 
   private renderToolbarPrimary(): Array<HTMLElement> {
-    const payload = this.props.payload;
+    const p = this.props.payload;
     const busy = this.toolbarBusy();
     const items: HTMLElement[] = [];
 
-    if (payload.recordId > 0 && this.isReadonly()) {
+    if (p.recordId > 0 && this.isReadonly()) {
       if (!this.props.inDialog) {
-        items.push(renderNewButton(payload));
+        items.push(renderNewButton(p));
         items.push(headerButton("Edit", undefined, () => this.startEdit(), busy));
         items.push(headerButton("Duplicate", undefined, () => void this.duplicateRecord(), busy));
         items.push(
@@ -320,47 +307,42 @@ export class FormView extends SwcComponent<FormViewProps> {
       items.push(headerButton("Cancel", undefined, () => this.cancelEdit(), busy || this.saving));
     }
 
-    for (const archButton of this.headerButtons()) {
-      if (archButton.type !== "object") continue;
+    for (const btn of this.headerButtons()) {
+      if (btn.type !== "object") continue;
       items.push(
-        headerButton(
-          archButton.string || archButton.name,
-          archButton.class,
-          () => void this.runObjectButton(archButton),
-          busy,
-        ),
+        headerButton(btn.string || btn.name, btn.class, () => void this.runObjectButton(btn), busy),
       );
     }
 
     return items;
   }
 
-  override template() {
-    const payload = this.props.payload;
+  template() {
+    const p = this.props.payload;
     const readonly = this.isReadonly();
-    const headerFields = payload.arch.header?.fields ?? [];
-    const exportFields = exportFieldNamesCsv(this.fields());
-    const reportActions = payload.recordId > 0 ? renderReportActions(payload, exportFields, payload.recordId) : null;
+    const headerFields = p.arch.header?.fields ?? [];
+    const exportFields = visibleFieldNames(this.fields());
+    const reportActions = p.recordId > 0 ? renderReportActions(p, exportFields, p.recordId) : null;
     const toolbarItems = this.renderToolbarPrimary();
     const busy = this.toolbarBusy();
 
     const sheet = renderFormSheet({
       env: this.env,
-      sheet: payload.arch.sheet,
+      sheet: p.arch.sheet,
       record: this.record,
       readonly,
-      hasImageField: payload.arch.formMeta?.hasImageField ?? false,
+      hasImageField: p.arch.formMeta?.hasImageField ?? false,
       activeNotebookPages: this.activeNotebookPages,
       onNotebookTab: (notebookIndex, pageIndex) => {
         this.activeNotebookPages = { ...this.activeNotebookPages, [notebookIndex]: pageIndex };
-        this.rerender();
+        this.bump?.();
       },
       renderField: this.renderFieldCached,
       onStatButton: (name) => void this.runObjectButton({ name, string: name, type: "object" }),
     });
 
-    const footerButtons = payload.arch.footer?.buttons ?? [];
-    const showChatter = payload.arch.hasChatter && payload.recordId > 0;
+    const footerButtons = p.arch.footer?.buttons ?? [];
+    const showChatter = p.arch.hasChatter && p.recordId > 0;
 
     return html`
       <div class="sum-form-view sum-form-view--workspace-chrome${readonly ? " sum-form-view--readonly" : ""}">
@@ -379,11 +361,11 @@ export class FormView extends SwcComponent<FormViewProps> {
             ${sheet}
             ${footerButtons.length > 0
               ? html`<div class="sum-form-footer">
-                  ${footerButtons.map((archButton) =>
+                  ${footerButtons.map((btn) =>
                     headerButton(
-                      archButton.string || archButton.name,
-                      archButton.class,
-                      () => void this.runObjectButton(archButton),
+                      btn.string || btn.name,
+                      btn.class,
+                      () => void this.runObjectButton(btn),
                       busy,
                     ),
                   )}

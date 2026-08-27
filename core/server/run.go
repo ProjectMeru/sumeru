@@ -31,14 +31,6 @@ func Run() {
 	httpPort := flag.String("http-port", "", "HTTP listen port; overrides http_port in config")
 	httpPortShort := flag.String("p", "", "HTTP port shorthand (same as --http-port)")
 	stopAfterInit := flag.Bool("stop-after-init", false, "After -i / -u, exit without starting HTTP")
-
-	// `go run . -- <args>` forwards the `--` separator to the program. Strip a
-	// leading `--` so the standard flag parser does not treat it as a terminator
-	// and silently ignore every flag that follows (e.g. -i / -u / --stop-after-init).
-	if len(os.Args) > 1 && os.Args[1] == "--" {
-		os.Args = append(os.Args[:1], os.Args[2:]...)
-	}
-
 	flag.Parse()
 
 	if err := LoadConfig(*configPath); err != nil {

@@ -13,11 +13,5 @@
             <field name="iso_code">hi</field>
             <field name="active">True</field>
         </record>
-        <record id="lang_id_ID" model="core.lang">
-            <field name="code">id_ID</field>
-            <field name="name">Bahasa Indonesia</field>
-            <field name="iso_code">id</field>
-            <field name="active">True</field>
-        </record>
     </data>
 </sumeru>

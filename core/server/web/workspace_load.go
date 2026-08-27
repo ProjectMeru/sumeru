@@ -278,7 +278,7 @@ func loadViewModeData(ctx context.Context, viewRecord *render.ViewRecordData, re
 		return loadWorkspaceKanbanData(ctx, viewRecord, resolved, actionData, req)
 	case workspaceViewModePivot:
 		return loadWorkspacePivotData(ctx, viewRecord, resolved, actionData, req)
-	case workspaceViewModeGraph, workspaceViewModeCalendar, workspaceViewModeGantt, workspaceViewModeMap, workspaceViewModeCohort:
+	case workspaceViewModeGraph, workspaceViewModeCalendar:
 		viewRecord.ListSearchQuery = req.listSearch
 		viewRecord.ListFilter = req.listFilter
 		return loadWorkspaceCollectionData(ctx, viewRecord, resolved.targetModel, actionData, resolved.view, req, maxWorkspaceListRows)

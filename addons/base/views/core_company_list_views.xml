@@ -5,7 +5,7 @@
         <view id="view_core.company_list" model="core.company" type="list">
             <field name="name" string="Company Name"/>
             <field name="city" string="City"/>
-            <field name="country_id" string="Country"/>
+            <field name="country" string="Country"/>
             <field name="email" string="Email"/>
             <field name="phone" string="Phone"/>
             <field name="vat" string="Tax ID"/>

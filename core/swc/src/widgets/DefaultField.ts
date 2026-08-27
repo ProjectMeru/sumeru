@@ -1,6 +1,7 @@
 import { SwcComponent } from "../runtime/component.js";
 import { html } from "../template/html.js";
 import type { SwcArchField } from "../types/workspace.js";
+import type { SwcRecord } from "../model/record.js";
 import {
   fieldInputId,
   fieldPlaceholder,
@@ -8,10 +9,12 @@ import {
   fieldReadonlyInput,
   renderFieldShell,
 } from "./field-shell.js";
-import type { FieldWidgetProps } from "./field-props.js";
-import { stringFromUnknown } from "./field-value.js";
-import { inputValueFromEvent } from "./field-events.js";
-import { isFieldReadonly } from "../model/modifiers.js";
+
+interface FieldProps {
+  field: SwcArchField;
+  record: SwcRecord;
+  readonly: boolean;
+}
 
 function inputTypeForField(field: SwcArchField): string {
   if (field.widget === "email") return "email";
@@ -34,21 +37,21 @@ function parseNumericValue(field: SwcArchField, raw: string): unknown {
   return raw;
 }
 
-export class DefaultField extends SwcComponent<FieldWidgetProps> {
-  override template() {
+export class DefaultField extends SwcComponent<FieldProps> {
+  template() {
     const { field, record, readonly } = this.props;
-    const fieldValue = stringFromUnknown(record.get(field.name));
+    const val = String(record.get(field.name) ?? "");
     const placeholder = fieldPlaceholder(field);
     const inputType = inputTypeForField(field);
     const step = stepForField(field);
     const id = fieldInputId(field);
 
-    if (isFieldReadonly(field, record, readonly)) {
+    if (readonly || field.readonly) {
       return renderFieldShell(
         field,
         field.type === "integer" || field.type === "float" || field.type === "numeric"
-          ? fieldReadonlyInput(field, fieldValue, "text")
-          : fieldReadonlyInput(field, fieldValue, inputType === "text" ? "text" : inputType),
+          ? fieldReadonlyInput(field, val, "text")
+          : fieldReadonlyInput(field, val, inputType === "text" ? "text" : inputType),
         { labelFor: id },
       );
     }
@@ -61,11 +64,11 @@ export class DefaultField extends SwcComponent<FieldWidgetProps> {
         class="sum-field-input"
         name=${field.name}
         placeholder=${placeholder}
-        value=${fieldValue}
+        value=${val}
         autocomplete=${fieldAutocomplete(field)}
         ${step ? html`step=${step}` : ""}
-        @input=${(event: Event) =>
-          record.set(field.name, parseNumericValue(field, inputValueFromEvent(event)))}
+        @input=${(ev: Event) =>
+          record.set(field.name, parseNumericValue(field, (ev.target as HTMLInputElement).value))}
         @change=${() => record.notifyFieldChange(field.name)}
       />`,
       { labelFor: id },

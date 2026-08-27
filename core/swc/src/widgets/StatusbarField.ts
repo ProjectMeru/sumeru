@@ -1,9 +1,14 @@
 import { SwcComponent } from "../runtime/component.js";
 import { html } from "../template/html.js";
 import type { SwcArchField } from "../types/workspace.js";
+import type { SwcRecord } from "../model/record.js";
 import { AsyncFieldController } from "./field-async.js";
-import { isFieldReadonly } from "../model/modifiers.js";
-import type { FieldWidgetProps } from "./field-props.js";
+
+interface FieldProps {
+  field: SwcArchField;
+  record: SwcRecord;
+  readonly: boolean;
+}
 
 interface StageRow {
   id: number | string;
@@ -15,16 +20,16 @@ function isClickable(field: SwcArchField): boolean {
   return opt !== "0" && opt !== "false";
 }
 
-export class StatusbarField extends SwcComponent<FieldWidgetProps> {
+export class StatusbarField extends SwcComponent<FieldProps> {
   private stages: StageRow[] = [];
   private loaded = false;
   private readonly asyncCtrl = new AsyncFieldController(this);
 
-  override setup(): void {
+  setup(): void {
     void this.loadStages();
   }
 
-  override onWillUnmount(): void {
+  onWillUnmount(): void {
     this.asyncCtrl.cancel();
   }
 
@@ -35,7 +40,7 @@ export class StatusbarField extends SwcComponent<FieldWidgetProps> {
     if (field.selection?.length) {
       this.stages = field.selection.map(([value, label]) => ({ id: value, label }));
       this.loaded = true;
-      this.asyncCtrl.commitIfCurrent(gen);
+      this.asyncCtrl.finish(gen);
       return;
     }
 
@@ -44,7 +49,7 @@ export class StatusbarField extends SwcComponent<FieldWidgetProps> {
       const fallback = (field.options?.states ?? "draft,done").split(",").map((s) => s.trim()).filter(Boolean);
       this.stages = fallback.map((s) => ({ id: s, label: s }));
       this.loaded = true;
-      this.asyncCtrl.commitIfCurrent(gen);
+      this.asyncCtrl.finish(gen);
       return;
     }
 
@@ -55,20 +60,20 @@ export class StatusbarField extends SwcComponent<FieldWidgetProps> {
       label: String(row.name ?? row.id),
     }));
     this.loaded = true;
-    this.asyncCtrl.commitIfCurrent(gen);
+    this.asyncCtrl.finish(gen);
   }
 
   private currentId(): string | number {
     const { field, record } = this.props;
-    const rawValue = record.get(field.name);
-    if (rawValue == null || rawValue === "") return "";
-    return field.type === "many2one" || field.relation ? Number(rawValue) : String(rawValue);
+    const raw = record.get(field.name);
+    if (raw == null || raw === "") return "";
+    return field.type === "many2one" || field.relation ? Number(raw) : String(raw);
   }
 
-  override template() {
+  template() {
     const { field, record, readonly } = this.props;
     const current = this.currentId();
-    const clickable = isClickable(field) && !isFieldReadonly(field, record, readonly);
+    const clickable = isClickable(field) && !readonly && !field.readonly;
 
     return html`<div class="sum-statusbar-stages" role="group" aria-label=${field.string ?? field.name}>
       ${this.stages.map((stage) => {

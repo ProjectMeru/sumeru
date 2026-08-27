@@ -59,7 +59,7 @@ func BuildWorkspacePayload(
 	if rec.Pivot != nil {
 		arch.Pivot = rec.Pivot
 	}
-	if selectedMode == "list" || selectedMode == "kanban" || selectedMode == "graph" || selectedMode == "calendar" || selectedMode == "pivot" || selectedMode == "gantt" || selectedMode == "map" || selectedMode == "cohort" {
+	if selectedMode == "list" || selectedMode == "kanban" || selectedMode == "graph" || selectedMode == "calendar" || selectedMode == "pivot" {
 		if arch.Search == nil {
 			arch.Search = loadSearchMeta(ctx, rec.ResModel)
 		}
@@ -87,11 +87,9 @@ func BuildWorkspacePayload(
 	}
 
 	if rec.Record != nil {
-		enrichMany2OneNames(ctx, rec.ResModel, []map[string]interface{}{rec.Record})
 		payload.Record = redactCopy(ctx, rec.ResModel, rec.Record)
 	}
 	if len(rec.ListRows) > 0 {
-		enrichMany2OneNames(ctx, rec.ResModel, rec.ListRows)
 		payload.Records = redactRows(ctx, rec.ResModel, rec.ListRows)
 	}
 	return payload

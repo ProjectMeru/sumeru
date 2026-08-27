@@ -1,6 +1,7 @@
 import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
 import type { SwcArchButton, SwcWorkspacePayload } from "../../types/workspace.js";
+import { useState } from "../../runtime/hooks.js";
 import { headerButton, renderCollectionToolbar } from "../shared/view-toolbar.js";
 import { SwcError } from "../../runtime/error.js";
 import {
@@ -14,10 +15,8 @@ import {
   type ControlPanelState,
 } from "./control-panel.js";
 import { forEach } from "../../template/helpers.js";
+import { patchKeyedChildren } from "../../runtime/patch/keyed.js";
 import { VIEW_FORM, VIEW_LIST } from "../../constants/routes.js";
-import { runObjectAction } from "../shared/object-action.js";
-import { FieldHost } from "../../widgets/field-host.js";
-import { SwcRecord } from "../../model/record.js";
 
 interface ListViewProps {
   payload: SwcWorkspacePayload;
@@ -33,28 +32,25 @@ export class ListView extends SwcComponent<ListViewProps> {
   };
   private deleting = false;
   private acting = false;
-  private fieldHost!: FieldHost;
 
-  override setup(): void {
-    this.fieldHost = new FieldHost(this.env);
+  setup(): void {
     this.syncFromPayload(this.props.payload);
+    const [, bump] = useState(0);
+    this.bump = () => bump((n) => n + 1);
   }
 
-  override onPropsChanged(props: ListViewProps): void {
+  onPropsChanged(props: ListViewProps): void {
     this.syncFromPayload(props.payload);
     this.panelState.selectedIds = new Set();
-    this.fieldHost.clear();
   }
 
-  override onWillUnmount(): void {
-    this.fieldHost.clear();
-  }
+  private bump: (() => void) | null = null;
 
-  private syncFromPayload(payload: SwcWorkspacePayload): void {
-    this.panelState.search = payload.listSearch ?? "";
-    this.panelState.offset = payload.listOffset ?? 0;
-    this.panelState.order = payload.listSort ?? "";
-    this.panelState.filters = parseFilterCSV(payload.listFilter);
+  private syncFromPayload(p: SwcWorkspacePayload): void {
+    this.panelState.search = p.listSearch ?? "";
+    this.panelState.offset = p.listOffset ?? 0;
+    this.panelState.order = p.listSort ?? "";
+    this.panelState.filters = parseFilterCSV(p.listFilter);
   }
 
   private columns() {
@@ -71,21 +67,21 @@ export class ListView extends SwcComponent<ListViewProps> {
     listSort?: string;
     listFilter?: string;
   }): void {
-    const payload = this.props.payload;
+    const p = this.props.payload;
     const url = this.env.services.router.workspaceUrl({
-      actionId: payload.actionId,
-      menuId: payload.menuId,
+      actionId: p.actionId,
+      menuId: p.menuId,
       viewType: VIEW_LIST,
       listSearch: patch.listSearch ?? this.panelState.search,
       listOffset: patch.listOffset ?? 0,
       listSort: patch.listSort ?? this.panelState.order ?? "",
       listFilter: patch.listFilter ?? this.panelState.filters.join(","),
-      model: payload.actionId ? "" : payload.model,
+      model: p.actionId ? "" : p.model,
     });
     this.env.services.action.navigate(url);
   }
 
-  private reloadCollection(): void {
+  private applySearch(): void {
     this.navigateList({ listSearch: this.panelState.search, listOffset: 0 });
   }
 
@@ -120,12 +116,12 @@ export class ListView extends SwcComponent<ListViewProps> {
   private toggleRow(id: number, checked: boolean): void {
     if (checked) this.panelState.selectedIds.add(id);
     else this.panelState.selectedIds.delete(id);
-    this.rerender();
+    this.bump?.();
   }
 
   private toggleAll(checked: boolean, ids: number[]): void {
     this.panelState.selectedIds = checked ? new Set(ids) : new Set();
-    this.rerender();
+    this.bump?.();
   }
 
   private toolbarBusy(): boolean {
@@ -133,9 +129,7 @@ export class ListView extends SwcComponent<ListViewProps> {
   }
 
   private headerObjectButtons(): SwcArchButton[] {
-    return (this.props.payload.arch.header?.buttons ?? []).filter(
-      (archButton) => archButton.type === "object",
-    );
+    return (this.props.payload.arch.header?.buttons ?? []).filter((btn) => btn.type === "object");
   }
 
   private async bulkDelete(): Promise<void> {
@@ -147,12 +141,12 @@ export class ListView extends SwcComponent<ListViewProps> {
     );
     if (!ok) return;
     this.deleting = true;
-    this.rerender();
+    this.bump?.();
     try {
       await this.env.services.rpc.unlink(this.props.payload.model, ids);
       this.panelState.selectedIds = new Set();
       this.env.services.notification.success("Deleted", `${ids.length} record(s) removed.`);
-      this.reloadCollection();
+      this.applySearch();
     } catch (err) {
       this.env.services.notification.error(
         "Delete failed",
@@ -160,57 +154,80 @@ export class ListView extends SwcComponent<ListViewProps> {
       );
     } finally {
       this.deleting = false;
-      this.rerender();
+      this.bump?.();
     }
   }
 
-  private async runHeaderObject(archButton: SwcArchButton): Promise<void> {
+  private async runHeaderObject(btn: SwcArchButton): Promise<void> {
     const ids = [...this.panelState.selectedIds];
     if (ids.length === 0 || this.toolbarBusy()) return;
     this.acting = true;
-    this.rerender();
-    const navigated = await runObjectAction(this.env, {
-      model: this.props.payload.model,
-      methodName: archButton.name,
-      recordId: ids[0],
-      extraArgs: { active_ids: ids.join(",") },
-      buttonLabel: archButton.string || archButton.name,
-      onSuccess: () => this.reloadCollection(),
-    });
-    this.acting = false;
-    if (!navigated) this.rerender();
+    this.bump?.();
+    try {
+      const result = await this.env.services.rpc.callMethod(this.props.payload.model, btn.name, ids[0], {
+        active_ids: ids.join(","),
+      });
+      if (await this.env.services.action.applyCallResult(result)) {
+        return;
+      }
+      this.env.services.notification.success(btn.string || btn.name, "Action completed.");
+      this.applySearch();
+    } catch (err) {
+      this.env.services.notification.error(
+        btn.string || btn.name,
+        err instanceof SwcError ? err.message : String(err),
+      );
+    } finally {
+      this.acting = false;
+      this.bump?.();
+    }
   }
 
-  /** List cells use readonly field widgets via FieldHost. */
   private renderRow(row: Record<string, unknown>) {
     const id = Number(row.id ?? 0);
     const cols = this.columns();
-    const record = new SwcRecord(this.props.payload.model, id, row);
     return html`<tr class="sum-list-row sum-list-row--click" @click=${() => this.openRow(row)}>
       ${renderRowCheckbox(id, this.panelState.selectedIds.has(id), (rid, checked) =>
         this.toggleRow(rid, checked),
       )}
       ${cols.map((c) => {
-        return html`<td class="sum-list-td">${this.fieldHost.render(c, record, true)}</td>`;
+        const display = row[`${c.name}_name`] ?? row[c.name];
+        return html`<td class="sum-list-td">${String(display ?? "")}</td>`;
       })}
     </tr>`;
   }
 
-  override template() {
-    const payload = this.props.payload;
+  patch(): void {
+    const tbody = this.el?.querySelector("tbody");
+    if (tbody) {
+      const rows = this.pageRows();
+      patchKeyedChildren(
+        tbody,
+        rows.map((row) => ({
+          key: String(row.id ?? 0),
+          render: () => this.renderRow(row).render(),
+        })),
+      );
+      return;
+    }
+    super.patch();
+  }
+
+  template() {
+    const p = this.props.payload;
     const cols = this.columns();
     const rows = this.pageRows();
     const ids = rows.map((r) => Number(r.id ?? 0)).filter((id) => id > 0);
     const allSelected = ids.length > 0 && ids.every((id) => this.panelState.selectedIds.has(id));
-    const filters = payload.arch.search?.filters ?? [];
+    const filters = p.arch.search?.filters ?? [];
 
     return html`
       <div class="sum-list-view">
         ${renderCollectionToolbar({
-          payload,
+          payload: p,
           viewType: VIEW_LIST,
           search: this.panelState.search,
-          onSearch: () => this.reloadCollection(),
+          onSearch: () => this.applySearch(),
           onInput: (next) => {
             this.panelState.search = next;
           },
@@ -226,11 +243,11 @@ export class ListView extends SwcComponent<ListViewProps> {
                 </button>`
               : "",
             this.panelState.selectedIds.size >= 2
-              ? this.headerObjectButtons().map((archButton) =>
+              ? this.headerObjectButtons().map((btn) =>
                   headerButton(
-                    archButton.string || archButton.name,
-                    archButton.class,
-                    () => void this.runHeaderObject(archButton),
+                    btn.string || btn.name,
+                    btn.class,
+                    () => void this.runHeaderObject(btn),
                     this.toolbarBusy(),
                   ),
                 )
@@ -243,7 +260,7 @@ export class ListView extends SwcComponent<ListViewProps> {
           onToggle: (name) => this.applyFilter(name),
         })}
         ${renderControlPanel({
-          payload,
+          payload: p,
           state: this.panelState,
           onPage: (o) => this.applyPage(o),
         })}

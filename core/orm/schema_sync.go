@@ -92,12 +92,6 @@ func syncModelSchema(ctx context.Context, model Model) error {
 	if err := dropStaleColumnUniques(modelName, tableName, quotedTable, model); err != nil {
 		return err
 	}
-	if err := dropRuntimeSQLDefaults(modelName, quotedTable, model); err != nil {
-		return err
-	}
-	if err := ensureColumnUniques(modelName, tableName, quotedTable, model); err != nil {
-		return err
-	}
 	return ensureModelIndexes(modelName, tableName, quotedTable, model)
 }
 
@@ -155,53 +149,6 @@ func dropStaleColumnUniques(modelName, tableName, quotedTable string, model Mode
 				return fmt.Errorf("drop unique %s.%s: %w", tableName, con, err)
 			}
 			applog.L(context.Background()).Info("schema_sync_drop_unique", "table", tableName, "constraint", con)
-		}
-	}
-	return nil
-}
-
-// dropRuntimeSQLDefaults removes SQL DEFAULT literals for tokens applied in Go at insert time
-// (uuid, current_user, current_company). Older schema sync stored those tokens as string defaults.
-func dropRuntimeSQLDefaults(modelName, quotedTable string, model Model) error {
-	for _, field := range model.Fields() {
-		if !isRuntimeDefaultToken(field.DefaultVal) || field.Name == "id" || IsVirtualField(field) {
-			continue
-		}
-		colQuoted, err := QuotedColumnForModel(modelName, field.Name)
-		if err != nil {
-			return err
-		}
-		q := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP DEFAULT", quotedTable, colQuoted)
-		if _, err := DB.Exec(q); err != nil {
-			return fmt.Errorf("drop default %s.%s: %w", modelName, field.Name, err)
-		}
-	}
-	return nil
-}
-
-// ensureColumnUniques adds a unique index for each Unique field on an existing table.
-// createTable applies UNIQUE only at CREATE time; later tag changes would otherwise
-// leave XML upsert (ON CONFLICT) without a matching constraint.
-func ensureColumnUniques(modelName, tableName, quotedTable string, model Model) error {
-	for _, field := range model.Fields() {
-		if !field.Unique || field.Name == "id" || IsVirtualField(field) {
-			continue
-		}
-		baseType, ok := ColumnTypeSQL(field)
-		if !ok || baseType == "" {
-			continue
-		}
-		colQuoted, err := QuotedColumnForModel(modelName, field.Name)
-		if err != nil {
-			return err
-		}
-		idxName := fmt.Sprintf("uidx_%s_%s", tableName, field.Name)
-		if !pgIdentOK(idxName) {
-			return fmt.Errorf("unsafe unique index name %q on %s", idxName, tableName)
-		}
-		q := fmt.Sprintf("CREATE UNIQUE INDEX IF NOT EXISTS %s ON %s (%s)", quoteIdent(idxName), quotedTable, colQuoted)
-		if _, err := DB.Exec(q + ";"); err != nil {
-			return fmt.Errorf("unique index %s: %w", idxName, err)
 		}
 	}
 	return nil
@@ -335,9 +282,6 @@ func loadTableColumns(tableName string) (map[string]struct{}, error) {
 
 // FormatAddColumnDefinition builds the SQL column definition fragment for ALTER TABLE ... ADD COLUMN.
 func FormatAddColumnDefinition(f FieldDefinition, baseType string) string {
-	if isRuntimeDefaultToken(f.DefaultVal) {
-		f.DefaultVal = nil
-	}
 	if f.Type == Boolean {
 		if f.DefaultVal == true {
 			return baseType + " NOT NULL DEFAULT TRUE"

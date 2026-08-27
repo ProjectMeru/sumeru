@@ -1,4 +1,4 @@
-import { initPasswordMatchGroups } from "../widgets/password-match.js";
+import { initPasswordMatchGroups } from "./password-match.js";
 
 declare global {
   interface Window {

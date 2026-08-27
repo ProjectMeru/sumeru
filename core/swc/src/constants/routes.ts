@@ -21,9 +21,6 @@ export const VIEW_KANBAN = "kanban";
 export const VIEW_PIVOT = "pivot";
 export const VIEW_GRAPH = "graph";
 export const VIEW_CALENDAR = "calendar";
-export const VIEW_GANTT = "gantt";
-export const VIEW_MAP = "map";
-export const VIEW_COHORT = "cohort";
 
 export const RECORD_UPDATED = "record.updated";
 export const ACTION_CLOSED = "action.closed";

@@ -38,14 +38,6 @@ type View struct {
 	DateStart string `xml:"date_start,attr"`
 	DateStop  string `xml:"date_stop,attr"`
 
-	// Map view field names.
-	Latitude  string `xml:"latitude,attr"`
-	Longitude string `xml:"longitude,attr"`
-
-	// Cohort view extras.
-	Interval string `xml:"interval,attr"`
-	Measure  string `xml:"measure,attr"`
-
 	// Search view filters (<filter name domain group_by>).
 	SearchFilter []SearchFilter `xml:"filter"`
 

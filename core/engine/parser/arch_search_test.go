@@ -45,32 +45,6 @@ func TestParseCalendarArch(t *testing.T) {
 	}
 }
 
-func TestParseGanttMapCohortArch(t *testing.T) {
-	gantt, err := parser.ParseViewFromArch(`<gantt date_start="date_start" date_stop="date_end"><field name="name"/></gantt>`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if gantt.Type != "gantt" || gantt.DateStart != "date_start" || gantt.DateStop != "date_end" {
-		t.Fatalf("gantt: %+v", gantt)
-	}
-
-	mp, err := parser.ParseViewFromArch(`<map latitude="lat" longitude="lng"><field name="name"/></map>`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if mp.Type != "map" || mp.Latitude != "lat" || mp.Longitude != "lng" {
-		t.Fatalf("map: %+v", mp)
-	}
-
-	cohort, err := parser.ParseViewFromArch(`<view type="cohort" date_start="create_date" interval="week" measure="amount"><field name="name"/></view>`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if cohort.Type != "cohort" || cohort.DateStart != "create_date" || cohort.Interval != "week" || cohort.Measure != "amount" {
-		t.Fatalf("cohort: %+v", cohort)
-	}
-}
-
 func TestParsePivotRootArch(t *testing.T) {
 	arch := `<pivot><field name="stage_id" type="row"/><field name="amount" type="measure"/></pivot>`
 	v, err := parser.ParseViewFromArch(arch)

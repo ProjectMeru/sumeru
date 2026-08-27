@@ -1,7 +1,7 @@
 import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
+import { useState } from "../../runtime/hooks.js";
 import { RECORD_UPDATED, SWC_API_BASE } from "../../constants/routes.js";
-import { inputValueFromEvent } from "../../widgets/field-events.js";
 
 interface ChatterMessage {
   body: string;
@@ -39,19 +39,23 @@ export class ChatterPanel extends SwcComponent<ChatterPanelProps> {
   private enabled = true;
   private tab: "messages" | "attachments" = "messages";
 
-  override setup(): void {
+  setup(): void {
+    const [, bump] = useState(0);
+    this.bump = () => bump((n) => n + 1);
     void this.load();
   }
+
+  private bump: (() => void) | null = null;
 
   private async load(): Promise<void> {
     const { model, recordId } = this.props;
     if (recordId <= 0) {
       this.loading = false;
-      this.rerender();
+      this.bump?.();
       return;
     }
     this.loading = true;
-    this.rerender();
+    this.bump?.();
     try {
       const base = this.env.bootstrap.swcApiBase || SWC_API_BASE;
       const data = await this.env.services.http.getJSON<ChatterPayload>(
@@ -62,7 +66,7 @@ export class ChatterPanel extends SwcComponent<ChatterPanelProps> {
       this.enabled = data.enabled !== false;
     } finally {
       this.loading = false;
-      this.rerender();
+      this.bump?.();
     }
   }
 
@@ -70,7 +74,7 @@ export class ChatterPanel extends SwcComponent<ChatterPanelProps> {
     const body = this.draft.trim();
     if (!body || this.props.recordId <= 0) return;
     this.posting = true;
-    this.rerender();
+    this.bump?.();
     try {
       await this.env.services.http.postForm("/web/chatter/post", {
         model: this.props.model,
@@ -86,11 +90,11 @@ export class ChatterPanel extends SwcComponent<ChatterPanelProps> {
       });
     } finally {
       this.posting = false;
-      this.rerender();
+      this.bump?.();
     }
   }
 
-  override template() {
+  template() {
     if (this.props.recordId <= 0) {
       return html`<aside class="sum-chatter sum-chatter--empty">Save the record to post messages.</aside>`;
     }
@@ -101,8 +105,8 @@ export class ChatterPanel extends SwcComponent<ChatterPanelProps> {
     return html`
       <aside class="sum-chatter">
         <div class="sum-chatter-tabs">
-          <button type="button" class="sum-chatter-tab${this.tab === "messages" ? " sum-chatter-tab--active" : ""}" @click=${() => { this.tab = "messages"; this.rerender(); }}>Messages</button>
-          <button type="button" class="sum-chatter-tab${this.tab === "attachments" ? " sum-chatter-tab--active" : ""}" @click=${() => { this.tab = "attachments"; this.rerender(); }}>Attachments (${this.attachments.length})</button>
+          <button type="button" class="sum-chatter-tab${this.tab === "messages" ? " sum-chatter-tab--active" : ""}" @click=${() => { this.tab = "messages"; this.bump?.(); }}>Messages</button>
+          <button type="button" class="sum-chatter-tab${this.tab === "attachments" ? " sum-chatter-tab--active" : ""}" @click=${() => { this.tab = "attachments"; this.bump?.(); }}>Attachments (${this.attachments.length})</button>
         </div>
         ${this.tab === "attachments"
           ? html`<ul class="sum-chatter-attachments">
@@ -119,9 +123,9 @@ export class ChatterPanel extends SwcComponent<ChatterPanelProps> {
             placeholder="Write a message…"
             rows="3"
             value=${this.draft}
-            @input=${(event: Event) => {
-              this.draft = inputValueFromEvent(event);
-              this.rerender();
+            @input=${(ev: Event) => {
+              this.draft = (ev.target as HTMLTextAreaElement).value;
+              this.bump?.();
             }}
           ></textarea>
           <button

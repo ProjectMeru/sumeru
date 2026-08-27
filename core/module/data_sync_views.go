@@ -80,12 +80,6 @@ func InferSysViewTypeFromArch(arch string) string {
 		return "graph"
 	case strings.HasPrefix(la, "<calendar"):
 		return "calendar"
-	case strings.HasPrefix(la, "<gantt"):
-		return "gantt"
-	case strings.HasPrefix(la, "<map"):
-		return "map"
-	case strings.HasPrefix(la, "<cohort"):
-		return "cohort"
 	case strings.HasPrefix(la, "<pivot"):
 		return "pivot"
 	case strings.HasPrefix(la, "<view"):

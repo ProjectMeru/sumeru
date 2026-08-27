@@ -32,15 +32,6 @@ func Upsert(ctx context.Context, model Model, values map[string]interface{}, con
 	if err != nil {
 		return 0, err
 	}
-	defs := map[string]FieldDefinition{}
-	for _, f := range model.Fields() {
-		if f.Name != "" && f.Name != "id" {
-			defs[f.Name] = f
-		}
-	}
-	if err := applySpecialDefaults(ctx, model, defs, prepared); err != nil {
-		return 0, err
-	}
 	if !SecurityBypass(ctx) {
 		if err := CheckFieldWriteAccess(ctx, uid, model.ModelName(), prepared); err != nil {
 			return 0, err

@@ -76,7 +76,7 @@ export class DialogService {
     });
   }
 
-  open(options: DialogOptions): Promise<unknown> {
+  open(opts: DialogOptions): Promise<unknown> {
     this.close();
     return new Promise((resolve) => {
       this.pendingResolve = resolve;
@@ -93,25 +93,25 @@ export class DialogService {
       const title = document.createElement("h2");
       title.id = "sum-dialog-title";
       title.className = "sum-dialog-title";
-      title.textContent = options.title;
+      title.textContent = opts.title;
 
       const body = document.createElement("p");
       body.className = "sum-dialog-body";
-      body.textContent = options.body;
+      body.textContent = opts.body;
 
       const actions = document.createElement("div");
       actions.className = "sum-dialog-actions";
 
-      const buttons = options.buttons ?? [{ label: "Close", primary: true, value: true }];
-      for (const archButton of buttons) {
+      const buttons = opts.buttons ?? [{ label: "Close", primary: true, value: true }];
+      for (const btn of buttons) {
         const el = document.createElement("button");
         el.type = "button";
-        el.textContent = archButton.label;
+        el.textContent = btn.label;
         el.className = "sum-dialog-btn";
-        if (archButton.primary) el.classList.add("sum-dialog-btn--primary");
-        if (archButton.danger) el.classList.add("sum-dialog-btn--danger");
+        if (btn.primary) el.classList.add("sum-dialog-btn--primary");
+        if (btn.danger) el.classList.add("sum-dialog-btn--danger");
         el.addEventListener("click", () => {
-          this.close(archButton.value ?? true);
+          this.close(btn.value ?? true);
         });
         actions.appendChild(el);
       }
@@ -126,16 +126,16 @@ export class DialogService {
   }
 
   private bindDismiss(layer: HTMLElement): void {
-    const onKey = (event: KeyboardEvent): void => {
-      if (event.key === "Escape") {
+    const onKey = (ev: KeyboardEvent): void => {
+      if (ev.key === "Escape") {
         this.close(false);
       }
     };
     document.addEventListener("keydown", onKey, true);
     layer.addEventListener(
       "click",
-      (event) => {
-        if (event.target === layer) {
+      (ev) => {
+        if (ev.target === layer) {
           this.close(false);
         }
       },

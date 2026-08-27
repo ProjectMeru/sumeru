@@ -1,7 +1,6 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { One2ManyField } from "../../src/widgets/One2ManyField.js";
 import { SwcRecord } from "../../src/model/record.js";
-import { getPendingChildren } from "../../src/model/pending-children.js";
 import type { SwcArchField } from "../../src/types/workspace.js";
 import type { SwcEnv } from "../../src/runtime/env.js";
 
@@ -45,7 +44,7 @@ async function mountField(
   document.body.appendChild(host);
   await new Promise((r) => setTimeout(r, 20));
   comp.patch();
-  return { host, el: comp.rootElement! };
+  return { host, el: comp.el! };
 }
 
 describe("One2ManyField", () => {
@@ -62,7 +61,7 @@ describe("One2ManyField", () => {
     comp.setup();
     const { host } = await mountField(comp);
     expect(searchRead).toHaveBeenCalled();
-    expect(comp.rootElement?.textContent).toContain("Line A");
+    expect(comp.el?.textContent).toContain("Line A");
     host.remove();
   });
 
@@ -75,7 +74,7 @@ describe("One2ManyField", () => {
     const comp = new One2ManyField({ field: lineField(), record, readonly: false }, env);
     comp.setup();
     const { host } = await mountField(comp);
-    const input = comp.rootElement!.querySelector("tbody input.sum-field-input") as HTMLInputElement;
+    const input = comp.el!.querySelector("tbody input.sum-field-input") as HTMLInputElement;
     expect(input).toBeTruthy();
     input.value = "Updated";
     input.dispatchEvent(new Event("input", { bubbles: true }));
@@ -93,9 +92,9 @@ describe("One2ManyField", () => {
     const comp = new One2ManyField({ field: lineField(), record, readonly: false }, env);
     comp.setup();
     const { host } = await mountField(comp);
-    comp.rootElement!.querySelector<HTMLButtonElement>(".sum-o2m-add-row")?.click();
+    comp.el!.querySelector<HTMLButtonElement>(".sum-o2m-add-row")?.click();
     comp.patch();
-    const input = comp.rootElement!.querySelector("tbody input.sum-field-input") as HTMLInputElement;
+    const input = comp.el!.querySelector("tbody input.sum-field-input") as HTMLInputElement;
     input.value = "New line";
     input.dispatchEvent(new Event("input", { bubbles: true }));
     await Promise.resolve();
@@ -103,25 +102,6 @@ describe("One2ManyField", () => {
       "my.module.line",
       expect.objectContaining({ name: "New line", module_id: 1 }),
     );
-    host.remove();
-  });
-
-  it("stages lines on an unsaved parent", async () => {
-    const env = makeEnv({});
-    const record = new SwcRecord("my.module", 0, { name: "Draft" });
-    const comp = new One2ManyField({ field: lineField(), record, readonly: false }, env);
-    comp.setup();
-    const { host } = await mountField(comp);
-    comp.rootElement!.querySelector<HTMLButtonElement>(".sum-o2m-add-row")?.click();
-    comp.patch();
-    const input = comp.rootElement!.querySelector("tbody input.sum-field-input") as HTMLInputElement;
-    input.value = "Staged line";
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    await Promise.resolve();
-    const pending = getPendingChildren(record, "line_ids");
-    expect(pending).toHaveLength(1);
-    expect(pending![0].values.name).toBe("Staged line");
-    expect(pending![0].comodel).toBe("my.module.line");
     host.remove();
   });
 
@@ -133,7 +113,7 @@ describe("One2ManyField", () => {
     const comp = new One2ManyField({ field: lineField(), record, readonly: false }, env);
     comp.setup();
     const { host } = await mountField(comp);
-    const btn = comp.rootElement!.querySelector<HTMLButtonElement>(".sum-o2m-delete-btn");
+    const btn = comp.el!.querySelector<HTMLButtonElement>(".sum-o2m-delete-btn");
     expect(btn).toBeTruthy();
     expect(btn!.getAttribute("data-line-id")).toBe("10");
     btn!.click();

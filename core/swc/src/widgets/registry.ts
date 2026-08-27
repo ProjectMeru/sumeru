@@ -1,4 +1,4 @@
-import { registry, type FieldWidgetConstructor } from "../runtime/registry.js";
+import { registry, type RegistryEntry } from "../runtime/registry.js";
 import type { SwcArchField } from "../types/workspace.js";
 import type { SwcEnv } from "../runtime/env.js";
 import type { SwcRecord } from "../model/record.js";
@@ -20,58 +20,71 @@ import {
   MonetaryField,
   HtmlField,
   BinaryField,
+  ReferenceField,
   ColorField,
   UrlField,
   ProgressField,
   HandleField,
 } from "./extra-fields.js";
 
-const FIELD_CONSTRUCTORS = {
-  default: DefaultField,
-  char: DefaultField,
-  email: DefaultField,
-  integer: DefaultField,
-  float: DefaultField,
-  numeric: DefaultField,
-  date: DateField,
-  datetime: DateTimeField,
-  json: TextareaField,
-  many2one: Many2OneField,
-  one2many: One2ManyField,
-  many2many: Many2ManyTagsField,
-  selection: SelectionField,
-  boolean: BooleanField,
-  text: TextareaField,
-  statusbar: StatusbarField,
-  priority: PriorityField,
-  phone: PhoneField,
-  radio: BooleanRadioField,
-  boolean_toggle: BooleanToggleField,
-  many2many_tags: Many2ManyTagsField,
-  image: ImageField,
-  monetary: MonetaryField,
-  html: HtmlField,
-  binary: BinaryField,
-  reference: DefaultField,
-  color: ColorField,
-  url: UrlField,
-  progress: ProgressField,
-  handle: HandleField,
-} satisfies Record<string, FieldWidgetConstructor>;
-
 export function registerDefaultWidgets(): void {
   const fields = registry.category("fields");
-  for (const [key, WidgetConstructor] of Object.entries(FIELD_CONSTRUCTORS)) {
-    fields.add(key, WidgetConstructor);
-  }
+  const add = (key: string, Ctor: unknown) => fields.add(key, Ctor as RegistryEntry);
+
+  add("default", DefaultField);
+  add("char", DefaultField);
+  add("email", DefaultField);
+  add("integer", DefaultField);
+  add("float", DefaultField);
+  add("numeric", DefaultField);
+  add("date", DateField);
+  add("datetime", DateTimeField);
+  add("json", TextareaField);
+  add("many2one", Many2OneField);
+  add("one2many", One2ManyField);
+  add("many2many", Many2ManyTagsField);
+  add("selection", SelectionField);
+  add("boolean", BooleanField);
+  add("text", TextareaField);
+  add("statusbar", StatusbarField);
+  add("priority", PriorityField);
+  add("phone", PhoneField);
+  add("radio", BooleanRadioField);
+  add("boolean_toggle", BooleanToggleField);
+  add("many2many_tags", Many2ManyTagsField);
+  add("image", ImageField);
+  add("monetary", MonetaryField);
+  add("html", HtmlField);
+  add("binary", BinaryField);
+  add("reference", ReferenceField);
+  add("color", ColorField);
+  add("url", UrlField);
+  add("progress", ProgressField);
+  add("handle", HandleField);
 }
 
-/** Widget names that alias a different registered constructor. */
-const WIDGET_ALIASES = {
+const WIDGET_MAP: Record<string, string> = {
+  many2many_tags: "many2many_tags",
+  boolean_toggle: "boolean_toggle",
+  radio: "radio",
+  phone: "phone",
+  image: "image",
+  selection: "selection",
+  email: "email",
+  statusbar: "statusbar",
+  priority: "priority",
+  monetary: "monetary",
+  html: "html",
+  binary: "binary",
+  reference: "reference",
+  color: "color",
+  url: "url",
   progressbar: "progress",
-} satisfies Record<string, string>;
+  progress: "progress",
+  handle: "handle",
+};
 
-const TYPE_MAP = {
+const TYPE_MAP: Record<string, string> = {
   boolean: "boolean",
   text: "text",
   many2one: "many2one",
@@ -83,25 +96,18 @@ const TYPE_MAP = {
   integer: "integer",
   float: "float",
   numeric: "numeric",
-} satisfies Record<string, string>;
+};
 
 export function resolveFieldWidget(field: SwcArchField): string {
-  const widget = field.widget ?? "";
-  if (widget && widget in WIDGET_ALIASES) {
-    return WIDGET_ALIASES[widget as keyof typeof WIDGET_ALIASES];
-  }
-  if (widget) return widget;
-  if (field.type && field.type in TYPE_MAP) {
-    return TYPE_MAP[field.type as keyof typeof TYPE_MAP];
-  }
-  return field.type ?? "default";
+  if (field.widget && WIDGET_MAP[field.widget]) return WIDGET_MAP[field.widget];
+  if (field.type && TYPE_MAP[field.type]) return TYPE_MAP[field.type];
+  return field.widget ?? field.type ?? "default";
 }
 
 export type FieldWidgetInstance = {
   render(): HTMLElement;
-  renderOrPatch(): HTMLElement;
   destroy(): void;
-  callSetup(): void;
+  setup?(): void;
 };
 
 export function instantiateFieldWidget(
@@ -111,11 +117,10 @@ export function instantiateFieldWidget(
   readonly: boolean,
 ): FieldWidgetInstance {
   const key = resolveFieldWidget(field);
-  const WidgetConstructor =
-    registry.get("fields", key) ?? registry.get("fields", "default") ?? DefaultField;
-  const widget = new WidgetConstructor({ field, record, readonly }, env);
-  widget.callSetup();
-  return widget;
+  const Ctor = (registry.get("fields", key) ?? registry.get("fields", "default")) as unknown as typeof DefaultField;
+  const comp = new Ctor({ field, record, readonly }, env);
+  comp.setup?.();
+  return comp;
 }
 
 export function renderField(

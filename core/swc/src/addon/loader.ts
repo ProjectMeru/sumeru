@@ -1,3 +1,5 @@
+import { registry } from "../runtime/registry.js";
+
 /** Loads addon swc_entry modules registered in manifest static paths. */
 export class AddonLoader {
   static async loadEntries(urls: string[]): Promise<void> {
@@ -17,3 +19,5 @@ export class AddonLoader {
     }
   }
 }
+
+export { registry };

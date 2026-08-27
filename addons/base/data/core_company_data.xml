@@ -8,7 +8,7 @@
             <field name="street">250 Executive Park Blvd</field>
             <field name="city">San Francisco</field>
             <field name="zip">94134</field>
-            <field name="country_id" ref="base.country_us"/>
+            <field name="country">United States</field>
             <field name="phone">+1 555 0100</field>
             <field name="website">https://example.com</field>
         </record>

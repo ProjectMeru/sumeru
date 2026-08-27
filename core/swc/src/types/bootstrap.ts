@@ -74,7 +74,7 @@ export interface SwcBootstrapWorkspace {
 }
 
 export interface SwcToastMessage {
-  kind: "info" | "success" | "warning" | "error";
+  kind: string;
   title: string;
   body: string;
   details?: string;
@@ -91,5 +91,5 @@ export function readBootstrap(): SwcBootstrap {
   if (!boot) {
     throw new Error("SWC bootstrap missing on window.__SWC_BOOTSTRAP__");
   }
-  return boot satisfies SwcBootstrap;
+  return boot;
 }

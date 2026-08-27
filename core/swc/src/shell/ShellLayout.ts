@@ -5,9 +5,9 @@ import { WorkspaceRouter } from "../views/workspace/WorkspaceRouter.js";
 export class ShellLayout extends SwcComponent {
   private workspaceRouter!: WorkspaceRouter;
 
-  override setup(): void {
+  setup(): void {
     this.workspaceRouter = new WorkspaceRouter({}, this.env);
-    this.workspaceRouter.callSetup();
+    this.workspaceRouter.setup?.();
 
     if (this.env.bootstrap.busEnabled) {
       this.env.services.bus.connect();
@@ -15,10 +15,14 @@ export class ShellLayout extends SwcComponent {
   }
 
   private workspaceView(): HTMLElement {
-    return this.workspaceRouter.renderOrPatch();
+    if (this.workspaceRouter.el?.isConnected) {
+      this.workspaceRouter.patch();
+      return this.workspaceRouter.el;
+    }
+    return this.workspaceRouter.render();
   }
 
-  override template() {
+  template() {
     return html`
       <div id="swc-root-inner">
         <main class="sum-workspace-inner">

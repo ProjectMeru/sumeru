@@ -73,28 +73,14 @@ export class RecordStore {
     return new SwcRecord(model, id, data);
   }
 
-  /**
-   * Removes client-only display fields (e.g. `partner_id_name`) before an RPC
-   * write/create. The server whitelists real model fields and rejects unknown
-   * keys, so these display helpers must never be sent.
-   */
-  private serverValues(values: Record<string, unknown>): Record<string, unknown> {
-    const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(values)) {
-      if (k.endsWith("_name") || k.endsWith("_names")) continue;
-      out[k] = v;
-    }
-    return out;
-  }
-
   async save(rec: SwcRecord): Promise<number> {
     if (rec.id <= 0) {
-      const newId = await this.rpc.create(rec.model, this.serverValues(rec.data));
+      const newId = await this.rpc.create(rec.model, rec.data);
       rec.clearDirty();
       return newId;
     }
     if (!rec.isDirty()) return rec.id;
-    await this.rpc.write(rec.model, [rec.id], this.serverValues(rec.dirtyValues()));
+    await this.rpc.write(rec.model, [rec.id], rec.dirtyValues());
     rec.clearDirty();
     return rec.id;
   }
@@ -110,7 +96,7 @@ export class RecordStore {
       if (omit.includes(k)) continue;
       values[k] = v;
     }
-    return this.rpc.create(rec.model, this.serverValues(values));
+    return this.rpc.create(rec.model, values);
   }
 
   async applyOnchange(rec: SwcRecord, field: string): Promise<OnchangeResult | null> {

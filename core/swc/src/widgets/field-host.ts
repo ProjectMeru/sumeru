@@ -4,9 +4,9 @@ import type { SwcRecord } from "../model/record.js";
 import { instantiateFieldWidget, resolveFieldWidget, type FieldWidgetInstance } from "./registry.js";
 
 interface FieldEntry {
-  widget: FieldWidgetInstance;
+  comp: FieldWidgetInstance;
   readonly: boolean;
-  widgetName: string;
+  widget: string;
 }
 
 /** Reuses field widget instances across FormView patches (same record + mode). */
@@ -19,38 +19,23 @@ export class FieldHost {
   }
 
   render(field: SwcArchField, record: SwcRecord, readonly: boolean): HTMLElement {
-    const widgetName = resolveFieldWidget(field);
-    const key = `${record.id}:${field.name}`;
+    const widget = resolveFieldWidget(field);
+    const key = field.name;
     const prev = this.entries.get(key);
 
-    if (prev && prev.readonly === readonly && prev.widgetName === widgetName) {
-      return prev.widget.renderOrPatch();
+    if (prev && prev.readonly === readonly && prev.widget === widget) {
+      return prev.comp.render();
     }
 
-    prev?.widget.destroy();
-    const widget = instantiateFieldWidget(this.env, field, record, readonly);
-    this.entries.set(key, { widget, readonly, widgetName });
-    return widget.render();
-  }
-
-  /** Drop one field widget after onchange, or all widgets when `fieldName` is omitted. */
-  invalidate(fieldName?: string): void {
-    if (!fieldName) {
-      this.clear();
-      return;
-    }
-    const suffix = `:${fieldName}`;
-    for (const [key, entry] of [...this.entries]) {
-      if (key === fieldName || key.endsWith(suffix)) {
-        entry.widget.destroy();
-        this.entries.delete(key);
-      }
-    }
+    prev?.comp.destroy();
+    const comp = instantiateFieldWidget(this.env, field, record, readonly);
+    this.entries.set(key, { comp, readonly, widget });
+    return comp.render();
   }
 
   clear(): void {
-    for (const { widget } of this.entries.values()) {
-      widget.destroy();
+    for (const { comp } of this.entries.values()) {
+      comp.destroy();
     }
     this.entries.clear();
   }

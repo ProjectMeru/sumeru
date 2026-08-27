@@ -44,16 +44,16 @@ describe("StatusbarField", () => {
       type: "many2one",
       relation: "crm.stage",
     };
-    const widget = new StatusbarField({ field, record, readonly: false }, env);
-    widget.setup?.();
+    const comp = new StatusbarField({ field, record, readonly: false }, env);
+    comp.setup?.();
     const host = document.createElement("div");
-    host.appendChild(widget.render());
+    host.appendChild(comp.render());
     document.body.appendChild(host);
     await new Promise((r) => setTimeout(r, 20));
-    widget.patch();
+    comp.patch();
     expect(searchRead).toHaveBeenCalledWith("crm.stage", [], ["id", "name", "sequence"], 200);
-    expect(widget.rootElement?.textContent).toContain("New");
-    expect(widget.rootElement?.textContent).toContain("Won");
+    expect(comp.el?.textContent).toContain("New");
+    expect(comp.el?.textContent).toContain("Won");
     host.remove();
   });
 });

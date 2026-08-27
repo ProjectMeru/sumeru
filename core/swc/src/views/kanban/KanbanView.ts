@@ -10,7 +10,6 @@ import {
 } from "../list/control-panel.js";
 import { RECORD_UPDATED, VIEW_FORM, VIEW_KANBAN } from "../../constants/routes.js";
 import { SwcError } from "../../runtime/error.js";
-import { inputValueFromEvent } from "../../widgets/field-events.js";
 
 interface KanbanViewProps {
   payload: SwcWorkspacePayload;
@@ -21,17 +20,17 @@ export class KanbanView extends SwcComponent<KanbanViewProps> {
   private filters: string[] = [];
   private drafts: Record<string, string> = {};
 
-  override setup(): void {
+  setup(): void {
     this.syncFromPayload(this.props.payload);
   }
 
-  override onPropsChanged(props: KanbanViewProps): void {
+  onPropsChanged(props: KanbanViewProps): void {
     this.syncFromPayload(props.payload);
   }
 
-  private syncFromPayload(payload: SwcWorkspacePayload): void {
-    this.search = payload.listSearch ?? "";
-    this.filters = parseFilterCSV(payload.listFilter);
+  private syncFromPayload(p: SwcWorkspacePayload): void {
+    this.search = p.listSearch ?? "";
+    this.filters = parseFilterCSV(p.listFilter);
   }
 
   private cardFields(): SwcArchField[] {
@@ -39,11 +38,11 @@ export class KanbanView extends SwcComponent<KanbanViewProps> {
   }
 
   private navigateKanban(patch: { listSearch?: string; listFilter?: string }): void {
-    const payload = this.props.payload;
+    const p = this.props.payload;
     this.env.services.action.navigate(
       this.env.services.router.workspaceUrl({
-        actionId: payload.actionId,
-        menuId: payload.menuId,
+        actionId: p.actionId,
+        menuId: p.menuId,
         viewType: VIEW_KANBAN,
         listSearch: patch.listSearch ?? this.search,
         listFilter: patch.listFilter ?? this.filters.join(","),
@@ -62,10 +61,10 @@ export class KanbanView extends SwcComponent<KanbanViewProps> {
   private openCard(row: Record<string, unknown>): void {
     const id = Number(row.id ?? 0);
     if (id <= 0) return;
-    const payload = this.props.payload;
+    const p = this.props.payload;
     this.env.services.action.openRecord({
-      actionId: payload.actionId,
-      menuId: payload.menuId,
+      actionId: p.actionId,
+      menuId: p.menuId,
       recordId: id,
       viewType: VIEW_FORM,
     });
@@ -127,22 +126,22 @@ export class KanbanView extends SwcComponent<KanbanViewProps> {
   private renderCard(
     row: Record<string, unknown>,
     fields: SwcArchField[],
-    options: { draggable?: boolean; dropValue?: number } = {},
+    opts: { draggable?: boolean; dropValue?: number } = {},
   ) {
-    const draggable = Boolean(options.draggable);
-    const dropValue = options.dropValue;
+    const draggable = Boolean(opts.draggable);
+    const dropValue = opts.dropValue;
     return html`<div
       class="sum-kanban-card"
       draggable=${draggable ? "true" : undefined}
       @click=${() => this.openCard(row)}
       @dragstart=${draggable
-        ? (event: Event) => (event as DragEvent).dataTransfer?.setData("text/plain", String(row.id))
+        ? (ev: Event) => (ev as DragEvent).dataTransfer?.setData("text/plain", String(row.id))
         : undefined}
-      @dragover=${dropValue !== undefined ? (event: Event) => event.preventDefault() : undefined}
+      @dragover=${dropValue !== undefined ? (ev: Event) => ev.preventDefault() : undefined}
       @drop=${dropValue !== undefined
-        ? (event: Event) => {
-            event.preventDefault();
-            const id = Number((event as DragEvent).dataTransfer?.getData("text/plain"));
+        ? (ev: Event) => {
+            ev.preventDefault();
+            const id = Number((ev as DragEvent).dataTransfer?.getData("text/plain"));
             if (id) void this.moveCard(id, dropValue);
           }
         : undefined}
@@ -151,13 +150,13 @@ export class KanbanView extends SwcComponent<KanbanViewProps> {
     </div>`;
   }
 
-  override template() {
-    const payload = this.props.payload;
-    const kanban = payload.arch.kanban;
+  template() {
+    const p = this.props.payload;
+    const kanban = p.arch.kanban;
     const fields = this.cardFields();
-    const filters = payload.arch.search?.filters ?? [];
+    const filters = p.arch.search?.filters ?? [];
     if (!kanban?.columns?.length) {
-      const rows = payload.records ?? [];
+      const rows = p.records ?? [];
       return html`
         <div class="sum-kanban-view">
           ${this.toolbar()}
@@ -198,8 +197,8 @@ export class KanbanView extends SwcComponent<KanbanViewProps> {
                 ${kanban.quickCreate
                   ? html`<form
                       class="sum-kanban-quick-create"
-                      @submit=${(event: Event) => {
-                        event.preventDefault();
+                      @submit=${(ev: Event) => {
+                        ev.preventDefault();
                         void this.quickCreate(col.value);
                       }}
                     >
@@ -208,8 +207,8 @@ export class KanbanView extends SwcComponent<KanbanViewProps> {
                         class="sum-kanban-quick-input"
                         placeholder="Add…"
                         value=${this.drafts[String(col.value)] ?? ""}
-                        @input=${(event: Event) => {
-                          this.drafts[String(col.value)] = inputValueFromEvent(event);
+                        @input=${(ev: Event) => {
+                          this.drafts[String(col.value)] = (ev.target as HTMLInputElement).value;
                         }}
                       />
                       <button type="submit" class="sum-btn sum-btn--ghost">Add</button>

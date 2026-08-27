@@ -13,7 +13,7 @@ type CoreCompany struct {
 	City                     sdk.String  `sumeru:"string=City"`
 	Zip                      sdk.String  `sumeru:"string=Zip"`
 	State                    sdk.String  `sumeru:"string=State / Province"`
-	CountryID                sdk.Many2One[CoreCountry] `sumeru:"index,string=Country"`
+	Country                  sdk.String  `sumeru:"string=Country"`
 	Email                    sdk.String  `sumeru:"string=Email"`
 	Phone                    sdk.String  `sumeru:"string=Phone"`
 	Mobile                   sdk.String  `sumeru:"string=Mobile"`

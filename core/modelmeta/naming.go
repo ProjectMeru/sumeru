@@ -13,9 +13,6 @@ func FieldNameFromGo(name string) string {
 	if name == "ID" {
 		return "id"
 	}
-	if strings.HasSuffix(name, "IDs") && len(name) > 3 {
-		return FieldNameFromGo(name[:len(name)-3]) + "_ids"
-	}
 	if strings.HasSuffix(name, "ID") && len(name) > 2 {
 		return FieldNameFromGo(name[:len(name)-2]) + "_id"
 	}

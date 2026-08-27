@@ -1,16 +1,24 @@
 import { SwcComponent } from "../runtime/component.js";
 import { html } from "../template/html.js";
+import type { SwcArchField } from "../types/workspace.js";
+import type { SwcRecord } from "../model/record.js";
 import { fieldLabelId, renderFieldShell } from "./field-shell.js";
-import type { FieldWidgetProps } from "./field-props.js";
-import { booleanFromUnknown } from "./field-value.js";
-import { isFieldReadonly } from "../model/modifiers.js";
 
-export class BooleanRadioField extends SwcComponent<FieldWidgetProps> {
-  override template() {
+interface FieldProps {
+  field: SwcArchField;
+  record: SwcRecord;
+  readonly: boolean;
+}
+
+function isChecked(val: unknown): boolean {
+  return val === true || val === 1 || val === "1" || val === "true";
+}
+
+export class BooleanRadioField extends SwcComponent<FieldProps> {
+  template() {
     const { field, record, readonly } = this.props;
-    const checked = booleanFromUnknown(record.get(field.name));
+    const checked = isChecked(record.get(field.name));
     const name = field.name;
-    const fieldReadonly = isFieldReadonly(field, record, readonly);
 
     return renderFieldShell(
       field,
@@ -21,8 +29,8 @@ export class BooleanRadioField extends SwcComponent<FieldWidgetProps> {
             name=${name}
             value="1"
             checked=${checked ? "checked" : ""}
-            disabled=${fieldReadonly ? "disabled" : undefined}
-            @change=${() => !fieldReadonly && record.set(field.name, true)}
+            disabled=${readonly || field.readonly ? "disabled" : undefined}
+            @change=${() => !readonly && record.set(field.name, true)}
           />
           Yes
         </label>
@@ -32,8 +40,8 @@ export class BooleanRadioField extends SwcComponent<FieldWidgetProps> {
             name=${name}
             value="0"
             checked=${!checked ? "checked" : ""}
-            disabled=${fieldReadonly ? "disabled" : undefined}
-            @change=${() => !fieldReadonly && record.set(field.name, false)}
+            disabled=${readonly || field.readonly ? "disabled" : undefined}
+            @change=${() => !readonly && record.set(field.name, false)}
           />
           No
         </label>

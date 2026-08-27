@@ -8,9 +8,12 @@ import {
   fieldReadonlyValue,
   renderFieldShell,
 } from "./field-shell.js";
-import type { FieldWidgetProps } from "./field-props.js";
-import { inputValueFromEvent } from "./field-events.js";
-import { isFieldReadonly } from "../model/modifiers.js";
+
+interface FieldProps {
+  field: SwcArchField;
+  record: SwcRecord;
+  readonly: boolean;
+}
 
 function priorityMode(field: SwcArchField): "stars" | "select" {
   const mode = (field.options?.mode ?? field.options?.display ?? "stars").toLowerCase();
@@ -29,14 +32,14 @@ function selectionOptions(field: SwcArchField): Array<{ value: string; label: st
 }
 
 function currentValue(field: SwcArchField, record: SwcRecord): string {
-  const rawValue = record.get(field.name);
-  if (rawValue == null || rawValue === "") return selectionOptions(field)[0]?.value ?? "0";
-  return String(rawValue);
+  const raw = record.get(field.name);
+  if (raw == null || raw === "") return selectionOptions(field)[0]?.value ?? "0";
+  return String(raw);
 }
 
 function numericLevel(value: string): number {
-  const parsed = Number.parseInt(value, 10);
-  return Number.isNaN(parsed) ? 0 : Math.max(0, parsed);
+  const n = Number.parseInt(value, 10);
+  return Number.isNaN(n) ? 0 : Math.max(0, n);
 }
 
 function starCount(field: SwcArchField): number {
@@ -46,15 +49,15 @@ function starCount(field: SwcArchField): number {
   return Math.max(Math.min(maxLevel, 4), 3);
 }
 
-export class PriorityField extends SwcComponent<FieldWidgetProps> {
-  override template() {
+export class PriorityField extends SwcComponent<FieldProps> {
+  template() {
     const { field, record, readonly } = this.props;
     const options = selectionOptions(field);
     const value = currentValue(field, record);
     const mode = priorityMode(field);
 
-    if (isFieldReadonly(field, record, readonly)) {
-      const label = options.find((option) => option.value === value)?.label ?? value;
+    if (readonly || field.readonly) {
+      const label = options.find((o) => o.value === value)?.label ?? value;
       if (mode === "select") {
         return renderFieldShell(field, fieldReadonlyValue(label), { labelFor: false });
       }
@@ -69,12 +72,13 @@ export class PriorityField extends SwcComponent<FieldWidgetProps> {
           id=${id}
           class="sum-field-select sum-priority-select"
           name=${field.name}
-          @change=${(event: Event) => record.set(field.name, inputValueFromEvent(event))}
+          @change=${(ev: Event) =>
+            record.set(field.name, (ev.target as HTMLSelectElement).value)}
         >
           ${options.map(
-            (option) =>
-              html`<option value=${option.value} selected=${value === option.value ? "selected" : ""}>
-                ${option.label}
+            (opt) =>
+              html`<option value=${opt.value} selected=${value === opt.value ? "selected" : ""}>
+                ${opt.label}
               </option>`,
           )}
         </select>`,
@@ -102,19 +106,19 @@ export class PriorityField extends SwcComponent<FieldWidgetProps> {
     const capped = Math.min(level, count);
     const out: TemplateResult[] = [];
 
-    for (let index = 0; index < count; index += 1) {
-      const starIndex = index + 1;
+    for (let i = 0; i < count; i += 1) {
+      const starIndex = i + 1;
       const filled = starIndex <= capped;
-      const option = options[Math.min(starIndex, options.length - 1)];
+      const opt = options[Math.min(starIndex, options.length - 1)];
       const click = () => {
         if (disabled) return;
         const next = capped === starIndex ? starIndex - 1 : starIndex;
         onPick?.(Math.max(0, next));
       };
       if (filled) {
-        out.push(html`<button type="button" class="sum-priority-star sum-priority-star--on" disabled=${disabled ? "disabled" : undefined} title=${option?.label ?? `Level ${starIndex}`} aria-label=${option?.label ?? `Priority ${starIndex}`} @click=${click}>★</button>`);
+        out.push(html`<button type="button" class="sum-priority-star sum-priority-star--on" disabled=${disabled ? "disabled" : undefined} title=${opt?.label ?? `Level ${starIndex}`} aria-label=${opt?.label ?? `Priority ${starIndex}`} @click=${click}>★</button>`);
       } else {
-        out.push(html`<button type="button" class="sum-priority-star" disabled=${disabled ? "disabled" : undefined} title=${option?.label ?? `Level ${starIndex}`} aria-label=${option?.label ?? `Priority ${starIndex}`} @click=${click}>★</button>`);
+        out.push(html`<button type="button" class="sum-priority-star" disabled=${disabled ? "disabled" : undefined} title=${opt?.label ?? `Level ${starIndex}`} aria-label=${opt?.label ?? `Priority ${starIndex}`} @click=${click}>★</button>`);
       }
     }
     return out;

@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { bindPasswordMatch } from "../../src/widgets/password-match.js";
+import { bindPasswordMatch } from "../../src/login/password-match.js";
 
 describe("bindPasswordMatch", () => {
   afterEach(() => {

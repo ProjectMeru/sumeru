@@ -67,31 +67,6 @@ type archCalendarRoot struct {
 	Field     []Field  `xml:"field"`
 }
 
-type archGanttRoot struct {
-	XMLName   xml.Name `xml:"gantt"`
-	String    string   `xml:"string,attr"`
-	DateStart string   `xml:"date_start,attr"`
-	DateStop  string   `xml:"date_stop,attr"`
-	Field     []Field  `xml:"field"`
-}
-
-type archMapRoot struct {
-	XMLName   xml.Name `xml:"map"`
-	String    string   `xml:"string,attr"`
-	Latitude  string   `xml:"latitude,attr"`
-	Longitude string   `xml:"longitude,attr"`
-	Field     []Field  `xml:"field"`
-}
-
-type archCohortRoot struct {
-	XMLName   xml.Name `xml:"cohort"`
-	String    string   `xml:"string,attr"`
-	DateStart string   `xml:"date_start,attr"`
-	Interval  string   `xml:"interval,attr"`
-	Measure   string   `xml:"measure,attr"`
-	Field     []Field  `xml:"field"`
-}
-
 type archPivotRoot struct {
 	XMLName xml.Name `xml:"pivot"`
 	String  string   `xml:"string,attr"`
@@ -228,40 +203,6 @@ func parseViewFromArchInternal(arch string) (*View, error) {
 		}, nil
 	}
 
-	var gantt archGanttRoot
-	if err := xml.Unmarshal([]byte(arch), &gantt); err == nil && strings.HasPrefix(strings.ToLower(strings.TrimSpace(arch)), "<gantt") {
-		return &View{
-			Type:      "gantt",
-			Title:     gantt.String,
-			DateStart: gantt.DateStart,
-			DateStop:  gantt.DateStop,
-			Field:     gantt.Field,
-		}, nil
-	}
-
-	var mp archMapRoot
-	if err := xml.Unmarshal([]byte(arch), &mp); err == nil && strings.HasPrefix(strings.ToLower(strings.TrimSpace(arch)), "<map") {
-		return &View{
-			Type:      "map",
-			Title:     mp.String,
-			Latitude:  mp.Latitude,
-			Longitude: mp.Longitude,
-			Field:     mp.Field,
-		}, nil
-	}
-
-	var coh archCohortRoot
-	if err := xml.Unmarshal([]byte(arch), &coh); err == nil && strings.HasPrefix(strings.ToLower(strings.TrimSpace(arch)), "<cohort") {
-		return &View{
-			Type:      "cohort",
-			Title:     coh.String,
-			DateStart: coh.DateStart,
-			Interval:  coh.Interval,
-			Measure:   coh.Measure,
-			Field:     coh.Field,
-		}, nil
-	}
-
 	var pvt archPivotRoot
 	if err := xml.Unmarshal([]byte(arch), &pvt); err == nil && strings.HasPrefix(strings.ToLower(strings.TrimSpace(arch)), "<pivot") {
 		return &View{
@@ -275,7 +216,7 @@ func parseViewFromArchInternal(arch string) (*View, error) {
 		return nil, fmt.Errorf("parse view arch: %w", err)
 	}
 	if !viewLooksPopulated(&v) {
-		return nil, fmt.Errorf("parse view arch: unsupported or empty root (use <view>, <form>, <list>, <kanban>, <search>, <graph>, <calendar>, <gantt>, <map>, <cohort>, or <pivot>)")
+		return nil, fmt.Errorf("parse view arch: unsupported or empty root (use <view>, <form>, <list>, <kanban>, <search>, <graph>, <calendar>, or <pivot>)")
 	}
 	return &v, nil
 }
@@ -285,8 +226,7 @@ func viewLooksPopulated(v *View) bool {
 		return false
 	}
 	return v.Type != "" || v.Header != nil || v.Sheet != nil || v.Footer != nil || v.Chatter != nil ||
-		len(v.Field) > 0 || len(v.Group) > 0 || len(v.SearchFilter) > 0 || v.DateStart != "" ||
-		v.Latitude != "" || v.Longitude != "" || v.Interval != "" || v.Measure != ""
+		len(v.Field) > 0 || len(v.Group) > 0 || len(v.SearchFilter) > 0 || v.DateStart != ""
 }
 
 func formArchHasContent(f *archFormRoot) bool {

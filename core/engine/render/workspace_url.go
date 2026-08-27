@@ -30,9 +30,6 @@ const (
 	ViewModePivot    = "pivot"
 	ViewModeGraph    = "graph"
 	ViewModeCalendar = "calendar"
-	ViewModeGantt    = "gantt"
-	ViewModeMap      = "map"
-	ViewModeCohort   = "cohort"
 	ViewModeSearch   = "search"
 )
 

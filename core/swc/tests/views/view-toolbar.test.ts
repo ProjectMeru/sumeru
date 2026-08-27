@@ -4,7 +4,7 @@ import {
   newRecordUrl,
   renderReportActions,
   renderSearchField,
-  exportFieldNamesCsv,
+  visibleFieldNames,
 } from "../../src/views/shared/view-toolbar.js";
 import type { SwcWorkspacePayload } from "../../src/types/workspace.js";
 
@@ -44,8 +44,8 @@ describe("view-toolbar", () => {
     expect(formParams.get("id")).toBe("7");
   });
 
-  it("exportFieldNamesCsv joins arch field names", () => {
-    expect(exportFieldNamesCsv([{ name: "a" }, { name: "b" }])).toBe("a,b");
+  it("visibleFieldNames joins arch field names", () => {
+    expect(visibleFieldNames([{ name: "a" }, { name: "b" }])).toBe("a,b");
   });
 
   it("renderReportActions returns null when arch.report is absent", () => {

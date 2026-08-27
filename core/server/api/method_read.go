@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"sumeru/core/engine/swcmeta"
 	"sumeru/core/orm"
 )
 
@@ -56,6 +55,5 @@ func rpcRead(ctx context.Context, model string, args json.RawMessage) (interface
 	if len(missing) > 0 {
 		return nil, newRPCError(CodeNotFound, "record(s) not found", map[string]interface{}{"missing_ids": missing})
 	}
-	swcmeta.EnrichMany2OneNames(ctx, model, out)
 	return out, nil
 }

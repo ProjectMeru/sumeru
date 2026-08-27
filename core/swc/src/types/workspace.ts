@@ -15,9 +15,6 @@ export interface SwcViewArch {
   search?: SwcSearchMeta;
   graph?: SwcGraphMeta;
   calendar?: SwcCalendarMeta;
-  gantt?: SwcGanttMeta;
-  map?: SwcMapMeta;
-  cohort?: SwcCohortMeta;
   report?: SwcReportMeta;
 }
 
@@ -66,7 +63,7 @@ export interface SwcArchField {
 export interface SwcArchButton {
   name: string;
   string: string;
-  type: "object" | "action" | string;
+  type: string;
   class?: string;
 }
 
@@ -155,22 +152,6 @@ export interface SwcGraphMeta {
 export interface SwcCalendarMeta {
   dateStart?: string;
   dateStop?: string;
-}
-
-export interface SwcGanttMeta {
-  dateStart?: string;
-  dateStop?: string;
-}
-
-export interface SwcMapMeta {
-  latitude?: string;
-  longitude?: string;
-}
-
-export interface SwcCohortMeta {
-  dateStart?: string;
-  interval?: string;
-  measure?: string;
 }
 
 export interface SwcReportMeta {

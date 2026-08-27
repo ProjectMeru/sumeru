@@ -1,4 +1,4 @@
-/** Keyed DOM reconciliation for list rows (`data-swc-key` siblings). */
+/** Keyed DOM reconciliation for list rows and t-key siblings. */
 
 export function collectKeyedChildren(container: HTMLElement): Map<string, HTMLElement> {
   const map = new Map<string, HTMLElement>();
@@ -12,11 +12,7 @@ export function collectKeyedChildren(container: HTMLElement): Map<string, HTMLEl
 
 export function patchKeyedChildren(
   container: HTMLElement,
-  items: Array<{
-    key: string;
-    render: () => HTMLElement;
-    patch?: (element: HTMLElement) => HTMLElement;
-  }>,
+  items: Array<{ key: string; render: () => HTMLElement }>,
 ): void {
   const prev = collectKeyedChildren(container);
   const nextKeys = new Set<string>();
@@ -24,30 +20,35 @@ export function patchKeyedChildren(
 
   for (const item of items) {
     nextKeys.add(item.key);
-    let element = prev.get(item.key);
-    if (!element) {
-      element = item.render();
-      element.dataset.swcKey = item.key;
-    } else if (item.patch) {
-      element = item.patch(element);
-      element.dataset.swcKey = item.key;
+    let el = prev.get(item.key);
+    if (!el) {
+      el = item.render();
+      el.dataset.swcKey = item.key;
     }
-    ordered.push(element);
+    ordered.push(el);
   }
 
-  for (const [key, element] of prev) {
-    if (!nextKeys.has(key)) element.remove();
+  for (const [key, el] of prev) {
+    if (!nextKeys.has(key)) el.remove();
   }
 
-  for (let index = 0; index < ordered.length; index++) {
-    const element = ordered[index];
-    const current = container.children[index] as HTMLElement | undefined;
-    if (current !== element) {
-      container.insertBefore(element, current ?? null);
+  for (let i = 0; i < ordered.length; i++) {
+    const el = ordered[i];
+    const current = container.children[i] as HTMLElement | undefined;
+    if (current !== el) {
+      container.insertBefore(el, current ?? null);
     }
   }
 
   while (container.children.length > ordered.length) {
     container.lastElementChild?.remove();
   }
+}
+
+/** Patch a keyed-list wrapper (display:contents div from KeyedListResult). */
+export function patchKeyedListWrapper(
+  wrapper: HTMLElement,
+  items: Array<{ key: string; render: () => HTMLElement }>,
+): void {
+  patchKeyedChildren(wrapper, items);
 }

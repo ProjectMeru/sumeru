@@ -1,15 +1,19 @@
 import { SwcComponent } from "../runtime/component.js";
 import { html } from "../template/html.js";
 import type { SwcArchField } from "../types/workspace.js";
+import type { SwcRecord } from "../model/record.js";
 import {
   fieldInputId,
   fieldPlaceholder,
   fieldReadonlyInput,
   renderFieldShell,
 } from "./field-shell.js";
-import type { FieldWidgetProps } from "./field-props.js";
-import { inputValueFromEvent } from "./field-events.js";
-import { isFieldReadonly } from "../model/modifiers.js";
+
+interface FieldProps {
+  field: SwcArchField;
+  record: SwcRecord;
+  readonly: boolean;
+}
 
 function isDateTime(field: SwcArchField): boolean {
   return field.type === "datetime" || field.widget === "datetime";
@@ -55,17 +59,17 @@ function todayNative(field: SwcArchField): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-export class DateField extends SwcComponent<FieldWidgetProps> {
-  override template() {
+export class DateField extends SwcComponent<FieldProps> {
+  template() {
     const { field, record, readonly } = this.props;
-    const rawValue = record.get(field.name);
-    const native = toNativeValue(field, rawValue);
-    const display = formatDisplay(field, rawValue);
+    const raw = record.get(field.name);
+    const native = toNativeValue(field, raw);
+    const display = formatDisplay(field, raw);
     const placeholder = fieldPlaceholder(field);
     const id = fieldInputId(field);
     const inputType = isDateTime(field) ? "datetime-local" : "date";
 
-    if (isFieldReadonly(field, record, readonly)) {
+    if (readonly || field.readonly) {
       return renderFieldShell(field, fieldReadonlyInput(field, display, "text"), { labelFor: id });
     }
 
@@ -80,12 +84,12 @@ export class DateField extends SwcComponent<FieldWidgetProps> {
           value=${native}
           placeholder=${placeholder}
           autocomplete="off"
-          @input=${(event: Event) => {
-            record.set(field.name, inputValueFromEvent(event) || null);
+          @input=${(ev: Event) => {
+            record.set(field.name, (ev.target as HTMLInputElement).value || null);
             this.patch();
           }}
-          @change=${(event: Event) => {
-            record.set(field.name, inputValueFromEvent(event) || null);
+          @change=${(ev: Event) => {
+            record.set(field.name, (ev.target as HTMLInputElement).value || null);
             record.notifyFieldChange(field.name);
           }}
         />
