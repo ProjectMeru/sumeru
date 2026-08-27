@@ -21,6 +21,7 @@ func init() {
 		&orm.SysModuleCategory{},
 		&orm.SysOutboxEvent{},
 		&orm.SysRule{},
+		&orm.SysSavedSearch{},
 		&orm.SysSession{},
 		&orm.SysView{},
 	)

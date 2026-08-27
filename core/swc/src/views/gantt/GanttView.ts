@@ -2,7 +2,8 @@ import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
 import { forEach } from "../../template/helpers.js";
 import type { SwcWorkspacePayload } from "../../types/workspace.js";
-import { VIEW_FORM } from "../../constants/routes.js";
+import { VIEW_FORM, VIEW_GANTT } from "../../constants/routes.js";
+import { CollectionBarHost, mountCollectionBar } from "../shared/collection-bar-host.js";
 
 interface GanttViewProps {
   payload: SwcWorkspacePayload;
@@ -19,6 +20,19 @@ function parseDate(raw: unknown): Date | null {
 
 export class GanttView extends SwcComponent<GanttViewProps> {
   private scale: GanttScale = "week";
+  private collectionBar!: CollectionBarHost;
+
+  override setup(): void {
+    this.collectionBar = mountCollectionBar(this.props.payload, VIEW_GANTT, this.env);
+  }
+
+  override onPropsChanged(props: GanttViewProps): void {
+    this.collectionBar.updateProps({ payload: props.payload, viewType: VIEW_GANTT });
+  }
+
+  override onWillUnmount(): void {
+    this.collectionBar.destroy();
+  }
 
   private setScale(next: GanttScale): void {
     this.scale = next;
@@ -78,7 +92,8 @@ export class GanttView extends SwcComponent<GanttViewProps> {
     const rows = this.props.payload.records ?? [];
 
     return html`
-      <div class="sum-gantt-view">
+      <div class="sum-collection-view sum-gantt-view">
+        ${this.collectionBar.renderOrPatch()}
         <div class="sum-gantt-toolbar">
           <h2>${this.props.payload.arch.title ?? "Gantt"}</h2>
           <div class="sum-gantt-scale">

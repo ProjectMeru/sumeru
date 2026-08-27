@@ -22,6 +22,8 @@ type ViewRecordInput struct {
 	ListSort         string
 	ListOffset       int
 	ListFilter       string
+	ListDomain       string
+	ListGroupBy      string
 	Record           map[string]interface{}
 	ListRows         []map[string]interface{}
 	KanbanColumns    []KanbanColumn
@@ -80,10 +82,16 @@ func BuildWorkspacePayload(
 		ListSort:      rec.ListSort,
 		ListOffset:    rec.ListOffset,
 		ListFilter:    rec.ListFilter,
+		ListDomain:    rec.ListDomain,
+		ListGroupBy:   rec.ListGroupBy,
 		FormBaseQuery: rec.FormBaseQuery,
 		ViewTabs:      rec.ViewTabs,
 		Breadcrumbs:   rec.Breadcrumbs,
 		Defaults:      rec.Defaults,
+	}
+
+	if selectedMode == "list" || selectedMode == "kanban" || selectedMode == "graph" || selectedMode == "calendar" || selectedMode == "pivot" || selectedMode == "gantt" || selectedMode == "map" || selectedMode == "cohort" {
+		payload.Favorites = LoadSavedSearches(ctx, rec.ActionID, rec.ResModel)
 	}
 
 	if rec.Record != nil {
@@ -124,19 +132,19 @@ func redactRows(ctx context.Context, model string, rows []map[string]interface{}
 func loadSearchMeta(ctx context.Context, model string) *SearchMeta {
 	model = strings.TrimSpace(model)
 	if model == "" || orm.DB == nil {
-		return nil
+		return BuildSearchMeta(ctx, model, nil)
 	}
 	viewData, err := orm.FindUIDefaultView(ctx, model, "search")
 	if err != nil || viewData == nil {
-		return nil
+		return BuildSearchMeta(ctx, model, nil)
 	}
 	arch := strings.TrimSpace(orm.AsString(viewData["arch"]))
 	if arch == "" {
-		return nil
+		return BuildSearchMeta(ctx, model, nil)
 	}
 	parsed, err := parser.ParseViewFromArch(arch)
 	if err != nil {
-		return nil
+		return BuildSearchMeta(ctx, model, nil)
 	}
-	return serializeSearch(parsed)
+	return BuildSearchMeta(ctx, model, parsed)
 }

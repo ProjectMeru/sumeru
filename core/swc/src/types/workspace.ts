@@ -145,7 +145,20 @@ export interface SwcSearchFilter {
 }
 
 export interface SwcSearchMeta {
-  filters: SwcSearchFilter[];
+  filters?: SwcSearchFilter[];
+  searchFields?: SwcArchField[];
+  filterFields?: SwcArchField[];
+  groupByFields?: SwcArchField[];
+}
+
+export interface SwcSavedSearch {
+  id: number;
+  name: string;
+  search?: string;
+  filter?: string;
+  domain?: string;
+  groupBy?: string;
+  isDefault?: boolean;
 }
 
 export interface SwcGraphMeta {
@@ -211,6 +224,9 @@ export interface SwcWorkspacePayload {
   listSort?: string;
   listOffset?: number;
   listFilter?: string;
+  listDomain?: string;
+  listGroupBy?: string;
+  favorites?: SwcSavedSearch[];
   formBaseQuery?: string;
   defaults?: Record<string, unknown>;
 }

@@ -39,7 +39,7 @@ func listSearchFieldNames(views ...*parser.View) []string {
 	return out
 }
 
-func workspaceListDomain(ctx context.Context, actionData map[string]interface{}, view, searchView *parser.View, searchQuery, filterCSV string) [][]interface{} {
+func workspaceListDomain(ctx context.Context, actionData map[string]interface{}, view, searchView *parser.View, searchQuery, filterCSV, domainJSON string) [][]interface{} {
 	base := actionListDomain(ctx, actionData)
 	model := ""
 	if view != nil {
@@ -64,7 +64,42 @@ func workspaceListDomain(ctx context.Context, actionData map[string]interface{},
 		dom = orm.SubstituteDomainUID(dom, uid)
 		base = orm.MergeDomains(base, dom)
 	}
+	if strings.TrimSpace(domainJSON) != "" && model != "" {
+		dom, err := orm.ParseDomainJSON(domainJSON)
+		if err == nil && len(dom) > 0 {
+			dom = filterDomainToModel(model, dom)
+			dom = orm.ResolveDomainXMLRefs(ctx, dom)
+			dom = orm.SubstituteDomainUID(dom, uid)
+			base = orm.MergeDomains(base, dom)
+		}
+	}
 	return base
+}
+
+func filterDomainToModel(model string, domain [][]interface{}) [][]interface{} {
+	if model == "" || len(domain) == 0 {
+		return domain
+	}
+	inst, ok := orm.Registry[model]
+	if !ok {
+		return nil
+	}
+	allowed := map[string]struct{}{}
+	for _, fd := range inst.Fields() {
+		allowed[fd.Name] = struct{}{}
+	}
+	out := make([][]interface{}, 0, len(domain))
+	for _, d := range domain {
+		if len(d) != 3 {
+			continue
+		}
+		field, _ := d[0].(string)
+		if _, ok := allowed[field]; !ok {
+			continue
+		}
+		out = append(out, d)
+	}
+	return out
 }
 
 func findSearchFilter(searchView *parser.View, name string) *parser.SearchFilter {
@@ -95,5 +130,6 @@ func workspaceListSearchURL(req workspaceRequest) string {
 		Sort:     req.listSort,
 		Offset:   offset,
 		GroupBy:  req.listGroupBy,
+		Domain:   req.listDomain,
 	})
 }

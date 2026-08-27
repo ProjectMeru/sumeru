@@ -1,62 +1,34 @@
 import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
 import type { SwcArchField, SwcWorkspacePayload } from "../../types/workspace.js";
-import { renderCollectionToolbar } from "../shared/view-toolbar.js";
 import { renderKanbanCardInner } from "./kanban-card.js";
-import {
-  parseFilterCSV,
-  renderSearchFilters,
-  toggleFilterName,
-} from "../list/control-panel.js";
 import { RECORD_UPDATED, VIEW_FORM, VIEW_KANBAN } from "../../constants/routes.js";
 import { SwcError } from "../../runtime/error.js";
 import { inputValueFromEvent } from "../../widgets/field-events.js";
+import { CollectionBarHost, mountCollectionBar } from "../shared/collection-bar-host.js";
 
 interface KanbanViewProps {
   payload: SwcWorkspacePayload;
 }
 
 export class KanbanView extends SwcComponent<KanbanViewProps> {
-  private search = "";
-  private filters: string[] = [];
   private drafts: Record<string, string> = {};
+  private collectionBar!: CollectionBarHost;
 
   override setup(): void {
-    this.syncFromPayload(this.props.payload);
+    this.collectionBar = mountCollectionBar(this.props.payload, VIEW_KANBAN, this.env);
   }
 
   override onPropsChanged(props: KanbanViewProps): void {
-    this.syncFromPayload(props.payload);
+    this.collectionBar.updateProps({ payload: props.payload, viewType: VIEW_KANBAN });
   }
 
-  private syncFromPayload(payload: SwcWorkspacePayload): void {
-    this.search = payload.listSearch ?? "";
-    this.filters = parseFilterCSV(payload.listFilter);
+  override onWillUnmount(): void {
+    this.collectionBar.destroy();
   }
 
   private cardFields(): SwcArchField[] {
     return this.props.payload.arch.fields.filter((f) => !f.invisible);
-  }
-
-  private navigateKanban(patch: { listSearch?: string; listFilter?: string }): void {
-    const payload = this.props.payload;
-    this.env.services.action.navigate(
-      this.env.services.router.workspaceUrl({
-        actionId: payload.actionId,
-        menuId: payload.menuId,
-        viewType: VIEW_KANBAN,
-        listSearch: patch.listSearch ?? this.search,
-        listFilter: patch.listFilter ?? this.filters.join(","),
-      }),
-    );
-  }
-
-  private applySearch(): void {
-    this.navigateKanban({ listSearch: this.search });
-  }
-
-  private applyFilter(name: string): void {
-    this.navigateKanban({ listFilter: toggleFilterName(this.filters, name).join(",") });
   }
 
   private openCard(row: Record<string, unknown>): void {
@@ -112,18 +84,6 @@ export class KanbanView extends SwcComponent<KanbanViewProps> {
     }
   }
 
-  private toolbar() {
-    return renderCollectionToolbar({
-      payload: this.props.payload,
-      viewType: VIEW_KANBAN,
-      search: this.search,
-      onSearch: () => this.applySearch(),
-      onInput: (next) => {
-        this.search = next;
-      },
-    });
-  }
-
   private renderCard(
     row: Record<string, unknown>,
     fields: SwcArchField[],
@@ -155,17 +115,11 @@ export class KanbanView extends SwcComponent<KanbanViewProps> {
     const payload = this.props.payload;
     const kanban = payload.arch.kanban;
     const fields = this.cardFields();
-    const filters = payload.arch.search?.filters ?? [];
     if (!kanban?.columns?.length) {
       const rows = payload.records ?? [];
       return html`
-        <div class="sum-kanban-view">
-          ${this.toolbar()}
-          ${renderSearchFilters({
-            filters,
-            active: this.filters,
-            onToggle: (name) => this.applyFilter(name),
-          })}
+        <div class="sum-collection-view sum-kanban-view">
+          ${this.collectionBar.renderOrPatch()}
           <div class="sum-kanban-columns">
             ${rows.length === 0
               ? html`<div class="sum-kanban-empty">No records</div>`
@@ -175,13 +129,8 @@ export class KanbanView extends SwcComponent<KanbanViewProps> {
       `;
     }
     return html`
-      <div class="sum-kanban-view">
-        ${this.toolbar()}
-        ${renderSearchFilters({
-          filters,
-          active: this.filters,
-          onToggle: (name) => this.applyFilter(name),
-        })}
+      <div class="sum-collection-view sum-kanban-view">
+        ${this.collectionBar.renderOrPatch()}
         <div class="sum-kanban-board sum-kanban-board--grouped">
           <div class="sum-kanban-stage-columns">
             ${kanban.columns.map(

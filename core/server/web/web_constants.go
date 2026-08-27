@@ -203,6 +203,7 @@ const (
 	workspaceSortParam        = render.WorkspaceSortParam
 	workspaceOffsetParam      = render.WorkspaceOffsetParam
 	workspaceGroupByParam     = render.WorkspaceGroupByParam
+	workspaceDomainParam      = render.WorkspaceDomainParam
 )
 
 // Workspace view modes and row limits.

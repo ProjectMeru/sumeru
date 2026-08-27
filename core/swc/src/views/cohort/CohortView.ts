@@ -1,6 +1,8 @@
 import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
 import type { SwcWorkspacePayload } from "../../types/workspace.js";
+import { VIEW_COHORT } from "../../constants/routes.js";
+import { CollectionBarHost, mountCollectionBar } from "../shared/collection-bar-host.js";
 
 interface CohortViewProps {
   payload: SwcWorkspacePayload;
@@ -28,6 +30,20 @@ function bucketKey(date: Date, interval: CohortInterval): string {
 }
 
 export class CohortView extends SwcComponent<CohortViewProps> {
+  private collectionBar!: CollectionBarHost;
+
+  override setup(): void {
+    this.collectionBar = mountCollectionBar(this.props.payload, VIEW_COHORT, this.env);
+  }
+
+  override onPropsChanged(props: CohortViewProps): void {
+    this.collectionBar.updateProps({ payload: props.payload, viewType: VIEW_COHORT });
+  }
+
+  override onWillUnmount(): void {
+    this.collectionBar.destroy();
+  }
+
   private dateField(): string {
     return this.props.payload.arch.cohort?.dateStart
       || this.props.payload.arch.calendar?.dateStart
@@ -74,7 +90,8 @@ export class CohortView extends SwcComponent<CohortViewProps> {
   override template() {
     const { periods, rows } = this.table();
     return html`
-      <div class="sum-cohort-view">
+      <div class="sum-collection-view sum-cohort-view">
+        ${this.collectionBar.renderOrPatch()}
         <h2>${this.props.payload.arch.title ?? "Cohort"}</h2>
         <table class="sum-cohort-table">
           <thead>

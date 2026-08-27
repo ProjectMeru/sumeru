@@ -2,6 +2,7 @@ import {
   EDIT_ENABLED,
   Q_ACTION,
   Q_EDIT,
+  Q_DOMAIN,
   Q_FILTER,
   Q_GROUPBY,
   Q_MENU_ID,
@@ -27,6 +28,7 @@ export interface WorkspaceRoute {
   listSort?: string;
   listOffset?: number;
   listGroupBy?: string;
+  listDomain?: string;
   /** SPA shell route: home | apps | settings */
   shell?: string;
 }
@@ -45,6 +47,7 @@ export class RouterService {
     if (route.listSort) params.set(Q_SORT, route.listSort);
     if (route.listOffset) params.set(Q_OFFSET, String(route.listOffset));
     if (route.listGroupBy) params.set(Q_GROUPBY, route.listGroupBy);
+    if (route.listDomain) params.set(Q_DOMAIN, route.listDomain);
     if (route.shell) params.set(Q_SHELL, route.shell);
     return params;
   }
@@ -67,6 +70,7 @@ export class RouterService {
       listSort: q.get(Q_SORT) ?? "",
       listOffset: Number(q.get(Q_OFFSET) ?? "0"),
       listGroupBy: q.get(Q_GROUPBY) ?? "",
+      listDomain: q.get(Q_DOMAIN) ?? "",
       shell: q.get(Q_SHELL) ?? "",
     };
   }

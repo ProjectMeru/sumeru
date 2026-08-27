@@ -1,22 +1,22 @@
 import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
 import type { SwcArchButton, SwcWorkspacePayload } from "../../types/workspace.js";
-import { headerButton, renderCollectionToolbar } from "../shared/view-toolbar.js";
+import { headerButton } from "../shared/view-toolbar.js";
 import { SwcError } from "../../runtime/error.js";
 import {
   parseFilterCSV,
   renderControlPanel,
   renderRowCheckbox,
-  renderSearchFilters,
   renderSelectAllHeader,
   renderSortHeader,
-  toggleFilterName,
   type ControlPanelState,
 } from "./control-panel.js";
 import { forEach } from "../../template/helpers.js";
 import { VIEW_FORM, VIEW_LIST } from "../../constants/routes.js";
 import { runObjectAction } from "../shared/object-action.js";
 import { formatFieldValue } from "../shared/field-display.js";
+import { CollectionBarHost, mountCollectionBar } from "../shared/collection-bar-host.js";
+import { navigateCollectionQuery } from "../shared/collection-query.js";
 
 interface ListViewProps {
   payload: SwcWorkspacePayload;
@@ -32,14 +32,21 @@ export class ListView extends SwcComponent<ListViewProps> {
   };
   private deleting = false;
   private acting = false;
+  private collectionBar!: CollectionBarHost;
 
   override setup(): void {
     this.syncFromPayload(this.props.payload);
+    this.collectionBar = mountCollectionBar(this.props.payload, VIEW_LIST, this.env, this.listExtras());
   }
 
   override onPropsChanged(props: ListViewProps): void {
     this.syncFromPayload(props.payload);
     this.panelState.selectedIds = new Set();
+    this.collectionBar.updateProps({ payload: props.payload, viewType: VIEW_LIST, extraPrimary: this.listExtras() });
+  }
+
+  override onWillUnmount(): void {
+    this.collectionBar.destroy();
   }
 
   private syncFromPayload(payload: SwcWorkspacePayload): void {
@@ -47,6 +54,39 @@ export class ListView extends SwcComponent<ListViewProps> {
     this.panelState.offset = payload.listOffset ?? 0;
     this.panelState.order = payload.listSort ?? "";
     this.panelState.filters = parseFilterCSV(payload.listFilter);
+  }
+
+  private listExtras() {
+    return [
+      this.panelState.selectedIds.size > 0
+        ? html`<button
+            type="button"
+            class="sum-btn sum-btn--danger"
+            disabled=${this.toolbarBusy() ? "disabled" : undefined}
+            @click=${() => void this.bulkDelete()}
+          >
+            Delete (${this.panelState.selectedIds.size})
+          </button>`
+        : "",
+      this.panelState.selectedIds.size >= 2
+        ? this.headerObjectButtons().map((archButton) =>
+            headerButton(
+              archButton.string || archButton.name,
+              archButton.class,
+              () => void this.runHeaderObject(archButton),
+              this.toolbarBusy(),
+            ),
+          )
+        : "",
+    ];
+  }
+
+  private refreshBarExtras(): void {
+    this.collectionBar.updateProps({
+      payload: this.props.payload,
+      viewType: VIEW_LIST,
+      extraPrimary: this.listExtras(),
+    });
   }
 
   private columns() {
@@ -57,32 +97,12 @@ export class ListView extends SwcComponent<ListViewProps> {
     return [...(this.props.payload.records ?? [])];
   }
 
-  private navigateList(patch: {
-    listSearch?: string;
-    listOffset?: number;
-    listSort?: string;
-    listFilter?: string;
-  }): void {
-    const payload = this.props.payload;
-    const url = this.env.services.router.workspaceUrl({
-      actionId: payload.actionId,
-      menuId: payload.menuId,
-      viewType: VIEW_LIST,
-      listSearch: patch.listSearch ?? this.panelState.search,
-      listOffset: patch.listOffset ?? 0,
-      listSort: patch.listSort ?? this.panelState.order ?? "",
-      listFilter: patch.listFilter ?? this.panelState.filters.join(","),
-      model: payload.actionId ? "" : payload.model,
-    });
-    this.env.services.action.navigate(url);
-  }
-
   private reloadCollection(): void {
-    this.navigateList({ listSearch: this.panelState.search, listOffset: 0 });
+    navigateCollectionQuery(this.env, this.props.payload, VIEW_LIST, { listOffset: 0 });
   }
 
   private applyPage(offset: number): void {
-    this.navigateList({ listOffset: offset });
+    navigateCollectionQuery(this.env, this.props.payload, VIEW_LIST, { listOffset: offset });
   }
 
   private applySort(fieldName: string): void {
@@ -90,12 +110,7 @@ export class ListView extends SwcComponent<ListViewProps> {
     let next = fieldName;
     if (current === fieldName) next = `-${fieldName}`;
     else if (current === `-${fieldName}`) next = "";
-    this.navigateList({ listSort: next, listOffset: 0 });
-  }
-
-  private applyFilter(name: string): void {
-    const next = toggleFilterName(this.panelState.filters, name);
-    this.navigateList({ listFilter: next.join(","), listOffset: 0 });
+    navigateCollectionQuery(this.env, this.props.payload, VIEW_LIST, { listSort: next, listOffset: 0 });
   }
 
   private openRow(row: Record<string, unknown>): void {
@@ -112,11 +127,13 @@ export class ListView extends SwcComponent<ListViewProps> {
   private toggleRow(id: number, checked: boolean): void {
     if (checked) this.panelState.selectedIds.add(id);
     else this.panelState.selectedIds.delete(id);
+    this.refreshBarExtras();
     this.rerender();
   }
 
   private toggleAll(checked: boolean, ids: number[]): void {
     this.panelState.selectedIds = checked ? new Set(ids) : new Set();
+    this.refreshBarExtras();
     this.rerender();
   }
 
@@ -139,6 +156,7 @@ export class ListView extends SwcComponent<ListViewProps> {
     );
     if (!ok) return;
     this.deleting = true;
+    this.refreshBarExtras();
     this.rerender();
     try {
       await this.env.services.rpc.unlink(this.props.payload.model, ids);
@@ -152,6 +170,7 @@ export class ListView extends SwcComponent<ListViewProps> {
       );
     } finally {
       this.deleting = false;
+      this.refreshBarExtras();
       this.rerender();
     }
   }
@@ -160,6 +179,7 @@ export class ListView extends SwcComponent<ListViewProps> {
     const ids = [...this.panelState.selectedIds];
     if (ids.length === 0 || this.toolbarBusy()) return;
     this.acting = true;
+    this.refreshBarExtras();
     this.rerender();
     const navigated = await runObjectAction(this.env, {
       model: this.props.payload.model,
@@ -170,10 +190,12 @@ export class ListView extends SwcComponent<ListViewProps> {
       onSuccess: () => this.reloadCollection(),
     });
     this.acting = false;
-    if (!navigated) this.rerender();
+    if (!navigated) {
+      this.refreshBarExtras();
+      this.rerender();
+    }
   }
 
-  /** Data rows: one `<td>` per visible column with plain text values. */
   private renderRow(row: Record<string, unknown>) {
     const id = Number(row.id ?? 0);
     const cols = this.columns();
@@ -191,46 +213,10 @@ export class ListView extends SwcComponent<ListViewProps> {
     const rows = this.pageRows();
     const ids = rows.map((r) => Number(r.id ?? 0)).filter((id) => id > 0);
     const allSelected = ids.length > 0 && ids.every((id) => this.panelState.selectedIds.has(id));
-    const filters = payload.arch.search?.filters ?? [];
 
     return html`
-      <div class="sum-list-view">
-        ${renderCollectionToolbar({
-          payload,
-          viewType: VIEW_LIST,
-          search: this.panelState.search,
-          onSearch: () => this.reloadCollection(),
-          onInput: (next) => {
-            this.panelState.search = next;
-          },
-          extraPrimary: [
-            this.panelState.selectedIds.size > 0
-              ? html`<button
-                  type="button"
-                  class="sum-btn sum-btn--danger"
-                  disabled=${this.toolbarBusy() ? "disabled" : undefined}
-                  @click=${() => void this.bulkDelete()}
-                >
-                  Delete (${this.panelState.selectedIds.size})
-                </button>`
-              : "",
-            this.panelState.selectedIds.size >= 2
-              ? this.headerObjectButtons().map((archButton) =>
-                  headerButton(
-                    archButton.string || archButton.name,
-                    archButton.class,
-                    () => void this.runHeaderObject(archButton),
-                    this.toolbarBusy(),
-                  ),
-                )
-              : "",
-          ],
-        })}
-        ${renderSearchFilters({
-          filters,
-          active: this.panelState.filters,
-          onToggle: (name) => this.applyFilter(name),
-        })}
+      <div class="sum-collection-view sum-list-view">
+        ${this.collectionBar.renderOrPatch()}
         ${renderControlPanel({
           payload,
           state: this.panelState,

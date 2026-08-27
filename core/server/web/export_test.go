@@ -239,6 +239,8 @@ func EnsureFormEditRedirectURL(rawNext string, clearRecordID bool) string {
 
 func SplitCommaSeparatedValues(raw string) []string { return splitCommaSeparatedValues(raw) }
 
+func FirstGroupByField(raw string) string { return firstGroupByField(raw) }
+
 func SplitViewModes(viewMode string) []string { return splitViewModes(viewMode) }
 
 func NormalizeViewMode(viewMode string) string { return normalizeViewMode(viewMode) }
