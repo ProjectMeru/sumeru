@@ -51,6 +51,9 @@ type ViewArch struct {
 	Search     *SearchMeta   `json:"search,omitempty"`
 	Graph      *GraphMeta    `json:"graph,omitempty"`
 	Calendar   *CalendarMeta `json:"calendar,omitempty"`
+	Gantt      *GanttMeta    `json:"gantt,omitempty"`
+	Map        *MapMeta      `json:"map,omitempty"`
+	Cohort     *CohortMeta   `json:"cohort,omitempty"`
 	Report     *ReportMeta   `json:"report,omitempty"`
 }
 
@@ -187,6 +190,22 @@ type GraphMeta struct {
 type CalendarMeta struct {
 	DateStart string `json:"dateStart,omitempty"`
 	DateStop  string `json:"dateStop,omitempty"`
+}
+
+type GanttMeta struct {
+	DateStart string `json:"dateStart,omitempty"`
+	DateStop  string `json:"dateStop,omitempty"`
+}
+
+type MapMeta struct {
+	Latitude  string `json:"latitude,omitempty"`
+	Longitude string `json:"longitude,omitempty"`
+}
+
+type CohortMeta struct {
+	DateStart string `json:"dateStart,omitempty"`
+	Interval  string `json:"interval,omitempty"`
+	Measure   string `json:"measure,omitempty"`
 }
 
 type ReportMeta struct {

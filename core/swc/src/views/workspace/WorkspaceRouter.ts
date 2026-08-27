@@ -2,16 +2,17 @@ import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
 import type { SwcWorkspacePayload } from "../../types/workspace.js";
 import { ListView } from "../list/ListView.js";
-import { useState, useEffect } from "../../runtime/hooks.js";
+import { useEffect } from "../../runtime/hooks.js";
 import { SwcError } from "../../runtime/error.js";
-import { registry } from "../../runtime/registry.js";
+import { registry, type ViewConstructor } from "../../runtime/registry.js";
 import { logWorkspacePayload, logViewArch } from "../../devtools/debug.js";
 import { ShellPageView } from "../../shell/ShellPageView.js";
 import { syncWorkspaceViewTabs } from "../../shell/view-tab-sync.js";
 import { ACTION_CLOSED, RECORD_UPDATED, SWC_API_BASE } from "../../constants/routes.js";
 import { RouterService } from "../../services/router.js";
+import { runWillStart } from "../../runtime/lifecycle.js";
 
-type ViewInstance = SwcComponent & { setup?: () => void; render(): HTMLElement };
+type ViewInstance = SwcComponent & { callSetup(): void; render(): HTMLElement };
 
 export class WorkspaceRouter extends SwcComponent {
   private payload: SwcWorkspacePayload | null = null;
@@ -20,14 +21,11 @@ export class WorkspaceRouter extends SwcComponent {
   private activeView: ViewInstance | null = null;
   private activeViewType = "";
 
-  setup(): void {
-    const [, bump] = useState(0);
-    this.bump = () => bump((n) => n + 1);
-
+  override setup(): void {
     const load = async (): Promise<void> => {
       this.loading = true;
       this.error = "";
-      this.bump?.();
+      this.rerender();
       try {
         this.payload = await this.fetchWorkspace();
         logWorkspacePayload("workspace", this.payload);
@@ -38,7 +36,7 @@ export class WorkspaceRouter extends SwcComponent {
         this.error = err instanceof SwcError ? err.message : String(err);
       } finally {
         this.loading = false;
-        this.bump?.();
+        this.rerender();
       }
     };
 
@@ -66,8 +64,6 @@ export class WorkspaceRouter extends SwcComponent {
     });
   }
 
-  private bump: (() => void) | null = null;
-
   private async fetchWorkspace(): Promise<SwcWorkspacePayload> {
     const params = RouterService.searchParams(this.env.services.router.parse());
     const base = this.env.bootstrap.swcApiBase || SWC_API_BASE;
@@ -75,9 +71,13 @@ export class WorkspaceRouter extends SwcComponent {
   }
 
   private createView(type: string, payload: SwcWorkspacePayload): ViewInstance {
-    const Ctor = (registry.category("views").get(type) as typeof ListView | undefined) ?? ListView;
-    const view = new Ctor({ payload }, this.env) as unknown as ViewInstance;
-    view.setup?.();
+    const ViewClass = (registry.category("views").get(type) ?? ListView) as ViewConstructor;
+    const view = new ViewClass({ payload }, this.env) as unknown as ViewInstance;
+    view.callSetup();
+    void runWillStart(view).then(() => {
+      if (view.rootElement?.isConnected) view.patch();
+      else this.rerender();
+    });
     return view;
   }
 
@@ -95,11 +95,7 @@ export class WorkspaceRouter extends SwcComponent {
 
   private renderView(): HTMLElement {
     if (!this.payload || !this.activeView) return document.createElement("div");
-    if (this.activeView.el?.isConnected) {
-      this.activeView.patch();
-      return this.activeView.el;
-    }
-    return this.activeView.render();
+    return this.activeView.renderOrPatch();
   }
 
   /** Reload workspace payload (e.g. after bus event). */
@@ -117,7 +113,7 @@ export class WorkspaceRouter extends SwcComponent {
       });
   }
 
-  template() {
+  override template() {
     const route = this.env.services.router.parse();
     if (route.shell === "home" || route.shell === "apps" || route.shell === "settings") {
       const page = route.shell as "home" | "apps" | "settings";

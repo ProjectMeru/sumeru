@@ -5,49 +5,55 @@
 }
 
 .sum-form-view .sum-form-sheet {
-	width: 100%;
-	max-width: 100%;
-	min-width: 0;
-	margin: 0.75rem 0;
-	padding: 1.25rem 1.5rem 2rem;
-	background: var(--sum-surface);
-	border-radius: var(--sum-radius);
-	box-shadow: var(--sum-shadow-md), 0 0 0 1px rgba(255, 255, 255, 0.5) inset;
-	border: 1px solid var(--sum-line);
-	box-sizing: border-box;
-	overflow-x: auto;
-	overflow-wrap: break-word;
-	word-wrap: break-word;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0.75rem 0;
+  padding: 1.25rem 1.5rem 2rem;
+  background: var(--sum-surface);
+  border-radius: var(--sum-radius);
+  box-shadow:
+    var(--sum-shadow-md),
+    0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+  border: 1px solid var(--sum-line);
+  box-sizing: border-box;
+  overflow-x: auto;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }
 
 .sum-form-view .sum-form-sheet > * {
-	min-width: 0;
-	max-width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .sum-form-sheet-bg {
-	box-sizing: border-box;
+  box-sizing: border-box;
 }
 
 .sum-form-split-layout,
 .sum-form-split-main,
 .sum-form-split-left {
-	box-sizing: border-box;
-	min-width: 0;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .sum-form-page-grid,
 .sum-form-group-grid,
 .sum-form-edit-grid,
 .sum-form-group-row {
-	box-sizing: border-box;
-	min-width: 0;
-	max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .sum-form-view--readonly .sum-form-sheet {
   max-width: 100%;
-  background: linear-gradient(180deg, var(--sum-surface) 0%, color-mix(in srgb, var(--sum-surface) 96%, var(--sum-bg)) 100%);
+  background: linear-gradient(
+    180deg,
+    var(--sum-surface) 0%,
+    color-mix(in srgb, var(--sum-surface) 96%, var(--sum-bg)) 100%
+  );
 }
 
 /* Legacy list container (if used by embedded markup). */
@@ -86,7 +92,8 @@
 }
 
 .sum-list-view table tr:hover td:first-child {
-  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--sum-header) 40%, transparent);
+  box-shadow: inset 3px 0 0
+    color-mix(in srgb, var(--sum-header) 40%, transparent);
 }
 
 .sum-notebook {
@@ -301,7 +308,11 @@
   border-radius: 50%;
   overflow: hidden;
   border: 1px solid var(--sum-line);
-  background: color-mix(in srgb, var(--sum-surface-alt) 70%, var(--sum-surface));
+  background: color-mix(
+    in srgb,
+    var(--sum-surface-alt) 70%,
+    var(--sum-surface)
+  );
   display: flex;
   align-items: center;
   justify-content: center;
@@ -818,7 +829,11 @@
   padding: 0.65rem;
   border-radius: var(--sum-radius);
   border: 1px dashed color-mix(in srgb, var(--sum-header) 35%, var(--sum-line));
-  background: color-mix(in srgb, var(--sum-surface-alt) 70%, var(--sum-surface));
+  background: color-mix(
+    in srgb,
+    var(--sum-surface-alt) 70%,
+    var(--sum-surface)
+  );
 }
 
 .sum-form-avatar-icon {
@@ -901,7 +916,11 @@
   padding: 0.7rem 0.9rem;
   border: 1px dashed color-mix(in srgb, var(--sum-header) 25%, var(--sum-line));
   border-radius: var(--sum-radius-sm);
-  background: color-mix(in srgb, var(--sum-surface-alt) 65%, var(--sum-surface));
+  background: color-mix(
+    in srgb,
+    var(--sum-surface-alt) 65%,
+    var(--sum-surface)
+  );
 }
 
 label.sum-form-label--hint {
@@ -994,16 +1013,26 @@ label.sum-form-label--hint {
   min-height: 8rem;
   resize: vertical;
   line-height: 1.45;
-  transition: border-color var(--sum-dur) var(--sum-ease), box-shadow var(--sum-dur) var(--sum-ease);
+  transition:
+    border-color var(--sum-dur) var(--sum-ease),
+    box-shadow var(--sum-dur) var(--sum-ease);
 }
 
 .sum-field-textarea:hover {
-  border-color: color-mix(in srgb, var(--sum-header) 28%, var(--sum-line-strong));
+  border-color: color-mix(
+    in srgb,
+    var(--sum-header) 28%,
+    var(--sum-line-strong)
+  );
 }
 
 .sum-field-textarea:focus {
   outline: none;
-  border-color: color-mix(in srgb, var(--sum-header) 45%, var(--sum-line-strong));
+  border-color: color-mix(
+    in srgb,
+    var(--sum-header) 45%,
+    var(--sum-line-strong)
+  );
   box-shadow: var(--sum-focus-ring);
 }
 
@@ -1039,7 +1068,9 @@ label.sum-form-label--hint {
   border: 1px solid var(--sum-line);
   border-radius: var(--sum-radius-sm);
   cursor: pointer;
-  transition: background var(--sum-dur) var(--sum-ease), border-color var(--sum-dur) var(--sum-ease);
+  transition:
+    background var(--sum-dur) var(--sum-ease),
+    border-color var(--sum-dur) var(--sum-ease);
 }
 
 .sum-date-action-btn:hover {
@@ -1076,15 +1107,25 @@ label.sum-form-label--hint {
   border-radius: var(--sum-radius-sm);
   background: var(--sum-surface);
   cursor: pointer;
-  transition: border-color var(--sum-dur) var(--sum-ease), box-shadow var(--sum-dur) var(--sum-ease);
+  transition:
+    border-color var(--sum-dur) var(--sum-ease),
+    box-shadow var(--sum-dur) var(--sum-ease);
 }
 
 .sum-date-field-trigger:hover {
-  border-color: color-mix(in srgb, var(--sum-header) 28%, var(--sum-line-strong));
+  border-color: color-mix(
+    in srgb,
+    var(--sum-header) 28%,
+    var(--sum-line-strong)
+  );
 }
 
 .sum-date-field[open] .sum-date-field-trigger {
-  border-color: color-mix(in srgb, var(--sum-header) 45%, var(--sum-line-strong));
+  border-color: color-mix(
+    in srgb,
+    var(--sum-header) 45%,
+    var(--sum-line-strong)
+  );
   box-shadow: var(--sum-focus-ring);
 }
 
@@ -1136,7 +1177,11 @@ label.sum-form-label--hint {
 
 .sum-date-popover-input:focus {
   outline: none;
-  border-color: color-mix(in srgb, var(--sum-header) 45%, var(--sum-line-strong));
+  border-color: color-mix(
+    in srgb,
+    var(--sum-header) 45%,
+    var(--sum-line-strong)
+  );
   box-shadow: var(--sum-focus-ring);
 }
 
@@ -1160,7 +1205,11 @@ label.sum-form-label--hint {
 }
 
 .sum-date-popover-btn:hover {
-  border-color: color-mix(in srgb, var(--sum-header) 30%, var(--sum-line-strong));
+  border-color: color-mix(
+    in srgb,
+    var(--sum-header) 30%,
+    var(--sum-line-strong)
+  );
   color: var(--sum-header);
 }
 
@@ -1268,6 +1317,21 @@ label.sum-form-label--hint {
   font-size: var(--sum-font-size-sm);
 }
 
+.sum-o2m-m2o {
+  position: relative;
+  min-width: 0;
+}
+
+.sum-o2m-m2o .sum-field-input {
+  width: 100%;
+}
+
+.sum-o2m-m2o-popover .sum-m2o-option {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .sum-o2m-col-actions {
   width: 2.5rem;
   text-align: center;
@@ -1334,7 +1398,6 @@ label.sum-form-label--hint {
   padding-left: 1.25rem;
   color: var(--sum-muted-ink);
 }
-
 
 .sum-security-section-title {
   margin: 0 0 0.5rem;
@@ -1502,7 +1565,8 @@ label.sum-form-label--hint {
   cursor: pointer;
 }
 
-.sum-m2o-suggest .sum-m2o-option:hover {
+.sum-m2o-suggest .sum-m2o-option:hover,
+.sum-m2o-suggest .sum-m2o-option--active {
   background: color-mix(in srgb, var(--sum-header) 12%, var(--sum-surface));
 }
 
@@ -1540,11 +1604,17 @@ label.sum-form-label--hint {
   border: 1px solid var(--sum-line-strong);
   border-radius: var(--sum-radius-sm);
   background: var(--sum-surface);
-  transition: border-color var(--sum-dur) var(--sum-ease), box-shadow var(--sum-dur) var(--sum-ease);
+  transition:
+    border-color var(--sum-dur) var(--sum-ease),
+    box-shadow var(--sum-dur) var(--sum-ease);
 }
 
 .sum-field-input:hover {
-  border-color: color-mix(in srgb, var(--sum-header) 28%, var(--sum-line-strong));
+  border-color: color-mix(
+    in srgb,
+    var(--sum-header) 28%,
+    var(--sum-line-strong)
+  );
 }
 
 .sum-field-hint {
@@ -1566,7 +1636,11 @@ label.sum-form-label--hint {
 
 .sum-field-input:focus {
   outline: none;
-  border-color: color-mix(in srgb, var(--sum-header) 45%, var(--sum-line-strong));
+  border-color: color-mix(
+    in srgb,
+    var(--sum-header) 45%,
+    var(--sum-line-strong)
+  );
   box-shadow: var(--sum-focus-ring);
 }
 
@@ -1726,7 +1800,11 @@ label.sum-form-label--hint {
   border-radius: var(--sum-radius-sm);
   padding: 1rem 1.15rem 1.15rem;
   margin-bottom: 1.25rem;
-  background: color-mix(in srgb, var(--sum-surface-alt) 55%, var(--sum-surface));
+  background: color-mix(
+    in srgb,
+    var(--sum-surface-alt) 55%,
+    var(--sum-surface)
+  );
 }
 
 .sum-security-title {
@@ -1761,7 +1839,8 @@ label.sum-form-label--hint {
 }
 
 .sum-form-view .sum-form-sheet {
-  border-top: 3px solid color-mix(in srgb, var(--sum-header) 55%, var(--sum-line));
+  border-top: 3px solid
+    color-mix(in srgb, var(--sum-header) 55%, var(--sum-line));
 }
 
 .sum-form-view--readonly .sum-form-sheet {
@@ -1823,7 +1902,11 @@ label.sum-form-label--hint {
   inset: 0;
   border-radius: 50%;
   overflow: hidden;
-  background: color-mix(in srgb, var(--sum-surface-alt) 70%, var(--sum-surface));
+  background: color-mix(
+    in srgb,
+    var(--sum-surface-alt) 70%,
+    var(--sum-surface)
+  );
   border: 1px solid var(--sum-line);
 }
 
@@ -2136,6 +2219,133 @@ label.sum-form-label--hint {
 .sum-calendar-event:hover {
   background: color-mix(in srgb, var(--sum-header) 12%, transparent);
 }
+
+.sum-gantt-view,
+.sum-map-view,
+.sum-cohort-view {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+}
+
+.sum-gantt-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.sum-gantt-toolbar h2,
+.sum-map-view h2,
+.sum-cohort-view h2 {
+  margin: 0;
+  font-size: var(--sum-font-size-lg);
+}
+
+.sum-gantt-scale {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.sum-gantt-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.sum-gantt-row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 14rem) 1fr;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+}
+
+.sum-gantt-label {
+  font-size: var(--sum-font-size-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sum-gantt-track {
+  position: relative;
+  height: 1.25rem;
+  background: var(--sum-surface-alt, var(--sum-surface));
+  border: 1px solid var(--sum-line);
+  border-radius: var(--sum-radius-sm);
+}
+
+.sum-gantt-bar {
+  position: absolute;
+  top: 0.15rem;
+  bottom: 0.15rem;
+  background: var(--sum-header);
+  border-radius: 999px;
+  min-width: 0.4rem;
+}
+
+.sum-map-hint {
+  margin: 0;
+  color: var(--sum-ink-muted);
+  font-size: var(--sum-font-size-sm);
+}
+
+.sum-map-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.sum-map-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--sum-line);
+  border-radius: var(--sum-radius-sm);
+  background: var(--sum-surface);
+}
+
+.sum-map-name {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  color: var(--sum-ink);
+  text-align: left;
+}
+
+.sum-map-link {
+  font-size: var(--sum-font-size-sm);
+  color: var(--sum-header);
+}
+
+.sum-cohort-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: var(--sum-font-size-sm);
+}
+
+.sum-cohort-table th,
+.sum-cohort-table td {
+  border: 1px solid var(--sum-line);
+  padding: 0.35rem 0.5rem;
+  text-align: right;
+}
+
+.sum-cohort-table th:first-child,
+.sum-cohort-table td:first-child {
+  text-align: left;
 }
 
 /* Workspace chrome (SWC no longer duplicates server breadcrumb / view tabs) */

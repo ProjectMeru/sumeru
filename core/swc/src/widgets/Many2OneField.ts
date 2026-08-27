@@ -1,51 +1,77 @@
 import { SwcComponent } from "../runtime/component.js";
 import { html } from "../template/html.js";
-import type { SwcArchField } from "../types/workspace.js";
-import type { SwcRecord } from "../model/record.js";
 import {
   fieldInputId,
   fieldPlaceholder,
   fieldReadonlyValue,
   renderFieldShell,
 } from "./field-shell.js";
-import { AsyncFieldController } from "./field-async.js";
-import { fieldDomain } from "../model/modifiers.js";
+import { AsyncFieldController, recordDisplayName } from "./field-async.js";
+import { fieldDomain, isFieldReadonly } from "../model/modifiers.js";
+import type { FieldWidgetProps } from "./field-props.js";
+import { inputValueFromEvent } from "./field-events.js";
 
-interface FieldProps {
-  field: SwcArchField;
-  record: SwcRecord;
-  readonly: boolean;
-}
-
-export class Many2OneField extends SwcComponent<FieldProps> {
+export class Many2OneField extends SwcComponent<FieldWidgetProps> {
   private suggestions: Record<string, unknown>[] = [];
   private open = false;
+  private highlightIndex = 0;
   private readonly asyncCtrl = new AsyncFieldController(this);
 
-  onWillUnmount(): void {
+  override onWillUnmount(): void {
     this.asyncCtrl.cancel();
   }
 
-  private async search(q: string): Promise<void> {
+  private async search(query: string): Promise<void> {
     const gen = this.asyncCtrl.begin();
     const comodel = this.props.field.relation ?? this.props.field.options?.relation ?? "";
     if (!comodel) return;
     const baseDomain = fieldDomain(this.props.field, this.props.record) ?? [];
-    const domain = q ? [...baseDomain, ["name", "ilike", q]] : baseDomain;
+    const domain = query ? [...baseDomain, ["name", "ilike", query]] : baseDomain;
     this.suggestions = await this.env.services.rpc.searchRead(comodel, domain, ["id", "name"], 20);
     this.open = true;
-    this.asyncCtrl.finish(gen);
+    this.highlightIndex = 0;
+    this.asyncCtrl.commitIfCurrent(gen);
   }
 
-  template() {
+  private pick(row: Record<string, unknown>): void {
+    const { field, record } = this.props;
+    record.set(field.name, row.id);
+    record.set(`${field.name}_name`, row.name);
+    record.notifyFieldChange(field.name);
+    this.open = false;
+    this.asyncCtrl.refresh();
+  }
+
+  private onKeydown(event: KeyboardEvent): void {
+    if (!this.open || this.suggestions.length === 0) return;
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      this.highlightIndex = (this.highlightIndex + 1) % this.suggestions.length;
+      this.asyncCtrl.refresh();
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      this.highlightIndex =
+        (this.highlightIndex - 1 + this.suggestions.length) % this.suggestions.length;
+      this.asyncCtrl.refresh();
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      const row = this.suggestions[this.highlightIndex];
+      if (row) this.pick(row);
+    } else if (event.key === "Escape") {
+      this.open = false;
+      this.asyncCtrl.refresh();
+    }
+  }
+
+  override template() {
     const { field, record, readonly } = this.props;
-    const display = record.get(`${field.name}_name`) ?? (record.get(field.name) ? `#${record.get(field.name)}` : "");
+    const display = recordDisplayName(record, field.name);
     const id = fieldInputId(field);
 
     const placeholder = fieldPlaceholder(field);
 
-    if (readonly || field.readonly) {
-      return renderFieldShell(field, fieldReadonlyValue(String(display), placeholder), { labelFor: false });
+    if (isFieldReadonly(field, record, readonly)) {
+      return renderFieldShell(field, fieldReadonlyValue(display, placeholder), { labelFor: false });
     }
 
     return renderFieldShell(
@@ -56,24 +82,21 @@ export class Many2OneField extends SwcComponent<FieldProps> {
           class="sum-field-input"
           name=${field.name}
           placeholder=${placeholder}
-          value=${String(display)}
+          value=${display}
           autocomplete="off"
-          @input=${(ev: Event) => void this.search((ev.target as HTMLInputElement).value)}
+          @input=${(event: Event) => void this.search(inputValueFromEvent(event))}
+          @keydown=${(event: Event) => this.onKeydown(event as KeyboardEvent)}
         />
         ${this.open
           ? html`<ul class="sum-m2o-suggest">
               ${this.suggestions.map(
-                (row) => html`<li>
+                (row, index) => html`<li>
                   <button
                     type="button"
-                    class="sum-m2o-option"
-                    @click=${() => {
-                      record.set(field.name, row.id);
-                      record.set(`${field.name}_name`, row.name);
-                      record.notifyFieldChange(field.name);
-                      this.open = false;
-                      this.asyncCtrl.refresh();
-                    }}
+                    class=${index === this.highlightIndex
+                      ? "sum-m2o-option sum-m2o-option--active"
+                      : "sum-m2o-option"}
+                    @click=${() => this.pick(row)}
                   >
                     ${String(row.name ?? row.id)}
                   </button>

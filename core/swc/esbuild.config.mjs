@@ -2,7 +2,7 @@ import * as esbuild from "esbuild";
 import { mkdirSync, readFileSync } from "node:fs";
 import { dirname, join, basename } from "node:path";
 import { fileURLToPath } from "node:url";
-import { compileSumXml } from "./sum-compile.mjs";
+import { loadCompileSumXml } from "./sum-compile.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const swcOutFile = join(__dirname, "../engine/assets/swc/swc.js");
@@ -11,6 +11,8 @@ const passwordMatchOutFile = join(__dirname, "../engine/assets/js/sumeru-passwor
 
 mkdirSync(dirname(swcOutFile), { recursive: true });
 mkdirSync(dirname(passwordMatchOutFile), { recursive: true });
+
+const compileSumXml = await loadCompileSumXml();
 
 const sumXmlPlugin = {
   name: "sum-xml",

@@ -62,6 +62,12 @@ func viewTypeLabel(base, viewType string) string {
 		return base + " · Graph"
 	case ViewModeCalendar:
 		return base + " · Calendar"
+	case ViewModeGantt:
+		return base + " · Gantt"
+	case ViewModeMap:
+		return base + " · Map"
+	case ViewModeCohort:
+		return base + " · Cohort"
 	default:
 		return base
 	}

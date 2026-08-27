@@ -27,3 +27,10 @@ func TestFormatAddColumnDefinitionBooleanDefault(t *testing.T) {
 		t.Fatalf("got %q", got)
 	}
 }
+
+func TestFormatAddColumnDefinitionSkipsRuntimeUUIDDefault(t *testing.T) {
+	got := orm.FormatAddColumnDefinition(orm.FieldDefinition{Name: "public_id", Type: orm.Char, DefaultVal: "uuid"}, "VARCHAR(36)")
+	if got != "VARCHAR(36)" {
+		t.Fatalf("got %q", got)
+	}
+}

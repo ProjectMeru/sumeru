@@ -54,3 +54,17 @@ func sqlDefaultLiteral(v interface{}) (string, bool) {
 		return "'" + quoteSQLString(fmt.Sprint(t)) + "'", true
 	}
 }
+
+// isRuntimeDefaultToken reports defaults applied in Go at insert time, not as SQL DEFAULT.
+func isRuntimeDefaultToken(v interface{}) bool {
+	s, ok := v.(string)
+	if !ok {
+		return false
+	}
+	switch strings.TrimSpace(s) {
+	case "uuid", "current_user", "current_company":
+		return true
+	default:
+		return false
+	}
+}

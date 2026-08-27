@@ -1,6 +1,6 @@
 "use strict";
 (() => {
-  // src/login/password-match.ts
+  // src/widgets/password-match.ts
   var DEFAULT_MESSAGE = "Passwords do not match.";
   function resolveHint(confirm, hint) {
     if (hint) {

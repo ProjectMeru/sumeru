@@ -1,5 +1,6 @@
 import { html, type TemplateResult } from "../../template/html.js";
 import type { SwcArchField, SwcSearchFilter, SwcWorkspacePayload } from "../../types/workspace.js";
+import { checkboxCheckedFromEvent } from "../../widgets/field-events.js";
 
 export interface ControlPanelState {
   search: string;
@@ -29,8 +30,8 @@ export interface ControlPanelOptions {
 }
 
 /** List toolbar secondary row: pagination only (shown when multiple pages). */
-export function renderControlPanel(opts: ControlPanelOptions): TemplateResult {
-  const { payload, state, onPage } = opts;
+export function renderControlPanel(options: ControlPanelOptions): TemplateResult {
+  const { payload, state, onPage } = options;
   const rows = payload.records ?? [];
   const total = payload.listTotal ?? rows.length;
   const page = Math.floor(state.offset / state.limit) + 1;
@@ -64,33 +65,33 @@ export function renderControlPanel(opts: ControlPanelOptions): TemplateResult {
   `;
 }
 
-export function renderSearchFilters(opts: {
+export function renderSearchFilters(options: {
   filters: SwcSearchFilter[];
   active: string[];
   onToggle: (name: string) => void;
 }): TemplateResult {
-  const domainFilters = opts.filters.filter((f) => f.domain || !f.groupBy);
-  const groupFilters = opts.filters.filter((f) => f.groupBy);
+  const domainFilters = options.filters.filter((f) => f.domain || !f.groupBy);
+  const groupFilters = options.filters.filter((f) => f.groupBy);
   if (domainFilters.length === 0 && groupFilters.length === 0) return html``;
   return html`
     <div class="sum-search-filters">
       ${domainFilters.map((f) => {
-        const on = opts.active.includes(f.name);
+        const on = options.active.includes(f.name);
         return html`<button
           type="button"
           class=${on ? "sum-search-chip sum-search-chip--active" : "sum-search-chip"}
-          @click=${() => opts.onToggle(f.name)}
+          @click=${() => options.onToggle(f.name)}
         >
           ${f.string || f.name}
         </button>`;
       })}
       ${groupFilters.length
         ? html`<span class="sum-search-filters-label">Group</span>${groupFilters.map((f) => {
-            const on = opts.active.includes(f.name);
+            const on = options.active.includes(f.name);
             return html`<button
               type="button"
               class=${on ? "sum-search-chip sum-search-chip--active" : "sum-search-chip"}
-              @click=${() => opts.onToggle(f.name)}
+              @click=${() => options.onToggle(f.name)}
             >
               ${f.string || f.name}
             </button>`;
@@ -122,11 +123,11 @@ export function renderRowCheckbox(
   selected: boolean,
   onToggle: (id: number, checked: boolean) => void,
 ): TemplateResult {
-  return html`<td class="sum-list-select-cell" @click=${(ev: Event) => ev.stopPropagation()}>
+  return html`<td class="sum-list-select-cell" @click=${(event: Event) => event.stopPropagation()}>
     <input
       type="checkbox"
       checked=${selected ? "checked" : undefined}
-      @change=${(ev: Event) => onToggle(id, (ev.target as HTMLInputElement).checked)}
+      @change=${(event: Event) => onToggle(id, checkboxCheckedFromEvent(event))}
     />
   </td>`;
 }
@@ -140,7 +141,7 @@ export function renderSelectAllHeader(
       type="checkbox"
       title="Select all"
       checked=${allSelected ? "checked" : undefined}
-      @change=${(ev: Event) => onToggleAll((ev.target as HTMLInputElement).checked)}
+      @change=${(event: Event) => onToggleAll(checkboxCheckedFromEvent(event))}
     />
   </th>`;
 }
