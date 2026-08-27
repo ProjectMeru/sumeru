@@ -2,7 +2,6 @@ import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
 import type { SwcWorkspacePayload } from "../../types/workspace.js";
 import { VIEW_FORM } from "../../constants/routes.js";
-import { useState } from "../../runtime/hooks.js";
 
 interface CalendarViewProps {
   payload: SwcWorkspacePayload;
@@ -15,7 +14,7 @@ export class CalendarView extends SwcComponent<CalendarViewProps> {
   private year = 0;
   private month = 0;
 
-  setup(): void {
+  override setup(): void {
     const now = new Date();
     this.year = now.getFullYear();
     this.month = now.getMonth();
@@ -27,11 +26,7 @@ export class CalendarView extends SwcComponent<CalendarViewProps> {
       const dateField = fields.find((f) => f.type === "date" || f.type === "datetime");
       if (dateField) this.dateField = dateField.name;
     }
-    const [, bump] = useState(0);
-    this.bump = () => bump((n) => n + 1);
   }
-
-  private bump: (() => void) | null = null;
 
   private eventsByDay(): Map<string, Record<string, unknown>[]> {
     const map = new Map<string, Record<string, unknown>[]>();
@@ -47,10 +42,10 @@ export class CalendarView extends SwcComponent<CalendarViewProps> {
   private openRecord(row: Record<string, unknown>): void {
     const id = Number(row.id ?? 0);
     if (id <= 0) return;
-    const p = this.props.payload;
+    const payload = this.props.payload;
     this.env.services.action.openRecord({
-      actionId: p.actionId,
-      menuId: p.menuId,
+      actionId: payload.actionId,
+      menuId: payload.menuId,
       recordId: id,
       viewType: VIEW_FORM,
     });
@@ -60,7 +55,7 @@ export class CalendarView extends SwcComponent<CalendarViewProps> {
     const d = new Date(this.year, this.month + delta, 1);
     this.year = d.getFullYear();
     this.month = d.getMonth();
-    this.bump?.();
+    this.rerender();
   }
 
   private cells(): Array<{ date: Date; inMonth: boolean }> {
@@ -68,9 +63,9 @@ export class CalendarView extends SwcComponent<CalendarViewProps> {
     const start = new Date(first);
     start.setDate(1 - first.getDay());
     const out: Array<{ date: Date; inMonth: boolean }> = [];
-    for (let i = 0; i < 42; i++) {
+    for (let index = 0; index < 42; index++) {
       const d = new Date(start);
-      d.setDate(start.getDate() + i);
+      d.setDate(start.getDate() + index);
       out.push({ date: d, inMonth: d.getMonth() === this.month });
     }
     return out;
@@ -83,7 +78,7 @@ export class CalendarView extends SwcComponent<CalendarViewProps> {
     return `${y}-${m}-${day}`;
   }
 
-  template() {
+  override template() {
     const events = this.eventsByDay();
     const title = new Date(this.year, this.month, 1).toLocaleString(undefined, {
       month: "long",

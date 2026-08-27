@@ -28,7 +28,7 @@ function titleFallback(type: string): string {
 }
 
 export class StubView extends SwcComponent<StubViewProps> {
-  template() {
+  override template() {
     const type = this.props.payload.arch.type ?? this.props.payload.viewType ?? "";
     return renderStubView(this.props.payload.arch.title ?? titleFallback(type), this.props.payload);
   }

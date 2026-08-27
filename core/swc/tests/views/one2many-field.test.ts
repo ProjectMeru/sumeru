@@ -44,7 +44,7 @@ async function mountField(
   document.body.appendChild(host);
   await new Promise((r) => setTimeout(r, 20));
   comp.patch();
-  return { host, el: comp.el! };
+  return { host, el: comp.rootElement! };
 }
 
 describe("One2ManyField", () => {
@@ -61,7 +61,7 @@ describe("One2ManyField", () => {
     comp.setup();
     const { host } = await mountField(comp);
     expect(searchRead).toHaveBeenCalled();
-    expect(comp.el?.textContent).toContain("Line A");
+    expect(comp.rootElement?.textContent).toContain("Line A");
     host.remove();
   });
 
@@ -74,7 +74,7 @@ describe("One2ManyField", () => {
     const comp = new One2ManyField({ field: lineField(), record, readonly: false }, env);
     comp.setup();
     const { host } = await mountField(comp);
-    const input = comp.el!.querySelector("tbody input.sum-field-input") as HTMLInputElement;
+    const input = comp.rootElement!.querySelector("tbody input.sum-field-input") as HTMLInputElement;
     expect(input).toBeTruthy();
     input.value = "Updated";
     input.dispatchEvent(new Event("input", { bubbles: true }));
@@ -92,9 +92,9 @@ describe("One2ManyField", () => {
     const comp = new One2ManyField({ field: lineField(), record, readonly: false }, env);
     comp.setup();
     const { host } = await mountField(comp);
-    comp.el!.querySelector<HTMLButtonElement>(".sum-o2m-add-row")?.click();
+    comp.rootElement!.querySelector<HTMLButtonElement>(".sum-o2m-add-row")?.click();
     comp.patch();
-    const input = comp.el!.querySelector("tbody input.sum-field-input") as HTMLInputElement;
+    const input = comp.rootElement!.querySelector("tbody input.sum-field-input") as HTMLInputElement;
     input.value = "New line";
     input.dispatchEvent(new Event("input", { bubbles: true }));
     await Promise.resolve();
@@ -113,7 +113,7 @@ describe("One2ManyField", () => {
     const comp = new One2ManyField({ field: lineField(), record, readonly: false }, env);
     comp.setup();
     const { host } = await mountField(comp);
-    const btn = comp.el!.querySelector<HTMLButtonElement>(".sum-o2m-delete-btn");
+    const btn = comp.rootElement!.querySelector<HTMLButtonElement>(".sum-o2m-delete-btn");
     expect(btn).toBeTruthy();
     expect(btn!.getAttribute("data-line-id")).toBe("10");
     btn!.click();

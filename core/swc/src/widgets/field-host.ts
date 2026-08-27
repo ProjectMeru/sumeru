@@ -4,9 +4,9 @@ import type { SwcRecord } from "../model/record.js";
 import { instantiateFieldWidget, resolveFieldWidget, type FieldWidgetInstance } from "./registry.js";
 
 interface FieldEntry {
-  comp: FieldWidgetInstance;
+  widget: FieldWidgetInstance;
   readonly: boolean;
-  widget: string;
+  widgetName: string;
 }
 
 /** Reuses field widget instances across FormView patches (same record + mode). */
@@ -19,23 +19,35 @@ export class FieldHost {
   }
 
   render(field: SwcArchField, record: SwcRecord, readonly: boolean): HTMLElement {
-    const widget = resolveFieldWidget(field);
+    const widgetName = resolveFieldWidget(field);
     const key = field.name;
     const prev = this.entries.get(key);
 
-    if (prev && prev.readonly === readonly && prev.widget === widget) {
-      return prev.comp.render();
+    if (prev && prev.readonly === readonly && prev.widgetName === widgetName) {
+      return prev.widget.render();
     }
 
-    prev?.comp.destroy();
-    const comp = instantiateFieldWidget(this.env, field, record, readonly);
-    this.entries.set(key, { comp, readonly, widget });
-    return comp.render();
+    prev?.widget.destroy();
+    const widget = instantiateFieldWidget(this.env, field, record, readonly);
+    this.entries.set(key, { widget, readonly, widgetName });
+    return widget.render();
+  }
+
+  /** Drop one field widget after onchange, or all widgets when `fieldName` is omitted. */
+  invalidate(fieldName?: string): void {
+    if (!fieldName) {
+      this.clear();
+      return;
+    }
+    const prev = this.entries.get(fieldName);
+    if (!prev) return;
+    prev.widget.destroy();
+    this.entries.delete(fieldName);
   }
 
   clear(): void {
-    for (const { comp } of this.entries.values()) {
-      comp.destroy();
+    for (const { widget } of this.entries.values()) {
+      widget.destroy();
     }
     this.entries.clear();
   }

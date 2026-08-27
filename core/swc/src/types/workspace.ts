@@ -63,7 +63,7 @@ export interface SwcArchField {
 export interface SwcArchButton {
   name: string;
   string: string;
-  type: string;
+  type: "object" | "action" | string;
   class?: string;
 }
 

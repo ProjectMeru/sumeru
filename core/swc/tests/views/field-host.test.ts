@@ -43,4 +43,22 @@ describe("FieldHost", () => {
     expect(searchRead).toHaveBeenCalled();
     host.clear();
   });
+
+  it("invalidates a single field without clearing others", () => {
+    const env = {
+      bootstrap: {} as never,
+      services: { rpc: { searchRead: vi.fn() } },
+    } as unknown as SwcEnv;
+    const host = new FieldHost(env);
+    const record = new SwcRecord("core.partner", 1, { email: "a@x.com", phone: "1" });
+    const email = { name: "email", type: "char" as const };
+    const phone = { name: "phone", type: "char" as const, widget: "phone" };
+
+    host.render(email, record, true);
+    host.render(phone, record, true);
+    host.invalidate("email");
+    const again = host.render(email, record, true);
+    expect((again.querySelector("input") as HTMLInputElement | null)?.value).toBe("a@x.com");
+    host.clear();
+  });
 });
