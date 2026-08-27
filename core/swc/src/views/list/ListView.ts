@@ -16,8 +16,7 @@ import {
 import { forEach } from "../../template/helpers.js";
 import { VIEW_FORM, VIEW_LIST } from "../../constants/routes.js";
 import { runObjectAction } from "../shared/object-action.js";
-import { FieldHost } from "../../widgets/field-host.js";
-import { SwcRecord } from "../../model/record.js";
+import { formatFieldValue } from "../shared/field-display.js";
 
 interface ListViewProps {
   payload: SwcWorkspacePayload;
@@ -33,21 +32,14 @@ export class ListView extends SwcComponent<ListViewProps> {
   };
   private deleting = false;
   private acting = false;
-  private fieldHost!: FieldHost;
 
   override setup(): void {
-    this.fieldHost = new FieldHost(this.env);
     this.syncFromPayload(this.props.payload);
   }
 
   override onPropsChanged(props: ListViewProps): void {
     this.syncFromPayload(props.payload);
     this.panelState.selectedIds = new Set();
-    this.fieldHost.clear();
-  }
-
-  override onWillUnmount(): void {
-    this.fieldHost.clear();
   }
 
   private syncFromPayload(payload: SwcWorkspacePayload): void {
@@ -181,18 +173,15 @@ export class ListView extends SwcComponent<ListViewProps> {
     if (!navigated) this.rerender();
   }
 
-  /** List cells use readonly field widgets via FieldHost. */
+  /** Data rows: one `<td>` per visible column with plain text values. */
   private renderRow(row: Record<string, unknown>) {
     const id = Number(row.id ?? 0);
     const cols = this.columns();
-    const record = new SwcRecord(this.props.payload.model, id, row);
     return html`<tr class="sum-list-row sum-list-row--click" @click=${() => this.openRow(row)}>
       ${renderRowCheckbox(id, this.panelState.selectedIds.has(id), (rid, checked) =>
         this.toggleRow(rid, checked),
       )}
-      ${cols.map((c) => {
-        return html`<td class="sum-list-td">${this.fieldHost.render(c, record, true)}</td>`;
-      })}
+      ${cols.map((c) => html`<td class="sum-list-td">${formatFieldValue(row, c)}</td>`)}
     </tr>`;
   }
 

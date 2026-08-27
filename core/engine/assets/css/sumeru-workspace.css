@@ -357,11 +357,14 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* —— Premium data table —— */
+/* —— List data table —— */
 .sum-web-table-wrap.sum-list-table-wrap,
 .sum-list-table-wrap {
-  padding: 0 0.5rem 0.75rem;
+  padding: 0 0.75rem 0.75rem;
   background: var(--sum-bg);
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
 }
 
 .sum-list-table {
@@ -369,26 +372,32 @@
   border-collapse: collapse;
   text-align: left;
   background: var(--sum-surface);
-  border-radius: var(--sum-radius-sm);
-  overflow: hidden;
   border: 1px solid var(--sum-line);
-  box-shadow: var(--sum-shadow-sm);
 }
 
 .sum-list-th {
-  padding: 0.55rem 0.65rem;
+  padding: 0.6rem 0.75rem;
   font-size: var(--sum-font-size-sm);
   font-weight: var(--sum-font-weight-bold);
-  text-transform: uppercase;
-  letter-spacing: var(--sum-letter-spacing-ui);
-  color: var(--sum-muted);
-  background: linear-gradient(180deg, var(--sum-surface-alt) 0%, color-mix(in srgb, var(--sum-surface-alt) 70%, var(--sum-surface)) 100%);
+  color: var(--sum-text);
+  background: var(--sum-surface-alt);
   border-bottom: 1px solid var(--sum-line);
+  white-space: nowrap;
+}
+
+.sum-list-th--sort {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sum-list-th--sort:hover {
+  background: color-mix(in srgb, var(--sum-surface-alt) 80%, var(--sum-header));
 }
 
 .sum-list-th-check,
 .sum-list-th-grip,
-.sum-list-th-actions {
+.sum-list-th-actions,
+.sum-list-select-head {
   width: 2.25rem;
   text-align: center;
 }
@@ -400,30 +409,31 @@
 .sum-list-td,
 .sum-list-td-check,
 .sum-list-td-grip,
-.sum-list-td-actions {
-  padding: 0.45rem 0.55rem;
+.sum-list-td-actions,
+.sum-list-select-cell {
+  padding: 0.55rem 0.75rem;
   font-size: var(--sum-font-size-root);
   border-bottom: 1px solid var(--sum-line);
   vertical-align: middle;
+  color: var(--sum-text);
 }
 
-.sum-list-row:nth-child(even) .sum-list-td {
-  background: color-mix(in srgb, var(--sum-bg) 55%, var(--sum-surface));
+.sum-list-row:nth-child(even) .sum-list-td,
+.sum-list-row:nth-child(even) .sum-list-select-cell {
+  background: color-mix(in srgb, var(--sum-bg) 40%, var(--sum-surface));
 }
 
 .sum-list-row--click {
   cursor: pointer;
 }
 
-.sum-list-row--click:hover .sum-list-td {
+.sum-list-row--click:hover .sum-list-td,
+.sum-list-row--click:hover .sum-list-select-cell {
   background: var(--sum-list-row-hover-bg);
 }
 
-.sum-list-row--click:hover .sum-list-td:first-child {
-  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--sum-header) 40%, transparent);
-}
-
-.sum-list-row--click:focus-within .sum-list-td {
+.sum-list-row--click:focus-within .sum-list-td,
+.sum-list-row--click:focus-within .sum-list-select-cell {
   outline: 2px solid color-mix(in srgb, var(--sum-header) 35%, transparent);
   outline-offset: -2px;
 }
