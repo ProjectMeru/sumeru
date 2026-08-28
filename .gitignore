@@ -202,3 +202,10 @@ logs.log
 log.log
 *.conf
 core/swc/node_modules/
+
+# Generated JavaScript bundles
+/core/engine/assets/swc/*.js
+/core/engine/assets/swc/*.js.map
+
+/core/engine/assets/js/*.js
+/core/engine/assets/js/*.js.map

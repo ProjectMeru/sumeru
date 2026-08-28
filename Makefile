@@ -1,7 +1,15 @@
-.PHONY: help build css run generate bp check-sql check-logs db-check i18n-export i18n-import module shell test-db test-integration swc swc-check swc-test
+.PHONY: help setup dev build css run generate bp check-sql check-logs db-check \
+	i18n-export i18n-import module shell test-db test-integration \
+	swc swc-build assets swc-check swc-test check
 
 # Extra flags for `make run`, e.g. `make run EXTRA_RUN_FLAGS='-p 9090 -d sumeru_staging'`
 EXTRA_RUN_FLAGS ?=
+
+SWC_DIR := core/swc
+SWC_BUNDLE := core/engine/assets/swc/swc.js
+SWC_JS_TOGGLE := core/engine/assets/js/sumeru-password-toggle.js
+SWC_JS_MATCH := core/engine/assets/js/sumeru-password-match.js
+SWC_ASSET_INPUTS := $(SWC_DIR)/esbuild.config.mjs $(SWC_DIR)/sum-compile.mjs $(SWC_DIR)/package.json
 
 check-sql:
 	@bash scripts/check_sql_safety.sh
@@ -12,33 +20,55 @@ check-logs:
 generate:
 	go generate ./cmd/sumeru
 
-# Default dev server (config: sumeru.conf, cwd: repo root).
-run: generate
-	go run ./cmd/sumeru -- -c sumeru.conf $(EXTRA_RUN_FLAGS)
-
-# Production-style binary next to Makefile.
-build: generate
-	go build -o sumeru ./cmd/sumeru
-
-# Scaffold a new addon (strict layout). Example: make bp NAME=parts_vendor
-bp:
-	@test -n "$(NAME)" || (echo 'usage: make bp NAME=my_module' >&2 && exit 1)
-	go run ./cmd/sumeru-bp -name $(NAME)
-
-# Plain CSS only — edit core/engine/assets/css/ (no Sass pipeline).
-css:
-	@echo "No CSS build step — edit core/engine/assets/css/*.css"
-
-SWC_DIR := core/swc
-
-swc:
+# Build SWC workspace bundle + login JS (always rebuild).
+swc-build:
 	cd $(SWC_DIR) && npm install && npm run build
+
+swc: swc-build
+
+# Build client assets when missing or when SWC sources changed (used by run/build).
+assets:
+	@if [ ! -f $(SWC_BUNDLE) ] || [ ! -f $(SWC_JS_TOGGLE) ] || [ ! -f $(SWC_JS_MATCH) ]; then \
+		echo "Building SWC assets (bundles missing)..."; \
+		$(MAKE) swc-build; \
+	elif find $(SWC_DIR)/src $(SWC_ASSET_INPUTS) -type f -newer $(SWC_BUNDLE) 2>/dev/null | grep -q .; then \
+		echo "Building SWC assets (sources changed)..."; \
+		$(MAKE) swc-build; \
+	else \
+		echo "SWC assets up to date"; \
+	fi
 
 swc-check:
 	cd $(SWC_DIR) && npm install && npm run check
 
 swc-test:
 	cd $(SWC_DIR) && npm install && npm run test
+
+# First-time local bootstrap: config, client bundles, Go imports.
+setup:
+	@test -f sumeru.conf || cp sumeru.conf.example sumeru.conf
+	$(MAKE) assets
+	$(MAKE) generate
+
+# Dev server: imports + client assets + Go server.
+run: generate assets
+	go run ./cmd/sumeru -- -c sumeru.conf $(EXTRA_RUN_FLAGS)
+
+dev: run
+
+# Production-style binary next to Makefile.
+build: generate assets
+	go build -o sumeru ./cmd/sumeru
+
+check: swc-check
+	go test ./...
+
+bp:
+	@test -n "$(NAME)" || (echo 'usage: make bp NAME=my_module' >&2 && exit 1)
+	go run ./cmd/sumeru-bp -name $(NAME)
+
+css:
+	@echo "No CSS build step — edit core/engine/assets/css/*.css"
 
 db-check:
 	go run ./cmd/sumeru-db-check -- -c sumeru.conf
@@ -63,23 +93,23 @@ test-integration: test-db
 		go test -tags=integration ./test/integration/... -count=1
 
 help:
-	@echo "Sumeru Makefile targets:"
-	@echo "  make generate - go generate ./cmd/sumeru (refresh cmd/sumeru/zimports.go from sumeru.conf.example; copy to sumeru.conf for make run)"
-	@echo "  make bp       - scaffold addon: make bp NAME=my_module (then make generate)"
-	@echo "  make run      - generate then go run ./cmd/sumeru -- -c sumeru.conf (optional EXTRA_RUN_FLAGS)"
-	@echo "  make build    - generate then go build -o sumeru ./cmd/sumeru (binary ./sumeru)"
-	@echo "  make css     - reminder: styles are plain CSS (no compile step)"
-	@echo "  make swc     - build SWC bundle and login password-toggle (core/engine/assets/)"
-	@echo "  make swc-check - TypeScript 7 strict check (tsc --noEmit)"
-	@echo "  make swc-test  - vitest unit tests for SWC"
-	@echo "  make check-sql - static SQL injection pattern guard"
-	@echo "  make check-logs - forbid stdlib log and operational fmt.Printf in server paths"
-	@echo "  make db-check  - validate sumeru.conf and PostgreSQL connectivity"
-	@echo "  make i18n-export - export sys.translation rows to translations.csv"
-	@echo "  make i18n-import - import translations.csv into sys.translation"
-	@echo "  make module      - module CLI (ARGS='list' | 'depends-tree' | 'install sales' | ...)"
-	@echo "  make shell       - interactive ORM REPL (sumeru-shell)"
-	@echo "  make test-db     - start PostgreSQL via docker-compose.test.yml"
-	@echo "  make test-integration - run go test -tags=integration against test DB"
-	@echo "  make help    - this message"
-	@echo "See README.md for CLI flags (-d, -i, -u, -p/--http-port, --stop-after-init) and sumeru.sh."
+	@echo "Sumeru Makefile — common dev flow:"
+	@echo "  make setup   - sumeru.conf (if missing), SWC assets, go generate"
+	@echo "  make run     - generate + assets + go run (alias: make dev)"
+	@echo "  make build   - generate + assets + go build -o sumeru"
+	@echo ""
+	@echo "Client (SWC + login JS under core/engine/assets/):"
+	@echo "  make assets  - build bundles when missing or sources changed"
+	@echo "  make swc     - always rebuild SWC + login JS"
+	@echo "  make swc-check / swc-test - TypeScript check / vitest"
+	@echo ""
+	@echo "Go / addons:"
+	@echo "  make generate - refresh cmd/sumeru/zimports.go"
+	@echo "  make bp NAME=x - scaffold kernel addon (then make generate)"
+	@echo "  make check   - swc-check + go test ./..."
+	@echo "  make module  - module CLI (ARGS='list' | 'install sales' | ...)"
+	@echo "  make shell   - ORM REPL"
+	@echo ""
+	@echo "Other: db-check | i18n-export | i18n-import | test-integration | check-sql | check-logs"
+	@echo "Vars: EXTRA_RUN_FLAGS='-p 9090 -d mydb'"
+	@echo "Prerequisites: Go 1.26.2+, Node.js (npm), PostgreSQL — see README.md"
