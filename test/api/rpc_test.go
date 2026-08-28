@@ -6,13 +6,8 @@ import (
 	"net/http"
 	"testing"
 
-	"sumeru/core/orm"
 	"sumeru/core/server/api"
 )
-
-func authCtx() context.Context {
-	return orm.ContextWithUID(context.Background(), 1)
-}
 
 func TestDispatch_inputValidation(t *testing.T) {
 	tests := []struct {

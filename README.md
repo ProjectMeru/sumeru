@@ -2,6 +2,7 @@
 
 **Modular open-source ERP — Go backend, PostgreSQL, and a modern web workspace.**
 
+[![CI](https://github.com/ProjectMeru/sumeru/actions/workflows/ci.yml/badge.svg)](https://github.com/ProjectMeru/sumeru/actions/workflows/ci.yml)
 [![Go](https://img.shields.io/badge/Go-1.26.2+-00ADD8?logo=go&logoColor=white)](https://go.dev/dl/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Pre-Alpha](https://img.shields.io/badge/Status-Pre--Alpha-critical)](https://github.com/ProjectMeru/sumeru)

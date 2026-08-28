@@ -1,0 +1,19 @@
+# CI and local integration bootstrap (no secrets). Used by .github/workflows/ci.yml.
+# For docker-compose.test.yml (port 5433), override db_port in the shell or a copy.
+
+[options]
+
+db_host = localhost
+db_port = 5432
+db_user = postgres
+db_password = postgres
+db_name = sumeru_test
+db_sslmode = disable
+
+http_port = 18080
+dev_mode = true
+setup_token =
+
+addons_path = addons
+
+log_enabled = false

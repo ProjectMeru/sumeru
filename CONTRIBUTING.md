@@ -82,6 +82,32 @@ go build ./...
 
 Add or update tests under `test/` when you change ORM, server, or module behavior.
 
+## Continuous integration
+
+GitHub Actions runs on every pull request and push to `main` / `dev`:
+
+| Job | What it checks | Local equivalent |
+| --- | --- | --- |
+| **Go build** | `go build ./...` | `go build ./...` |
+| **Go test** | `go test ./... -count=1` | `go test ./...` or `make check` (with SWC) |
+| **SWC** | `npm run check` + `npm run test` in `core/swc` | `make swc-test` |
+| **Generate** | `make generate` — `cmd/sumeru/zimports.go` must not drift | `make generate` then review diff |
+
+On **push to `main` or `dev` only**, an **integration** job boots PostgreSQL, installs the `base` module with `sumeru.conf.ci`, and runs `go test -tags=integration ./test/integration/...`.
+
+Reproduce integration locally:
+
+```bash
+# Option A: docker-compose.test.yml (port 5433 — adjust sumeru.conf.ci db_port)
+docker compose -f docker-compose.test.yml up -d --wait
+go run ./cmd/sumeru -- -c sumeru.conf.ci -i base --stop-after-init
+make test-integration
+
+# Option B: CI-style Postgres on localhost:5432 with sumeru.conf.ci as committed
+```
+
+See the [Actions tab](https://github.com/ProjectMeru/sumeru/actions/workflows/ci.yml) for workflow runs. Dependabot opens weekly Go/npm and monthly GitHub Actions update PRs.
+
 ## Pull requests
 
 - Keep diffs focused; one concern per PR when practical.
