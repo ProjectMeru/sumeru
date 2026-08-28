@@ -1,0 +1,159 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+      - dev
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  go-build:
+    name: Go build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.2"
+          cache: true
+
+      - name: Build all packages
+        run: go build ./...
+
+      - name: Job summary
+        if: always()
+        run: |
+          echo "## Go build" >> "$GITHUB_STEP_SUMMARY"
+          echo "Command: \`go build ./...\`" >> "$GITHUB_STEP_SUMMARY"
+
+  go-test:
+    name: Go test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.2"
+          cache: true
+
+      - name: Run unit tests
+        env:
+          GOFLAGS: -mod=readonly
+        run: go test ./... -count=1 -timeout 15m
+
+      - name: Job summary
+        if: always()
+        run: |
+          echo "## Go test" >> "$GITHUB_STEP_SUMMARY"
+          echo "Command: \`go test ./... -count=1\`" >> "$GITHUB_STEP_SUMMARY"
+
+  swc:
+    name: SWC check and test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: core/swc
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: core/swc/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run check
+
+      - name: Vitest
+        run: npm run test
+
+      - name: Job summary
+        if: always()
+        run: |
+          echo "## SWC" >> "$GITHUB_STEP_SUMMARY"
+          echo "Commands: \`npm run check\`, \`npm run test\` (core/swc)" >> "$GITHUB_STEP_SUMMARY"
+
+  generate:
+    name: Generate drift check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.2"
+          cache: true
+
+      - name: Regenerate zimports.go
+        run: make generate
+
+      - name: Fail on uncommitted generated imports
+        run: git diff --exit-code cmd/sumeru/zimports.go
+
+      - name: Job summary
+        if: always()
+        run: |
+          echo "## Generate" >> "$GITHUB_STEP_SUMMARY"
+          echo "Command: \`make generate\` — \`cmd/sumeru/zimports.go\` must match committed output." >> "$GITHUB_STEP_SUMMARY"
+
+  integration:
+    name: Integration (PostgreSQL)
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+    needs:
+      - go-test
+      - swc
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: sumeru_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d sumeru_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.2"
+          cache: true
+
+      - name: Bootstrap kernel schema
+        run: |
+          make generate
+          go run ./cmd/sumeru -- -c sumeru.conf.ci -i base --stop-after-init
+
+      - name: Run integration tests
+        env:
+          SUMERU_TEST_DSN: host=localhost port=5432 user=postgres password=postgres dbname=sumeru_test sslmode=disable
+        run: go test -tags=integration ./test/integration/... -count=1 -v
+
+      - name: Job summary
+        if: always()
+        run: |
+          echo "## Integration" >> "$GITHUB_STEP_SUMMARY"
+          echo "PostgreSQL 16 — install \`base\`, then \`go test -tags=integration ./test/integration/...\`." >> "$GITHUB_STEP_SUMMARY"
