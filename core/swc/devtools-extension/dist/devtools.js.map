@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../src/devtools.ts"],
-  "sourcesContent": ["/** DevTools bootstrap \u2014 registers the SWC Vision sidebar panel. */\nchrome.devtools.panels.create(\"SWC Vision\", \"\", \"panel.html\");\n"],
-  "mappings": ";;;AACA,SAAO,SAAS,OAAO,OAAO,cAAc,IAAI,YAAY;",
-  "names": []
-}
