@@ -19,11 +19,5 @@
                 <button name="action_cancel_import" string="Cancel" type="object"/>
             </footer>
         </view>
-
-        <record id="action_bulk_import" model="sys.action.window">
-            <field name="name">Bulk Import</field>
-            <field name="core_model">sys.bulk.import</field>
-            <field name="view_mode">form</field>
-        </record>
     </data>
 </sumeru>

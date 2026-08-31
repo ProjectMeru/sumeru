@@ -7,7 +7,11 @@
   "description": "Short summary shown in Apps.",
   "application": true,
   "data": [
-    "views/my_model_views.xml",
+    "security/security.xml",
+    "security/sys.access.csv",
+    "views/actions.xml",
+    "views/my_model_list_views.xml",
+    "views/my_model_form_views.xml",
     "views/menus.xml"
   ]
 }

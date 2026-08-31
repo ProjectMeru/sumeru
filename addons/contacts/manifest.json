@@ -9,6 +9,7 @@
   ],
   "data": [
     "security/security.xml",
+    "security/sys.access.csv",
     "views/actions.xml",
     "views/core_partner_form_views.xml",
     "views/core_partner_form_inherit_views.xml",

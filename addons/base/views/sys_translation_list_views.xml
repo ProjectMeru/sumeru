@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_sys.translation_list" model="sys.translation" type="list">
+            <field name="lang" string="Language"/>
+            <field name="module" string="Module"/>
+            <field name="src" string="Source"/>
+            <field name="value" string="Translation"/>
+        </view>
+    </data>
+</sumeru>

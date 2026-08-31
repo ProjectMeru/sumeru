@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <action id="action_bulk_import" type="window" model="sys.bulk.import" name="Bulk Import" view_mode="form"/>
+    </data>
+</sumeru>

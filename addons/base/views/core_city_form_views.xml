@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_core.city_form" model="core.city" type="form">
+            <sheet>
+                <group>
+                    <field name="name" string="City"/>
+                    <field name="country_id" string="Country" widget="selection"/>
+                    <field name="state_id" string="State" widget="selection"/>
+                    <field name="active" string="Active"/>
+                </group>
+            </sheet>
+        </view>
+    </data>
+</sumeru>

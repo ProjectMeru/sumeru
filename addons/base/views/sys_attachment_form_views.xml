@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_sys.attachment_form" model="sys.attachment" type="form">
+            <sheet>
+                <group>
+                    <field name="name" string="Name"/>
+                    <field name="model" string="Model"/>
+                    <field name="res_id" string="Record"/>
+                    <field name="mimetype" string="MIME Type"/>
+                    <field name="file_size" string="Size"/>
+                    <field name="store_fname" string="Stored Filename"/>
+                    <field name="company_id" string="Company"/>
+                </group>
+            </sheet>
+        </view>
+    </data>
+</sumeru>

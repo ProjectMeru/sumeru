@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_core.lang_form" model="core.lang" type="form">
+            <sheet>
+                <group>
+                    <field name="code" string="Code"/>
+                    <field name="name" string="Name"/>
+                    <field name="iso_code" string="ISO Code"/>
+                    <field name="active" string="Active"/>
+                </group>
+            </sheet>
+        </view>
+    </data>
+</sumeru>

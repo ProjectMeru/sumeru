@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_sys_workflow_transition_form" model="sys.workflow.transition" type="form">
+            <sheet>
+                <group>
+                    <field name="name" string="Name"/>
+                    <field name="model" string="Model"/>
+                    <field name="from_state" string="From"/>
+                    <field name="to_state" string="To"/>
+                    <field name="group_id" string="Required Group"/>
+                    <field name="active" string="Active"/>
+                </group>
+            </sheet>
+        </view>
+    </data>
+</sumeru>

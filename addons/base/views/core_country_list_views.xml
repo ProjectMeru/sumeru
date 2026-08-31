@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_core.country_list" model="core.country" type="list">
+            <field name="name" string="Country"/>
+            <field name="code" string="Code"/>
+            <field name="phone_code" string="Phone Code"/>
+            <field name="active" string="Active"/>
+        </view>
+    </data>
+</sumeru>

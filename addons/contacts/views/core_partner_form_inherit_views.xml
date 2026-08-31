@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <sumeru>
     <data>
+        <!-- View inherit demo: adds customer_rank from models/partner_extend.go -->
         <record id="view_core_partner_form_contacts_inherit" model="sys.view">
             <field name="inherit_id" ref="contacts.view_core_partner_form"/>
             <field name="arch" type="xml">

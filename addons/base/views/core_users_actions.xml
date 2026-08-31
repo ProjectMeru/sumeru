@@ -1,12 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <sumeru>
     <data>
-        <!-- sys.action.window : core.user -->
-        <record id="action_core.user" model="sys.action.window">
-            <field name="name">Users</field>
-            <field name="core_model">core.user</field>
-            <field name="view_mode">list,kanban,form</field>
-            <field name="help">Configure internal users: authentication, default company, language, timezone, and email signature.</field>
-        </record>
+        <action id="action_core.user" type="window" model="core.user" name="Users" view_mode="list,kanban,form">
+            <help>Configure internal users: authentication, default company, language, timezone, and email signature.</help>
+        </action>
     </data>
 </sumeru>

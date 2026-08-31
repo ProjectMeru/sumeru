@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_sys.attachment_list" model="sys.attachment" type="list">
+            <field name="name" string="Name"/>
+            <field name="model" string="Model"/>
+            <field name="res_id" string="Record"/>
+            <field name="mimetype" string="Type"/>
+            <field name="file_size" string="Size"/>
+        </view>
+    </data>
+</sumeru>

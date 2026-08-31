@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_core.group_form" model="core.group" type="form">
+            <sheet>
+                <div class="sum_title">
+                    <h1>
+                        <field name="name" placeholder="e.g. Sales / User"/>
+                    </h1>
+                </div>
+                <group>
+                    <group string="Identification">
+                        <field name="category_id" string="Application"/>
+                        <field name="sequence" string="Display Order"/>
+                    </group>
+                    <group string="Hierarchy">
+                        <separator string="Implication"/>
+                        <label string="Higher levels include lower ones (Manager implies User). Assign levels on the user Access Rights tab."/>
+                    </group>
+                </group>
+            </sheet>
+        </view>
+    </data>
+</sumeru>

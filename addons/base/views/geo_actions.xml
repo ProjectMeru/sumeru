@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <action id="action_core.country" type="window" model="core.country" name="Countries" view_mode="list,form"/>
+        <action id="action_core.country.state" type="window" model="core.country.state" name="States" view_mode="list,form"/>
+        <action id="action_core.city" type="window" model="core.city" name="Cities" view_mode="list,form"/>
+    </data>
+</sumeru>

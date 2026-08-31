@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_sys_cron_list" model="sys.cron" type="list">
+            <field name="name" string="Name"/>
+            <field name="interval_number" string="Interval (min)"/>
+            <field name="event_name" string="Event"/>
+            <field name="next_call" string="Next"/>
+            <field name="active" string="Active"/>
+        </view>
+    </data>
+</sumeru>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_sys.audit_form" model="sys.audit" type="form">
+            <sheet>
+                <group>
+                    <group string="Event">
+                        <field name="create_date" string="When"/>
+                        <field name="user_id" string="User"/>
+                        <field name="action" string="Action"/>
+                        <field name="model" string="Model"/>
+                        <field name="res_id" string="Record"/>
+                    </group>
+                    <group string="Payload">
+                        <field name="before_json" string="Before"/>
+                        <field name="after_json" string="After"/>
+                        <field name="detail" string="Detail"/>
+                    </group>
+                </group>
+            </sheet>
+        </view>
+    </data>
+</sumeru>

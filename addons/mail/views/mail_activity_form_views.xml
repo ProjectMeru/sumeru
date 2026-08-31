@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_mail_activity_form" model="mail.activity" type="form">
+            <sheet>
+                <group>
+                    <field name="name" string="Activity"/>
+                    <field name="summary" string="Summary"/>
+                    <field name="model" string="Model"/>
+                    <field name="res_id" string="Record"/>
+                    <field name="user_id" string="Assigned To"/>
+                    <field name="date_deadline" string="Due Date"/>
+                    <field name="state" string="State"/>
+                </group>
+            </sheet>
+        </view>
+    </data>
+</sumeru>
