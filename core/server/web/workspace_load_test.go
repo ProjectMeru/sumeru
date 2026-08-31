@@ -60,6 +60,21 @@ func TestWorkspaceViewModeCandidates(t *testing.T) {
 	}
 }
 
+func TestActionViewModesForTabs(t *testing.T) {
+	if got := web.ActionViewModesForTabs(nil); got != nil {
+		t.Fatalf("nil action should not filter tabs, got %v", got)
+	}
+	if got := web.ActionViewModesForTabs(map[string]interface{}{}); got != nil {
+		t.Fatalf("empty action should not filter tabs, got %v", got)
+	}
+	if got := web.ActionViewModesForTabs(map[string]interface{}{"view_mode": "map,list,form"}); len(got) != 3 || got[0] != "map" {
+		t.Fatalf("got %v", got)
+	}
+	if got := web.ActionViewModesForTabs(map[string]interface{}{"view_mode": ""}); len(got) != 1 || got[0] != web.TestWorkspaceViewModeList {
+		t.Fatalf("empty view_mode should default to list, got %v", got)
+	}
+}
+
 func TestParsePositiveRecordID(t *testing.T) {
 	recordID, ok := web.ParsePositiveRecordID("15")
 	if !ok || recordID != 15 {

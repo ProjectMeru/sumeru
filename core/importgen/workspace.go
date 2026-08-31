@@ -66,7 +66,18 @@ func writeAddonZRefs(workspaceRoot, sumeruRoot, addonsRoot, addonName, modelsDir
 	if err != nil {
 		return err
 	}
-	filtered := filterRefsForUsage(rawRefs, used)
+	modelsImport, err := module.PackageImportPath(modelsDir)
+	if err != nil {
+		return err
+	}
+	var externalRefs []modelRef
+	for _, ref := range rawRefs {
+		if ref.ImportPath == modelsImport {
+			continue
+		}
+		externalRefs = append(externalRefs, ref)
+	}
+	filtered := filterRefsForUsage(externalRefs, used)
 	exported := buildExportedRefs(filtered, used)
 	body := renderZRefs(exported)
 	if body == "" {

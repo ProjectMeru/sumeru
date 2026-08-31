@@ -3,7 +3,7 @@ import { html, type TemplateResult, type TemplateValue } from "../../template/ht
 import type { SwcArchField, SwcWorkspacePayload } from "../../types/workspace.js";
 import { SAVED_SEARCHES_ROUTE } from "../../constants/routes.js";
 import { inputValueFromEvent } from "../../widgets/field-events.js";
-import { renderNewButton, renderReportActions, exportFieldNamesCsv } from "./view-toolbar.js";
+import { renderNewButton, renderReportActions, exportFieldNamesCsv, renderSearchIcon } from "./view-toolbar.js";
 import {
   activeFilterTags,
   appendDomainTriple,
@@ -201,8 +201,53 @@ export class CollectionBarHost extends SwcComponent<CollectionBarHostProps> {
     return html`<span class="sum-popover-check" aria-hidden="true">${active ? "✓" : ""}</span>`;
   }
 
+  private clearSearch(): void {
+    this.query.search = "";
+    this.applyQuery({ search: "" });
+  }
+
+  private renderSearchBar(tags: FilterTag[]): TemplateResult {
+    const hasQuery = this.query.search.trim().length > 0;
+    return html`
+      <div class="sum-control-bar-search-wrap">
+        <span class="sum-control-bar-search-icon" aria-hidden="true">
+          ${renderSearchIcon("sum-control-bar-search-icon-svg")}
+        </span>
+        <div class="sum-control-bar-search-body">
+          ${tags.length > 0
+            ? html`<div class="sum-control-bar-search-tags">${tags.map((tag) => this.renderTag(tag))}</div>`
+            : ""}
+          <input
+            type="search"
+            class="sum-control-bar-search"
+            placeholder=${tags.length > 0 ? "Search within results…" : "Search records…"}
+            aria-label="Search records"
+            value=${this.query.search}
+            @keydown=${(event: Event) => (event as KeyboardEvent).key === "Enter" && this.applySearch()}
+            @input=${(event: Event) => { this.query.search = inputValueFromEvent(event); this.rerender(); }}
+            @click=${(e: Event) => e.stopPropagation()}
+          />
+        </div>
+        ${hasQuery
+          ? html`<button
+              type="button"
+              class="sum-control-bar-search-clear"
+              aria-label="Clear search"
+              title="Clear search"
+              @click=${(e: Event) => { e.stopPropagation(); this.clearSearch(); }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M18 6L6 18" />
+                <path d="M6 6l12 12" />
+              </svg>
+            </button>`
+          : ""}
+      </div>
+    `;
+  }
+
   private renderTag(tag: FilterTag): TemplateResult {
-    return html`<span class="sum-filter-tag">
+    return html`<span class="sum-filter-tag sum-filter-tag--${tag.kind}">
       ${tag.label}
       <button type="button" class="sum-filter-tag-remove" aria-label="Remove" @click=${() => this.removeTag(tag)}>×</button>
     </span>`;
@@ -324,17 +369,25 @@ export class CollectionBarHost extends SwcComponent<CollectionBarHostProps> {
     badgeCount: number,
   ): TemplateResult {
     const open = this.panelOpen === kind;
+    const btnClass = open
+      ? "sum-control-bar-chip-btn sum-control-bar-chip-btn--active"
+      : "sum-control-bar-chip-btn";
+    const chevron = html`<svg class="sum-control-bar-chip-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M6 9l6 6 6-6" />
+    </svg>`;
     return html`
       <div class="sum-control-bar-popover-anchor">
         <button
           type="button"
-          class=${open ? "sum-control-bar-action-btn sum-control-bar-action-btn--active" : "sum-control-bar-action-btn"}
+          class=${btnClass}
+          aria-label=${label}
           aria-expanded=${open ? "true" : "false"}
           @click=${(e: Event) => { e.stopPropagation(); this.togglePanel(kind); }}
         >
           ${icon}
-          <span class="sum-control-bar-action-label">${label}</span>
+          <span class="sum-control-bar-chip-label">${label}</span>
           ${this.renderBadge(badgeCount)}
+          ${chevron}
         </button>
         ${open ? (kind === "filters" ? this.renderFiltersPopover() : kind === "group" ? this.renderGroupPopover() : this.renderFavoritesPopover()) : ""}
       </div>
@@ -349,18 +402,18 @@ export class CollectionBarHost extends SwcComponent<CollectionBarHostProps> {
     const fCount = filterCount(this.query);
     const gCount = groupByCount(this.query);
 
-    const filterIcon = html`<svg class="sum-control-bar-action-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-      <path d="M3 4h18l-7 8v6l-4 2v-8L3 4z" />
+    const filterIcon = html`<svg class="sum-control-bar-chip-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
     </svg>`;
 
-    const groupIcon = html`<svg class="sum-control-bar-action-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-      <rect x="3" y="3" width="7" height="7" rx="1" />
-      <rect x="14" y="3" width="7" height="7" rx="1" />
-      <rect x="3" y="14" width="7" height="7" rx="1" />
-      <rect x="14" y="14" width="7" height="7" rx="1" />
+    const groupIcon = html`<svg class="sum-control-bar-chip-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
     </svg>`;
 
-    const favIcon = html`<svg class="sum-control-bar-action-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+    const favIcon = html`<svg class="sum-control-bar-chip-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
     </svg>`;
 
@@ -370,45 +423,15 @@ export class CollectionBarHost extends SwcComponent<CollectionBarHostProps> {
           <div class="sum-view-toolbar-primary">
             ${renderNewButton(payload)}
             <div class="sum-control-bar-search-group">
-              <div class="sum-control-bar-search-wrap">
-                <span class="sum-list-search-icon" aria-hidden="true">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="11" cy="11" r="7" />
-                    <path d="M20 20l-3-3" />
-                  </svg>
-                </span>
-                <input
-                  type="search"
-                  class="sum-control-bar-search sum-list-search"
-                  placeholder="Search…"
-                  value=${this.query.search}
-                  @keydown=${(event: Event) => (event as KeyboardEvent).key === "Enter" && this.applySearch()}
-                  @input=${(event: Event) => { this.query.search = inputValueFromEvent(event); }}
-                  @click=${(e: Event) => e.stopPropagation()}
-                />
-              </div>
+              ${this.renderSearchBar(tags)}
               ${this.renderActionButton("filters", "Filters", filterIcon, fCount)}
               ${this.renderActionButton("group", "Group By", groupIcon, gCount)}
-              <div class="sum-control-bar-popover-anchor">
-                <button
-                  type="button"
-                  class=${this.panelOpen === "favorites" ? "sum-control-bar-action-btn sum-control-bar-action-btn--icon-only sum-control-bar-action-btn--active" : "sum-control-bar-action-btn sum-control-bar-action-btn--icon-only"}
-                  title="Favorites"
-                  aria-expanded=${this.panelOpen === "favorites" ? "true" : "false"}
-                  @click=${(e: Event) => { e.stopPropagation(); this.togglePanel("favorites"); }}
-                >
-                  ${favIcon}
-                </button>
-                ${this.panelOpen === "favorites" ? this.renderFavoritesPopover() : ""}
-              </div>
+              ${this.renderActionButton("favorites", "Favorites", favIcon, 0)}
             </div>
             ${this.props.extraPrimary ?? ""}
           </div>
           ${reportActions ?? ""}
         </div>
-        ${tags.length > 0
-          ? html`<div class="sum-control-bar-tags">${tags.map((tag) => this.renderTag(tag))}</div>`
-          : ""}
       </div>
     `;
   }

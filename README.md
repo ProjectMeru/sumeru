@@ -129,6 +129,8 @@ Build with **`make swc`** (always rebuild) or let **`make assets`** / **`make ru
 
 Sumeru splits across three repositories so you can pull engine and standard apps without mixing customer code.
 
+In-repo reference: **[docs/architecture-layers.md](docs/architecture-layers.md)** — six-layer stack, request traces, and inheritance catalog (view inherit, model inherit, depends, events).
+
 ```text
 sumeru_custom_addons
   make setup / make run

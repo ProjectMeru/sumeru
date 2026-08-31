@@ -3,17 +3,25 @@ package orm
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 )
 
+func uiViewLookupLogErr(err error) error {
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
+	return err
+}
+
 // FindUIDefaultView returns the highest-priority sys.view for a model and type.
-// Record rules are applied in SQL like Search.
+// Record rules are applied in SQL like Search. Missing views return sql.ErrNoRows.
 func FindUIDefaultView(ctx context.Context, modelName, viewType string) (result map[string]interface{}, err error) {
 	start := time.Now()
 	defer func() {
-		logORMOperationKV(ctx, start, "find_ui_view", "sys.view", err, "target_model", modelName, "view_type", viewType, "found", result != nil)
+		logORMOperationKV(ctx, start, "find_ui_view", "sys.view", uiViewLookupLogErr(err), "target_model", modelName, "view_type", viewType, "found", result != nil)
 	}()
 	if _, ok := Registry["sys.view"]; !ok {
 		return nil, fmt.Errorf("model sys.view not registered")
@@ -66,10 +74,11 @@ func findUIDefaultViewByType(ctx context.Context, uid int, modelName, vt string)
 }
 
 // FindUIViewByName returns a sys.view row by unique name (typically the XML view id).
+// Missing views return sql.ErrNoRows.
 func FindUIViewByName(ctx context.Context, modelName, viewType, viewName string) (result map[string]interface{}, err error) {
 	start := time.Now()
 	defer func() {
-		logORMOperationKV(ctx, start, "find_ui_view_by_name", "sys.view", err, "target_model", modelName, "view_type", viewType, "view_name", viewName, "found", result != nil)
+		logORMOperationKV(ctx, start, "find_ui_view_by_name", "sys.view", uiViewLookupLogErr(err), "target_model", modelName, "view_type", viewType, "view_name", viewName, "found", result != nil)
 	}()
 	viewName = strings.TrimSpace(viewName)
 	if viewName == "" {

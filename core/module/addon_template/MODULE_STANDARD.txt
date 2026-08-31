@@ -92,7 +92,26 @@ View inheritance
     after, before, replace, inside
   Stored arch may use `<form>`/`<list>` roots or `<view>`; both load after merge.
 
-  Example: addons/sale_demo_inherit/
+  Example: addons/contacts/views/core_partner_form_inherit_views.xml (xpath after phone → customer_rank)
+
+Model inherit
+-------------
+  Extend an existing ORM model from a dependent module with a Go struct that embeds sdk.Model
+  and uses inherit= instead of model=:
+
+    type PartnerContacts struct {
+        sdk.Model `sumeru:"inherit=core.partner"`
+        CustomerRank sdk.Integer `sumeru:"string=Customer Rank,default=0"`
+    }
+
+  Rules:
+    • inherit= and model= are mutually exclusive on one struct
+    • Target model must register first (manifest depends + import order)
+    • Duplicate field names on the same model panic at startup
+    • Run make generate, then -u your_module for additive schema sync on extended models
+    • Pair with view xpath inherit to show new fields in the UI
+
+  Example: addons/contacts/models/partner_extend.go
 
 Strict convention (enforced on startup)
 -----------------------------------------

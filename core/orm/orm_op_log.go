@@ -35,7 +35,7 @@ func logORMOperation(ctx context.Context, start time.Time, operation, modelName 
 	}
 	ev.Message = humanORMMessage(operation, modelName, true)
 	ev.Status = "success"
-	if operation == "search" || operation == "search_one" || operation == "search_page" || operation == "find_ui_view" {
+	if operation == "search" || operation == "search_one" || operation == "search_page" || operation == "find_ui_view" || operation == "find_ui_view_by_name" {
 		applog.Debug(ctx, ev)
 		return
 	}

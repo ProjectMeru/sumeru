@@ -9,6 +9,7 @@ import (
 // FieldTags holds parsed sumeru struct tag options for one field.
 type FieldTags struct {
 	Model        string
+	Inherit      string
 	Required     bool
 	Unique       bool
 	Index        bool
@@ -39,10 +40,17 @@ type FieldTags struct {
 }
 
 // ParseModelTag parses the sumeru tag on an embedded ModelMeta.
+// For inherit= tags, returns the inherited model name.
 func ParseModelTag(tag string) (modelName string, err error) {
 	tags, err := parseSumeruTag(tag)
 	if err != nil {
 		return "", err
+	}
+	if tags.Model != "" && tags.Inherit != "" {
+		return "", fmt.Errorf("model= and inherit= are mutually exclusive")
+	}
+	if tags.Inherit != "" {
+		return tags.Inherit, nil
 	}
 	if tags.Model == "" {
 		return "", nil
@@ -82,6 +90,8 @@ func parseSumeruTag(tag string) (FieldTags, error) {
 		switch key {
 		case "model":
 			out.Model = val
+		case "inherit":
+			out.Inherit = val
 		case "required":
 			out.Required = true
 		case "unique":

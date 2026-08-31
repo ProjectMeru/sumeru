@@ -11,6 +11,7 @@
     "security/security.xml",
     "views/actions.xml",
     "views/core_partner_form_views.xml",
+    "views/core_partner_form_inherit_views.xml",
     "views/core_partner_list_views.xml",
     "views/core_partner_kanban_views.xml",
     "views/menus.xml"
