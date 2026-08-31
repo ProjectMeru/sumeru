@@ -7,7 +7,13 @@
   "depends": ["base"],
   "application": false,
   "data": [
-    "views/mail_message_views.xml",
+    "security/security.xml",
+    "security/sys.access.csv",
+    "views/actions.xml",
+    "views/mail_message_list_views.xml",
+    "views/mail_message_form_views.xml",
+    "views/mail_activity_list_views.xml",
+    "views/mail_activity_form_views.xml",
     "views/menus.xml"
   ]
 }

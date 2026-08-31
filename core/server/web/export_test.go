@@ -318,3 +318,7 @@ func ParseModuleRow(values map[string]interface{}) (ModuleRow, bool) { return pa
 func ModuleDisplayName(moduleName, displayName string) string {
 	return moduleDisplayName(moduleName, displayName)
 }
+
+func ActionViewModesForTabs(actionData map[string]interface{}) []string {
+	return actionViewModesForTabs(actionData)
+}

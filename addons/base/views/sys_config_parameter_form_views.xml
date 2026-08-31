@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_sys.config.parameter_form" model="sys.config.parameter" type="form">
+            <sheet>
+                <group>
+                    <field name="key" string="Key"/>
+                    <field name="value" string="Value"/>
+                </group>
+            </sheet>
+        </view>
+    </data>
+</sumeru>

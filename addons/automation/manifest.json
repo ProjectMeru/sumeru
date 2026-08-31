@@ -7,7 +7,15 @@
   "depends": ["base", "mail"],
   "application": false,
   "data": [
-    "views/automation_views.xml",
+    "security/security.xml",
+    "security/sys.access.csv",
+    "views/actions.xml",
+    "views/sys_cron_list_views.xml",
+    "views/sys_cron_form_views.xml",
+    "views/sys_workflow_transition_list_views.xml",
+    "views/sys_workflow_transition_form_views.xml",
+    "views/sys_server_action_list_views.xml",
+    "views/sys_server_action_form_views.xml",
     "views/menus.xml"
   ]
 }

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <action id="action_core.user.apikey" type="window" model="core.user.apikey" name="API Keys" view_mode="list,form"/>
+        <action id="action_core.user.log" type="window" model="core.user.log" name="Login History" view_mode="list"/>
+    </data>
+</sumeru>

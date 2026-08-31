@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_core.city_list" model="core.city" type="list">
+            <field name="name" string="City"/>
+            <field name="state_id" string="State"/>
+            <field name="country_id" string="Country"/>
+            <field name="active" string="Active"/>
+        </view>
+    </data>
+</sumeru>

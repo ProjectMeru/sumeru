@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_sys.audit_list" model="sys.audit" type="list">
+            <field name="create_date" string="When"/>
+            <field name="user_id" string="User"/>
+            <field name="action" string="Action"/>
+            <field name="model" string="Model"/>
+            <field name="res_id" string="Record"/>
+            <field name="detail" string="Detail"/>
+        </view>
+    </data>
+</sumeru>

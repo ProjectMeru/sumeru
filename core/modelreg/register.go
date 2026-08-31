@@ -22,6 +22,7 @@ func MustRegister(module string, models ...any) {
 		module:    module,
 		typeNames: make(map[string]string),
 		byName:    make(map[string]reflect.Type),
+		specs:     make(map[string]modelmeta.ModelSpec),
 	}
 
 	for _, sample := range models {
@@ -29,15 +30,17 @@ func MustRegister(module string, models ...any) {
 		if !ok {
 			panic(fmt.Sprintf("modelreg.MustRegister: %T is not a pointer to struct", sample))
 		}
-		name, err := modelNameFromStruct(rt)
+		spec, err := modelSpecFromStruct(rt)
 		if err != nil {
 			panic(fmt.Sprintf("modelreg.MustRegister: %v", err))
 		}
+		name := spec.Name
 		if name == "" || name == "-" {
 			continue
 		}
 		ctx.typeNames[rt.String()] = name
 		ctx.byName[rt.Name()] = rt
+		ctx.specs[rt.String()] = spec
 		if ctx.pkgDir == "" {
 			ctx.pkgDir = pkgDirForStructType(rt)
 		}
@@ -48,11 +51,16 @@ func MustRegister(module string, models ...any) {
 		if !ok {
 			continue
 		}
-		name := ctx.typeNames[rt.String()]
+		spec := ctx.specs[rt.String()]
+		name := spec.Name
 		if name == "" || name == "-" {
 			continue
 		}
 		rm := buildReflectedModel(ctx, rt, name)
+		if spec.Extend {
+			extendRegisteredModel(name, rm.fields, module)
+			continue
+		}
 		orm.RegisterModelWithModule(rm, module)
 	}
 }
@@ -62,6 +70,7 @@ type registerCtx struct {
 	pkgDir    string
 	typeNames map[string]string
 	byName    map[string]reflect.Type
+	specs     map[string]modelmeta.ModelSpec
 }
 
 type reflectedModel struct {
@@ -84,8 +93,39 @@ func modelStructType(sample any) (reflect.Type, bool) {
 	return rt.Elem(), true
 }
 
+func (m *reflectedModel) mergeFields(extra []orm.FieldDefinition) error {
+	for _, f := range extra {
+		for _, existing := range m.fields {
+			if existing.Name == f.Name {
+				return fmt.Errorf("duplicate field %q on model %s", f.Name, m.name)
+			}
+		}
+		m.fields = append(m.fields, f)
+	}
+	return nil
+}
+
 func modelNameFromStruct(st reflect.Type) (string, error) {
 	return modelmeta.ModelNameFromStruct(st)
+}
+
+func modelSpecFromStruct(st reflect.Type) (modelmeta.ModelSpec, error) {
+	return modelmeta.ModelSpecFromStruct(st)
+}
+
+func extendRegisteredModel(targetName string, extra []orm.FieldDefinition, module string) {
+	existing := orm.RegistryModel(targetName)
+	if existing == nil {
+		panic(fmt.Sprintf("modelreg: inherit=%s: target model is not registered", targetName))
+	}
+	rm, ok := existing.(*reflectedModel)
+	if !ok {
+		panic(fmt.Sprintf("modelreg: inherit=%s: cannot extend non-reflected model %T", targetName, existing))
+	}
+	if err := rm.mergeFields(extra); err != nil {
+		panic(fmt.Sprintf("modelreg: inherit=%s: %v", targetName, err))
+	}
+	orm.RecordModelExtendedBy(targetName, module)
 }
 
 func buildReflectedModel(ctx *registerCtx, st reflect.Type, modelName string) *reflectedModel {

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_sys.field.access_form" model="sys.field.access" type="form">
+            <sheet>
+                <group>
+                    <field name="name" string="Name"/>
+                    <field name="model" string="Model"/>
+                    <field name="field_name" string="Field"/>
+                    <field name="group_id" string="Group"/>
+                    <field name="perm_read" string="Read"/>
+                    <field name="perm_write" string="Write"/>
+                </group>
+            </sheet>
+        </view>
+    </data>
+</sumeru>

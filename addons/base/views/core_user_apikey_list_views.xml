@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_core.user.apikey_list" model="core.user.apikey" type="list">
+            <field name="name" string="Name"/>
+            <field name="user_id" string="User"/>
+            <field name="key_prefix" string="Prefix"/>
+            <field name="active" string="Active"/>
+            <field name="create_date" string="Created"/>
+        </view>
+    </data>
+</sumeru>

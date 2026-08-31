@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <action id="action_mail.message" type="window" model="mail.message" name="Messages" view_mode="list,form"/>
+        <action id="action_mail.activity" type="window" model="mail.activity" name="Activities" view_mode="list,form"/>
+    </data>
+</sumeru>

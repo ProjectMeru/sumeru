@@ -219,6 +219,23 @@ func workspaceViewNotFoundError(targetModel string, modes []string, lastErr erro
 	return fmt.Errorf("%s", message)
 }
 
+func actionViewModesForTabs(actionData map[string]interface{}) []string {
+	if actionData == nil || len(actionData) == 0 {
+		return nil
+	}
+	modes := splitViewModes(strings.TrimSpace(orm.AsString(actionData["view_mode"])))
+	if len(modes) == 0 {
+		return []string{workspaceViewModeList}
+	}
+	out := make([]string, 0, len(modes))
+	for _, mode := range modes {
+		if normalized := normalizeViewMode(mode); normalized != "" {
+			out = append(out, normalized)
+		}
+	}
+	return out
+}
+
 func buildViewRecordData(ctx context.Context, w http.ResponseWriter, r *http.Request, req workspaceRequest, resolved *resolvedWorkspaceView, actionData map[string]interface{}) (*render.ViewRecordData, error) {
 	viewRecord := &render.ViewRecordData{
 		ActionID:    req.actionID,
@@ -232,7 +249,7 @@ func buildViewRecordData(ctx context.Context, w http.ResponseWriter, r *http.Req
 			RecordID: req.recordID,
 			Model:    req.model,
 		}),
-		ViewTabs: render.WorkspaceViewTabs(ctx, resolved.targetModel, req.actionID, req.menuID, resolved.selectedMode, req.recordID),
+		ViewTabs: render.WorkspaceViewTabs(ctx, resolved.targetModel, req.actionID, req.menuID, resolved.selectedMode, req.recordID, actionViewModesForTabs(actionData)),
 	}
 	appendPageFlashesToViewRecord(r, w, viewRecord)
 	appendQueryFlashesToViewRecord(r, viewRecord)

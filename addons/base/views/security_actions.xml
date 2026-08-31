@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <action id="access_action_core.group" type="window" model="core.group" name="Groups" view_mode="list,form"/>
+        <action id="access_action_core.group_user_types" type="window" model="core.group" name="User Types" view_mode="list,form" domain='[["category_id","=","base.module_category_user_types"]]'/>
+        <action id="access_action_sys.access" type="window" model="sys.access" name="Access Rights" view_mode="list,form"/>
+        <action id="access_action_sys.rule" type="window" model="sys.rule" name="Record Rules" view_mode="list,form"/>
+    </data>
+</sumeru>

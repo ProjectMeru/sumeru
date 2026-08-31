@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_sys.sequence_form" model="sys.sequence" type="form">
+            <sheet>
+                <group>
+                    <field name="name" string="Name"/>
+                    <field name="code" string="Code"/>
+                    <field name="prefix" string="Prefix"/>
+                    <field name="suffix" string="Suffix"/>
+                    <field name="padding" string="Padding"/>
+                    <field name="number_next" string="Next Number"/>
+                    <field name="active" string="Active"/>
+                </group>
+            </sheet>
+        </view>
+    </data>
+</sumeru>

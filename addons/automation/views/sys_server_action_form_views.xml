@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_sys_server_action_form" model="sys.server.action" type="form">
+            <sheet>
+                <group>
+                    <field name="name" string="Name"/>
+                    <field name="model" string="Model"/>
+                    <field name="event_name" string="On Event"/>
+                    <field name="code" string="Code / Notes"/>
+                    <field name="active" string="Active"/>
+                </group>
+            </sheet>
+        </view>
+    </data>
+</sumeru>

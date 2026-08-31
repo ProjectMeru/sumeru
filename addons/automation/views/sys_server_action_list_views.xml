@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_sys_server_action_list" model="sys.server.action" type="list">
+            <field name="name" string="Name"/>
+            <field name="model" string="Model"/>
+            <field name="event_name" string="Event"/>
+            <field name="active" string="Active"/>
+        </view>
+    </data>
+</sumeru>

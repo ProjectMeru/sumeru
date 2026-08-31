@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_sys.access_form" model="sys.access" type="form">
+            <sheet>
+                <div class="sum_title">
+                    <h1>
+                        <field name="name" placeholder="e.g. access_sale_order_manager"/>
+                    </h1>
+                </div>
+                <group>
+                    <group string="Scope">
+                        <field name="model" string="Model (technical name)"/>
+                        <field name="group_id" string="Group (leave empty for global)"/>
+                    </group>
+                    <group string="Permissions">
+                        <field name="perm_read" string="Read"/>
+                        <field name="perm_write" string="Write"/>
+                        <field name="perm_create" string="Create"/>
+                        <field name="perm_unlink" string="Delete"/>
+                    </group>
+                </group>
+            </sheet>
+        </view>
+    </data>
+</sumeru>

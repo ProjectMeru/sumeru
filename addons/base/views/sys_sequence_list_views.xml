@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_sys.sequence_list" model="sys.sequence" type="list">
+            <field name="name" string="Name"/>
+            <field name="code" string="Code"/>
+            <field name="prefix" string="Prefix"/>
+            <field name="number_next" string="Next"/>
+            <field name="active" string="Active"/>
+        </view>
+    </data>
+</sumeru>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <action id="action_sys.audit" type="window" model="sys.audit" name="Audit Trail" view_mode="list,form"/>
+        <action id="action_sys.attachment" type="window" model="sys.attachment" name="Attachments" view_mode="list,form"/>
+        <action id="action_sys.sequence" type="window" model="sys.sequence" name="Sequences" view_mode="list,form"/>
+        <action id="action_sys.config.parameter" type="window" model="sys.config.parameter" name="System Parameters" view_mode="list,form"/>
+    </data>
+</sumeru>

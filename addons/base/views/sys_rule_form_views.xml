@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_sys.rule_form" model="sys.rule" type="form">
+            <sheet>
+                <div class="sum_title">
+                    <h1>
+                        <field name="name" placeholder="e.g. Sales: own records only"/>
+                    </h1>
+                </div>
+                <group>
+                    <group string="Scope">
+                        <field name="model" string="Model (technical name)"/>
+                        <field name="active" string="Active"/>
+                    </group>
+                    <group string="Applicable Operations">
+                        <field name="perm_read" string="Read"/>
+                        <field name="perm_write" string="Write"/>
+                        <field name="perm_create" string="Create"/>
+                        <field name="perm_unlink" string="Delete"/>
+                    </group>
+                </group>
+                <group>
+                    <group string="Domain Filter" colspan="2">
+                        <field name="domain_force" string="Domain (JSON, e.g. [[&quot;user_id&quot;,&quot;=&quot;,&quot;uid&quot;]])"/>
+                    </group>
+                </group>
+            </sheet>
+        </view>
+    </data>
+</sumeru>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_sys.config.parameter_list" model="sys.config.parameter" type="list">
+            <field name="key" string="Key"/>
+            <field name="value" string="Value"/>
+        </view>
+    </data>
+</sumeru>

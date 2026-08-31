@@ -18,8 +18,36 @@
         <menuitem id="menu_user_section" name="Users" parent="menu_settings_root" sequence="20" web_icon="users" groups="base.group_system"/>
         <menuitem id="menu_user_directory" name="User Accounts" parent="menu_user_section" sequence="10" action="base.action_core.user" web_icon="user" groups="base.group_system"/>
         <menuitem id="menu_user_companies" name="Company Directory" parent="menu_user_section" sequence="20" action="base.action_core.company" web_icon="building" groups="base.group_system"/>
+        <menuitem id="menu_user_groups" name="Groups" parent="menu_user_section" sequence="30" action="base.access_action_core.group" groups="base.group_system" web_icon="users"/>
+        <menuitem id="menu_user_types" name="User Types" parent="menu_user_section" sequence="40" action="base.access_action_core.group_user_types" groups="base.group_system" web_icon="user"/>
+        <menuitem id="menu_user_apikeys" name="API Keys" parent="menu_user_section" sequence="50" action="base.action_core.user.apikey" web_icon="settings"/>
+        <menuitem id="menu_user_login_log" name="Login History" parent="menu_user_section" sequence="60" action="base.action_core.user.log" web_icon="log"/>
+
+        <!-- Security -->
+        <menuitem id="menu_security_access" name="Access Rights" parent="menu_company_configuration" sequence="16" action="base.access_action_sys.access" groups="base.group_system" web_icon="settings"/>
+        <menuitem id="menu_security_rules" name="Record Rules" parent="menu_company_configuration" sequence="17" action="base.access_action_sys.rule" groups="base.group_system" web_icon="settings"/>
+        <menuitem id="menu_sys_field_access" name="Field Access" parent="menu_company_configuration" sequence="18" action="base.action_sys.field.access" groups="base.group_system" web_icon="settings"/>
+
+        <!-- Localization -->
+        <menuitem id="menu_geo_section" name="Localization" parent="menu_settings_root" sequence="60" web_icon="settings" groups="base.group_system"/>
+        <menuitem id="menu_core_country" name="Countries" parent="menu_geo_section" sequence="10" action="base.action_core.country" web_icon="settings" groups="base.group_system"/>
+        <menuitem id="menu_core_country_state" name="States" parent="menu_geo_section" sequence="20" action="base.action_core.country.state" web_icon="settings" groups="base.group_system"/>
+        <menuitem id="menu_core_city" name="Cities" parent="menu_geo_section" sequence="30" action="base.action_core.city" web_icon="settings" groups="base.group_system"/>
+
+        <!-- Translations -->
+        <menuitem id="menu_i18n_section" name="Translations" parent="menu_settings_root" sequence="70" web_icon="settings"/>
+        <menuitem id="menu_core_lang" name="Languages" parent="menu_i18n_section" sequence="10" action="base.action_core.lang" web_icon="settings"/>
+        <menuitem id="menu_sys_translation" name="Translated Terms" parent="menu_i18n_section" sequence="20" action="base.action_sys.translation" web_icon="settings"/>
+
+        <!-- Audit and platform -->
+        <menuitem id="menu_audit_section" name="Audit" parent="menu_settings_root" sequence="80" web_icon="log"/>
+        <menuitem id="menu_sys_audit" name="Audit Trail" parent="menu_audit_section" sequence="10" action="base.action_sys.audit" web_icon="log"/>
+        <menuitem id="menu_sys_attachment" name="Attachments" parent="menu_company_configuration" sequence="40" action="base.action_sys.attachment" web_icon="settings"/>
+        <menuitem id="menu_sys_sequence" name="Sequences" parent="menu_company_configuration" sequence="50" action="base.action_sys.sequence" web_icon="settings"/>
+        <menuitem id="menu_sys_config" name="System Parameters" parent="menu_company_configuration" sequence="60" action="base.action_sys.config.parameter" web_icon="settings"/>
+
         <!-- App Logs: module lifecycle event history (install / uninstall / update) -->
-        <menuitem id="menu_app_logs_section" name="App Logs"    parent="menu_settings_root" sequence="90" web_icon="log" groups="base.group_system"/>
-        <menuitem id="menu_app_logs"         name="Event Log"   parent="menu_app_logs_section" sequence="10" web_icon="log" groups="base.group_system"/>
+        <menuitem id="menu_app_logs_section" name="App Logs" parent="menu_settings_root" sequence="90" web_icon="log" groups="base.group_system"/>
+        <menuitem id="menu_app_logs" name="Event Log" parent="menu_app_logs_section" sequence="10" web_icon="log" groups="base.group_system"/>
     </data>
 </sumeru>

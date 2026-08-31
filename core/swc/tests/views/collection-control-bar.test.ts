@@ -57,16 +57,24 @@ function basePayload(): SwcWorkspacePayload {
 }
 
 describe("CollectionBarHost", () => {
-  it("renders search field and separate filter/group buttons beside it", () => {
+  it("renders search field and chip filter/group buttons with icons and labels", () => {
     const bar = new CollectionBarHost({ payload: basePayload(), viewType: "list" }, testEnv());
     bar.callSetup();
     const el = bar.render();
     expect(el.querySelector(".sum-control-bar-search")).toBeTruthy();
+    expect(el.querySelector(".sum-control-bar-search-icon")).toBeTruthy();
     expect(el.querySelector(".sum-control-bar-search-group")).toBeTruthy();
-    expect(el.querySelector(".sum-control-bar-search-wrap .sum-control-bar-action-btn")).toBeFalsy();
-    const labels = [...el.querySelectorAll(".sum-control-bar-action-label")].map((n) => n.textContent);
-    expect(labels).toContain("Filters");
-    expect(labels).toContain("Group By");
+    expect(el.querySelector(".sum-control-bar-search-wrap .sum-control-bar-chip-btn")).toBeFalsy();
+    const filterBtn = el.querySelector('[aria-label="Filters"]') as HTMLButtonElement;
+    const groupBtn = el.querySelector('[aria-label="Group By"]') as HTMLButtonElement;
+    const favBtn = el.querySelector('[aria-label="Favorites"]') as HTMLButtonElement;
+    expect(filterBtn).toBeTruthy();
+    expect(groupBtn).toBeTruthy();
+    expect(favBtn).toBeTruthy();
+    expect(filterBtn.classList.contains("sum-control-bar-chip-btn")).toBe(true);
+    expect(filterBtn.querySelector(".sum-control-bar-chip-icon")).toBeTruthy();
+    expect(filterBtn.querySelector(".sum-control-bar-chip-label")?.textContent).toBe("Filters");
+    expect(groupBtn.querySelector(".sum-control-bar-chip-label")?.textContent).toBe("Group By");
     bar.destroy();
   });
 
@@ -74,8 +82,8 @@ describe("CollectionBarHost", () => {
     const bar = new CollectionBarHost({ payload: basePayload(), viewType: "list" }, testEnv());
     bar.callSetup();
     document.body.append(bar.render());
-    const buttons = [...bar.rootElement!.querySelectorAll(".sum-control-bar-action-btn")] as HTMLButtonElement[];
-    const filtersBtn = buttons.find((b) => b.textContent?.includes("Filters"))!;
+    const buttons = [...bar.rootElement!.querySelectorAll(".sum-control-bar-chip-btn")] as HTMLButtonElement[];
+    const filtersBtn = buttons.find((b) => b.getAttribute("aria-label") === "Filters")!;
     filtersBtn.click();
     bar.patch();
     expect(bar.rootElement!.querySelector(".sum-popover--filters")).toBeTruthy();
@@ -84,7 +92,7 @@ describe("CollectionBarHost", () => {
     bar.destroy();
   });
 
-  it("shows active tags in dedicated tags row", () => {
+  it("shows active filter and group tags inside the search bar", () => {
     const bar = new CollectionBarHost(
       {
         payload: {
@@ -98,7 +106,11 @@ describe("CollectionBarHost", () => {
     );
     bar.callSetup();
     const el = bar.render();
-    expect(el.querySelector(".sum-control-bar-tags")).toBeTruthy();
+    const tagsRow = el.querySelector(".sum-control-bar-search-tags");
+    expect(tagsRow).toBeTruthy();
+    expect(el.querySelector(".sum-control-bar-tags")).toBeFalsy();
+    expect(tagsRow!.textContent).toContain("Draft");
+    expect(tagsRow!.textContent).toContain("Group:");
     bar.destroy();
   });
 });

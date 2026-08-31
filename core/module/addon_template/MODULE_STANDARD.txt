@@ -7,9 +7,24 @@ The `addons/` directory at the project root holds installable app modules
 Directory (technical name = folder name, should match manifest "name"):
   addons/<technical_name>/
     manifest.json     — required
-    init.go           — optional blank import of models: _ "sumeru/addons/<name>/models"
+    init.go           — package + models blank import only (see Go layout below)
+    README.md         — recommended; purpose, models, key files
     models/           — Go structs embedding sdk.Model with sumeru:"model=…" tags. Run make generate so models/zmodels.go calls sdk.MustRegister (do not RegisterModel in init). Import sumeru/core/sdk.
-    views/            — XML under <sumeru> root (see below)
+    security/
+      security.xml    — groups, categories (load first in manifest)
+      sys.access.csv  — ACL rows (auto-loaded; optional in manifest data for docs)
+    data/             — optional seed XML (noupdate="1" where appropriate)
+    views/
+      actions.xml     — window actions via <action type="window"> (preferred)
+      *_actions.xml   — optional split when many actions (e.g. core_company_actions.xml)
+      {model}_{type}_views.xml — one primary view per file (e.g. core_partner_form_views.xml)
+      {model}_inherit_views.xml — view xpath inherits (after base views in manifest)
+      menus.xml       — always load last in manifest
+    hooks.go          — optional; event subscriptions, render hooks (not in init.go)
+    {feature}.go      — optional public API (e.g. mail/mail.go, automation/actions.go)
+    static/           — optional CSS/assets
+
+Reference layout: addons/contacts/ (gold standard for new addons)
 
 Core ships:
   addons/base/              — kernel `base` sys.module (Go models + XML)
@@ -27,6 +42,32 @@ manifest.json keys
   description    string  — shown in Apps
   application    bool     — optional; default true. false = hidden from Apps cards (e.g. base)
   data           []string — paths relative to addon root; XML load order is list order
+
+manifest.json data load order (recommended)
+-------------------------------------------
+  1. security/security.xml
+  2. security/sys.access.csv (optional; auto-loaded if omitted)
+  3. data/*.xml (seed records)
+  4. views/actions.xml and views/*_actions.xml
+  5. views/*_{form,list,kanban,...}_views.xml (base views before inherits)
+  6. views/*_inherit_views.xml
+  7. views/menus.xml (always last)
+
+File and XML id naming
+----------------------
+  View files:     {model_underscores}_{type}_views.xml   e.g. core_partner_form_views.xml
+  View xml id:    view_{model_underscores}_{type}       e.g. view_core_partner_form
+  Action files:   actions.xml or {area}_actions.xml
+  Action xml id:  action_{short_name}                   e.g. action_contacts
+  Window actions: prefer <action type="window" id="..." model="..." name="..." view_mode="..."/>
+                  over raw <record model="sys.action.window"> (both supported; shorthand is standard)
+
+Go layout
+---------
+  init.go — package declaration + blank import of models only:
+    import _ "sumeru/addons/<name>/models"
+  hooks.go / feature.go — event.Subscribe, render.RegisterShellHook, server action runners, etc.
+  Do not put hook registration in init.go when models/ exists; keeps init.go minimal and readable.
 
 ACL CSV (sys.access)
 --------------------
@@ -92,7 +133,26 @@ View inheritance
     after, before, replace, inside
   Stored arch may use `<form>`/`<list>` roots or `<view>`; both load after merge.
 
-  Example: addons/sale_demo_inherit/
+  Example: addons/contacts/views/core_partner_form_inherit_views.xml (xpath after phone → customer_rank)
+
+Model inherit
+-------------
+  Extend an existing ORM model from a dependent module with a Go struct that embeds sdk.Model
+  and uses inherit= instead of model=:
+
+    type PartnerContacts struct {
+        sdk.Model `sumeru:"inherit=core.partner"`
+        CustomerRank sdk.Integer `sumeru:"string=Customer Rank,default=0"`
+    }
+
+  Rules:
+    • inherit= and model= are mutually exclusive on one struct
+    • Target model must register first (manifest depends + import order)
+    • Duplicate field names on the same model panic at startup
+    • Run make generate, then -u your_module for additive schema sync on extended models
+    • Pair with view xpath inherit to show new fields in the UI
+
+  Example: addons/contacts/models/partner_extend.go
 
 Strict convention (enforced on startup)
 -----------------------------------------

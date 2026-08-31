@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <record id="module_category_automation" model="sys.module.category">
+            <field name="name">Automation</field>
+            <field name="sequence">90</field>
+        </record>
+
+        <record id="group_automation_manager" model="core.group">
+            <field name="name">Automation / Manager</field>
+            <field name="category_id" ref="module_category_automation"/>
+            <field name="implied_ids" eval="[(4, ref('base.group_system'))]"/>
+        </record>
+    </data>
+</sumeru>

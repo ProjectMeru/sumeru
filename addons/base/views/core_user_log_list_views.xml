@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_core.user.log_list" model="core.user.log" type="list">
+            <field name="create_date" string="When"/>
+            <field name="user_id" string="User"/>
+            <field name="result" string="Result"/>
+            <field name="ip" string="IP"/>
+        </view>
+    </data>
+</sumeru>

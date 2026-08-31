@@ -1,12 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <sumeru>
     <data>
-        <!-- sys.action.window : core.company -->
-        <record id="action_core.company" model="sys.action.window">
-            <field name="name">Companies</field>
-            <field name="core_model">core.company</field>
-            <field name="view_mode">list,kanban,form</field>
-            <field name="help">Maintain the legal entities used across the database: fiscal position, identifiers, and contact channels.</field>
-        </record>
+        <action id="action_core.company" type="window" model="core.company" name="Companies" view_mode="list,kanban,form">
+            <help>Maintain the legal entities used across the database: fiscal position, identifiers, and contact channels.</help>
+        </action>
     </data>
 </sumeru>

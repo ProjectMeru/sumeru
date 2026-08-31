@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_core.group_list" model="core.group" type="list">
+            <field name="name" string="Name"/>
+            <field name="category_id" string="Application"/>
+            <field name="sequence" string="Sequence"/>
+        </view>
+    </data>
+</sumeru>

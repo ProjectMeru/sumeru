@@ -79,11 +79,22 @@ func SyncRegistrySchemaForNames(modelNames []string) error {
 // ModelsForModuleSchemaSync returns (names, true) when install should only touch those models;
 // (nil, false) means sync the full registry (unknown modules with no registered models).
 func ModelsForModuleSchemaSync(moduleName string) ([]string, bool) {
-	names := ModelsOwnedByModule(moduleName)
-	if len(names) > 0 {
-		return names, true
+	owned := ModelsOwnedByModule(moduleName)
+	extended := ModelsExtendedByModule(moduleName)
+	if len(owned) == 0 && len(extended) == 0 {
+		return nil, false
 	}
-	return nil, false
+	seen := make(map[string]struct{}, len(owned)+len(extended))
+	var names []string
+	for _, name := range append(owned, extended...) {
+		if _, ok := seen[name]; ok {
+			continue
+		}
+		seen[name] = struct{}{}
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names, true
 }
 
 // SyncRegistrySchemaForModule runs schema sync for models owned by the module, or the full registry.

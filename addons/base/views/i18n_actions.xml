@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <action id="action_core.lang" type="window" model="core.lang" name="Languages" view_mode="list,form"/>
+        <action id="action_sys.translation" type="window" model="sys.translation" name="Translated Terms" view_mode="list,form"/>
+        <action id="action_sys.field.access" type="window" model="sys.field.access" name="Field Access" view_mode="list,form"/>
+    </data>
+</sumeru>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_core.user.apikey_form" model="core.user.apikey" type="form">
+            <sheet>
+                <div class="sum_title">
+                    <h1>
+                        <field name="name" placeholder="e.g. CI integration"/>
+                    </h1>
+                </div>
+                <group>
+                    <group string="Key">
+                        <field name="user_id" string="User"/>
+                        <field name="key_prefix" string="Prefix" readonly="1"/>
+                        <field name="active" string="Active"/>
+                        <field name="create_date" string="Created" readonly="1"/>
+                    </group>
+                </group>
+            </sheet>
+        </view>
+    </data>
+</sumeru>

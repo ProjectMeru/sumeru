@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_sys.rule_list" model="sys.rule" type="list">
+            <field name="name" string="Name"/>
+            <field name="model" string="Model"/>
+            <field name="active" string="Active"/>
+        </view>
+    </data>
+</sumeru>

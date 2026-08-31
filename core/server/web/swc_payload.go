@@ -2,7 +2,6 @@ package web
 
 import (
 	"context"
-	"strconv"
 
 	"sumeru/core/engine/render"
 	"sumeru/core/engine/swcmeta"
@@ -24,7 +23,6 @@ func buildSwcWorkspacePayload(
 		Record:        viewRecord.Record,
 		RecordID:      viewRecord.RecordID,
 	})
-	tabs := render.WorkspaceViewTabs(ctx, viewRecord.ResModel, viewRecord.ActionID, req.menuID, resolved.selectedMode, recordIDStr(viewRecord.RecordID))
 
 	input := swcmeta.ViewRecordInput{
 		ActionID:         viewRecord.ActionID,
@@ -45,7 +43,7 @@ func buildSwcWorkspacePayload(
 		ListRows:         viewRecord.ListRows,
 		KanbanGroupField: viewRecord.KanbanGroupField,
 		KanbanDraggable:  viewRecord.KanbanDraggable,
-		ViewTabs:         serializeSwcViewTabs(tabs),
+		ViewTabs:         serializeSwcViewTabs(viewRecord.ViewTabs),
 		Breadcrumbs:      serializeSwcBreadcrumbs(crumbs),
 		Defaults:         actionDefaultFieldValues(actionData),
 	}
@@ -62,13 +60,6 @@ func buildSwcWorkspacePayload(
 		}
 	}
 	return swcmeta.BuildWorkspacePayload(ctx, resolved.view, resolved.selectedMode, input, req.menuID)
-}
-
-func recordIDStr(id int) string {
-	if id <= 0 {
-		return ""
-	}
-	return strconv.Itoa(id)
 }
 
 func serializeSwcViewTabs(tabs []render.ViewSwitchTab) []swcmeta.ViewTab {

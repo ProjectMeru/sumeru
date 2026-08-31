@@ -1,10 +1,24 @@
 package module_test
 
 import (
+	"strings"
 	"testing"
 
+	"sumeru/core/engine/viewinherit"
 	"sumeru/core/module"
 )
+
+func TestPartnerFormInheritAddsCustomerRank(t *testing.T) {
+	parent := `<view id="view_core_partner_form" model="core.partner" type="form"><sheet><group><group string="Contact"><field name="email" string="Email"></field><field name="phone" string="Phone"></field></group></group></sheet></view>`
+	frag := `<xpath expr="//field[@name='phone']" position="after"><field name="customer_rank" string="Customer Rank"></field></xpath>`
+	out, err := viewinherit.ApplyInheritArch(parent, frag)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, `name="customer_rank"`) {
+		t.Fatalf("merged arch missing customer_rank: %s", out)
+	}
+}
 
 func TestInferSysViewTypeFromArch(t *testing.T) {
 	tests := []struct {

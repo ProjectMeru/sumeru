@@ -83,7 +83,7 @@ func TestBaseDeferredMenusIncludeGeoSection(t *testing.T) {
 	}
 }
 
-func TestBaseManifestMenusLoadBeforeGeoViews(t *testing.T) {
+func TestBaseManifestMenusLoadLast(t *testing.T) {
 	baseDir := baseAddonDir(t)
 	raw, err := os.ReadFile(filepath.Join(baseDir, "manifest.json"))
 	if err != nil {
@@ -95,19 +95,11 @@ func TestBaseManifestMenusLoadBeforeGeoViews(t *testing.T) {
 	if err := json.Unmarshal(raw, &manifest); err != nil {
 		t.Fatal(err)
 	}
-	menusIdx, geoIdx := -1, -1
-	for i, f := range manifest.Data {
-		switch f {
-		case "views/menus.xml":
-			menusIdx = i
-		case "views/geo_views.xml":
-			geoIdx = i
-		}
+	if len(manifest.Data) == 0 {
+		t.Fatal("manifest data is empty")
 	}
-	if menusIdx < 0 || geoIdx < 0 {
-		t.Fatal("manifest must list views/menus.xml and views/geo_views.xml")
-	}
-	if menusIdx >= geoIdx {
-		t.Fatalf("views/menus.xml (index %d) must load before views/geo_views.xml (index %d)", menusIdx, geoIdx)
+	last := manifest.Data[len(manifest.Data)-1]
+	if last != "views/menus.xml" {
+		t.Fatalf("views/menus.xml must be last in manifest data; got %q", last)
 	}
 }
