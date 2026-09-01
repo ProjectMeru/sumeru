@@ -4,8 +4,9 @@ import { html } from "../../template/html.js";
 import type { SwcWorkspacePayload } from "../../types/workspace.js";
 import { onWillStart, onWillUnmount } from "../../runtime/lifecycle.js";
 import { onMount, useTemplateRef } from "../../runtime/hooks.js";
-import { VIEW_GRAPH } from "../../constants/routes.js";
+import { VIEW_GRAPH, VIEW_LIST } from "../../constants/routes.js";
 import { CollectionBarHost, mountCollectionBar } from "../shared/collection-bar-host.js";
+import { navigateCollectionQuery } from "../shared/collection-query.js";
 
 interface GraphViewProps {
   payload: SwcWorkspacePayload;
@@ -142,6 +143,17 @@ export class GraphView extends SwcComponent<GraphViewProps> {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        onClick: (_event, elements) => {
+          if (elements.length === 0) return;
+          const idx = elements[0].index;
+          const group = this.groups[idx];
+          if (!group) return;
+          const value = group[this.groupField];
+          navigateCollectionQuery(this.env, this.props.payload, VIEW_LIST, {
+            customDomain: JSON.stringify([[this.groupField, "=", value]]),
+            listOffset: 0,
+          });
+        },
         plugins: {
           legend: { display: type === "pie" },
         },
