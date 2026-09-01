@@ -11,8 +11,22 @@ import (
 	"sumeru/core/engine/parser"
 )
 
+// SWCPageInput configures SWC workspace shell page rendering.
+type SWCPageInput struct {
+	View         *parser.View
+	ActiveMenuID string
+	TemplatesDir string
+	RecData      *ViewRecordData
+	SelectedMode string
+}
+
 // RenderSWCWorkspace builds the shell HTML page with an empty SWC mount point.
-func RenderSWCWorkspace(ctx context.Context, view *parser.View, activeMenuID, templatesDir string, recData *ViewRecordData, selectedMode string) string {
+func RenderSWCWorkspace(ctx context.Context, in SWCPageInput) string {
+	view := in.View
+	recData := in.RecData
+	selectedMode := in.SelectedMode
+	activeMenuID := in.ActiveMenuID
+	templatesDir := in.TemplatesDir
 	if recData == nil {
 		recData = &ViewRecordData{}
 	}

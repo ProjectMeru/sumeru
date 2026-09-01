@@ -29,6 +29,20 @@ type workspaceRequest struct {
 	listGroupBy string
 }
 
+type workspaceLoadInput struct {
+	ViewRecord *render.ViewRecordData
+	Resolved   *resolvedWorkspaceView
+	ActionData map[string]interface{}
+	Req        workspaceRequest
+}
+
+type searchWorkspaceRowsInput struct {
+	workspaceLoadInput
+	View        *parser.View
+	SearchQuery string
+	RowLimit    int
+}
+
 func parseWorkspaceRequest(r *http.Request, actionID int) workspaceRequest {
 	query := r.URL.Query()
 	offset, _ := strconv.Atoi(strings.TrimSpace(query.Get(workspaceOffsetParam)))
@@ -249,7 +263,14 @@ func buildViewRecordData(ctx context.Context, w http.ResponseWriter, r *http.Req
 			RecordID: req.recordID,
 			Model:    req.model,
 		}),
-		ViewTabs: render.WorkspaceViewTabs(ctx, resolved.targetModel, req.actionID, req.menuID, resolved.selectedMode, req.recordID, actionViewModesForTabs(actionData)),
+		ViewTabs: render.WorkspaceViewTabs(ctx, render.WorkspaceTabsInput{
+			ResModel:     resolved.targetModel,
+			ActionID:     req.actionID,
+			MenuID:       req.menuID,
+			SelectedMode: resolved.selectedMode,
+			RecordID:     req.recordID,
+			ViewModes:    actionViewModesForTabs(actionData),
+		}),
 	}
 	appendPageFlashesToViewRecord(r, w, viewRecord)
 	appendQueryFlashesToViewRecord(r, viewRecord)
@@ -258,7 +279,12 @@ func buildViewRecordData(ctx context.Context, w http.ResponseWriter, r *http.Req
 		viewRecord.RecordID = recordID
 	}
 
-	if err := loadViewModeData(ctx, viewRecord, resolved, actionData, req); err != nil {
+	if err := loadViewModeData(ctx, workspaceLoadInput{
+		ViewRecord: viewRecord,
+		Resolved:   resolved,
+		ActionData: actionData,
+		Req:        req,
+	}); err != nil {
 		return nil, err
 	}
 	return viewRecord, nil
@@ -280,10 +306,13 @@ func parsePositiveRecordID(recordIDRaw string) (int, bool) {
 	return recordID, err == nil && recordID > 0
 }
 
-func loadViewModeData(ctx context.Context, viewRecord *render.ViewRecordData, resolved *resolvedWorkspaceView, actionData map[string]interface{}, req workspaceRequest) error {
+func loadViewModeData(ctx context.Context, in workspaceLoadInput) error {
+	viewRecord := in.ViewRecord
+	resolved := in.Resolved
+	req := in.Req
 	switch resolved.selectedMode {
 	case workspaceViewModeForm:
-		return loadWorkspaceFormData(ctx, viewRecord, resolved.targetModel, req.recordID, actionData)
+		return loadWorkspaceFormData(ctx, in)
 	case workspaceViewModeList:
 		viewRecord.ListSearchQuery = req.listSearch
 		viewRecord.ListSearchURL = workspaceListSearchURL(req)
@@ -292,31 +321,35 @@ func loadViewModeData(ctx context.Context, viewRecord *render.ViewRecordData, re
 		viewRecord.ListFilter = req.listFilter
 		viewRecord.ListDomain = req.listDomain
 		viewRecord.ListGroupBy = req.listGroupBy
-		return loadWorkspaceListData(ctx, viewRecord, resolved.targetModel, actionData, resolved.view, req)
+		return loadWorkspaceListData(ctx, in)
 	case workspaceViewModeKanban:
 		viewRecord.ListSearchQuery = req.listSearch
 		viewRecord.ListFilter = req.listFilter
 		viewRecord.ListDomain = req.listDomain
 		viewRecord.ListGroupBy = req.listGroupBy
-		return loadWorkspaceKanbanData(ctx, viewRecord, resolved, actionData, req)
+		return loadWorkspaceKanbanData(ctx, in)
 	case workspaceViewModePivot:
 		viewRecord.ListSearchQuery = req.listSearch
 		viewRecord.ListFilter = req.listFilter
 		viewRecord.ListDomain = req.listDomain
 		viewRecord.ListGroupBy = req.listGroupBy
-		return loadWorkspacePivotData(ctx, viewRecord, resolved, actionData, req)
+		return loadWorkspacePivotData(ctx, in)
 	case workspaceViewModeGraph, workspaceViewModeCalendar, workspaceViewModeGantt, workspaceViewModeMap, workspaceViewModeCohort:
 		viewRecord.ListSearchQuery = req.listSearch
 		viewRecord.ListFilter = req.listFilter
 		viewRecord.ListDomain = req.listDomain
 		viewRecord.ListGroupBy = req.listGroupBy
-		return loadWorkspaceCollectionData(ctx, viewRecord, resolved.targetModel, actionData, resolved.view, req, maxWorkspaceListRows)
+		return loadWorkspaceCollectionData(ctx, in, maxWorkspaceListRows)
 	default:
 		return nil
 	}
 }
 
-func loadWorkspaceFormData(ctx context.Context, viewRecord *render.ViewRecordData, targetModel, recordIDRaw string, actionData map[string]interface{}) error {
+func loadWorkspaceFormData(ctx context.Context, in workspaceLoadInput) error {
+	viewRecord := in.ViewRecord
+	targetModel := in.Resolved.targetModel
+	recordIDRaw := in.Req.recordID
+	actionData := in.ActionData
 	if recordIDRaw == "" {
 		if defaults := actionDefaultFieldValues(actionData); len(defaults) > 0 {
 			viewRecord.Record = defaults
@@ -354,9 +387,19 @@ func loadWorkspaceFormRecord(ctx context.Context, targetModel, recordIDRaw strin
 	return record, nil
 }
 
-func loadWorkspaceListData(ctx context.Context, viewRecord *render.ViewRecordData, targetModel string, actionData map[string]interface{}, view *parser.View, req workspaceRequest) error {
+func loadWorkspaceListData(ctx context.Context, in workspaceLoadInput) error {
+	viewRecord := in.ViewRecord
+	targetModel := in.Resolved.targetModel
+	req := in.Req
 	searchView := loadSearchView(ctx, targetModel)
-	domain := workspaceListDomain(ctx, actionData, view, searchView, req.listSearch, req.listFilter, req.listDomain)
+	domain := workspaceListDomain(ctx, listDomainInput{
+		ActionData:  in.ActionData,
+		View:        in.Resolved.view,
+		SearchView:  searchView,
+		SearchQuery: req.listSearch,
+		FilterCSV:   req.listFilter,
+		DomainJSON:  req.listDomain,
+	})
 	orderBy := orderByFromSortParam(req.listSort)
 	if gbFields := splitCommaSeparatedValues(req.listGroupBy); len(gbFields) > 0 {
 		gbOrder := strings.Join(gbFields, ", ")
@@ -376,12 +419,25 @@ func loadWorkspaceListData(ctx context.Context, viewRecord *render.ViewRecordDat
 	}
 	viewRecord.ListRows = rows
 	viewRecord.ListTotal = total
+	if gb := firstGroupByField(req.listGroupBy); gb != "" {
+		viewRecord.ListSections = partitionListSections(rows, gb)
+	}
 	return nil
 }
 
-func loadWorkspaceCollectionData(ctx context.Context, viewRecord *render.ViewRecordData, targetModel string, actionData map[string]interface{}, view *parser.View, req workspaceRequest, rowLimit int) error {
+func loadWorkspaceCollectionData(ctx context.Context, in workspaceLoadInput, rowLimit int) error {
+	viewRecord := in.ViewRecord
+	targetModel := in.Resolved.targetModel
+	req := in.Req
 	searchView := loadSearchView(ctx, targetModel)
-	domain := workspaceListDomain(ctx, actionData, view, searchView, req.listSearch, req.listFilter, req.listDomain)
+	domain := workspaceListDomain(ctx, listDomainInput{
+		ActionData:  in.ActionData,
+		View:        in.Resolved.view,
+		SearchView:  searchView,
+		SearchQuery: req.listSearch,
+		FilterCSV:   req.listFilter,
+		DomainJSON:  req.listDomain,
+	})
 	rows, err := orm.SearchLimit(ctx, targetModel, domain, rowLimit)
 	if err != nil {
 		return fmt.Errorf("collection load: %w", err)
@@ -390,9 +446,19 @@ func loadWorkspaceCollectionData(ctx context.Context, viewRecord *render.ViewRec
 	return nil
 }
 
-func loadWorkspaceKanbanData(ctx context.Context, viewRecord *render.ViewRecordData, resolved *resolvedWorkspaceView, actionData map[string]interface{}, req workspaceRequest) error {
+func loadWorkspaceKanbanData(ctx context.Context, in workspaceLoadInput) error {
+	viewRecord := in.ViewRecord
+	resolved := in.Resolved
+	req := in.Req
 	searchView := loadSearchView(ctx, resolved.targetModel)
-	domain := workspaceListDomain(ctx, actionData, resolved.view, searchView, req.listSearch, req.listFilter, req.listDomain)
+	domain := workspaceListDomain(ctx, listDomainInput{
+		ActionData:  in.ActionData,
+		View:        resolved.view,
+		SearchView:  searchView,
+		SearchQuery: req.listSearch,
+		FilterCSV:   req.listFilter,
+		DomainJSON:  req.listDomain,
+	})
 	rows, err := orm.SearchLimit(ctx, resolved.targetModel, domain, maxWorkspaceKanbanRows)
 	if err != nil {
 		return fmt.Errorf("kanban load: %w", err)
@@ -415,9 +481,19 @@ func loadWorkspaceKanbanData(ctx context.Context, viewRecord *render.ViewRecordD
 	return nil
 }
 
-func loadWorkspacePivotData(ctx context.Context, viewRecord *render.ViewRecordData, resolved *resolvedWorkspaceView, actionData map[string]interface{}, req workspaceRequest) error {
+func loadWorkspacePivotData(ctx context.Context, in workspaceLoadInput) error {
+	viewRecord := in.ViewRecord
+	resolved := in.Resolved
+	req := in.Req
 	searchView := loadSearchView(ctx, resolved.targetModel)
-	domain := workspaceListDomain(ctx, actionData, resolved.view, searchView, req.listSearch, req.listFilter, req.listDomain)
+	domain := workspaceListDomain(ctx, listDomainInput{
+		ActionData:  in.ActionData,
+		View:        resolved.view,
+		SearchView:  searchView,
+		SearchQuery: req.listSearch,
+		FilterCSV:   req.listFilter,
+		DomainJSON:  req.listDomain,
+	})
 	rows, err := orm.SearchLimit(ctx, resolved.targetModel, domain, maxWorkspaceListRows)
 	if err != nil {
 		return fmt.Errorf("pivot load: %w", err)
@@ -431,13 +507,22 @@ func loadWorkspacePivotData(ctx context.Context, viewRecord *render.ViewRecordDa
 	return nil
 }
 
-func searchWorkspaceRowsWithSearch(ctx context.Context, targetModel string, actionData map[string]interface{}, view *parser.View, searchQuery string, rowLimit int) ([]map[string]interface{}, error) {
-	domain := workspaceListDomain(ctx, actionData, view, nil, searchQuery, "", "")
-	return orm.SearchLimit(ctx, targetModel, domain, rowLimit)
+func searchWorkspaceRowsWithSearch(ctx context.Context, in searchWorkspaceRowsInput) ([]map[string]interface{}, error) {
+	domain := workspaceListDomain(ctx, listDomainInput{
+		ActionData:  in.ActionData,
+		View:        in.View,
+		SearchView:  nil,
+		SearchQuery: in.SearchQuery,
+	})
+	return orm.SearchLimit(ctx, in.Resolved.targetModel, domain, in.RowLimit)
 }
 
-func searchWorkspaceRows(ctx context.Context, targetModel string, actionData map[string]interface{}, rowLimit int) ([]map[string]interface{}, error) {
-	return searchWorkspaceRowsWithSearch(ctx, targetModel, actionData, nil, "", rowLimit)
+func searchWorkspaceRows(ctx context.Context, in workspaceLoadInput, rowLimit int) ([]map[string]interface{}, error) {
+	return searchWorkspaceRowsWithSearch(ctx, searchWorkspaceRowsInput{
+		workspaceLoadInput: in,
+		SearchQuery:        "",
+		RowLimit:           rowLimit,
+	})
 }
 
 func loadSearchView(ctx context.Context, model string) *parser.View {

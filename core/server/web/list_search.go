@@ -39,20 +39,29 @@ func listSearchFieldNames(views ...*parser.View) []string {
 	return out
 }
 
-func workspaceListDomain(ctx context.Context, actionData map[string]interface{}, view, searchView *parser.View, searchQuery, filterCSV, domainJSON string) [][]interface{} {
-	base := actionListDomain(ctx, actionData)
+type listDomainInput struct {
+	ActionData   map[string]interface{}
+	View         *parser.View
+	SearchView   *parser.View
+	SearchQuery  string
+	FilterCSV    string
+	DomainJSON   string
+}
+
+func workspaceListDomain(ctx context.Context, in listDomainInput) [][]interface{} {
+	base := actionListDomain(ctx, in.ActionData)
 	model := ""
-	if view != nil {
-		model = view.Model
+	if in.View != nil {
+		model = in.View.Model
 	}
-	searchFields := listSearchFieldNames(view, searchView)
-	if searchQuery != "" && model != "" {
-		search := orm.BuildListSearchDomain(model, searchFields, searchQuery)
+	searchFields := listSearchFieldNames(in.View, in.SearchView)
+	if in.SearchQuery != "" && model != "" {
+		search := orm.BuildListSearchDomain(model, searchFields, in.SearchQuery)
 		base = orm.MergeDomains(base, search)
 	}
 	uid := orm.SecurityUID(ctx)
-	for _, name := range splitCommaSeparatedValues(filterCSV) {
-		f := findSearchFilter(searchView, name)
+	for _, name := range splitCommaSeparatedValues(in.FilterCSV) {
+		f := findSearchFilter(in.SearchView, name)
 		if f == nil || strings.TrimSpace(f.Domain) == "" {
 			continue
 		}
@@ -64,8 +73,8 @@ func workspaceListDomain(ctx context.Context, actionData map[string]interface{},
 		dom = orm.SubstituteDomainUID(dom, uid)
 		base = orm.MergeDomains(base, dom)
 	}
-	if strings.TrimSpace(domainJSON) != "" && model != "" {
-		dom, err := orm.ParseDomainJSON(domainJSON)
+	if strings.TrimSpace(in.DomainJSON) != "" && model != "" {
+		dom, err := orm.ParseDomainJSON(in.DomainJSON)
 		if err == nil && len(dom) > 0 {
 			dom = filterDomainToModel(model, dom)
 			dom = orm.ResolveDomainXMLRefs(ctx, dom)

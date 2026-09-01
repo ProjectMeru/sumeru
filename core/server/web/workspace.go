@@ -57,7 +57,13 @@ func WebHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	html := render.RenderSWCWorkspace(ctx, resolved.view, req.menuID, config.AppConfig.TemplatesPath, viewRecord, resolved.selectedMode)
+	html := render.RenderSWCWorkspace(ctx, render.SWCPageInput{
+		View:         resolved.view,
+		ActiveMenuID: req.menuID,
+		TemplatesDir: config.AppConfig.TemplatesPath,
+		RecData:      viewRecord,
+		SelectedMode: resolved.selectedMode,
+	})
 	logWorkspaceViewOpened(ctx, r.URL.Path, req, actionID, resolved)
 	writeHTML(w, ctx, r.URL.Path, html)
 }
