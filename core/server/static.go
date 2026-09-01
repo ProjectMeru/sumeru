@@ -101,29 +101,40 @@ func registerInstalledAddonManifestAssets(ctx context.Context, stylesheetURLs, s
 			continue
 		}
 		for _, rel := range addon.Manifest.Assets {
-			clean, ok := normalizeManifestAssetRel(rel)
-			if !ok {
-				continue
+			registerManifestAsset(ctx, addon, moduleName, rel, stylesheetURLs, scriptURLs)
+		}
+		for bundle, paths := range addon.Manifest.AssetBundles {
+			for _, rel := range paths {
+				registerManifestAsset(ctx, addon, moduleName, rel, stylesheetURLs, scriptURLs)
+				applog.InfoMsg(ctx, "web", "static", "Registered manifest asset bundle entry",
+					map[string]interface{}{"module": moduleName, "bundle": bundle, "path": rel})
 			}
-			absPath := filepath.Join(addon.Path, clean)
-			if !isRegularFile(absPath) {
-				applog.WarnMsg(ctx, "web", "static", "manifest asset not found", nil,
-					map[string]interface{}{"module": moduleName, "path": absPath})
-				continue
-			}
-			publicURL := manifestAssetPublicURL(moduleName, clean)
-			contentType := contentTypeForAssetRel(clean)
-			registerInstalledModuleFileHandler(publicURL, absPath, moduleName, contentType)
-			if strings.HasSuffix(strings.ToLower(clean), ".css") {
-				*stylesheetURLs = append(*stylesheetURLs, publicURL)
-			}
-			if strings.HasSuffix(strings.ToLower(clean), ".js") || strings.HasSuffix(strings.ToLower(clean), ".mjs") {
-				*scriptURLs = append(*scriptURLs, publicURL)
-			}
-			applog.InfoMsg(ctx, "web", "static", "Registered manifest asset",
-				map[string]interface{}{"module": moduleName, "path": absPath, "url": publicURL})
 		}
 	}
+}
+
+func registerManifestAsset(ctx context.Context, addon *module.Addon, moduleName, rel string, stylesheetURLs, scriptURLs *[]string) {
+	clean, ok := normalizeManifestAssetRel(rel)
+	if !ok {
+		return
+	}
+	absPath := filepath.Join(addon.Path, clean)
+	if !isRegularFile(absPath) {
+		applog.WarnMsg(ctx, "web", "static", "manifest asset not found", nil,
+			map[string]interface{}{"module": moduleName, "path": absPath})
+		return
+	}
+	publicURL := manifestAssetPublicURL(moduleName, clean)
+	contentType := contentTypeForAssetRel(clean)
+	registerInstalledModuleFileHandler(publicURL, absPath, moduleName, contentType)
+	if strings.HasSuffix(strings.ToLower(clean), ".css") {
+		*stylesheetURLs = append(*stylesheetURLs, publicURL)
+	}
+	if strings.HasSuffix(strings.ToLower(clean), ".js") || strings.HasSuffix(strings.ToLower(clean), ".mjs") {
+		*scriptURLs = append(*scriptURLs, publicURL)
+	}
+	applog.InfoMsg(ctx, "web", "static", "Registered manifest asset",
+		map[string]interface{}{"module": moduleName, "path": absPath, "url": publicURL})
 }
 
 func normalizeManifestAssetRel(rel string) (string, bool) {
