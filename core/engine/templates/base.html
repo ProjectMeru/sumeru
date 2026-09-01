@@ -343,6 +343,9 @@
         </div>
     </dialog>
     <div id="sum-toast-stack" class="sum-toast-stack" aria-live="polite"></div>
+    {{range .ExtraScriptURLs}}
+    <script src="{{.}}" defer></script>
+    {{end}}
     {{if .SWCBootstrapJSON}}
     <script>window.__SWC_BOOTSTRAP__ = {{.SWCBootstrapJSON}};</script>
     {{if .SwcAddonEntriesJSON}}<script>window.__SWC_ADDON_ENTRIES__ = {{.SwcAddonEntriesJSON}};</script>{{end}}

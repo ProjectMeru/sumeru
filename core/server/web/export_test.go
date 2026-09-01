@@ -7,6 +7,7 @@ import (
 
 	"sumeru/core/engine/render"
 	"sumeru/core/orm"
+	"sumeru/core/report"
 )
 
 // Type aliases for external tests in core/server/web (web_test package).
@@ -321,4 +322,29 @@ func ModuleDisplayName(moduleName, displayName string) string {
 
 func ActionViewModesForTabs(actionData map[string]interface{}) []string {
 	return actionViewModesForTabs(actionData)
+}
+
+// ExportXLSXHandlerForTest exposes the XLSX export handler for external tests.
+func ExportXLSXHandlerForTest(w http.ResponseWriter, r *http.Request) {
+	ExportXLSXHandler(w, r)
+}
+
+// ResolveExportRequestForTest exposes export query validation for external tests.
+func ResolveExportRequestForTest(w http.ResponseWriter, r *http.Request) (report.ExportCSVInput, bool) {
+	return resolveExportRequest(w, r)
+}
+
+// ExportTemplatePDFHandlerForTest exposes the template PDF handler for external tests.
+func ExportTemplatePDFHandlerForTest(w http.ResponseWriter, r *http.Request) {
+	ExportTemplatePDFHandler(w, r)
+}
+
+// SetTestSessionUserIDForTest overrides SessionUserID for handler tests.
+func SetTestSessionUserIDForTest(userID int) { testSessionUserIDOverride = userID }
+
+// ResetTestSessionUserIDForTest clears the session override.
+func ResetTestSessionUserIDForTest() { testSessionUserIDOverride = 0 }
+
+func ResolveExtraScripts(pageScripts, optScripts []string) []string {
+	return resolveExtraScripts(pageScripts, optScripts)
 }

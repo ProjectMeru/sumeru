@@ -31,6 +31,7 @@ export const ACTION_CLOSED = "action.closed";
 
 export const EXPORT_CSV_ROUTE = "/web/export/csv";
 export const EXPORT_PDF_ROUTE = "/web/export/pdf";
+export const EXPORT_XLSX_ROUTE = "/web/export/xlsx";
 export const BULK_TEMPLATE_ROUTE = "/web/bulk/template";
 export const BULK_UPLOAD_ROUTE = "/web/bulk/upload";
 export const SAVED_SEARCHES_ROUTE = "/web/swc/saved-searches";

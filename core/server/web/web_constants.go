@@ -248,7 +248,9 @@ const (
 const (
 	importCSVRoute      = "/web/import/csv"
 	exportCSVRoute      = "/web/export/csv"
-	exportPDFRoute      = "/web/export/pdf"
+	exportPDFRoute         = "/web/export/pdf"
+	exportXLSXRoute        = "/web/export/xlsx"
+	templatePDFRoute       = "/web/report/template-pdf"
 	bulkTemplateRoute   = "/web/bulk/template"
 	bulkUploadRoute     = "/web/bulk/upload"
 	bulkConfirmRoute    = "/web/bulk/confirm"

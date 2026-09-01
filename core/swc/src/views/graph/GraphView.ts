@@ -1,7 +1,9 @@
+import Chart from "chart.js/auto";
 import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
 import type { SwcWorkspacePayload } from "../../types/workspace.js";
-import { onWillStart } from "../../runtime/lifecycle.js";
+import { onWillStart, onWillUnmount } from "../../runtime/lifecycle.js";
+import { onMount, useTemplateRef } from "../../runtime/hooks.js";
 import { VIEW_GRAPH } from "../../constants/routes.js";
 import { CollectionBarHost, mountCollectionBar } from "../shared/collection-bar-host.js";
 
@@ -9,17 +11,36 @@ interface GraphViewProps {
   payload: SwcWorkspacePayload;
 }
 
-/** Graph view over read_group RPC (bar / line / pie). */
+const CHART_PALETTE = ["#2563eb", "#16a34a", "#f59e0b", "#dc2626", "#7c3aed", "#0891b2"];
+
+/** Graph view over read_group RPC (bar / line / pie) via Chart.js. */
 export class GraphView extends SwcComponent<GraphViewProps> {
   private groups: Record<string, unknown>[] = [];
   private measureField = "id";
   private groupField = "create_date";
   private chart = "bar";
   private collectionBar!: CollectionBarHost;
+  private chartInstance: Chart | null = null;
+  private chartInstanceType: "bar" | "line" | "pie" | "" = "";
+  private canvasRef!: { current: Element | null };
+  private chartDataKey = "";
+  private loadSeq = 0;
 
   override setup(): void {
+    this.canvasRef = useTemplateRef("graph-canvas");
     this.collectionBar = mountCollectionBar(this.props.payload, VIEW_GRAPH, this.env);
     onWillStart(() => this.load());
+    onMount(() => this.syncChart());
+    onWillUnmount(() => this.destroyChart());
+  }
+
+  override afterPatch(): void {
+    const key = this.buildChartDataKey();
+    if (key === this.chartDataKey) {
+      return;
+    }
+    this.chartDataKey = key;
+    this.syncChart();
   }
 
   override onPropsChanged(props: GraphViewProps): void {
@@ -32,17 +53,23 @@ export class GraphView extends SwcComponent<GraphViewProps> {
   }
 
   private async load(): Promise<void> {
+    const seq = ++this.loadSeq;
     const payload = this.props.payload;
     this.chart = (payload.arch.graph?.chart || "bar").toLowerCase();
     this.groupField = payload.arch.fields.find((f) => f.pivotType === "row")?.name ?? "create_date";
     this.measureField = payload.arch.fields.find((f) => f.pivotType === "measure")?.name ?? "id";
-    this.groups = await this.env.services.rpc.readGroup(
+    const groups = await this.env.services.rpc.readGroup(
       payload.model,
       [],
       [this.measureField],
       [this.groupField],
       40,
     );
+    if (seq !== this.loadSeq) {
+      return;
+    }
+    this.groups = groups;
+    this.chartDataKey = "";
     this.rerender();
   }
 
@@ -53,47 +80,88 @@ export class GraphView extends SwcComponent<GraphViewProps> {
     return String(group.name ?? "");
   }
 
-  override template() {
-    const max = Math.max(...this.groups.map((g) => Number(g[this.measureField] ?? 0)), 1);
-    if (this.chart === "pie") {
-      let accumulatedPercent = 0;
-      const total = this.groups.reduce((sum, g) => sum + Number(g[this.measureField] ?? 0), 0) || 1;
-      const stops: string[] = [];
-      const palette = ["#2563eb", "#16a34a", "#f59e0b", "#dc2626", "#7c3aed", "#0891b2"];
-      this.groups.forEach((group, index) => {
-        const fieldValue = Number(group[this.measureField] ?? 0);
-        const start = accumulatedPercent;
-        accumulatedPercent += (fieldValue / total) * 100;
-        stops.push(`${palette[index % palette.length]} ${start}% ${accumulatedPercent}%`);
-      });
-      return html`
-        <div class="sum-collection-view sum-graph-view">
-          ${this.collectionBar.renderOrPatch()}
-          <div class="sum-graph-pie" style=${`background:conic-gradient(${stops.join(",")})`}></div>
-          <ul class="sum-graph-legend">
-            ${this.groups.map(
-              (group, index) => html`<li>
-                <span class="sum-graph-swatch" style=${`background:${["#2563eb", "#16a34a", "#f59e0b", "#dc2626", "#7c3aed", "#0891b2"][index % 6]}`}></span>
-                ${this.labelOf(group)} (${String(group[this.measureField] ?? 0)})
-              </li>`,
-            )}
-          </ul>
-        </div>
-      `;
+  private chartType(): "bar" | "line" | "pie" {
+    if (this.chart === "pie") return "pie";
+    if (this.chart === "line") return "line";
+    return "bar";
+  }
+
+  private buildChartDataKey(): string {
+    const labels = this.groups.map((group) => this.labelOf(group));
+    const values = this.groups.map((group) => Number(group[this.measureField] ?? 0));
+    return `${this.chartType()}:${this.measureField}:${labels.join("\u001e")}:${values.join(",")}`;
+  }
+
+  private destroyChart(): void {
+    this.chartInstance?.destroy();
+    this.chartInstance = null;
+    this.chartInstanceType = "";
+  }
+
+  private syncChart(): void {
+    const canvas = this.canvasRef.current as HTMLCanvasElement | null;
+    if (!canvas) return;
+
+    const labels = this.groups.map((group) => this.labelOf(group));
+    const values = this.groups.map((group) => Number(group[this.measureField] ?? 0));
+    const type = this.chartType();
+
+    if (this.chartInstance && this.chartInstanceType === type) {
+      this.chartInstance.data.labels = labels;
+      const dataset = this.chartInstance.data.datasets[0];
+      dataset.data = values;
+      dataset.label = this.measureField;
+      if (type === "pie") {
+        dataset.backgroundColor = CHART_PALETTE;
+        dataset.borderColor = CHART_PALETTE;
+      } else {
+        dataset.backgroundColor = CHART_PALETTE[0];
+        dataset.borderColor = type === "line" ? CHART_PALETTE[0] : CHART_PALETTE;
+      }
+      this.chartInstance.update();
+      return;
     }
+
+    this.destroyChart();
+    this.chartInstanceType = type;
+    this.chartInstance = new Chart(canvas, {
+      type,
+      data: {
+        labels,
+        datasets: [
+          {
+            label: this.measureField,
+            data: values,
+            backgroundColor: type === "pie" ? CHART_PALETTE : CHART_PALETTE[0],
+            borderColor: type === "line" ? CHART_PALETTE[0] : CHART_PALETTE,
+            borderWidth: type === "line" ? 2 : 1,
+            tension: type === "line" ? 0.25 : 0,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: type === "pie" },
+        },
+        scales:
+          type === "pie"
+            ? undefined
+            : {
+                y: { beginAtZero: true },
+              },
+      },
+    });
+  }
+
+  override template() {
     return html`
       <div class="sum-collection-view sum-graph-view">
         ${this.collectionBar.renderOrPatch()}
-        ${this.groups.map((group) => {
-          const label = this.labelOf(group);
-          const fieldValue = Number(group[this.measureField] ?? 0);
-          const pct = Math.round((fieldValue / max) * 100);
-          return html`<div class="sum-graph-bar-row">
-            <span class="sum-graph-label">${label}</span>
-            <div class=${this.chart === "line" ? "sum-graph-bar sum-graph-bar--line" : "sum-graph-bar"} style="width:${pct}%"></div>
-            <span class="sum-graph-value">${fieldValue}</span>
-          </div>`;
-        })}
+        <div class="sum-graph-chart-wrap">
+          <canvas data-ref="graph-canvas"></canvas>
+        </div>
       </div>
     `;
   }

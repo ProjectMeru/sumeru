@@ -116,6 +116,9 @@ func EnrichShellPageData(ctx context.Context, d *PageData) {
 	d.applyShellUserInitials()
 
 	d.ActivityEnabled = mail.CompanyChatterEnabled(ctx) && mail.CompanyActivityPanelEnabled(ctx)
+	if len(d.ExtraScriptURLs) == 0 {
+		d.ExtraScriptURLs = ExtraScriptURLs
+	}
 	if d.SuppressActivityDock {
 		d.ActivityEnabled = false
 	}

@@ -189,6 +189,7 @@ export interface SwcCohortMeta {
 export interface SwcReportMeta {
   download: boolean;
   upload: boolean;
+  formats?: string;
   pdfSizes: string;
   bulkModes: string;
 }

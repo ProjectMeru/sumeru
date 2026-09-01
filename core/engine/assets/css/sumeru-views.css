@@ -2097,6 +2097,19 @@ label.sum-form-label--hint {
   padding: 0.5rem 0 1.25rem;
 }
 
+.sum-graph-chart-wrap {
+  position: relative;
+  min-height: 16rem;
+  height: 20rem;
+  width: 100%;
+}
+
+.sum-graph-chart-wrap canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
 .sum-graph-bar-row {
   display: grid;
   grid-template-columns: 8rem 1fr 4rem;

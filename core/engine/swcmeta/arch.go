@@ -85,6 +85,7 @@ func SerializeViewForUser(ctx context.Context, view *parser.View) ViewArch {
 		arch.Report = &ReportMeta{
 			Download:  caps.HasDownload(),
 			Upload:    caps.BulkUpload,
+			Formats:   strings.Join(caps.DownloadFormats, ","),
 			PDFSizes:  strings.Join(caps.PDFSizes, ","),
 			BulkModes: strings.Join(caps.BulkModes, ","),
 		}

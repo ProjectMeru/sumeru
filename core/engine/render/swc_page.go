@@ -39,6 +39,7 @@ func RenderSWCWorkspace(ctx context.Context, view *parser.View, activeMenuID, te
 		ActiveMenuID:            activeMenuID,
 		ViewStylesheetURLs:      []string{"/static/css/sumeru-workspace.css"},
 		ExtraStylesheetURLs:     ExtraStylesheetURLs,
+		ExtraScriptURLs:         ExtraScriptURLs,
 		ViewTabs:                recData.ViewTabs,
 		ActivityContextModel:    actCtxModel,
 		ActivityContextRecordID: actCtxID,

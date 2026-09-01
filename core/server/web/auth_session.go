@@ -14,6 +14,8 @@ import (
 const sessionCookieName = "sumeru_session"
 const sessionDuration = 7 * 24 * time.Hour
 
+var testSessionUserIDOverride int
+
 func randomSessionID() (string, error) {
 	b := make([]byte, 24)
 	if _, err := rand.Read(b); err != nil {
@@ -59,6 +61,9 @@ func ClearSessionCookie(w http.ResponseWriter) {
 
 // SessionUserID returns core.user id from cookie session, or 0.
 func SessionUserID(r *http.Request) int {
+	if testSessionUserIDOverride > 0 {
+		return testSessionUserIDOverride
+	}
 	if orm.DB == nil {
 		return 0
 	}

@@ -1,5 +1,3 @@
-# --- Sumeru (project-specific) ---
-
 # Local server config (secrets). Templates sumeru.conf.example and sumeru.conf.ci stay tracked.
 sumeru.conf
 

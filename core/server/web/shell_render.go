@@ -96,6 +96,7 @@ func applyShellPageDefaults(page render.PageData, opts shellPageOpts, route stri
 		page.ViewStylesheetURLs = []string{workspaceStylesheetURL}
 	}
 	page.ExtraStylesheetURLs = resolveExtraStylesheets(page.ExtraStylesheetURLs, opts.ExtraStylesheetURLs)
+	page.ExtraScriptURLs = resolveExtraScripts(page.ExtraScriptURLs, nil)
 	if page.CSRFToken == "" {
 		page.CSRFToken = CSRFTokenForRequest(r)
 	}
@@ -113,6 +114,16 @@ func resolveExtraStylesheets(pageStylesheets, optStylesheets []string) []string 
 		return pageStylesheets
 	}
 	return render.ExtraStylesheetURLs
+}
+
+func resolveExtraScripts(pageScripts, optScripts []string) []string {
+	if len(optScripts) > 0 {
+		return optScripts
+	}
+	if len(pageScripts) > 0 {
+		return pageScripts
+	}
+	return render.ExtraScriptURLs
 }
 
 func writeHTML(w http.ResponseWriter, ctx context.Context, route, html string) {
