@@ -68,6 +68,10 @@ func viewTypeLabel(base, viewType string) string {
 		return base + " · Map"
 	case ViewModeCohort:
 		return base + " · Cohort"
+	case ViewModeHierarchy:
+		return base + " · Hierarchy"
+	case ViewModeActivity:
+		return base + " · Activities"
 	default:
 		return base
 	}

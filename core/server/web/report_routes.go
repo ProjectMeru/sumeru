@@ -56,7 +56,7 @@ func ExportPivotHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "group_by and measures required", http.StatusBadRequest)
 		return
 	}
-	domain := exportDomain(r)
+	domain := analyticsExportDomain(r.Context(), r, modelName)
 	data, err := report.ExportPivotCSV(r.Context(), report.PivotExportInput{
 		Model:       modelName,
 		Domain:      domain,
@@ -91,7 +91,7 @@ func ExportGraphHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "group_by and measure required", http.StatusBadRequest)
 		return
 	}
-	domain := exportDomain(r)
+	domain := analyticsExportDomain(r.Context(), r, modelName)
 	data, err := report.ExportGraphCSV(r.Context(), report.GraphExportInput{
 		Model:        modelName,
 		Domain:       domain,

@@ -34,6 +34,8 @@ func WorkspaceViewTabs(ctx context.Context, in WorkspaceTabsInput) []ViewSwitchT
 		{ViewModeGantt, "Gantt"},
 		{ViewModeMap, "Map"},
 		{ViewModeCohort, "Cohort"},
+		{ViewModeHierarchy, "Hierarchy"},
+		{ViewModeActivity, "Activity"},
 	}
 	sel := strings.ToLower(strings.TrimSpace(in.SelectedMode))
 	menuID := strings.TrimSpace(in.MenuID)

@@ -334,7 +334,7 @@ func loadViewModeData(ctx context.Context, in workspaceLoadInput) error {
 		viewRecord.ListDomain = req.listDomain
 		viewRecord.ListGroupBy = req.listGroupBy
 		return loadWorkspacePivotData(ctx, in)
-	case workspaceViewModeGraph, workspaceViewModeCalendar, workspaceViewModeGantt, workspaceViewModeMap, workspaceViewModeCohort:
+	case workspaceViewModeGraph, workspaceViewModeCalendar, workspaceViewModeGantt, workspaceViewModeMap, workspaceViewModeCohort, workspaceViewModeHierarchy, workspaceViewModeActivity:
 		viewRecord.ListSearchQuery = req.listSearch
 		viewRecord.ListFilter = req.listFilter
 		viewRecord.ListDomain = req.listDomain

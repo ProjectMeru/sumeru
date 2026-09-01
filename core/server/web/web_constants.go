@@ -217,6 +217,8 @@ const (
 	workspaceViewModeGantt    = render.ViewModeGantt
 	workspaceViewModeMap      = render.ViewModeMap
 	workspaceViewModeCohort   = render.ViewModeCohort
+	workspaceViewModeHierarchy = render.ViewModeHierarchy
+	workspaceViewModeActivity  = render.ViewModeActivity
 	maxWorkspaceListRows      = 500
 	maxWorkspaceKanbanRows    = 200
 	workspaceListPageSize     = 40
