@@ -2,96 +2,92 @@ package render
 
 import (
 	"strings"
-	"unicode"
 )
 
-// UIModelName maps technical model names to end-user labels for the UI.
-func UIModelName(technicalModel string) string {
-	switch strings.TrimSpace(technicalModel) {
-	case "core.company":
-		return "Companies"
-	case "core.user":
-		return "Users"
-	case "core.partner":
-		return "Contacts"
-	case "core.currency":
-		return "Currencies"
-	case "sys.module":
-		return "Apps"
-	default:
-		return humanizeModelTechnical(technicalModel)
-	}
+const (
+	labelForm           = "Form"
+	breadcrumbSeparator = " · "
+)
+
+// Display names for technical models (list/collection context).
+var uiModelNames = map[string]string{
+	"core.company": "Companies",
+	"core.user":    "Users",
+	"core.group":   "Groups",
+	"core.module":  "Modules",
+	"core.menu":    "Menus",
+	"core.action":  "Actions",
+	"core.view":    "Views",
+	"core.rule":    "Access Rules",
+	"core.cron":    "Scheduled Actions",
+	"core.report":  "Reports",
 }
 
-// HumanViewBreadcrumb returns the workspace breadcrumb segment for a view (no technical model id).
-func HumanViewBreadcrumb(technicalModel, viewType string) string {
-	switch strings.TrimSpace(technicalModel) {
-	case "core.company":
-		switch strings.TrimSpace(viewType) {
-		case ViewModeList:
-			return "Companies"
-		default:
-			return "Company"
-		}
-	case "core.user":
-		switch strings.TrimSpace(viewType) {
-		case ViewModeList:
-			return "Users"
-		default:
-			return "User"
-		}
-	default:
-		return viewTypeLabel(UIModelName(technicalModel), viewType)
+// Breadcrumb labels when list vs record context differs.
+var modelBreadcrumbLabels = map[string]struct {
+	list, singular string
+}{
+	"core.company": {list: "Companies", singular: "Company"},
+	"core.user":    {list: "Users", singular: "User"},
+}
+
+// View-mode suffix appended after breadcrumbSeparator (list/form use base only).
+var viewModeSuffix = map[string]string{
+	ViewModeKanban:    "Kanban",
+	ViewModePivot:     "Pivot",
+	ViewModeGraph:     "Graph",
+	ViewModeCalendar:  "Calendar",
+	ViewModeGantt:     "Gantt",
+	ViewModeMap:       "Map",
+	ViewModeCohort:    "Cohort",
+	ViewModeHierarchy: "Hierarchy",
+	ViewModeActivity:  "Activity",
+	ViewModeSearch:    "Search",
+}
+
+// UIModelName returns a human label for a technical model name.
+func UIModelName(technicalModel string) string {
+	model := strings.TrimSpace(technicalModel)
+	if model == "" {
+		return ""
 	}
+	if name, ok := uiModelNames[model]; ok {
+		return name
+	}
+	parts := strings.Split(model, ".")
+	if len(parts) == 0 {
+		return model
+	}
+	last := parts[len(parts)-1]
+	return strings.ToUpper(last[:1]) + last[1:]
+}
+
+// HumanViewBreadcrumb builds a short breadcrumb label for workspace chrome.
+func HumanViewBreadcrumb(technicalModel, viewType string) string {
+	model := strings.TrimSpace(technicalModel)
+	vt := strings.TrimSpace(viewType)
+	if labels, ok := modelBreadcrumbLabels[model]; ok {
+		if vt == ViewModeList {
+			return labels.list
+		}
+		return labels.singular
+	}
+	return viewTypeLabel(UIModelName(model), vt)
 }
 
 func viewTypeLabel(base, viewType string) string {
-	switch strings.TrimSpace(viewType) {
+	switch viewType {
 	case ViewModeList:
 		return base
 	case ViewModeForm:
 		if base != "" {
 			return base
 		}
-		return "Form"
-	case ViewModeKanban:
-		return base + " · Kanban"
-	case ViewModePivot:
-		return base + " · Pivot"
-	case ViewModeGraph:
-		return base + " · Graph"
-	case ViewModeCalendar:
-		return base + " · Calendar"
-	case ViewModeGantt:
-		return base + " · Gantt"
-	case ViewModeMap:
-		return base + " · Map"
-	case ViewModeCohort:
-		return base + " · Cohort"
-	case ViewModeHierarchy:
-		return base + " · Hierarchy"
-	case ViewModeActivity:
-		return base + " · Activities"
+		return labelForm
 	default:
+		if suffix, ok := viewModeSuffix[viewType]; ok {
+			return base + breadcrumbSeparator + suffix
+		}
 		return base
 	}
-}
-
-func humanizeModelTechnical(model string) string {
-	model = strings.TrimSpace(model)
-	if model == "" {
-		return ""
-	}
-	parts := strings.Split(model, ".")
-	last := parts[len(parts)-1]
-	last = strings.ReplaceAll(last, "_", " ")
-	rs := []rune(last)
-	for i, r := range rs {
-		if i == 0 {
-			rs[i] = unicode.ToUpper(r)
-		} else if i > 0 && rs[i-1] == ' ' {
-			rs[i] = unicode.ToUpper(r)
-		}
-	}
-	return string(rs)
 }
