@@ -64,6 +64,12 @@ func ReadGroup(ctx context.Context, modelName string, domain [][]interface{}, sp
 			selectParts = append(selectParts, fmt.Sprintf("COUNT(*) AS %s", quoteIdent(name)))
 		case "sum":
 			selectParts = append(selectParts, fmt.Sprintf("COALESCE(SUM(%s),0) AS %s", col, quoteIdent(name)))
+		case "avg":
+			selectParts = append(selectParts, fmt.Sprintf("COALESCE(AVG(%s),0) AS %s", col, quoteIdent(name)))
+		case "min":
+			selectParts = append(selectParts, fmt.Sprintf("MIN(%s) AS %s", col, quoteIdent(name)))
+		case "max":
+			selectParts = append(selectParts, fmt.Sprintf("MAX(%s) AS %s", col, quoteIdent(name)))
 		default:
 			return nil, fmt.Errorf("unsupported measure %q", f.Measure)
 		}
