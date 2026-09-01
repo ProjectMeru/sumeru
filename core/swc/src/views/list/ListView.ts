@@ -30,6 +30,7 @@ export class ListView extends SwcComponent<ListViewProps> {
     selectedIds: new Set(),
     filters: [],
   };
+  private foldedSections = new Set<string>();
   private deleting = false;
   private acting = false;
   private collectionBar!: CollectionBarHost;
@@ -95,6 +96,20 @@ export class ListView extends SwcComponent<ListViewProps> {
 
   private pageRows() {
     return [...(this.props.payload.records ?? [])];
+  }
+
+  private listSections() {
+    return this.props.payload.listSections ?? [];
+  }
+
+  private useSections(): boolean {
+    return this.listSections().length > 0;
+  }
+
+  private toggleSection(value: string): void {
+    if (this.foldedSections.has(value)) this.foldedSections.delete(value);
+    else this.foldedSections.add(value);
+    this.rerender();
   }
 
   private reloadCollection(): void {
@@ -210,9 +225,41 @@ export class ListView extends SwcComponent<ListViewProps> {
   override template() {
     const payload = this.props.payload;
     const cols = this.columns();
+    const sections = this.listSections();
     const rows = this.pageRows();
     const ids = rows.map((r) => Number(r.id ?? 0)).filter((id) => id > 0);
     const allSelected = ids.length > 0 && ids.every((id) => this.panelState.selectedIds.has(id));
+
+    const tableHead = html`<thead>
+      <tr>
+        ${renderSelectAllHeader(allSelected, (checked) => this.toggleAll(checked, ids))}
+        ${cols.map((c) =>
+          renderSortHeader(c, this.panelState.order ?? "", (name) => this.applySort(name)),
+        )}
+      </tr>
+    </thead>`;
+
+    const flatBody = html`<tbody>
+      ${forEach(rows, (row) => Number(row.id ?? 0), (row) => this.renderRow(row))}
+    </tbody>`;
+
+    const sectionBody =
+      sections.length > 0
+        ? html`${sections.map(
+            (section) => html`<tbody class="sum-list-section">
+              <tr class="sum-list-section-head" @click=${() => this.toggleSection(section.value)}>
+                <td colspan=${cols.length + 1}>
+                  <span class="sum-list-section-toggle">${this.foldedSections.has(section.value) ? "▸" : "▾"}</span>
+                  ${section.label}
+                  <span class="sum-list-section-count">(${section.count})</span>
+                </td>
+              </tr>
+              ${this.foldedSections.has(section.value)
+                ? ""
+                : forEach(section.records, (row) => Number(row.id ?? 0), (row) => this.renderRow(row))}
+            </tbody>`,
+          )}`
+        : flatBody;
 
     return html`
       <div class="sum-collection-view sum-list-view">
@@ -224,17 +271,8 @@ export class ListView extends SwcComponent<ListViewProps> {
         })}
         <div class="sum-list-table-wrap">
           <table class="sum-list-table">
-            <thead>
-              <tr>
-                ${renderSelectAllHeader(allSelected, (checked) => this.toggleAll(checked, ids))}
-                ${cols.map((c) =>
-                  renderSortHeader(c, this.panelState.order ?? "", (name) => this.applySort(name)),
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              ${forEach(rows, (row) => Number(row.id ?? 0), (row) => this.renderRow(row))}
-            </tbody>
+            ${tableHead}
+            ${this.useSections() ? sectionBody : flatBody}
           </table>
         </div>
       </div>

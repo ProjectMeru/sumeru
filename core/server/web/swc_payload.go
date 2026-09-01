@@ -39,6 +39,7 @@ func buildSwcWorkspacePayload(
 		ListFilter:       viewRecord.ListFilter,
 		ListDomain:       viewRecord.ListDomain,
 		ListGroupBy:      viewRecord.ListGroupBy,
+		ListSections:     serializeListSections(viewRecord.ListSections),
 		Record:           viewRecord.Record,
 		ListRows:         viewRecord.ListRows,
 		KanbanGroupField: viewRecord.KanbanGroupField,
@@ -74,6 +75,22 @@ func serializeSwcBreadcrumbs(items []render.BreadcrumbItem) []swcmeta.Breadcrumb
 	out := make([]swcmeta.Breadcrumb, 0, len(items))
 	for _, b := range items {
 		out = append(out, swcmeta.Breadcrumb{Label: b.Label, Href: b.Href})
+	}
+	return out
+}
+
+func serializeListSections(sections []render.ListSection) []swcmeta.ListSectionMeta {
+	if len(sections) == 0 {
+		return nil
+	}
+	out := make([]swcmeta.ListSectionMeta, 0, len(sections))
+	for _, s := range sections {
+		out = append(out, swcmeta.ListSectionMeta{
+			Label:   s.Label,
+			Value:   s.Value,
+			Count:   s.Count,
+			Records: s.Rows,
+		})
 	}
 	return out
 }

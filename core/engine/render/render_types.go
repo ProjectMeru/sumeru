@@ -198,6 +198,15 @@ type ViewRecordData struct {
 	ListFilter      string
 	ListDomain      string
 	ListGroupBy     string
+	ListSections    []ListSection
+}
+
+// ListSection groups list rows under a foldable header (list group_by v2).
+type ListSection struct {
+	Label  string
+	Value  string
+	Count  int
+	Rows   []map[string]interface{}
 }
 
 // PivotData holds aggregated pivot table cells for HTML rendering.

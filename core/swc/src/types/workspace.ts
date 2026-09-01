@@ -14,6 +14,8 @@ export interface SwcViewArch {
   pivot?: SwcPivotMeta;
   search?: SwcSearchMeta;
   graph?: SwcGraphMeta;
+  hierarchy?: SwcHierarchyMeta;
+  activity?: SwcActivityMeta;
   calendar?: SwcCalendarMeta;
   gantt?: SwcGanttMeta;
   map?: SwcMapMeta;
@@ -68,6 +70,9 @@ export interface SwcArchButton {
   string: string;
   type: "object" | "action" | string;
   class?: string;
+  invisible?: boolean;
+  invisible_expr?: string;
+  confirm?: string;
 }
 
 export interface SwcArchHeader {
@@ -159,6 +164,23 @@ export interface SwcSavedSearch {
   domain?: string;
   groupBy?: string;
   isDefault?: boolean;
+  isShared?: boolean;
+}
+
+export interface SwcListSection {
+  label: string;
+  value: string;
+  count: number;
+  records: Record<string, unknown>[];
+}
+
+export interface SwcHierarchyMeta {
+  parentField?: string;
+}
+
+export interface SwcActivityMeta {
+  resModel?: string;
+  resId?: string;
 }
 
 export interface SwcGraphMeta {
@@ -227,6 +249,7 @@ export interface SwcWorkspacePayload {
   listFilter?: string;
   listDomain?: string;
   listGroupBy?: string;
+  listSections?: SwcListSection[];
   favorites?: SwcSavedSearch[];
   formBaseQuery?: string;
   defaults?: Record<string, unknown>;
