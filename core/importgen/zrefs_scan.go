@@ -20,6 +20,7 @@ type modelRef struct {
 	HeuristicName  string
 	UseAlias       bool
 	PhantomName    string
+	IsExtend       bool
 }
 
 type exportedRef struct {
@@ -65,7 +66,7 @@ func scanModelsInDir(dir string) ([]modelRef, error) {
 					if !ok || !structEmbedsModel(st) {
 						continue
 					}
-					technical := modelTagFromStruct(st)
+					technical, isExtend := modelSpecFromStruct(st)
 					if technical == "" || technical == "-" {
 						continue
 					}
@@ -75,6 +76,7 @@ func scanModelsInDir(dir string) ([]modelRef, error) {
 						TechnicalModel: technical,
 						ImportPath:     importPath,
 						HeuristicName:  heuristic,
+						IsExtend:       isExtend,
 					}
 					if ref.GoName == heuristic ||
 						strings.EqualFold(ref.GoName, heuristic) ||
@@ -211,7 +213,13 @@ func filterRefsForUsage(refs []modelRef, used map[string]struct{}) []modelRef {
 		if ref.TechnicalModel == "" {
 			continue
 		}
-		if _, ok := byTech[ref.TechnicalModel]; !ok {
+		existing, ok := byTech[ref.TechnicalModel]
+		if !ok {
+			byTech[ref.TechnicalModel] = ref
+			continue
+		}
+		// Prefer the defining model= struct over inherit= extensions.
+		if existing.IsExtend && !ref.IsExtend {
 			byTech[ref.TechnicalModel] = ref
 		}
 	}
