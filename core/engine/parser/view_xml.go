@@ -46,6 +46,9 @@ type View struct {
 	Interval string `xml:"interval,attr"`
 	Measure  string `xml:"measure,attr"`
 
+	// Hierarchy view: parent many2one column for tree indentation.
+	ParentField string `xml:"parent_field,attr"`
+
 	// Search view filters (<filter name domain group_by>).
 	SearchFilter []SearchFilter `xml:"filter"`
 
@@ -151,10 +154,12 @@ type Page struct {
 }
 
 type Button struct {
-	Name   string `xml:"name,attr"`
-	String string `xml:"string,attr"`
-	Type   string `xml:"type,attr"`
-	Class  string `xml:"class,attr"`
+	Name      string `xml:"name,attr"`
+	String    string `xml:"string,attr"`
+	Type      string `xml:"type,attr"`
+	Class     string `xml:"class,attr"`
+	Invisible string `xml:"invisible,attr"`
+	Confirm   string `xml:"confirm,attr"`
 }
 
 type Chatter struct {

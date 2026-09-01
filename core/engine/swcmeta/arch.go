@@ -77,6 +77,12 @@ func SerializeViewForUser(ctx context.Context, view *parser.View) ViewArch {
 			Interval:  strings.TrimSpace(view.Interval),
 			Measure:   strings.TrimSpace(view.Measure),
 		}
+	case "hierarchy":
+		parent := strings.TrimSpace(view.ParentField)
+		if parent == "" {
+			parent = "parent_id"
+		}
+		arch.Hierarchy = &HierarchyMeta{ParentField: parent}
 	}
 	if len(view.SearchFilter) > 0 {
 		arch.Search = serializeSearch(view)
@@ -333,12 +339,19 @@ func divHasContent(d ArchDiv) bool {
 func serializeButtons(buttons []parser.Button) []ArchButton {
 	out := make([]ArchButton, 0, len(buttons))
 	for _, b := range buttons {
-		out = append(out, ArchButton{
+		ab := ArchButton{
 			Name:   strings.TrimSpace(b.Name),
 			String: strings.TrimSpace(b.String),
 			Type:   strings.TrimSpace(b.Type),
 			Class:  strings.TrimSpace(b.Class),
-		})
+			Confirm: strings.TrimSpace(b.Confirm),
+		}
+		if lit, truthy, expr := parser.AttrLiteralOrExpr(b.Invisible); lit {
+			ab.Invisible = truthy
+		} else {
+			ab.InvisibleExpr = expr
+		}
+		out = append(out, ab)
 	}
 	return out
 }
