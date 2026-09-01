@@ -130,8 +130,10 @@ func fieldLabel(modelName, fieldName string) string {
 func redirectRecordError(w http.ResponseWriter, r *http.Request, nextURL, operation, model string, err error) {
 	ctx := r.Context()
 	title, body, details, fieldErrors := userFacingRecordError(operation, model, err)
-	WebLogEvent(ctx, operationRoute(operation), body, operation, logStatusFailure, err, map[string]interface{}{
-		"model": model,
+	WebLogEvent(ctx, WebLogInput{
+		Route: operationRoute(operation), Message: body,
+		Operation: operation, Status: logStatusFailure, Err: err,
+		ContextFields: map[string]interface{}{"model": model},
 	})
 	applog.DebugMsg(ctx, webLogComponent, operation, "record POST failed", map[string]interface{}{
 		"model": model,

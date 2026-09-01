@@ -101,7 +101,7 @@ func runDue(ctx context.Context) {
 	}
 
 	for _, row := range due {
-		executeCron(bypass, row.id, row.name, row.eventName, row.code)
+		executeCron(bypass, CronRunInput{ID: row.id, Name: row.name, EventName: row.eventName, Code: row.code})
 		interval := cronIntervalTx(bypass, tx, row.id)
 		next := now.Add(interval)
 		_, _ = tx.ExecContext(bypass,
@@ -124,21 +124,28 @@ func cronIntervalTx(ctx context.Context, tx orm.TxWrapper, id int64) time.Durati
 	return time.Duration(n) * time.Minute
 }
 
-func executeCron(ctx context.Context, id int64, name, eventName, code string) {
-	applog.L(ctx).Info("scheduler.cron", "id", id, "name", name, "code", code)
-	payload := map[string]interface{}{"cron_id": id, "cron_name": name, "code": code}
+type CronRunInput struct {
+	ID        int64
+	Name      string
+	EventName string
+	Code      string
+}
+
+func executeCron(ctx context.Context, in CronRunInput) {
+	applog.L(ctx).Info("scheduler.cron", "id", in.ID, "name", in.Name, "code", in.Code)
+	payload := map[string]interface{}{"cron_id": in.ID, "cron_name": in.Name, "code": in.Code}
 	_ = event.Publish(ctx, event.Event{Name: "cron.tick", Payload: payload})
-	if eventName = strings.TrimSpace(eventName); eventName != "" {
+	if eventName := strings.TrimSpace(in.EventName); eventName != "" {
 		_ = event.Publish(ctx, event.Event{Name: eventName, Payload: payload})
 	}
-	if fn := lookupCronHandler(code); fn != nil {
+	if fn := lookupCronHandler(in.Code); fn != nil {
 		if err := fn(ctx, payload); err != nil {
 			applog.Warn(ctx, applog.Event{
 				Message:   "cron handler failed",
 				Component: "scheduler",
 				Operation: "cron_handler",
 				Status:    "failed",
-				Context:   map[string]interface{}{"cron_id": id, "code": code},
+				Context:   map[string]interface{}{"cron_id": in.ID, "code": in.Code},
 				Err:       err,
 			})
 		}

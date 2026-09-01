@@ -92,7 +92,9 @@ func TestTranslate_fallbackWithoutDB(t *testing.T) {
 
 func TestCanWorkflowTransition_bypass(t *testing.T) {
 	ctx := orm.ContextWithBypass(orm.BackgroundBypass(), true)
-	if err := orm.CanWorkflowTransition(ctx, "x.model", 1, "a", "b", 2); err != nil {
+	if err := orm.CanWorkflowTransition(ctx, orm.WorkflowTransitionInput{
+		Model: "x.model", RecordID: 1, FromState: "a", ToState: "b", UID: 2,
+	}); err != nil {
 		t.Fatalf("bypass should allow: %v", err)
 	}
 }

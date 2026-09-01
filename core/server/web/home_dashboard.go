@@ -22,7 +22,10 @@ func HomeDashboardHandler(w http.ResponseWriter, r *http.Request) {
 
 	tiles, err := loadInstalledAppTiles(ctx, true)
 	if err != nil {
-		WebLogEvent(ctx, r.URL.Path, "Failed to list modules for home dashboard", "load", "failure", err, nil)
+		WebLogEvent(ctx, WebLogInput{
+			Route: r.URL.Path, Message: "Failed to list modules for home dashboard",
+			Operation: "load", Status: "failure", Err: err,
+		})
 		http.Error(w, "Failed to list modules", http.StatusInternalServerError)
 		return
 	}

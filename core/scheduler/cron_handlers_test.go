@@ -18,7 +18,9 @@ func TestRegisterCronHandler(t *testing.T) {
 		atomic.StoreInt32(&called, 1)
 		return nil
 	})
-	scheduler.ExecuteCronForTest(context.Background(), 1, "Test", "", "test_job")
+	scheduler.ExecuteCronForTest(context.Background(), scheduler.CronRunInput{
+		ID: 1, Name: "Test", Code: "test_job",
+	})
 	if atomic.LoadInt32(&called) != 1 {
 		t.Fatal("cron handler was not called")
 	}
