@@ -12,6 +12,8 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	"sumeru/core/modelmeta"
 )
 
 var (
@@ -121,7 +123,7 @@ func scanSelectionConsts(pkgDir, typeName string) [][]string {
 			continue
 		}
 		seen[key] = struct{}{}
-		out = append(out, []string{key, titleWords(key)})
+		out = append(out, []string{key, modelmeta.LabelFromGo(key)})
 	}
 	return out
 }

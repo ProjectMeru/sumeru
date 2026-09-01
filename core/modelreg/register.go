@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"unicode"
 
 	"sumeru/core/modelmeta"
 	"sumeru/core/orm"
@@ -19,58 +18,57 @@ func MustRegister(module string, models ...any) {
 	}
 
 	ctx := &registerCtx{
-		module:    module,
 		typeNames: make(map[string]string),
 		byName:    make(map[string]reflect.Type),
-		specs:     make(map[string]modelmeta.ModelSpec),
 	}
-
+	entries := make([]modelEntry, 0, len(models))
 	for _, sample := range models {
-		rt, ok := modelStructType(sample)
+		structType, ok := modelStructType(sample)
 		if !ok {
 			panic(fmt.Sprintf("modelreg.MustRegister: %T is not a pointer to struct", sample))
 		}
-		spec, err := modelSpecFromStruct(rt)
+		spec, err := modelmeta.ModelSpecFromStruct(structType)
 		if err != nil {
 			panic(fmt.Sprintf("modelreg.MustRegister: %v", err))
 		}
-		name := spec.Name
-		if name == "" || name == "-" {
+		if spec.Name == "" || spec.Name == "-" {
 			continue
 		}
-		ctx.typeNames[rt.String()] = name
-		ctx.byName[rt.Name()] = rt
-		ctx.specs[rt.String()] = spec
-		if ctx.pkgDir == "" {
-			ctx.pkgDir = pkgDirForStructType(rt)
-		}
+		ctx.index(structType, spec)
+		entries = append(entries, modelEntry{structType: structType, spec: spec})
 	}
 
-	for _, sample := range models {
-		rt, ok := modelStructType(sample)
-		if !ok {
-			continue
+	for _, entry := range entries {
+		fields, err := reflectFields(ctx, entry.structType)
+		if err != nil {
+			panic(fmt.Sprintf("modelreg: model %s: %v", entry.spec.Name, err))
 		}
-		spec := ctx.specs[rt.String()]
-		name := spec.Name
-		if name == "" || name == "-" {
-			continue
-		}
-		rm := buildReflectedModel(ctx, rt, name)
-		if spec.Extend {
-			extendRegisteredModel(name, rm.fields, module)
+		rm := &reflectedModel{name: entry.spec.Name, fields: fields}
+		if entry.spec.Extend {
+			extendRegisteredModel(entry.spec.Name, rm.fields, module)
 			continue
 		}
 		orm.RegisterModelWithModule(rm, module)
 	}
 }
 
+type modelEntry struct {
+	structType reflect.Type
+	spec       modelmeta.ModelSpec
+}
+
 type registerCtx struct {
-	module    string
 	pkgDir    string
 	typeNames map[string]string
 	byName    map[string]reflect.Type
-	specs     map[string]modelmeta.ModelSpec
+}
+
+func (ctx *registerCtx) index(structType reflect.Type, spec modelmeta.ModelSpec) {
+	ctx.typeNames[structType.String()] = spec.Name
+	ctx.byName[structType.Name()] = structType
+	if ctx.pkgDir == "" {
+		ctx.pkgDir = pkgDirForStructType(structType)
+	}
 }
 
 type reflectedModel struct {
@@ -105,14 +103,6 @@ func (m *reflectedModel) mergeFields(extra []orm.FieldDefinition) error {
 	return nil
 }
 
-func modelNameFromStruct(st reflect.Type) (string, error) {
-	return modelmeta.ModelNameFromStruct(st)
-}
-
-func modelSpecFromStruct(st reflect.Type) (modelmeta.ModelSpec, error) {
-	return modelmeta.ModelSpecFromStruct(st)
-}
-
 func extendRegisteredModel(targetName string, extra []orm.FieldDefinition, module string) {
 	existing := orm.RegistryModel(targetName)
 	if existing == nil {
@@ -128,42 +118,20 @@ func extendRegisteredModel(targetName string, extra []orm.FieldDefinition, modul
 	orm.RecordModelExtendedBy(targetName, module)
 }
 
-func buildReflectedModel(ctx *registerCtx, st reflect.Type, modelName string) *reflectedModel {
-	fields, err := reflectFields(ctx, st)
-	if err != nil {
-		panic(fmt.Sprintf("modelreg: model %s: %v", modelName, err))
-	}
-	return &reflectedModel{name: modelName, fields: fields}
-}
-
-func reflectFields(ctx *registerCtx, st reflect.Type) ([]orm.FieldDefinition, error) {
+func reflectFields(ctx *registerCtx, structType reflect.Type) ([]orm.FieldDefinition, error) {
 	var out []orm.FieldDefinition
-	for i := 0; i < st.NumField(); i++ {
-		f := st.Field(i)
-		if !f.IsExported() {
+	for i := 0; i < structType.NumField(); i++ {
+		f := structType.Field(i)
+		if !f.IsExported() || modelmeta.IsEmbeddedModelMeta(f) {
 			continue
 		}
-		if isModelMetaField(f) {
-			continue
-		}
-		fd, err := fieldFromStructField(ctx, f)
+		fieldDef, err := fieldFromStructField(ctx, f)
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, fd)
+		out = append(out, fieldDef)
 	}
 	return out, nil
-}
-
-func isModelMetaField(f reflect.StructField) bool {
-	if !f.Anonymous {
-		return false
-	}
-	t := f.Type
-	for t.Kind() == reflect.Pointer {
-		t = t.Elem()
-	}
-	return t == reflect.TypeOf(modelmeta.ModelMeta{})
 }
 
 func fieldFromStructField(ctx *registerCtx, f reflect.StructField) (orm.FieldDefinition, error) {
@@ -182,14 +150,15 @@ func fieldFromStructField(ctx *registerCtx, f reflect.StructField) (orm.FieldDef
 		label = modelmeta.LabelFromGo(f.Name)
 	}
 
-	ft, widget, err := mapMarkerType(f.Type)
+	marker := markerBaseName(f.Type)
+	fieldType, widget, err := mapMarkerType(marker)
 	if err != nil {
 		return orm.FieldDefinition{}, fmt.Errorf("field %s: %w", f.Name, err)
 	}
 
-	fd := orm.FieldDefinition{
+	fieldDef := orm.FieldDefinition{
 		Name:      name,
-		Type:      ft,
+		Type:      fieldType,
 		Required:  tags.Required,
 		Unique:    tags.Unique,
 		Index:     tags.Index,
@@ -211,142 +180,110 @@ func fieldFromStructField(ctx *registerCtx, f reflect.StructField) (orm.FieldDef
 	}
 
 	if tags.Related != "" {
-		fd.RelatedStore = tags.Store
+		fieldDef.RelatedStore = tags.Store
 		if !tags.Store {
-			fd.Virtual = true
+			fieldDef.Virtual = true
 		}
 	}
 	if tags.Compute != "" {
-		fd.ComputeStore = tags.Store
+		fieldDef.ComputeStore = tags.Store
 		if tags.Store {
-			fd.Readonly = true
+			fieldDef.Readonly = true
 		} else {
-			fd.Virtual = true
+			fieldDef.Virtual = true
 		}
 	}
-
 	if tags.Column != "" && tags.Column != name {
-		fd.Column = tags.Column
+		fieldDef.Column = tags.Column
 	}
-
 	if tags.Default != "" {
-		fd.DefaultVal = parseDefault(tags.Default, ft)
+		fieldDef.DefaultVal = parseDefault(tags.Default, fieldType)
 	}
 
 	if tags.Selection != "" {
-		fd.Type = orm.Selection
-		fd.Selection = parseSelection(tags.Selection)
-	} else if markerBaseName(f.Type) == "Selection" {
-		fd.Type = orm.Selection
+		fieldDef.Type = orm.Selection
+		fieldDef.Selection = parseSelection(tags.Selection)
+	} else if marker == "Selection" {
+		fieldDef.Type = orm.Selection
 		if opts := selectionForFieldType(f.Type); len(opts) > 0 {
-			fd.Selection = opts
+			fieldDef.Selection = opts
 		} else if typeName := typeShortName(selectionTypeKey(f.Type)); typeName != "" {
-			fd.Selection = selectionOptionsFromPackage(ctx.pkgDir, typeName)
+			fieldDef.Selection = selectionOptionsFromPackage(ctx.pkgDir, typeName)
 		}
 	}
 
-	switch ft {
-	case orm.Many2One:
+	switch fieldDef.Type {
+	case orm.Many2One, orm.One2Many, orm.Many2Many:
 		comodel, err := ctx.resolveComodel(f.Type, tags)
 		if err != nil {
 			return orm.FieldDefinition{}, fmt.Errorf("field %s: %w", f.Name, err)
 		}
-		fd.Relation = comodel
-	case orm.One2Many:
-		comodel, err := ctx.resolveComodel(f.Type, tags)
-		if err != nil {
-			return orm.FieldDefinition{}, fmt.Errorf("field %s: %w", f.Name, err)
+		fieldDef.Relation = comodel
+		if fieldDef.Type == orm.Many2Many {
+			fieldDef.RelationTable = tags.Table
+			fieldDef.Column1 = tags.Left
+			fieldDef.Column2 = tags.Right
 		}
-		fd.Relation = comodel
-	case orm.Many2Many:
-		comodel, err := ctx.resolveComodel(f.Type, tags)
-		if err != nil {
-			return orm.FieldDefinition{}, fmt.Errorf("field %s: %w", f.Name, err)
-		}
-		fd.Relation = comodel
-		fd.RelationTable = tags.Table
-		fd.Column1 = tags.Left
-		fd.Column2 = tags.Right
-	}
-
-	if markerBaseName(f.Type) == "Many2OneReference" && tags.ModelField != "" {
-		fd.RelationModelField = tags.ModelField
-	}
-
-	if fd.Type == orm.Numeric {
-		if fd.Precision <= 0 && markerBaseName(f.Type) == "Money" {
-			fd.Precision = 18
-		}
-		if fd.Scale <= 0 && markerBaseName(f.Type) == "Money" {
-			fd.Scale = 2
+	case orm.Integer:
+		if marker == "Many2OneReference" && tags.ModelField != "" {
+			fieldDef.RelationModelField = tags.ModelField
 		}
 	}
 
-	if fd.Type == orm.Char && markerBaseName(f.Type) == "UUID" && fd.Size <= 0 {
-		fd.Size = 36
+	if fieldDef.Type == orm.Numeric && marker == "Money" {
+		if fieldDef.Precision <= 0 {
+			fieldDef.Precision = 18
+		}
+		if fieldDef.Scale <= 0 {
+			fieldDef.Scale = 2
+		}
+	}
+	if fieldDef.Type == orm.Char && marker == "UUID" && fieldDef.Size <= 0 {
+		fieldDef.Size = 36
 	}
 
-	return fd, nil
+	return fieldDef, nil
 }
 
-func mapMarkerType(t reflect.Type) (orm.FieldType, string, error) {
-	base := markerBaseName(t)
-	switch base {
-	case "String":
-		return orm.Char, "", nil
-	case "Text":
-		return orm.Text, "", nil
-	case "HTML":
-		return orm.Text, "html", nil
-	case "Email":
-		return orm.Char, "email", nil
-	case "Phone":
-		return orm.Char, "phone", nil
-	case "URL":
-		return orm.Char, "url", nil
-	case "UUID":
-		return orm.Char, "", nil
-	case "Boolean":
-		return orm.Boolean, "", nil
-	case "Integer":
-		return orm.Integer, "", nil
-	case "Float":
-		return orm.Float, "float", nil
-	case "Float64":
-		return orm.Float64, "float", nil
-	case "Numeric":
-		return orm.Numeric, "numeric", nil
-	case "Money":
-		return orm.Numeric, "monetary", nil
-	case "Date":
-		return orm.Date, "date", nil
-	case "Time":
-		return orm.Text, "time", nil
-	case "DateTime":
-		return orm.DateTime, "datetime", nil
-	case "Duration":
-		return orm.Numeric, "duration", nil
-	case "Json":
-		return orm.Json, "json", nil
-	case "Binary":
-		return orm.Text, "binary", nil
-	case "Image":
-		return orm.Text, "image", nil
-	case "Reference":
-		return orm.Char, "reference", nil
-	case "Many2OneReference":
-		return orm.Integer, "many2one_reference", nil
-	case "Many2One":
-		return orm.Many2One, "", nil
-	case "One2Many":
-		return orm.One2Many, "", nil
-	case "Many2Many":
-		return orm.Many2Many, "", nil
-	case "Selection":
-		return orm.Selection, "", nil
-	default:
-		return "", "", fmt.Errorf("unsupported field type %s", t.String())
+type markerType struct {
+	fieldType orm.FieldType
+	widget    string
+}
+
+var markerTypeByName = map[string]markerType{
+	"String":            {orm.Char, ""},
+	"Text":              {orm.Text, ""},
+	"HTML":              {orm.Text, "html"},
+	"Email":             {orm.Char, "email"},
+	"Phone":             {orm.Char, "phone"},
+	"URL":               {orm.Char, "url"},
+	"UUID":              {orm.Char, ""},
+	"Boolean":           {orm.Boolean, ""},
+	"Integer":           {orm.Integer, ""},
+	"Float":             {orm.Float, "float"},
+	"Float64":           {orm.Float64, "float"},
+	"Numeric":           {orm.Numeric, "numeric"},
+	"Money":             {orm.Numeric, "monetary"},
+	"Date":              {orm.Date, "date"},
+	"Time":              {orm.Text, "time"},
+	"DateTime":          {orm.DateTime, "datetime"},
+	"Duration":          {orm.Numeric, "duration"},
+	"Json":              {orm.Json, "json"},
+	"Binary":            {orm.Text, "binary"},
+	"Image":             {orm.Text, "image"},
+	"Reference":         {orm.Char, "reference"},
+	"Many2OneReference": {orm.Integer, "many2one_reference"},
+	"Many2One":          {orm.Many2One, ""},
+	"One2Many":          {orm.One2Many, ""},
+	"Many2Many":         {orm.Many2Many, ""},
+	"Selection":         {orm.Selection, ""},
+}
+
+func mapMarkerType(marker string) (orm.FieldType, string, error) {
+	if m, ok := markerTypeByName[marker]; ok {
+		return m.fieldType, m.widget, nil
 	}
+	return "", "", fmt.Errorf("unsupported field type %s", marker)
 }
 
 func markerBaseName(t reflect.Type) string {
@@ -354,10 +291,7 @@ func markerBaseName(t reflect.Type) string {
 	if i := strings.Index(s, "["); i >= 0 {
 		s = s[:i]
 	}
-	if dot := strings.LastIndex(s, "."); dot >= 0 {
-		return s[dot+1:]
-	}
-	return s
+	return typeShortName(s)
 }
 
 func genericArgString(t reflect.Type) string {
@@ -409,11 +343,7 @@ func (ctx *registerCtx) resolveComodel(fieldType reflect.Type, tags modelmeta.Fi
 		}
 	}
 
-	candidate := modelmeta.ModelNameFromGo(short)
-	if orm.RegistryModel(candidate) != nil {
-		return candidate, nil
-	}
-	return candidate, nil
+	return modelmeta.ModelNameFromGo(short), nil
 }
 
 func parseSelection(raw string) [][]string {
@@ -429,7 +359,7 @@ func parseSelection(raw string) [][]string {
 			continue
 		}
 		if !hasLabel || strings.TrimSpace(label) == "" {
-			label = titleWords(key)
+			label = modelmeta.LabelFromGo(key)
 		} else {
 			label = strings.TrimSpace(label)
 		}
@@ -438,24 +368,9 @@ func parseSelection(raw string) [][]string {
 	return out
 }
 
-func titleWords(s string) string {
-	s = strings.ReplaceAll(s, "_", " ")
-	s = strings.ReplaceAll(s, "-", " ")
-	parts := strings.Fields(s)
-	for i, p := range parts {
-		if p == "" {
-			continue
-		}
-		runes := []rune(p)
-		runes[0] = unicode.ToUpper(runes[0])
-		parts[i] = string(runes)
-	}
-	return strings.Join(parts, " ")
-}
-
-func parseDefault(raw string, ft orm.FieldType) interface{} {
+func parseDefault(raw string, fieldType orm.FieldType) interface{} {
 	raw = strings.TrimSpace(raw)
-	switch ft {
+	switch fieldType {
 	case orm.Boolean:
 		switch strings.ToLower(raw) {
 		case "true", "1", "yes":
@@ -471,13 +386,7 @@ func parseDefault(raw string, ft orm.FieldType) interface{} {
 			return raw
 		}
 		return n
-	case orm.Float, orm.Float64:
-		f, err := strconv.ParseFloat(raw, 64)
-		if err != nil {
-			return raw
-		}
-		return f
-	case orm.Numeric:
+	case orm.Float, orm.Float64, orm.Numeric:
 		f, err := strconv.ParseFloat(raw, 64)
 		if err != nil {
 			return raw
