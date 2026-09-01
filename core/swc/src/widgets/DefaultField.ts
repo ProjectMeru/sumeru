@@ -49,7 +49,7 @@ export class DefaultField extends SwcComponent<FieldWidgetProps> {
         field.type === "integer" || field.type === "float" || field.type === "numeric"
           ? fieldReadonlyInput(field, fieldValue, "text")
           : fieldReadonlyInput(field, fieldValue, inputType === "text" ? "text" : inputType),
-        { labelFor: id },
+        { labelFor: id, modelName: record.model },
       );
     }
 
@@ -68,7 +68,7 @@ export class DefaultField extends SwcComponent<FieldWidgetProps> {
           record.set(field.name, parseNumericValue(field, inputValueFromEvent(event)))}
         @change=${() => record.notifyFieldChange(field.name)}
       />`,
-      { labelFor: id },
+      { labelFor: id, modelName: record.model },
     );
   }
 }

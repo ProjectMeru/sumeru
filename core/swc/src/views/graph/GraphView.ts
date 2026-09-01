@@ -7,6 +7,7 @@ import { onMount, useTemplateRef } from "../../runtime/hooks.js";
 import { VIEW_GRAPH, VIEW_LIST } from "../../constants/routes.js";
 import { CollectionBarHost, mountCollectionBar } from "../shared/collection-bar-host.js";
 import { navigateCollectionQuery } from "../shared/collection-query.js";
+import { renderGraphExportLink } from "../shared/view-toolbar.js";
 
 interface GraphViewProps {
   payload: SwcWorkspacePayload;
@@ -168,9 +169,11 @@ export class GraphView extends SwcComponent<GraphViewProps> {
   }
 
   override template() {
+    const exportLink = renderGraphExportLink(this.props.payload, this.groupField, this.measureField);
     return html`
       <div class="sum-collection-view sum-graph-view">
         ${this.collectionBar.renderOrPatch()}
+        ${exportLink ?? ""}
         <div class="sum-graph-chart-wrap">
           <canvas data-ref="graph-canvas"></canvas>
         </div>

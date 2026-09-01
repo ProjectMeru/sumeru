@@ -7,6 +7,8 @@ import {
   EXPORT_CSV_ROUTE,
   EXPORT_PDF_ROUTE,
   EXPORT_XLSX_ROUTE,
+  EXPORT_PIVOT_ROUTE,
+  EXPORT_GRAPH_ROUTE,
   VIEW_FORM,
   VIEW_KANBAN,
 } from "../../constants/routes.js";
@@ -45,7 +47,48 @@ export function exportQuery(
   if (payload.actionId > 0) params.set("action", String(payload.actionId));
   if (fields) params.set("fields", fields);
   if (recordId > 0) params.set("id", String(recordId));
+  if (payload.listFilter) params.set("filter", payload.listFilter);
+  if (payload.listDomain) params.set("domain", payload.listDomain);
+  if (payload.listSearch) params.set("q", payload.listSearch);
   return params;
+}
+
+/** Build export URL for pivot read_group CSV snapshot. */
+export function pivotExportUrl(payload: SwcWorkspacePayload, groupFields: string[], measures: string[]): string {
+  const params = exportQuery(payload, "");
+  if (groupFields.length) params.set("group_by", groupFields.join(","));
+  if (measures.length) params.set("measures", measures.join(","));
+  return `${EXPORT_PIVOT_ROUTE}?${params.toString()}`;
+}
+
+/** Build export URL for graph read_group CSV snapshot. */
+export function graphExportUrl(payload: SwcWorkspacePayload, groupField: string, measureField: string): string {
+  const params = exportQuery(payload, "");
+  if (groupField) params.set("group_by", groupField);
+  if (measureField) params.set("measure", measureField);
+  return `${EXPORT_GRAPH_ROUTE}?${params.toString()}`;
+}
+
+function pivotExportFields(payload: SwcWorkspacePayload): { groups: string[]; measures: string[] } {
+  const groups: string[] = [];
+  const measures: string[] = [];
+  for (const f of payload.arch.fields ?? []) {
+    const kind = (f.pivotType ?? "").toLowerCase();
+    if (kind === "row" || kind === "col" || kind === "column") groups.push(f.name);
+    if (kind === "measure") measures.push(f.name);
+  }
+  return { groups, measures };
+}
+
+export function renderPivotExportLink(payload: SwcWorkspacePayload): HTMLElement | null {
+  const { groups, measures } = pivotExportFields(payload);
+  if (!groups.length || !measures.length) return null;
+  return linkButton(pivotExportUrl(payload, groups, measures), "Export CSV");
+}
+
+export function renderGraphExportLink(payload: SwcWorkspacePayload, groupField: string, measureField: string): HTMLElement | null {
+  if (!groupField || !measureField) return null;
+  return linkButton(graphExportUrl(payload, groupField, measureField), "Export CSV");
 }
 
 export function renderSearchIcon(className = "sum-search-icon"): TemplateResult {

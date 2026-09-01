@@ -48,6 +48,7 @@ export class CollectionBarHost extends SwcComponent<CollectionBarHostProps> {
   private customOp = "=";
   private customValue = "";
   private saveName = "";
+  private saveShared = false;
   private savingFavorite = false;
 
   override setup(): void {
@@ -170,6 +171,7 @@ export class CollectionBarHost extends SwcComponent<CollectionBarHostProps> {
         filter: this.query.presetFilters.join(","),
         domain: this.query.customDomain,
         groupBy: this.query.groupBy.join(","),
+        isShared: this.saveShared,
       });
       this.saveName = "";
       this.env.services.notification.success("Saved", "Search saved to favorites.");
@@ -342,7 +344,7 @@ export class CollectionBarHost extends SwcComponent<CollectionBarHostProps> {
           ${favorites.map(
             (f) => html`<li class="sum-popover-fav">
               <button type="button" class="sum-popover-item" @click=${() => this.applyFavorite(f)}>
-                <span class="sum-popover-item-label">${f.name}</span>
+                <span class="sum-popover-item-label">${f.name}${f.isShared ? " (shared)" : ""}</span>
               </button>
               <button type="button" class="sum-popover-fav-delete" @click=${() => void this.deleteFavorite(f.id)} title="Delete">×</button>
             </li>`,
@@ -356,6 +358,14 @@ export class CollectionBarHost extends SwcComponent<CollectionBarHostProps> {
             value=${this.saveName}
             @input=${(e: Event) => { this.saveName = inputValueFromEvent(e); }}
           />
+          <label class="sum-popover-check">
+            <input
+              type="checkbox"
+              ?checked=${this.saveShared}
+              @change=${(e: Event) => { this.saveShared = (e.target as HTMLInputElement).checked; }}
+            />
+            Share with all users
+          </label>
           <button type="button" class="sum-btn sum-btn--secondary" disabled=${this.savingFavorite ? "disabled" : undefined} @click=${() => void this.saveFavorite()}>Save current search</button>
         </div>
       </div>
