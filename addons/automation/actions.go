@@ -22,6 +22,21 @@ func executeServerAction(ctx context.Context, row map[string]interface{}, ev eve
 			return nil
 		}
 	}
+	if domRaw := strings.TrimSpace(orm.AsString(row["trigger_domain"])); domRaw != "" {
+		modelName := strings.TrimSpace(orm.AsString(ev.Payload["model"]))
+		resID, ok := orm.CoerceInt64(ev.Payload["id"])
+		if modelName == "" || !ok || resID <= 0 {
+			return nil
+		}
+		var domain [][]interface{}
+		if err := json.Unmarshal([]byte(domRaw), &domain); err != nil {
+			return nil
+		}
+		matches, err := orm.SearchCount(ctx, modelName, append(domain, []interface{}{"id", "=", resID}))
+		if err != nil || matches == 0 {
+			return nil
+		}
+	}
 
 	code := strings.TrimSpace(orm.AsString(row["code"]))
 	if code == "" {
