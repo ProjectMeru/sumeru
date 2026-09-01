@@ -17,11 +17,13 @@ func init() {
 		&CoreUserAPIKey{},
 		&CoreUserLog{},
 		&Partner{},
+		&SysActivity{},
 		&SysAttachment{},
 		&SysAudit{},
 		&SysBulkImport{},
 		&SysConfigParameter{},
 		&SysFieldAccess{},
+		&SysReportAction{},
 		&SysSequence{},
 		&SysTranslation{},
 	)
