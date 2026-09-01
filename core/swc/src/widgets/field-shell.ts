@@ -65,11 +65,14 @@ export function fieldLabel(
   const label = field.string ?? field.name;
   const cls = row ? "sum-field-label sum-field-label--row" : "sum-field-label";
   const title = debugFieldTitle(modelName || "?", field.name, field.type ?? field.widget);
-  const titleAttr = title ? html` title=${title}` : html``;
   if (forId) {
-    return html`<label class=${cls} id=${labelId} for=${forId}${titleAttr}>${label}</label>`;
+    return title
+      ? html`<label class=${cls} id=${labelId} for=${forId} title=${title}>${label}</label>`
+      : html`<label class=${cls} id=${labelId} for=${forId}>${label}</label>`;
   }
-  return html`<span class=${cls} id=${labelId}${titleAttr}>${label}</span>`;
+  return title
+    ? html`<span class=${cls} id=${labelId} title=${title}>${label}</span>`
+    : html`<span class=${cls} id=${labelId}>${label}</span>`;
 }
 
 export function fieldControl(

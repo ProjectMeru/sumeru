@@ -288,6 +288,10 @@ function buildTree(strings: TemplateStringsArray, values: TemplateValue[]): VNod
         if (attr) partialHandlers[attr.startsWith("@") ? attr.slice(1) : attr] = value as EventHandler;
         return;
       }
+      if (isTemplateResult(value)) {
+        // Optional attribute suffix fragments (e.g. html``) must not stringify to [object Object].
+        return;
+      }
       const text = String(value);
       const needsQuotes =
         attr &&
