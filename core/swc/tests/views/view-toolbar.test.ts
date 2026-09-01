@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildReportActionEntries,
+  createToolbarIcon,
   exportQuery,
   newRecordUrl,
   renderReportActions,
@@ -63,11 +65,33 @@ describe("view-toolbar", () => {
     expect(result!.querySelector('a[href*="/web/export/csv"]')).not.toBeNull();
   });
 
-  it("renderSearchField renders search input", () => {
+  it("buildReportActionEntries lists export formats for actions menu", () => {
+    const entries = buildReportActionEntries(
+      basePayload({
+        arch: {
+          type: "list",
+          model: "crm.lead",
+          fields: [],
+          report: { download: true, upload: false, formats: "csv,xlsx", pdfSizes: "", bulkModes: "" },
+        },
+      }),
+      "name,email",
+    );
+    expect(entries.map((e) => e.label)).toEqual(["Export CSV", "Export Excel"]);
+  });
+
+  it("renderSearchField renders search input with icon", () => {
     const root = renderSearchField("acme", () => {}, () => {}).render();
     const input = root.querySelector(".sum-list-search") as HTMLInputElement;
     expect(input).toBeTruthy();
     expect(input.value).toBe("acme");
     expect(input.getAttribute("placeholder")).toBe("Search…");
+    expect(root.querySelector(".sum-list-search-submit svg")).toBeTruthy();
+  });
+
+  it("createToolbarIcon renders SVG paths for toolbar buttons", () => {
+    const icon = createToolbarIcon("filter", "test-icon");
+    expect(icon.querySelector("svg.test-icon")).toBeTruthy();
+    expect(icon.querySelector("polygon")).toBeTruthy();
   });
 });

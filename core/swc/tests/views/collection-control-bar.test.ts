@@ -57,24 +57,60 @@ function basePayload(): SwcWorkspacePayload {
 }
 
 describe("CollectionBarHost", () => {
-  it("renders search field and chip filter/group buttons with icons and labels", () => {
+  it("renders search field and segmented filter controls with icons and labels", () => {
     const bar = new CollectionBarHost({ payload: basePayload(), viewType: "list" }, testEnv());
     bar.callSetup();
     const el = bar.render();
     expect(el.querySelector(".sum-control-bar-search")).toBeTruthy();
-    expect(el.querySelector(".sum-control-bar-search-icon")).toBeTruthy();
-    expect(el.querySelector(".sum-control-bar-search-group")).toBeTruthy();
-    expect(el.querySelector(".sum-control-bar-search-wrap .sum-control-bar-chip-btn")).toBeFalsy();
+    expect(el.querySelector(".sum-control-bar-search-submit svg")).toBeTruthy();
+    expect(el.querySelector(".sum-control-bar-search-area")).toBeTruthy();
+    expect(el.querySelector(".sum-control-bar-segment")).toBeTruthy();
     const filterBtn = el.querySelector('[aria-label="Filters"]') as HTMLButtonElement;
     const groupBtn = el.querySelector('[aria-label="Group By"]') as HTMLButtonElement;
     const favBtn = el.querySelector('[aria-label="Favorites"]') as HTMLButtonElement;
     expect(filterBtn).toBeTruthy();
     expect(groupBtn).toBeTruthy();
     expect(favBtn).toBeTruthy();
-    expect(filterBtn.classList.contains("sum-control-bar-chip-btn")).toBe(true);
-    expect(filterBtn.querySelector(".sum-control-bar-chip-icon")).toBeTruthy();
-    expect(filterBtn.querySelector(".sum-control-bar-chip-label")?.textContent).toBe("Filters");
-    expect(groupBtn.querySelector(".sum-control-bar-chip-label")?.textContent).toBe("Group By");
+    expect(filterBtn.getAttribute("title")).toContain("Filter records");
+    expect(filterBtn.classList.contains("sum-control-bar-segment-btn")).toBe(true);
+    expect(filterBtn.querySelector(".sum-control-bar-segment-icon")).toBeTruthy();
+    expect(filterBtn.querySelector(".sum-control-bar-segment-label")?.textContent).toBe("Filters");
+    expect(groupBtn.querySelector(".sum-control-bar-segment-label")?.textContent).toBe("Group By");
+    bar.destroy();
+  });
+
+  it("clear button empties search input and removes q from navigation", () => {
+    let navigated = "";
+    const env = testEnv();
+    env.services.action.navigate = (url: string) => {
+      navigated = url;
+    };
+    const bar = new CollectionBarHost(
+      { payload: { ...basePayload(), listSearch: "acme" }, viewType: "list" },
+      env,
+    );
+    bar.callSetup();
+    document.body.append(bar.render());
+    const input = bar.rootElement!.querySelector(".sum-control-bar-search") as HTMLInputElement;
+    expect(input.value).toBe("acme");
+    const clear = bar.rootElement!.querySelector(".sum-control-bar-search-clear") as HTMLButtonElement;
+    expect(clear).toBeTruthy();
+    clear.click();
+    const cleared = bar.rootElement!.querySelector(".sum-control-bar-search") as HTMLInputElement;
+    expect(cleared.value).toBe("");
+    expect(navigated).not.toContain("q=acme");
+    expect(bar.rootElement!.querySelector(".sum-control-bar-search-clear")).toBeFalsy();
+    bar.destroy();
+  });
+
+  it("search submit button is present and clickable", () => {
+    const bar = new CollectionBarHost({ payload: basePayload(), viewType: "list" }, testEnv());
+    bar.callSetup();
+    document.body.append(bar.render());
+    const submit = bar.rootElement!.querySelector(".sum-control-bar-search-submit") as HTMLButtonElement;
+    expect(submit).toBeTruthy();
+    expect(submit.getAttribute("title")).toBe("Search records");
+    submit.click();
     bar.destroy();
   });
 
@@ -82,7 +118,7 @@ describe("CollectionBarHost", () => {
     const bar = new CollectionBarHost({ payload: basePayload(), viewType: "list" }, testEnv());
     bar.callSetup();
     document.body.append(bar.render());
-    const buttons = [...bar.rootElement!.querySelectorAll(".sum-control-bar-chip-btn")] as HTMLButtonElement[];
+    const buttons = [...bar.rootElement!.querySelectorAll(".sum-control-bar-segment-btn")] as HTMLButtonElement[];
     const filtersBtn = buttons.find((b) => b.getAttribute("aria-label") === "Filters")!;
     filtersBtn.click();
     bar.patch();

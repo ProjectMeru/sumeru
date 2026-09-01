@@ -367,6 +367,14 @@ function applyAttrs(el: HTMLElement, attrs: Record<string, string>, key?: string
       nextNames.add("style");
       continue;
     }
+    if (k === "value") {
+      el.setAttribute("value", v);
+      nextNames.add("value");
+      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+        if (el.value !== v) el.value = v;
+      }
+      continue;
+    }
     if (k.startsWith("data-") || ALLOWED_ATTRS.has(k)) {
       el.setAttribute(k, v);
       nextNames.add(k);
