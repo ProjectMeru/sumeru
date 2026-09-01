@@ -11,6 +11,31 @@ import (
 	"sumeru/core/orm"
 )
 
+// sanitizeSpreadsheetCell prefixes values that spreadsheet apps may interpret as formulas.
+func sanitizeSpreadsheetCell(value string) string {
+	if value == "" {
+		return value
+	}
+	trimmed := strings.TrimSpace(value)
+	switch value[0] {
+	case '=':
+		return "\t" + value
+	case '+', '-':
+		if _, err := strconv.ParseFloat(trimmed, 64); err == nil {
+			return value
+		}
+		return "\t" + value
+	case '@', '\t', '\r':
+		return "\t" + value
+	}
+	return value
+}
+
+// SanitizeSpreadsheetCellForTest exposes spreadsheet injection guard for tests.
+func SanitizeSpreadsheetCellForTest(value string) string {
+	return sanitizeSpreadsheetCell(value)
+}
+
 func writeCSV(headers []string, rows [][]string) ([]byte, error) {
 	var buf bytes.Buffer
 	buf.Write([]byte{0xEF, 0xBB, 0xBF})
@@ -19,7 +44,11 @@ func writeCSV(headers []string, rows [][]string) ([]byte, error) {
 		return nil, err
 	}
 	for _, row := range rows {
-		if err := w.Write(row); err != nil {
+		safeRow := make([]string, len(row))
+		for i, cell := range row {
+			safeRow[i] = sanitizeSpreadsheetCell(cell)
+		}
+		if err := w.Write(safeRow); err != nil {
 			return nil, err
 		}
 	}

@@ -62,6 +62,8 @@ func registerAppsRoutes() {
 func registerRecordRoutes() {
 	registerSession(http.MethodGet, exportCSVRoute, ExportCSVHandler)
 	registerSession(http.MethodGet, exportPDFRoute, ExportPDFHandler)
+	registerSession(http.MethodGet, exportXLSXRoute, ExportXLSXHandler)
+	registerSession(http.MethodGet, templatePDFRoute, ExportTemplatePDFHandler)
 	registerSession(http.MethodGet, bulkTemplateRoute, BulkTemplateHandler)
 	registerSession(http.MethodPost, bulkUploadRoute, BulkUploadHandler)
 	registerSession(http.MethodPost, bulkConfirmRoute, BulkConfirmHandler)

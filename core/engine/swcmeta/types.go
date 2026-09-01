@@ -227,6 +227,7 @@ type CohortMeta struct {
 type ReportMeta struct {
 	Download  bool   `json:"download"`
 	Upload    bool   `json:"upload"`
+	Formats   string `json:"formats,omitempty"`
 	PDFSizes  string `json:"pdfSizes,omitempty"`
 	BulkModes string `json:"bulkModes,omitempty"`
 }

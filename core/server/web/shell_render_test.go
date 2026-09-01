@@ -35,6 +35,22 @@ func TestResolveExtraStylesheets(t *testing.T) {
 	}
 }
 
+func TestResolveExtraScripts(t *testing.T) {
+	optScripts := []string{"/static/addon-asset/demo/static/js/widget.js"}
+	if got := web.ResolveExtraScripts(nil, optScripts); !reflect.DeepEqual(got, optScripts) {
+		t.Fatalf("opts override: got %v", got)
+	}
+
+	pageScripts := []string{"/static/js/page.js"}
+	if got := web.ResolveExtraScripts(pageScripts, nil); !reflect.DeepEqual(got, pageScripts) {
+		t.Fatalf("page scripts: got %v", got)
+	}
+
+	if got := web.ResolveExtraScripts(nil, nil); !reflect.DeepEqual(got, render.ExtraScriptURLs) {
+		t.Fatalf("default scripts: got %v", got)
+	}
+}
+
 func TestApplyShellPageDefaults(t *testing.T) {
 	req := httptest.NewRequest("GET", web.TestHomeRoute, nil)
 	page := web.ApplyShellPageDefaults(render.PageData{}, web.ShellPageOpts{MenuIDStr: "12"}, web.TestHomeRoute, req, "sale", nil)

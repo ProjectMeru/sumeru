@@ -20,3 +20,13 @@ func ConfigForTest(httpInterface, httpPort string, setupLocalhostOnly bool) conf
 		SetupLocalhostOnly: setupLocalhostOnly,
 	}
 }
+
+// NormalizeManifestAssetRelForTest exposes manifest asset path normalization for tests.
+func NormalizeManifestAssetRelForTest(rel string) (string, bool) {
+	return normalizeManifestAssetRel(rel)
+}
+
+// ManifestAssetPublicURLForTest builds the public URL for a manifest asset entry.
+func ManifestAssetPublicURLForTest(moduleName, cleanRel string) string {
+	return manifestAssetPublicURL(moduleName, cleanRel)
+}

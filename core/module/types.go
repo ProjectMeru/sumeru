@@ -18,6 +18,7 @@ type Manifest struct {
 	Application *bool    `json:"application"` // nil = true (show in Apps)
 	AutoImport  *bool    `json:"auto_import"` // nil = true; false = omit from generated zimports blank imports
 	SwcEntry    string   `json:"swc_entry"`   // optional SWC addon entry module URL
+	Assets      []string `json:"assets"`      // optional CSS/JS paths relative to addon root
 }
 
 func (manifest *Manifest) IsAutoImport() bool {

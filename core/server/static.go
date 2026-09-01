@@ -39,9 +39,12 @@ func registerBrandingAndStatic() {
 	ctx := context.Background()
 
 	stylesheetURLs := buildShellStylesheetURLs()
+	scriptURLs := []string{}
 	registerInstalledAddonThemeOverrides(ctx, &stylesheetURLs)
+	registerInstalledAddonManifestAssets(ctx, &stylesheetURLs, &scriptURLs)
 	registerBrandStylesheet(ctx, &stylesheetURLs)
 	render.SetExtraStylesheetURLs(stylesheetURLs)
+	render.SetExtraScriptURLs(scriptURLs)
 
 	logoURL := registerAppLogo(ctx)
 	render.SetShellBranding(render.ShellBranding{
@@ -85,6 +88,84 @@ func registerInstalledAddonThemeOverrides(ctx context.Context, stylesheetURLs *[
 		*stylesheetURLs = append(*stylesheetURLs, publicURL)
 		applog.InfoMsg(ctx, "web", "static", "Registered addon theme overrides",
 			map[string]interface{}{"module": moduleName, "path": overridePath, "url": publicURL})
+	}
+}
+
+// registerInstalledAddonManifestAssets exposes manifest.json "assets" entries at
+// /static/addon-asset/<module>/<relative-path>. CSS files are appended to the shell stylesheet list;
+// JS files are appended to ExtraScriptURLs.
+func registerInstalledAddonManifestAssets(ctx context.Context, stylesheetURLs, scriptURLs *[]string) {
+	for _, moduleName := range sortedLoadedAddonNames() {
+		addon := module.LoadedAddons[moduleName]
+		if addon == nil || !addonModuleInstalled(moduleName) {
+			continue
+		}
+		for _, rel := range addon.Manifest.Assets {
+			clean, ok := normalizeManifestAssetRel(rel)
+			if !ok {
+				continue
+			}
+			absPath := filepath.Join(addon.Path, clean)
+			if !isRegularFile(absPath) {
+				applog.WarnMsg(ctx, "web", "static", "manifest asset not found", nil,
+					map[string]interface{}{"module": moduleName, "path": absPath})
+				continue
+			}
+			publicURL := manifestAssetPublicURL(moduleName, clean)
+			contentType := contentTypeForAssetRel(clean)
+			registerInstalledModuleFileHandler(publicURL, absPath, moduleName, contentType)
+			if strings.HasSuffix(strings.ToLower(clean), ".css") {
+				*stylesheetURLs = append(*stylesheetURLs, publicURL)
+			}
+			if strings.HasSuffix(strings.ToLower(clean), ".js") || strings.HasSuffix(strings.ToLower(clean), ".mjs") {
+				*scriptURLs = append(*scriptURLs, publicURL)
+			}
+			applog.InfoMsg(ctx, "web", "static", "Registered manifest asset",
+				map[string]interface{}{"module": moduleName, "path": absPath, "url": publicURL})
+		}
+	}
+}
+
+func normalizeManifestAssetRel(rel string) (string, bool) {
+	rel = strings.TrimSpace(rel)
+	if strings.Contains(rel, `\`) {
+		return "", false
+	}
+	rel = filepath.ToSlash(rel)
+	if rel == "" || strings.Contains(rel, "..") || strings.HasPrefix(rel, "/") {
+		return "", false
+	}
+	if filepath.IsAbs(rel) {
+		return "", false
+	}
+	if len(rel) >= 2 && rel[1] == ':' {
+		return "", false
+	}
+	return rel, true
+}
+
+func manifestAssetPublicURL(moduleName, cleanRel string) string {
+	return "/static/addon-asset/" + moduleName + "/" + cleanRel
+}
+
+func contentTypeForAssetRel(rel string) string {
+	switch strings.ToLower(filepath.Ext(rel)) {
+	case ".css":
+		return "text/css; charset=utf-8"
+	case ".js", ".mjs":
+		return "text/javascript; charset=utf-8"
+	case ".svg":
+		return "image/svg+xml"
+	case ".png":
+		return "image/png"
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	case ".webp":
+		return "image/webp"
+	case ".gif":
+		return "image/gif"
+	default:
+		return "application/octet-stream"
 	}
 }
 

@@ -40,7 +40,7 @@ func CapabilitiesFromView(v *parser.View) Capabilities {
 
 func mergeCaps(caps *Capabilities, download, upload, pdfSizes, modes string) {
 	for _, f := range splitCSVList(download) {
-		if f == "csv" || f == "pdf" {
+		if f == "csv" || f == "pdf" || f == "xlsx" {
 			caps.DownloadFormats = appendUnique(caps.DownloadFormats, f)
 		}
 	}

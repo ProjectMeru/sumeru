@@ -6,6 +6,7 @@ import {
   BULK_UPLOAD_ROUTE,
   EXPORT_CSV_ROUTE,
   EXPORT_PDF_ROUTE,
+  EXPORT_XLSX_ROUTE,
   VIEW_FORM,
   VIEW_KANBAN,
 } from "../../constants/routes.js";
@@ -151,8 +152,20 @@ export function renderReportActions(
   const items: Array<HTMLElement | TemplateResult> = [];
 
   if (report.download) {
-    items.push(linkButton(`${EXPORT_CSV_ROUTE}?${exportParams.toString()}`, "Export CSV"));
-    items.push(linkButton(`${EXPORT_PDF_ROUTE}?${exportParams.toString()}`, "Export PDF"));
+    const formats = (report.formats || "csv,pdf")
+      .split(",")
+      .map((f) => f.trim().toLowerCase())
+      .filter(Boolean);
+    const showAll = formats.length === 0;
+    if (showAll || formats.includes("csv")) {
+      items.push(linkButton(`${EXPORT_CSV_ROUTE}?${exportParams.toString()}`, "Export CSV"));
+    }
+    if (showAll || formats.includes("pdf")) {
+      items.push(linkButton(`${EXPORT_PDF_ROUTE}?${exportParams.toString()}`, "Export PDF"));
+    }
+    if (formats.includes("xlsx")) {
+      items.push(linkButton(`${EXPORT_XLSX_ROUTE}?${exportParams.toString()}`, "Export Excel"));
+    }
   }
   if (report.upload && fields) {
     const templateParams = new URLSearchParams(exportParams);
