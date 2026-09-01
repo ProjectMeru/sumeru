@@ -53,7 +53,12 @@ func TestResolveExtraScripts(t *testing.T) {
 
 func TestApplyShellPageDefaults(t *testing.T) {
 	req := httptest.NewRequest("GET", web.TestHomeRoute, nil)
-	page := web.ApplyShellPageDefaults(render.PageData{}, web.ShellPageOpts{MenuIDStr: "12"}, web.TestHomeRoute, req, "sale", nil)
+	page := web.ApplyShellPageDefaults(render.PageData{}, web.ShellPageOpts{
+		MenuIDStr:    "12",
+		Route:        web.TestHomeRoute,
+		ModuleName:   "sale",
+		SidebarMenus: nil,
+	}, req)
 
 	if page.Title != web.TestDefaultPageTitle {
 		t.Fatalf("title=%q want %q", page.Title, web.TestDefaultPageTitle)
