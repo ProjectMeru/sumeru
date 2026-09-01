@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"sumeru/core/applog"
 	"sumeru/core/cache"
 )
 
@@ -178,6 +179,13 @@ func BuildWhereWithRecordRules(ctx context.Context, uid int, model, op string, b
 	parts, err := loadRuleDomainParts(ctx, uid, model, op)
 	if err != nil {
 		return "", nil, err
+	}
+	if DevFeatureEnabled("access") {
+		applog.L(ctx).Debug("dev_access_rules",
+			"model", model, "op", op, "uid", uid,
+			"global_rules", len(parts.globals), "group_rules", len(parts.groups),
+			"allow_all_groups", parts.allowAllGroups,
+		)
 	}
 	var clauses [][][]interface{}
 	if len(base) > 0 {
