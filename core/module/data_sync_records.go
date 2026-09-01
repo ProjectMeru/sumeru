@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"sumeru/core/engine/eval"
 	"sumeru/core/sdk/platformmsg"
 	"sumeru/core/engine/parser"
 	"sumeru/core/orm"
@@ -162,6 +163,16 @@ func ConvertRecordScalar(ctx context.Context, moduleName, model, column, rawValu
 		}
 		return strings.EqualFold(trimmedValue, "true") || trimmedValue == "1"
 	}
+	if v, err := eval.SafeEval(trimmedValue); err == nil {
+		switch typed := v.(type) {
+		case bool, int64, float64, string:
+			return typed
+		case []interface{}:
+			return resolveEvalTuple(ctx, moduleName, typed)
+		case nil:
+			return nil
+		}
+	}
 	// Numeric / integer literals from eval="…"
 	if n, err := strconv.ParseInt(trimmedValue, 10, 64); err == nil && !strings.Contains(trimmedValue, ".") {
 		return n
@@ -170,4 +181,22 @@ func ConvertRecordScalar(ctx context.Context, moduleName, model, column, rawValu
 		return f
 	}
 	return trimmedValue
+}
+
+func resolveEvalTuple(ctx context.Context, moduleName string, parts []interface{}) interface{} {
+	if len(parts) == 0 {
+		return parts
+	}
+	out := make([]interface{}, len(parts))
+	for i, p := range parts {
+		out[i] = p
+	}
+	if cmd, ok := out[0].(int64); ok && cmd == 4 && len(out) >= 2 {
+		if ref, ok := out[1].(string); ok {
+			if id, err := resolveXMLIDInModule(ctx, moduleName, strings.Trim(ref, `"'`)); err == nil && id > 0 {
+				return id
+			}
+		}
+	}
+	return out
 }
