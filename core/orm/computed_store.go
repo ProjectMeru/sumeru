@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-// MergeStoredComputes runs stored compute handlers and merges results into values for SQL write.
+// MergeStoredComputes runs stored compute handlers in dependency order and merges results for SQL write.
 func MergeStoredComputes(ctx context.Context, modelName string, rec map[string]interface{}) error {
 	if rec == nil {
 		return nil
@@ -14,19 +14,91 @@ func MergeStoredComputes(ctx context.Context, modelName string, rec map[string]i
 	if !ok || inst == nil {
 		return nil
 	}
-	stored := storedComputeFields(inst)
-	if len(stored) == 0 {
+	order := storedComputeOrder(modelName)
+	if len(order) == 0 {
 		return nil
 	}
-	if err := ApplyComputes(ctx, modelName, rec); err != nil {
-		return err
+	computeMu.RLock()
+	byField := computes[modelName]
+	specs := make(map[string]computeSpec, len(byField))
+	for k, v := range byField {
+		specs[k] = v
 	}
-	for _, name := range stored {
-		if v, ok := rec[name]; ok {
-			rec[name] = v
+	computeMu.RUnlock()
+	for _, field := range order {
+		spec, ok := specs[field]
+		if !ok || spec.fn == nil {
+			continue
 		}
+		val, err := spec.fn(ctx, rec)
+		if err != nil {
+			return fmt.Errorf("compute %s.%s: %w", modelName, field, err)
+		}
+		rec[field] = val
 	}
 	return nil
+}
+
+func storedComputeOrder(modelName string) []string {
+	computeMu.RLock()
+	byField := computes[modelName]
+	if len(byField) == 0 {
+		computeMu.RUnlock()
+		return nil
+	}
+	fields := make([]string, 0, len(byField))
+	for f := range byField {
+		fields = append(fields, f)
+	}
+	deps := map[string][]string{}
+	for f, spec := range byField {
+		deps[f] = append([]string(nil), spec.deps...)
+	}
+	computeMu.RUnlock()
+	return topoSort(fields, deps)
+}
+
+func topoSort(fields []string, deps map[string][]string) []string {
+	fieldSet := map[string]bool{}
+	for _, f := range fields {
+		fieldSet[f] = true
+	}
+	inDegree := map[string]int{}
+	rev := map[string][]string{}
+	for _, f := range fields {
+		inDegree[f] = 0
+	}
+	for _, f := range fields {
+		for _, d := range deps[f] {
+			if !fieldSet[d] {
+				continue
+			}
+			inDegree[f]++
+			rev[d] = append(rev[d], f)
+		}
+	}
+	var queue []string
+	for _, f := range fields {
+		if inDegree[f] == 0 {
+			queue = append(queue, f)
+		}
+	}
+	var out []string
+	for len(queue) > 0 {
+		n := queue[0]
+		queue = queue[1:]
+		out = append(out, n)
+		for _, m := range rev[n] {
+			inDegree[m]--
+			if inDegree[m] == 0 {
+				queue = append(queue, m)
+			}
+		}
+	}
+	if len(out) != len(fields) {
+		return fields
+	}
+	return out
 }
 
 func storedComputeFields(model Model) []string {

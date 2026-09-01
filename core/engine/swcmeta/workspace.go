@@ -8,6 +8,15 @@ import (
 	"sumeru/core/orm"
 )
 
+var listMode = "list"
+var kanbanMode = "kanban"
+var graphMode = "graph"
+var calendarMode = "calendar"
+var pivotMode = "pivot"
+var ganttMode = "gantt"
+var mapMode = "map"
+var cohortMode = "cohort"
+
 // ViewRecordInput is workspace ORM data passed from the web layer (no render import).
 type ViewRecordInput struct {
 	ActionID         int
@@ -24,6 +33,7 @@ type ViewRecordInput struct {
 	ListFilter       string
 	ListDomain       string
 	ListGroupBy      string
+	ListSections     []ListSectionMeta
 	Record           map[string]interface{}
 	ListRows         []map[string]interface{}
 	KanbanColumns    []KanbanColumn
@@ -61,7 +71,7 @@ func BuildWorkspacePayload(
 	if rec.Pivot != nil {
 		arch.Pivot = rec.Pivot
 	}
-	if selectedMode == "list" || selectedMode == "kanban" || selectedMode == "graph" || selectedMode == "calendar" || selectedMode == "pivot" || selectedMode == "gantt" || selectedMode == "map" || selectedMode == "cohort" {
+	if selectedMode == listMode || selectedMode == kanbanMode || selectedMode == graphMode || selectedMode == calendarMode || selectedMode == pivotMode || selectedMode == ganttMode || selectedMode == mapMode || selectedMode == cohortMode {
 		if arch.Search == nil {
 			arch.Search = loadSearchMeta(ctx, rec.ResModel)
 		}
@@ -84,13 +94,14 @@ func BuildWorkspacePayload(
 		ListFilter:    rec.ListFilter,
 		ListDomain:    rec.ListDomain,
 		ListGroupBy:   rec.ListGroupBy,
+		ListSections:  rec.ListSections,
 		FormBaseQuery: rec.FormBaseQuery,
 		ViewTabs:      rec.ViewTabs,
 		Breadcrumbs:   rec.Breadcrumbs,
 		Defaults:      rec.Defaults,
 	}
 
-	if selectedMode == "list" || selectedMode == "kanban" || selectedMode == "graph" || selectedMode == "calendar" || selectedMode == "pivot" || selectedMode == "gantt" || selectedMode == "map" || selectedMode == "cohort" {
+	if selectedMode == listMode || selectedMode == kanbanMode || selectedMode == graphMode || selectedMode == calendarMode || selectedMode == pivotMode || selectedMode == ganttMode || selectedMode == mapMode || selectedMode == cohortMode {
 		payload.Favorites = LoadSavedSearches(ctx, rec.ActionID, rec.ResModel)
 	}
 
@@ -101,6 +112,15 @@ func BuildWorkspacePayload(
 	if len(rec.ListRows) > 0 {
 		enrichMany2OneNames(ctx, rec.ResModel, rec.ListRows)
 		payload.Records = redactRows(ctx, rec.ResModel, rec.ListRows)
+	}
+	if len(rec.ListSections) > 0 {
+		for i := range rec.ListSections {
+			if len(rec.ListSections[i].Records) > 0 {
+				enrichMany2OneNames(ctx, rec.ResModel, rec.ListSections[i].Records)
+				rec.ListSections[i].Records = redactRows(ctx, rec.ResModel, rec.ListSections[i].Records)
+			}
+		}
+		payload.ListSections = rec.ListSections
 	}
 	return payload
 }

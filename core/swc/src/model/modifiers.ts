@@ -1,4 +1,4 @@
-import type { SwcArchField } from "../types/workspace.js";
+import type { SwcArchButton, SwcArchField } from "../types/workspace.js";
 import type { SwcRecord } from "./record.js";
 
 type ModifierTriplet = { invisible: boolean; readonly: boolean; required: boolean };
@@ -85,4 +85,10 @@ export function createDefaults(fields: SwcArchField[]): Record<string, unknown> 
     if (f.default !== undefined) out[f.name] = f.default;
   }
   return out;
+}
+
+export function isButtonVisible(button: SwcArchButton, record?: SwcRecord): boolean {
+  const dynamic = evalModifierExpr(button.invisible_expr, record);
+  if (dynamic !== undefined) return !dynamic;
+  return !button.invisible;
 }

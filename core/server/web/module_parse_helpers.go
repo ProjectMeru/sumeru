@@ -51,7 +51,10 @@ func parseModuleRow(row map[string]interface{}) (moduleRow, bool) {
 func listModulesOr500(w http.ResponseWriter, r *http.Request, logMessage string) ([]map[string]interface{}, bool) {
 	moduleRows, err := module.ListModules(r.Context())
 	if err != nil {
-		WebLogEvent(r.Context(), r.URL.Path, logMessage, "load", "failure", err, nil)
+		WebLogEvent(r.Context(), WebLogInput{
+			Route: r.URL.Path, Message: logMessage,
+			Operation: "load", Status: "failure", Err: err,
+		})
 		http.Error(w, "Failed to list modules", http.StatusInternalServerError)
 		return nil, false
 	}

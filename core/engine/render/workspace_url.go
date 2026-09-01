@@ -34,6 +34,8 @@ const (
 	ViewModeGantt    = "gantt"
 	ViewModeMap      = "map"
 	ViewModeCohort   = "cohort"
+	ViewModeHierarchy = "hierarchy"
+	ViewModeActivity  = "activity"
 	ViewModeSearch   = "search"
 )
 

@@ -11,6 +11,7 @@ import {
   exportFieldNamesCsv,
 } from "../shared/view-toolbar.js";
 import { collectFormFields, renderFormSheet } from "./form-sheet.js";
+import { isButtonVisible } from "../../model/modifiers.js";
 import { initFormInteractions } from "./form-interactions.js";
 import { validatePasswordMatchGroups } from "../../widgets/password-match.js";
 import { FieldHost } from "../../widgets/field-host.js";
@@ -285,6 +286,7 @@ export class FormView extends SwcComponent<FormViewProps> {
   private async runObjectButton(archButton: SwcArchButton): Promise<void> {
     const payload = this.props.payload;
     if (archButton.type !== "object" || payload.recordId <= 0) return;
+    if (archButton.confirm && !window.confirm(archButton.confirm)) return;
     this.acting = true;
     this.error = "";
     this.rerender();
@@ -322,6 +324,7 @@ export class FormView extends SwcComponent<FormViewProps> {
 
     for (const archButton of this.headerButtons()) {
       if (archButton.type !== "object") continue;
+      if (!isButtonVisible(archButton, this.record)) continue;
       items.push(
         headerButton(
           archButton.string || archButton.name,

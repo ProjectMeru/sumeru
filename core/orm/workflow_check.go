@@ -8,11 +8,23 @@ import (
 	"strings"
 )
 
+// WorkflowTransitionInput describes a state transition check on a record.
+type WorkflowTransitionInput struct {
+	Model     string
+	RecordID  int
+	FromState string
+	ToState   string
+	UID       int
+}
+
 // CanWorkflowTransition reports whether uid may move record id on model from→to.
 // Prefers sys.workflow.transition; falls back to sys.approval.rule.
-func CanWorkflowTransition(ctx context.Context, model string, recordID int, fromState, toState string, uid int) error {
-	model = strings.TrimSpace(model)
-	toState = strings.TrimSpace(toState)
+func CanWorkflowTransition(ctx context.Context, in WorkflowTransitionInput) error {
+	model := strings.TrimSpace(in.Model)
+	toState := strings.TrimSpace(in.ToState)
+	fromState := in.FromState
+	uid := in.UID
+	recordID := in.RecordID
 	if model == "" || toState == "" {
 		return fmt.Errorf("model and to_state required")
 	}

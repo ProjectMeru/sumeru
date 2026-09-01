@@ -3,6 +3,7 @@ import { html } from "../../template/html.js";
 import type { SwcWorkspacePayload } from "../../types/workspace.js";
 import { VIEW_PIVOT } from "../../constants/routes.js";
 import { CollectionBarHost, mountCollectionBar } from "../shared/collection-bar-host.js";
+import { renderPivotExportLink } from "../shared/view-toolbar.js";
 
 interface PivotViewProps {
   payload: SwcWorkspacePayload;
@@ -25,6 +26,7 @@ export class PivotView extends SwcComponent<PivotViewProps> {
 
   override template() {
     const pivot = this.props.payload.arch.pivot;
+    const exportLink = renderPivotExportLink(this.props.payload);
     if (!pivot) {
       return html`<div class="sum-collection-view sum-pivot-view sum-pivot-view--empty">
         ${this.collectionBar.renderOrPatch()}
@@ -34,6 +36,7 @@ export class PivotView extends SwcComponent<PivotViewProps> {
     return html`
       <div class="sum-collection-view sum-pivot-view">
         ${this.collectionBar.renderOrPatch()}
+        ${exportLink ?? ""}
         <table class="sum-pivot-table">
           <thead>
             <tr>

@@ -150,8 +150,8 @@ func ResolveExtraStylesheets(pageStylesheets, optStylesheets []string) []string 
 	return resolveExtraStylesheets(pageStylesheets, optStylesheets)
 }
 
-func ApplyShellPageDefaults(page render.PageData, opts ShellPageOpts, route string, r *http.Request, moduleName string, sidebarMenus []render.SidebarMenu) render.PageData {
-	return applyShellPageDefaults(page, opts, route, r, moduleName, sidebarMenus)
+func ApplyShellPageDefaults(page render.PageData, opts ShellPageOpts, r *http.Request) render.PageData {
+	return applyShellPageDefaults(page, opts, r)
 }
 
 func ClientIP(r *http.Request) string { return clientIP(r) }
@@ -304,8 +304,8 @@ func FilterAppsModulesByBrowse(modules []AppsModule, browse AppsBrowseState) (ap
 	return filterAppsModulesByBrowse(modules, browse)
 }
 
-func AppsDetailURL(layout, filter, scope, searchQuery, moduleName string, editing bool) string {
-	return appsDetailURL(layout, filter, scope, searchQuery, moduleName, editing)
+func AppsDetailURL(browse AppsBrowseState, editing bool) string {
+	return appsDetailURL(browse, editing)
 }
 
 func FindAppsModule(modules []AppsModule, moduleName string) (AppsModule, bool) {

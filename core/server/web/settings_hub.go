@@ -46,7 +46,10 @@ func SettingsHubHandler(w http.ResponseWriter, r *http.Request) {
 	sections := loadSettingsHubSections(ctx, menuIDStr)
 	appTiles, err := loadInstalledAppTiles(ctx, false)
 	if err != nil {
-		WebLogEvent(ctx, settingsRoute, "Failed to list modules for settings hub", "load", "failure", err, nil)
+		WebLogEvent(ctx, WebLogInput{
+			Route: settingsRoute, Message: "Failed to list modules for settings hub",
+			Operation: "load", Status: "failure", Err: err,
+		})
 		http.Error(w, "Failed to list modules", http.StatusInternalServerError)
 		return
 	}

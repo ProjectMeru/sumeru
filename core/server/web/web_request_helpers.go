@@ -11,20 +11,31 @@ import (
 	"sumeru/core/orm"
 )
 
+// WebLogInput holds structured web log event fields.
+type WebLogInput struct {
+	Route         string
+	Message       string
+	Operation     string
+	Status        string
+	Err           error
+	ContextFields map[string]interface{}
+}
+
 // WebLogEvent logs a structured web event using the applog contract.
-func WebLogEvent(ctx context.Context, route, message, operation, status string, err error, contextFields map[string]interface{}) {
+func WebLogEvent(ctx context.Context, in WebLogInput) {
+	contextFields := in.ContextFields
 	if contextFields == nil {
 		contextFields = map[string]interface{}{}
 	}
-	contextFields["route"] = route
+	contextFields["route"] = in.Route
 
 	event := applog.Event{
-		Message:   message,
+		Message:   in.Message,
 		Component: webLogComponent,
-		Operation: operation,
-		Status:    status,
+		Operation: in.Operation,
+		Status:    in.Status,
 		Context:   contextFields,
-		Err:       err,
+		Err:       in.Err,
 	}
 	emitWebLogEvent(ctx, event)
 }
@@ -47,12 +58,17 @@ func WebLogf(ctx context.Context, route, format string, args ...interface{}) {
 	if route = strings.TrimSpace(route); route == "" {
 		route = webLogUnknownRoute
 	}
-	WebLogEvent(ctx, route, fmt.Sprintf(format, args...), logOperationRequest, logStatusSuccess, nil, nil)
+	WebLogEvent(ctx, WebLogInput{
+		Route: route, Message: fmt.Sprintf(format, args...),
+		Operation: logOperationRequest, Status: logStatusSuccess,
+	})
 }
 
 // WebLogNavigation emits an INFO-level audit event for successful navigation (menu, view, module, company).
 func WebLogNavigation(ctx context.Context, route, operation, message string, fields map[string]interface{}) {
-	WebLogEvent(ctx, route, message, operation, logStatusSuccess, nil, fields)
+	WebLogEvent(ctx, WebLogInput{
+		Route: route, Message: message, Operation: operation, Status: logStatusSuccess, ContextFields: fields,
+	})
 }
 
 // SafePathNext returns a same-origin relative path, rejecting open-redirect targets.

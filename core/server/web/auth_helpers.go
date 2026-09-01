@@ -11,7 +11,10 @@ import (
 func writeJSON(w http.ResponseWriter, ctx context.Context, route string, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(v); err != nil {
-		WebLogEvent(ctx, route, "Failed to encode JSON response", "write", "partial", err, nil)
+		WebLogEvent(ctx, WebLogInput{
+			Route: route, Message: "Failed to encode JSON response",
+			Operation: "write", Status: "partial", Err: err,
+		})
 	}
 }
 
@@ -45,8 +48,11 @@ func requireSystemAdmin(w http.ResponseWriter, r *http.Request, redirectOnDeny b
 
 func requireModelAccess(w http.ResponseWriter, r *http.Request, model, perm string) bool {
 	if err := orm.CheckModelAccess(r.Context(), orm.SecurityUID(r.Context()), model, perm); err != nil {
-		WebLogEvent(r.Context(), r.URL.Path, "Model access denied", "access", "failure", err,
-			map[string]interface{}{"resource": model, "permission": perm})
+		WebLogEvent(r.Context(), WebLogInput{
+			Route: r.URL.Path, Message: "Model access denied",
+			Operation: "access", Status: "failure", Err: err,
+			ContextFields: map[string]interface{}{"resource": model, "permission": perm},
+		})
 		http.Error(w, forbiddenMessage, http.StatusForbidden)
 		return false
 	}

@@ -22,7 +22,10 @@ func AppLogsHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	events, err := loadAppLogEvents(ctx)
 	if err != nil {
-		WebLogEvent(ctx, appLogsRoute, "Failed to load app logs", "load", "failure", err, nil)
+		WebLogEvent(ctx, WebLogInput{
+			Route: appLogsRoute, Message: "Failed to load app logs",
+			Operation: "load", Status: "failure", Err: err,
+		})
 		http.Error(w, "Failed to load app logs", http.StatusInternalServerError)
 		return
 	}
@@ -96,7 +99,10 @@ func loadAppLogEvents(ctx context.Context) ([]appLogEvent, error) {
 	for rows.Next() {
 		var event appLogEvent
 		if err := rows.Scan(&event.CreatedAt, &event.Module, &event.Action, &event.Detail); err != nil {
-			WebLogEvent(ctx, appLogsRoute, "App log row scan failed", "load", "partial", err, nil)
+			WebLogEvent(ctx, WebLogInput{
+				Route: appLogsRoute, Message: "App log row scan failed",
+				Operation: "load", Status: "partial", Err: err,
+			})
 			continue
 		}
 		events = append(events, event)

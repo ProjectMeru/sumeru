@@ -29,7 +29,10 @@ func PinnedAppsSaveHandler(w http.ResponseWriter, r *http.Request) {
 
 	savedModules, err := render.SavePinnedAppsForUser(r.Context(), request.Modules)
 	if err != nil {
-		WebLogEvent(r.Context(), pinnedAppsRoute, "Failed to save pinned apps", "save", "failure", err, nil)
+		WebLogEvent(r.Context(), WebLogInput{
+			Route: pinnedAppsRoute, Message: "Failed to save pinned apps",
+			Operation: "save", Status: "failure", Err: err,
+		})
 		http.Error(w, "Failed to save pinned apps", http.StatusInternalServerError)
 		return
 	}

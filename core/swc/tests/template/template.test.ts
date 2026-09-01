@@ -94,4 +94,10 @@ describe("html template", () => {
     const el = html`<button type="button" disabled=${undefined}>Save</button>`.render();
     expect(el.hasAttribute("disabled")).toBe(false);
   });
+
+  it("ignores empty TemplateResult suffix in tag attributes", () => {
+    const suffix = html``;
+    const el = html`<label for=${"f-date_start"}${suffix}>Start</label>`.render();
+    expect(el.getAttribute("for")).toBe("f-date_start");
+  });
 });

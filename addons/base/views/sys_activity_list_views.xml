@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_sys.activity_list" model="sys.activity" type="list">
+            <field name="name" string="Summary"/>
+            <field name="model" string="Model"/>
+            <field name="res_id" string="Record"/>
+            <field name="activity_type" string="Type"/>
+            <field name="state" string="State"/>
+            <field name="due_date" string="Due"/>
+        </view>
+    </data>
+</sumeru>

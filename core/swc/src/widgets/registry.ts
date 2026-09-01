@@ -113,7 +113,7 @@ export function instantiateFieldWidget(
   const key = resolveFieldWidget(field);
   const WidgetConstructor =
     registry.get("fields", key) ?? registry.get("fields", "default") ?? DefaultField;
-  const widget = new WidgetConstructor({ field, record, readonly }, env);
+  const widget = new WidgetConstructor({ field, record, readonly, modelName: record.model }, env);
   widget.callSetup();
   return widget;
 }

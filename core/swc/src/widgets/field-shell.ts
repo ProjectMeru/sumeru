@@ -1,5 +1,7 @@
 import { html, type TemplateResult } from "../template/html.js";
+import { debugFieldTitle } from "../devtools/debug.js";
 import type { SwcArchField } from "../types/workspace.js";
+import type { SwcRecord } from "../model/record.js";
 
 export function fieldInputId(field: SwcArchField): string {
   return `f-${field.name}`;
@@ -58,13 +60,19 @@ export function fieldLabel(
   forId?: string,
   row = false,
   labelId = fieldLabelId(field),
+  modelName = "",
 ): TemplateResult {
   const label = field.string ?? field.name;
   const cls = row ? "sum-field-label sum-field-label--row" : "sum-field-label";
+  const title = debugFieldTitle(modelName || "?", field.name, field.type ?? field.widget);
   if (forId) {
-    return html`<label class=${cls} id=${labelId} for=${forId}>${label}</label>`;
+    return title
+      ? html`<label class=${cls} id=${labelId} for=${forId} title=${title}>${label}</label>`
+      : html`<label class=${cls} id=${labelId} for=${forId}>${label}</label>`;
   }
-  return html`<span class=${cls} id=${labelId}>${label}</span>`;
+  return title
+    ? html`<span class=${cls} id=${labelId} title=${title}>${label}</span>`
+    : html`<span class=${cls} id=${labelId}>${label}</span>`;
 }
 
 export function fieldControl(
@@ -109,6 +117,11 @@ export function fieldReadonlyInput(
   />`;
 }
 
+/** Merge debug model name from a record into field shell options. */
+export function shellOptions(record: SwcRecord, extra: FieldShellOptions = {}): FieldShellOptions {
+  return { ...extra, modelName: extra.modelName ?? record.model };
+}
+
 export interface FieldShellOptions {
   showLabel?: boolean;
   modifiers?: string[];
@@ -116,6 +129,8 @@ export interface FieldShellOptions {
   labelFor?: string | false;
   layout?: "row" | "stack";
   compact?: boolean;
+  /** Res model name for debug field tooltips. */
+  modelName?: string;
 }
 
 export function renderFieldShell(
@@ -125,6 +140,7 @@ export function renderFieldShell(
 ): TemplateResult {
   const showLabel = options.showLabel !== false;
   const labelId = fieldLabelId(field);
+  const modelName = options.modelName ?? "";
   const labelFor = options.labelFor === false ? undefined : options.labelFor;
   const useRow =
     options.layout === "row" || (options.layout !== "stack" && !isFullWidthField(field) && !options.compact);
@@ -134,13 +150,13 @@ export function renderFieldShell(
 
   if (useRow) {
     return html`<div class=${fieldWidgetClass(field, modifiers)}>
-      ${showLabel ? fieldLabel(field, labelFor, true, labelId) : ""}
+      ${showLabel ? fieldLabel(field, labelFor, true, labelId, modelName) : ""}
       ${wrappedBody}
     </div>`;
   }
 
   return html`<div class=${fieldWidgetClass(field, modifiers)}>
-    ${showLabel ? fieldLabel(field, labelFor, false, labelId) : ""}
+    ${showLabel ? fieldLabel(field, labelFor, false, labelId, modelName) : ""}
     ${wrappedBody}
   </div>`;
 }

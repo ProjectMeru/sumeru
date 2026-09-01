@@ -123,12 +123,17 @@ func executeUpdateMutation(ctx context.Context, modelName string, domain [][]int
 				oldState := AsString(before["state"])
 				if newState != oldState {
 					rid, _ := CoerceInt64(before["id"])
-					if err := CanWorkflowTransition(ctx, modelName, int(rid), oldState, newState, uid); err != nil {
+					if err := CanWorkflowTransition(ctx, WorkflowTransitionInput{
+						Model: modelName, RecordID: int(rid), FromState: oldState, ToState: newState, UID: uid,
+					}); err != nil {
 						return err
 					}
 				}
 			}
 			merged := mergeRecordMap(before, prepared)
+			if err := runConstraints(ctx, modelName, merged); err != nil {
+				return err
+			}
 			if err := CheckRecordRules(ctx, uid, modelName, "write", merged); err != nil {
 				return err
 			}

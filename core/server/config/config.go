@@ -36,6 +36,7 @@ type Config struct {
 	LogEnabled         bool     // log_enabled: when false, no slog sinks and L(ctx) is no-op; stdlib log discarded
 	LogTimezone        string   // log_timezone: UTC, Local (default), or IANA (e.g. Asia/Kolkata) for timestamps
 	DevMode            bool     // dev_mode INI key; parseBoolKey(..., false) — debug slog level and dev-only server paths
+	DevFeatures        string   // dev_features INI: comma-separated sql, access, xml
 	SetupToken         string   // optional secret required for POST /setup/init (header X-Setup-Token or JSON setup_token)
 	SetupLocalhostOnly bool     // when true (default), setup mode listens on 127.0.0.1 only
 	DbMaxOpenConns     int      // db_max_open_conns; 0 = Go default
@@ -149,6 +150,8 @@ func LoadConfig(path string) error {
 			AppConfig.LogTimezone = val
 		case keyDevMode:
 			AppConfig.DevMode = parseBoolKey(val, false)
+		case keyDevFeatures:
+			AppConfig.DevFeatures = val
 		case keySetupToken:
 			AppConfig.SetupToken = val
 		case keySetupLocalhostOnly:

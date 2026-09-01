@@ -14,17 +14,20 @@ func FetchRows(ctx context.Context, modelName string, domain [][]interface{}, re
 	if !ok {
 		return nil, fmt.Errorf("unknown model %q", modelName)
 	}
+	uid := orm.SecurityUID(ctx)
 	if recordID > 0 {
 		row, err := orm.SearchOne(ctx, modelName, map[string]interface{}{"id": recordID})
 		if err != nil {
 			return nil, err
 		}
+		orm.RedactRecordForRead(ctx, uid, modelName, row)
 		return []map[string]interface{}{row}, nil
 	}
 	rows, err := orm.SearchLimit(ctx, modelName, domain, maxExportRows)
 	if err != nil {
 		return nil, err
 	}
+	orm.RedactSearchResults(ctx, uid, modelName, rows)
 	_ = modelInst
 	return rows, nil
 }

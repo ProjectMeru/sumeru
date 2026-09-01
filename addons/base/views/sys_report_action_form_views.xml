@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_sys.report.action_form" model="sys.report.action" type="form">
+            <sheet>
+                <group string="Report">
+                    <field name="name" string="Name"/>
+                    <field name="model" string="Model"/>
+                    <field name="report_type" string="Report Type"/>
+                    <field name="template_path" string="Template Path"/>
+                    <field name="paperformat" string="Paper Format"/>
+                    <field name="active" string="Active"/>
+                </group>
+            </sheet>
+        </view>
+    </data>
+</sumeru>

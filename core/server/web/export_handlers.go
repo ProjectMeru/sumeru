@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"strings"
@@ -46,6 +47,29 @@ func exportDomain(r *http.Request) [][]interface{} {
 		return nil
 	}
 	return actionListDomain(r.Context(), actionData)
+}
+
+// analyticsExportDomain merges action domain with workspace search/filter/domain query params.
+func analyticsExportDomain(ctx context.Context, r *http.Request, modelName string) [][]interface{} {
+	q := r.URL.Query()
+	actionID := report.ParseActionIDParam(q.Get(actionIDField))
+	var actionData map[string]interface{}
+	if actionID > 0 {
+		if row, err := loadWindowAction(ctx, actionID); err == nil {
+			actionData = row
+		}
+	}
+	if actionData == nil {
+		actionData = map[string]interface{}{}
+	}
+	searchView := loadSearchView(ctx, modelName)
+	return workspaceListDomain(ctx, listDomainInput{
+		ActionData:  actionData,
+		SearchView:  searchView,
+		SearchQuery: strings.TrimSpace(q.Get(workspaceListSearchParam)),
+		FilterCSV:   strings.TrimSpace(q.Get(workspaceFilterParam)),
+		DomainJSON:  strings.TrimSpace(q.Get(workspaceDomainParam)),
+	})
 }
 
 // ExportCSVHandler GET /web/export/csv

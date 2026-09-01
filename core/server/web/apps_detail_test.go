@@ -7,7 +7,9 @@ import (
 )
 
 func TestAppsDetailURL(t *testing.T) {
-	assertQueryContains(t, web.AppsDetailURL("grid", "installed", "apps", "crm", "sale", true), map[string]string{
+	assertQueryContains(t, web.AppsDetailURL(web.AppsBrowseState{
+		Layout: "grid", Filter: "installed", Scope: "apps", SearchQuery: "crm", ModuleName: "sale",
+	}, true), map[string]string{
 		"layout": "grid",
 		"filter": "installed",
 		"scope":  "apps",
@@ -16,7 +18,9 @@ func TestAppsDetailURL(t *testing.T) {
 		"edit":   "1",
 	})
 
-	assertQueryContains(t, web.AppsDetailURL("list", "all", "all", "", "base", false), map[string]string{
+	assertQueryContains(t, web.AppsDetailURL(web.AppsBrowseState{
+		Layout: "list", Filter: "all", Scope: "all", ModuleName: "base",
+	}, false), map[string]string{
 		"layout": "list",
 		"module": "base",
 	})

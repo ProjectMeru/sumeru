@@ -288,6 +288,10 @@ function buildTree(strings: TemplateStringsArray, values: TemplateValue[]): VNod
         if (attr) partialHandlers[attr.startsWith("@") ? attr.slice(1) : attr] = value as EventHandler;
         return;
       }
+      if (isTemplateResult(value)) {
+        // Optional attribute suffix fragments (e.g. html``) must not stringify to [object Object].
+        return;
+      }
       const text = String(value);
       const needsQuotes =
         attr &&
@@ -365,6 +369,14 @@ function applyAttrs(el: HTMLElement, attrs: Record<string, string>, key?: string
     if (k === "style") {
       applyStyle(el, v);
       nextNames.add("style");
+      continue;
+    }
+    if (k === "value") {
+      el.setAttribute("value", v);
+      nextNames.add("value");
+      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+        if (el.value !== v) el.value = v;
+      }
       continue;
     }
     if (k.startsWith("data-") || ALLOWED_ATTRS.has(k)) {

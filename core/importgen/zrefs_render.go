@@ -36,7 +36,9 @@ func renderZRefs(refs []exportedRef) string {
 
 	imports := map[string]string{}
 	for _, ref := range refs {
-		imports[ref.ImportPath] = ref.ImportAlias
+		if ref.Kind == "alias" {
+			imports[ref.ImportPath] = ref.ImportAlias
+		}
 	}
 	paths := make([]string, 0, len(imports))
 	for p := range imports {

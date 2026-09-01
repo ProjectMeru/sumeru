@@ -10,6 +10,7 @@ import { AsyncFieldController, recordDisplayName } from "./field-async.js";
 import { fieldDomain, isFieldReadonly } from "../model/modifiers.js";
 import type { FieldWidgetProps } from "./field-props.js";
 import { inputValueFromEvent } from "./field-events.js";
+import { SelectCreateDialog } from "../views/dialogs/select-create-dialog.js";
 
 export class Many2OneField extends SwcComponent<FieldWidgetProps> {
   private suggestions: Record<string, unknown>[] = [];
@@ -40,6 +41,18 @@ export class Many2OneField extends SwcComponent<FieldWidgetProps> {
     record.notifyFieldChange(field.name);
     this.open = false;
     this.asyncCtrl.refresh();
+  }
+
+  private openSelectCreate(): void {
+    const { field, record } = this.props;
+    const comodel = field.relation ?? field.options?.relation ?? "";
+    if (!comodel) return;
+    SelectCreateDialog.open(this.env, {
+      comodel,
+      title: field.string ?? field.name,
+      domain: fieldDomain(field, record) ?? [],
+      onSelect: (row) => this.pick(row),
+    });
   }
 
   private onKeydown(event: KeyboardEvent): void {
@@ -87,6 +100,7 @@ export class Many2OneField extends SwcComponent<FieldWidgetProps> {
           @input=${(event: Event) => void this.search(inputValueFromEvent(event))}
           @keydown=${(event: Event) => this.onKeydown(event as KeyboardEvent)}
         />
+        <button type="button" class="sum-m2o-search-btn" title="Search records" @click=${() => this.openSelectCreate()}>…</button>
         ${this.open
           ? html`<ul class="sum-m2o-suggest">
               ${this.suggestions.map(

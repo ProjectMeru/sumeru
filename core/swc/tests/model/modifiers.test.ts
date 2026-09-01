@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { fieldModifiers, isFieldReadonly, isFieldVisible } from "../../src/model/modifiers.js";
+import { fieldModifiers, isFieldReadonly, isFieldVisible, fieldDomain, createDefaults, isButtonVisible, evalModifierExpr } from "../../src/model/modifiers.js";
+import { SwcRecord } from "../../src/model/record.js";
 
 describe("field modifiers", () => {
   it("respects static invisible flag", () => {
@@ -46,5 +47,28 @@ describe("field modifiers", () => {
         false,
       ),
     ).toBe(true);
+  });
+
+  it("fieldDomain parses static domain and substitutes placeholders", () => {
+    const record = new SwcRecord("m", 1, { partner_id: 42 });
+    const fromStatic = fieldDomain({ name: "x", options: { domain: '[["partner_id","=","$partner_id$"]]' } }, record);
+    expect(fromStatic).toEqual([["partner_id", "=", 42]]);
+    record.fieldDomains.set("x", [["id", ">", 0]]);
+    expect(fieldDomain({ name: "x" }, record)).toEqual([["id", ">", 0]]);
+  });
+
+  it("createDefaults collects arch defaults", () => {
+    expect(createDefaults([{ name: "a", default: 1 }, { name: "b" }])).toEqual({ a: 1 });
+  });
+
+  it("isButtonVisible respects invisible_expr", () => {
+    const record = { data: { state: "done" }, modifierOverrides: new Map() } as never;
+    expect(isButtonVisible({ name: "x", invisible_expr: "state == 'done'" }, record)).toBe(false);
+    expect(isButtonVisible({ name: "x", invisible: true }, record)).toBe(false);
+  });
+
+  it("evalModifierExpr returns undefined on bad expressions", () => {
+    const record = { data: {}, modifierOverrides: new Map() } as never;
+    expect(evalModifierExpr("not valid ++", record)).toBeUndefined();
   });
 });

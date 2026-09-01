@@ -25,6 +25,8 @@ export const VIEW_CALENDAR = "calendar";
 export const VIEW_GANTT = "gantt";
 export const VIEW_MAP = "map";
 export const VIEW_COHORT = "cohort";
+export const VIEW_HIERARCHY = "hierarchy";
+export const VIEW_ACTIVITY = "activity";
 
 export const RECORD_UPDATED = "record.updated";
 export const ACTION_CLOSED = "action.closed";
@@ -32,6 +34,8 @@ export const ACTION_CLOSED = "action.closed";
 export const EXPORT_CSV_ROUTE = "/web/export/csv";
 export const EXPORT_PDF_ROUTE = "/web/export/pdf";
 export const EXPORT_XLSX_ROUTE = "/web/export/xlsx";
+export const EXPORT_PIVOT_ROUTE = "/web/export/pivot";
+export const EXPORT_GRAPH_ROUTE = "/web/export/graph";
 export const BULK_TEMPLATE_ROUTE = "/web/bulk/template";
 export const BULK_UPLOAD_ROUTE = "/web/bulk/upload";
 export const SAVED_SEARCHES_ROUTE = "/web/swc/saved-searches";

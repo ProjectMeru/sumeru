@@ -85,7 +85,7 @@ func withModuleName(browse appsBrowseState, moduleName string) appsBrowseState {
 }
 
 func appendAppsBrowseQuery(query url.Values, browse appsBrowseState) {
-	appendAppsQueryBase(query, browse.Layout, browse.Filter, browse.Scope, browse.SearchQuery)
+	appendAppsQueryBase(query, browse)
 	if browse.ModuleName != "" {
 		query.Set("module", browse.ModuleName)
 	}
@@ -154,17 +154,17 @@ func filterAppsModulesByBrowse(modules []appsModule, browse appsBrowseState) (ap
 	return appModules, techModules
 }
 
-func appendAppsQueryBase(query url.Values, layout, filter, scope, searchQuery string) {
-	if layout == appsLayoutList || layout == appsLayoutGrid {
-		query.Set("layout", layout)
+func appendAppsQueryBase(query url.Values, browse appsBrowseState) {
+	if browse.Layout == appsLayoutList || browse.Layout == appsLayoutGrid {
+		query.Set("layout", browse.Layout)
 	}
-	if filter != "" && filter != appsFilterAll {
-		query.Set("filter", filter)
+	if browse.Filter != "" && browse.Filter != appsFilterAll {
+		query.Set("filter", browse.Filter)
 	}
-	if scope != "" && scope != appsScopeAll {
-		query.Set("scope", scope)
+	if browse.Scope != "" && browse.Scope != appsScopeAll {
+		query.Set("scope", browse.Scope)
 	}
-	if trimmed := strings.TrimSpace(searchQuery); trimmed != "" {
+	if trimmed := strings.TrimSpace(browse.SearchQuery); trimmed != "" {
 		query.Set("q", trimmed)
 	}
 }
@@ -176,14 +176,8 @@ func appsBrowseQuery(browse appsBrowseState) string {
 }
 
 // appsDetailURL builds links for module detail, edit, and cancel views.
-func appsDetailURL(layout, filter, scope, searchQuery, moduleName string, editing bool) string {
-	return appsDetailPageURL(appsBrowseState{
-		Layout:      layout,
-		Filter:      filter,
-		Scope:       scope,
-		SearchQuery: searchQuery,
-		ModuleName:  moduleName,
-	}, editing)
+func appsDetailURL(browse appsBrowseState, editing bool) string {
+	return appsDetailPageURL(browse, editing)
 }
 
 func buildAppsNavVM(browse appsBrowseState) appsNavVM {

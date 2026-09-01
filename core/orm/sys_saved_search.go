@@ -16,4 +16,5 @@ type SysSavedSearch struct {
 	Domain    modelmeta.Text                    `sumeru:"column=domain_json"`
 	GroupBy   modelmeta.String                  `sumeru:"column=group_by"`
 	IsDefault modelmeta.Boolean                 `sumeru:"column=is_default"`
+	IsShared  modelmeta.Boolean                 `sumeru:"column=is_shared,index"`
 }

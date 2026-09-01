@@ -24,6 +24,8 @@ import { CalendarView } from "./views/calendar/CalendarView.js";
 import { GanttView } from "./views/gantt/GanttView.js";
 import { MapView } from "./views/map/MapView.js";
 import { CohortView } from "./views/cohort/CohortView.js";
+import { HierarchyView } from "./views/hierarchy/HierarchyView.js";
+import { ActivityView } from "./views/activity/ActivityView.js";
 import { loadTranslations } from "./i18n/translate.js";
 import { mountDebugPanel } from "./devtools/debug.js";
 import { initDevtoolsBridge } from "./devtools/bridge.js";
@@ -38,6 +40,8 @@ const VIEW_CONSTRUCTORS = {
   gantt: GanttView,
   map: MapView,
   cohort: CohortView,
+  hierarchy: HierarchyView,
+  activity: ActivityView,
 } satisfies Record<string, ViewConstructor>;
 
 function registerCore(): void {

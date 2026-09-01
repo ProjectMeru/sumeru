@@ -18,6 +18,8 @@ type shellPageOpts struct {
 	MenuIDStr           string
 	Page                render.PageData
 	ExtraStylesheetURLs []string
+	ModuleName          string
+	SidebarMenus        []render.SidebarMenu
 }
 
 func renderShellPage(w http.ResponseWriter, r *http.Request, opts shellPageOpts) {
@@ -32,7 +34,10 @@ func renderShellPage(w http.ResponseWriter, r *http.Request, opts shellPageOpts)
 	page := finalizeShellPage(ctx, r, opts, innerHTML, route)
 	layoutHTML, err := render.RenderPage(ctx, config.AppConfig.TemplatesPath, page)
 	if err != nil {
-		WebLogEvent(ctx, route, "Failed to render page layout", "render", "failure", err, nil)
+		WebLogEvent(ctx, WebLogInput{
+			Route: route, Message: "Failed to render page layout",
+			Operation: "render", Status: "failure", Err: err,
+		})
 		http.Error(w, "Layout render error", http.StatusInternalServerError)
 		return
 	}
@@ -53,15 +58,21 @@ func executeInnerTemplate(ctx context.Context, w http.ResponseWriter, route stri
 	}
 	templateFile, err := template.ParseFiles(templatePaths...)
 	if err != nil {
-		WebLogEvent(ctx, route, "Failed to parse inner template", "render", "failure", err,
-			map[string]interface{}{"template": opts.InnerTemplate})
+		WebLogEvent(ctx, WebLogInput{
+			Route: route, Message: "Failed to parse inner template",
+			Operation: "render", Status: "failure", Err: err,
+			ContextFields: map[string]interface{}{"template": opts.InnerTemplate},
+		})
 		http.Error(w, "Template error", http.StatusInternalServerError)
 		return "", false
 	}
 
 	var innerBuffer bytes.Buffer
 	if err := templateFile.Execute(&innerBuffer, opts.InnerData); err != nil {
-		WebLogEvent(ctx, route, "Failed to execute inner template", "render", "failure", err, nil)
+		WebLogEvent(ctx, WebLogInput{
+			Route: route, Message: "Failed to execute inner template",
+			Operation: "render", Status: "failure", Err: err,
+		})
 		http.Error(w, "Template error", http.StatusInternalServerError)
 		return "", false
 	}
@@ -76,10 +87,16 @@ func finalizeShellPage(ctx context.Context, r *http.Request, opts shellPageOpts,
 	page.TopMenus = topMenus
 	page.SidebarMenus = sidebarMenus
 	page.ActiveModuleID = activeModuleID
-	return applyShellPageDefaults(page, opts, route, r, moduleName, sidebarMenus)
+	opts.Route = route
+	opts.ModuleName = moduleName
+	opts.SidebarMenus = sidebarMenus
+	return applyShellPageDefaults(page, opts, r)
 }
 
-func applyShellPageDefaults(page render.PageData, opts shellPageOpts, route string, r *http.Request, moduleName string, sidebarMenus []render.SidebarMenu) render.PageData {
+func applyShellPageDefaults(page render.PageData, opts shellPageOpts, r *http.Request) render.PageData {
+	moduleName := opts.ModuleName
+	sidebarMenus := opts.SidebarMenus
+	route := opts.Route
 	if page.Title == "" {
 		page.Title = defaultPageTitle
 	}
@@ -129,6 +146,9 @@ func resolveExtraScripts(pageScripts, optScripts []string) []string {
 func writeHTML(w http.ResponseWriter, ctx context.Context, route, html string) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if _, err := w.Write([]byte(html)); err != nil {
-		WebLogEvent(ctx, route, "Failed to write HTML response", "write", "partial", err, nil)
+		WebLogEvent(ctx, WebLogInput{
+			Route: route, Message: "Failed to write HTML response",
+			Operation: "write", Status: "partial", Err: err,
+		})
 	}
 }

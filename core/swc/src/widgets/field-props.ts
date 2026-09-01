@@ -6,4 +6,5 @@ export interface FieldWidgetProps {
   field: SwcArchField;
   record: SwcRecord;
   readonly: boolean;
+  modelName?: string;
 }

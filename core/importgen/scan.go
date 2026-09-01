@@ -41,8 +41,14 @@ func structEmbedsModel(st *ast.StructType) bool {
 }
 
 func modelTagFromStruct(st *ast.StructType) string {
+	technical, _ := modelSpecFromStruct(st)
+	return technical
+}
+
+// modelSpecFromStruct returns the ORM model name and whether the struct extends via inherit=.
+func modelSpecFromStruct(st *ast.StructType) (technical string, isExtend bool) {
 	if st == nil {
-		return ""
+		return "", false
 	}
 	for _, field := range st.Fields.List {
 		if field.Type == nil {
@@ -57,12 +63,19 @@ func modelTagFromStruct(st *ast.StructType) string {
 			if !ok {
 				continue
 			}
-			if model, _ := modelmeta.ParseModelTag(tag); model != "" {
-				return model
+			tags, err := modelmeta.ParseFieldTag(tag)
+			if err != nil {
+				continue
+			}
+			if tags.Inherit != "" {
+				return tags.Inherit, true
+			}
+			if tags.Model != "" {
+				return tags.Model, false
 			}
 		}
 	}
-	return ""
+	return "", false
 }
 
 func scanPackageForModels(dir string) ([]string, error) {

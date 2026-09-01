@@ -15,6 +15,7 @@ describe("formatFieldValue", () => {
   it("formats boolean and selection values", () => {
     expect(formatFieldValue({ active: true }, field({ name: "active", type: "boolean" }))).toBe("Yes");
     expect(formatFieldValue({ active: false }, field({ name: "active", type: "boolean" }))).toBe("No");
+    expect(formatFieldValue({ active: null }, field({ name: "active", type: "boolean" }))).toBe("");
     expect(
       formatFieldValue(
         { state: "done" },

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_sys.report.action_list" model="sys.report.action" type="list">
+            <field name="name" string="Name"/>
+            <field name="model" string="Model"/>
+            <field name="report_type" string="Type"/>
+            <field name="template_path" string="Template"/>
+            <field name="active" string="Active"/>
+        </view>
+    </data>
+</sumeru>

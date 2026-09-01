@@ -7,10 +7,20 @@ import (
 	"sumeru/core/orm"
 )
 
+// WorkspaceTabsInput configures workspace view-mode tab links.
+type WorkspaceTabsInput struct {
+	ResModel     string
+	ActionID     int
+	MenuID       string
+	SelectedMode string
+	RecordID     string
+	ViewModes    []string
+}
+
 // WorkspaceViewTabs builds URLs for each action view_mode that has a default sys.view for resModel.
-// viewModes comes from sys.action.window view_mode (e.g. map, list, form). When empty, every
+// in.ViewModes comes from sys.action.window view_mode (e.g. map, list, form). When empty, every
 // known workspace mode is considered (direct ?model= opens without an action).
-func WorkspaceViewTabs(ctx context.Context, resModel string, actionID int, menuID, selectedMode, recordID string, viewModes []string) []ViewSwitchTab {
+func WorkspaceViewTabs(ctx context.Context, in WorkspaceTabsInput) []ViewSwitchTab {
 	order := []struct {
 		mode  string
 		label string
@@ -24,11 +34,13 @@ func WorkspaceViewTabs(ctx context.Context, resModel string, actionID int, menuI
 		{ViewModeGantt, "Gantt"},
 		{ViewModeMap, "Map"},
 		{ViewModeCohort, "Cohort"},
+		{ViewModeHierarchy, "Hierarchy"},
+		{ViewModeActivity, "Activity"},
 	}
-	sel := strings.ToLower(strings.TrimSpace(selectedMode))
-	menuID = strings.TrimSpace(menuID)
-	recID := strings.TrimSpace(recordID)
-	allowed := viewModeFilterSet(viewModes)
+	sel := strings.ToLower(strings.TrimSpace(in.SelectedMode))
+	menuID := strings.TrimSpace(in.MenuID)
+	recID := strings.TrimSpace(in.RecordID)
+	allowed := viewModeFilterSet(in.ViewModes)
 
 	var out []ViewSwitchTab
 	for _, o := range order {
@@ -37,10 +49,10 @@ func WorkspaceViewTabs(ctx context.Context, resModel string, actionID int, menuI
 				continue
 			}
 		}
-		if _, err := orm.FindUIDefaultView(ctx, resModel, o.mode); err != nil {
+		if _, err := orm.FindUIDefaultView(ctx, in.ResModel, o.mode); err != nil {
 			continue
 		}
-		q := WorkspaceQuery{ActionID: actionID, MenuID: menuID, ViewType: o.mode}
+		q := WorkspaceQuery{ActionID: in.ActionID, MenuID: menuID, ViewType: o.mode}
 		if o.mode == ViewModeForm && recID != "" {
 			q.RecordID = recID
 		}

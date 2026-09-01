@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <action id="action_sys.report.action" type="window" model="sys.report.action" name="Report Actions" view_mode="list,form"/>
+        <record id="report_action_demo" model="sys.report.action">
+            <field name="name">Demo Platform Report</field>
+            <field name="model">core.company</field>
+            <field name="report_type">pdf</field>
+            <field name="template_path">demo_platform_report</field>
+            <field name="paperformat">a4</field>
+            <field name="active" eval="True"/>
+        </record>
+    </data>
+</sumeru>

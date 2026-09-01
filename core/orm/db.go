@@ -33,7 +33,7 @@ func InitDBWithPool(connStr string, pool DBPoolSettings) {
 		applog.Fatal(context.Background(), "db_open", "err", err)
 	}
 	applyPoolSettings(rawDB, pool)
-	DB = NewDBWrapper(rawDB)
+	DB = wrapDevLogging(NewDBWrapper(rawDB))
 	if err := DB.Ping(); err != nil {
 		applog.Fatal(context.Background(), "db_ping", "err", err)
 	}
@@ -53,7 +53,7 @@ func InitReadReplica(connStr string, pool DBPoolSettings) {
 		applog.Fatal(context.Background(), "db_read_open", "err", err)
 	}
 	applyPoolSettings(rawDB, pool)
-	readDB = NewDBWrapper(rawDB)
+	readDB = wrapDevLogging(NewDBWrapper(rawDB))
 	if err := readDB.Ping(); err != nil {
 		applog.Fatal(context.Background(), "db_read_ping", "err", err)
 	}

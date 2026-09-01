@@ -108,6 +108,26 @@ func buildSearchWhereClause(modelName string, domain [][]interface{}) (string, [
 			parts = append(parts, fmt.Sprintf("%s LIKE $%d", col, n))
 			args = append(args, d[2])
 			n++
+		case ">", ">=", "<", "<=":
+			parts = append(parts, fmt.Sprintf("%s %s $%d", col, strings.ToUpper(op), n))
+			args = append(args, d[2])
+			n++
+		case "not in":
+			list, ok := d[2].([]interface{})
+			if !ok {
+				return "", nil, fmt.Errorf("operator not in requires array value")
+			}
+			if len(list) == 0 {
+				parts = append(parts, "TRUE")
+				continue
+			}
+			ph := make([]string, len(list))
+			for i := range list {
+				ph[i] = fmt.Sprintf("$%d", n)
+				args = append(args, list[i])
+				n++
+			}
+			parts = append(parts, fmt.Sprintf("%s NOT IN (%s)", col, strings.Join(ph, ",")))
 		default:
 			return "", nil, fmt.Errorf("unsupported domain operator %q", op)
 		}

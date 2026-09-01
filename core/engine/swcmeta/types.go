@@ -22,6 +22,7 @@ type WorkspacePayload struct {
 	ListFilter    string                   `json:"listFilter,omitempty"`
 	ListDomain    string                   `json:"listDomain,omitempty"`
 	ListGroupBy   string                   `json:"listGroupBy,omitempty"`
+	ListSections  []ListSectionMeta        `json:"listSections,omitempty"`
 	Favorites     []SavedSearchMeta        `json:"favorites,omitempty"`
 	FormBaseQuery string                   `json:"formBaseQuery,omitempty"`
 	Defaults      map[string]interface{}   `json:"defaults,omitempty"`
@@ -37,6 +38,13 @@ type ViewTab struct {
 type Breadcrumb struct {
 	Label string `json:"label"`
 	Href  string `json:"href,omitempty"`
+}
+
+type ListSectionMeta struct {
+	Label   string                   `json:"label"`
+	Value   string                   `json:"value"`
+	Count   int                      `json:"count"`
+	Records []map[string]interface{} `json:"records"`
 }
 
 type ViewArch struct {
@@ -57,6 +65,7 @@ type ViewArch struct {
 	Gantt      *GanttMeta    `json:"gantt,omitempty"`
 	Map        *MapMeta      `json:"map,omitempty"`
 	Cohort     *CohortMeta   `json:"cohort,omitempty"`
+	Hierarchy  *HierarchyMeta `json:"hierarchy,omitempty"`
 	Report     *ReportMeta   `json:"report,omitempty"`
 }
 
@@ -102,10 +111,13 @@ type ArchListSubview struct {
 }
 
 type ArchButton struct {
-	Name   string `json:"name"`
-	String string `json:"string"`
-	Type   string `json:"type"`
-	Class  string `json:"class,omitempty"`
+	Name           string `json:"name"`
+	String         string `json:"string"`
+	Type           string `json:"type"`
+	Class          string `json:"class,omitempty"`
+	Invisible      bool   `json:"invisible,omitempty"`
+	InvisibleExpr  string `json:"invisible_expr,omitempty"`
+	Confirm        string `json:"confirm,omitempty"`
 }
 
 type ArchHeader struct {
@@ -197,6 +209,7 @@ type SavedSearchMeta struct {
 	Domain    string `json:"domain,omitempty"`
 	GroupBy   string `json:"groupBy,omitempty"`
 	IsDefault bool   `json:"isDefault,omitempty"`
+	IsShared  bool   `json:"isShared,omitempty"`
 }
 
 type GraphMeta struct {
@@ -222,6 +235,10 @@ type CohortMeta struct {
 	DateStart string `json:"dateStart,omitempty"`
 	Interval  string `json:"interval,omitempty"`
 	Measure   string `json:"measure,omitempty"`
+}
+
+type HierarchyMeta struct {
+	ParentField string `json:"parentField,omitempty"`
 }
 
 type ReportMeta struct {

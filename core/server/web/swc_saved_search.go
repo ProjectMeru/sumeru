@@ -42,12 +42,23 @@ func SwcSavedSearchSaveHandler(w http.ResponseWriter, r *http.Request) {
 		Domain    string `json:"domain"`
 		GroupBy   string `json:"groupBy"`
 		IsDefault bool   `json:"isDefault"`
+		IsShared  bool   `json:"isShared"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "invalid json", http.StatusBadRequest)
 		return
 	}
-	id, err := swcmeta.SaveSavedSearch(r.Context(), body.ActionID, body.Model, body.Name, body.Search, body.Filter, body.Domain, body.GroupBy, body.IsDefault)
+	id, err := swcmeta.SaveSavedSearch(r.Context(), swcmeta.SavedSearchInput{
+		ActionID:  body.ActionID,
+		Model:     body.Model,
+		Name:      body.Name,
+		Search:    body.Search,
+		Filter:    body.Filter,
+		Domain:    body.Domain,
+		GroupBy:   body.GroupBy,
+		IsDefault: body.IsDefault,
+		IsShared:  body.IsShared,
+	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
