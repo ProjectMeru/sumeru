@@ -171,5 +171,5 @@ func createTable(model Model) error {
 	if _, err := DB.Exec(query); err != nil {
 		return err
 	}
-	return ensureModelIndexes(model.ModelName(), physical, tableName, model)
+	return ensureModelIndexes(schemaTable{ModelName: model.ModelName(), TableName: physical, QuotedTable: tableName, Model: model})
 }

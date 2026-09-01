@@ -46,6 +46,14 @@ func SyncRegistrySchema() error {
 	return ensureExtraIndexes()
 }
 
+// schemaTable identifies a registered model's physical PostgreSQL table for DDL helpers.
+type schemaTable struct {
+	ModelName   string
+	TableName   string
+	QuotedTable string
+	Model       Model
+}
+
 func syncModelSchema(ctx context.Context, model Model) error {
 	modelName := model.ModelName()
 	tableName, err := ModelToTableName(modelName)
@@ -89,22 +97,26 @@ func syncModelSchema(ctx context.Context, model Model) error {
 		}
 		applog.L(ctx).Info("schema_sync", "table", tableName, "field", field.Name)
 	}
-	if err := dropStaleColumnUniques(modelName, tableName, quotedTable, model); err != nil {
+	tbl := schemaTable{ModelName: modelName, TableName: tableName, QuotedTable: quotedTable, Model: model}
+	if err := dropStaleColumnUniques(tbl); err != nil {
 		return err
 	}
 	if err := dropRuntimeSQLDefaults(modelName, quotedTable, model); err != nil {
 		return err
 	}
-	if err := ensureColumnUniques(modelName, tableName, quotedTable, model); err != nil {
+	if err := ensureColumnUniques(tbl); err != nil {
 		return err
 	}
-	return ensureModelIndexes(modelName, tableName, quotedTable, model)
+	if err := ensureModelIndexes(tbl); err != nil {
+		return err
+	}
+	return ensureForeignKeys(ctx, tbl)
 }
 
 // dropStaleColumnUniques removes single-column UNIQUE constraints when the field
 // definition no longer sets Unique (e.g. sys.menu.name after menu label collisions).
-func dropStaleColumnUniques(modelName, tableName, quotedTable string, model Model) error {
-	for _, field := range model.Fields() {
+func dropStaleColumnUniques(tbl schemaTable) error {
+	for _, field := range tbl.Model.Fields() {
 		if field.Unique || field.Name == "id" {
 			continue
 		}
@@ -128,7 +140,7 @@ func dropStaleColumnUniques(modelName, tableName, quotedTable string, model Mode
 			      AND NOT a.attisdropped
 			      AND a.attname = $2
 			  )
-		`, tableName, field.Name)
+		`, tbl.TableName, field.Name)
 		if err != nil {
 			return err
 		}
@@ -148,13 +160,13 @@ func dropStaleColumnUniques(modelName, tableName, quotedTable string, model Mode
 		rows.Close()
 		for _, con := range names {
 			if !pgIdentOK(con) {
-				return fmt.Errorf("unsafe constraint name %q on %s", con, tableName)
+				return fmt.Errorf("unsafe constraint name %q on %s", con, tbl.TableName)
 			}
-			q := fmt.Sprintf(`ALTER TABLE %s DROP CONSTRAINT IF EXISTS %s`, quotedTable, quoteIdent(con))
+			q := fmt.Sprintf(`ALTER TABLE %s DROP CONSTRAINT IF EXISTS %s`, tbl.QuotedTable, quoteIdent(con))
 			if _, err := DB.Exec(q); err != nil {
-				return fmt.Errorf("drop unique %s.%s: %w", tableName, con, err)
+				return fmt.Errorf("drop unique %s.%s: %w", tbl.TableName, con, err)
 			}
-			applog.L(context.Background()).Info("schema_sync_drop_unique", "table", tableName, "constraint", con)
+			applog.L(context.Background()).Info("schema_sync_drop_unique", "table", tbl.TableName, "constraint", con)
 		}
 	}
 	return nil
@@ -182,8 +194,8 @@ func dropRuntimeSQLDefaults(modelName, quotedTable string, model Model) error {
 // ensureColumnUniques adds a unique index for each Unique field on an existing table.
 // createTable applies UNIQUE only at CREATE time; later tag changes would otherwise
 // leave XML upsert (ON CONFLICT) without a matching constraint.
-func ensureColumnUniques(modelName, tableName, quotedTable string, model Model) error {
-	for _, field := range model.Fields() {
+func ensureColumnUniques(tbl schemaTable) error {
+	for _, field := range tbl.Model.Fields() {
 		if !field.Unique || field.Name == "id" || IsVirtualField(field) {
 			continue
 		}
@@ -191,15 +203,15 @@ func ensureColumnUniques(modelName, tableName, quotedTable string, model Model) 
 		if !ok || baseType == "" {
 			continue
 		}
-		colQuoted, err := QuotedColumnForModel(modelName, field.Name)
+		colQuoted, err := QuotedColumnForModel(tbl.ModelName, field.Name)
 		if err != nil {
 			return err
 		}
-		idxName := fmt.Sprintf("uidx_%s_%s", tableName, field.Name)
+		idxName := fmt.Sprintf("uidx_%s_%s", tbl.TableName, field.Name)
 		if !pgIdentOK(idxName) {
-			return fmt.Errorf("unsafe unique index name %q on %s", idxName, tableName)
+			return fmt.Errorf("unsafe unique index name %q on %s", idxName, tbl.TableName)
 		}
-		q := fmt.Sprintf("CREATE UNIQUE INDEX IF NOT EXISTS %s ON %s (%s)", quoteIdent(idxName), quotedTable, colQuoted)
+		q := fmt.Sprintf("CREATE UNIQUE INDEX IF NOT EXISTS %s ON %s (%s)", quoteIdent(idxName), tbl.QuotedTable, colQuoted)
 		if _, err := DB.Exec(q + ";"); err != nil {
 			return fmt.Errorf("unique index %s: %w", idxName, err)
 		}
@@ -207,20 +219,20 @@ func ensureColumnUniques(modelName, tableName, quotedTable string, model Model) 
 	return nil
 }
 
-func ensureModelIndexes(modelName, tableName, quotedTable string, model Model) error {
-	for _, field := range model.Fields() {
+func ensureModelIndexes(tbl schemaTable) error {
+	for _, field := range tbl.Model.Fields() {
 		if IsVirtualField(field) {
 			continue
 		}
 		if !(field.Index || field.Type == Many2One) {
 			continue
 		}
-		colQuoted, err := QuotedColumnForModel(modelName, field.Name)
+		colQuoted, err := QuotedColumnForModel(tbl.ModelName, field.Name)
 		if err != nil {
 			return err
 		}
-		idxName := fmt.Sprintf("idx_%s_%s", tableName, field.Name)
-		idxQuery := fmt.Sprintf("CREATE INDEX IF NOT EXISTS %s ON %s (%s)", quoteIdent(idxName), quotedTable, colQuoted)
+		idxName := fmt.Sprintf("idx_%s_%s", tbl.TableName, field.Name)
+		idxQuery := fmt.Sprintf("CREATE INDEX IF NOT EXISTS %s ON %s (%s)", quoteIdent(idxName), tbl.QuotedTable, colQuoted)
 		if _, err := DB.Exec(idxQuery + ";"); err != nil {
 			return fmt.Errorf("index %s: %w", idxName, err)
 		}
