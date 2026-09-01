@@ -32,4 +32,12 @@ describe("kanban-card", () => {
       "https://example.com/x.png",
     );
   });
+
+  it("renders priority stars when priority field present", () => {
+    const el = renderKanbanCardInner(
+      { id: 1, name: "Acme", priority: 3 },
+      [{ name: "priority" }, { name: "name" }],
+    ).render();
+    expect(el.querySelector(".sum-kanban-priority")).not.toBeNull();
+  });
 });

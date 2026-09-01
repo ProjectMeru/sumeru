@@ -80,4 +80,12 @@ describe("NotificationService", () => {
     vi.advanceTimersByTime(3000);
     expect(toast.classList.contains("sum-toast-out")).toBe(true);
   });
+
+  it("bootstrap replays server messages and creates stack when missing", () => {
+    stack.remove();
+    const auto = new NotificationService();
+    auto.bootstrap([{ kind: "info", title: "Boot", body: "msg" }]);
+    expect(document.getElementById("sum-toast-stack")?.querySelector(".sum-toast-title")?.textContent).toBe("Boot");
+    document.getElementById("sum-toast-stack")?.remove();
+  });
 });

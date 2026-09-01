@@ -1,12 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   buildReportActionEntries,
   createToolbarIcon,
   exportQuery,
+  graphExportUrl,
   newRecordUrl,
+  pivotExportUrl,
+  renderGraphExportLink,
+  renderPivotExportLink,
   renderReportActions,
   renderSearchField,
   exportFieldNamesCsv,
+  renderNewButton,
+  renderCollectionToolbar,
 } from "../../src/views/shared/view-toolbar.js";
 import type { SwcWorkspacePayload } from "../../src/types/workspace.js";
 
@@ -89,9 +95,91 @@ describe("view-toolbar", () => {
     expect(root.querySelector(".sum-list-search-submit svg")).toBeTruthy();
   });
 
+  it("renderSearchField triggers search callbacks", () => {
+    const onSearch = vi.fn();
+    const onInput = vi.fn();
+    const root = renderSearchField("", onSearch, onInput).render();
+    const input = root.querySelector(".sum-list-search") as HTMLInputElement;
+    input.value = "x";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(onInput).toHaveBeenCalledWith("x");
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    root.querySelector(".sum-list-search-submit")?.dispatchEvent(new MouseEvent("click"));
+    expect(onSearch).toHaveBeenCalledTimes(2);
+  });
+
+  it("renderNewButton and collection toolbar render primary actions", () => {
+    const btn = renderNewButton(basePayload());
+    expect(btn.textContent).toBe("New");
+    const toolbar = renderCollectionToolbar({
+      payload: basePayload(),
+      viewType: "list",
+      search: "",
+      onSearch: () => undefined,
+      onInput: () => undefined,
+    }).render();
+    expect(toolbar.querySelector(".sum-list-btn-new")).toBeTruthy();
+  });
+
   it("createToolbarIcon renders SVG paths for toolbar buttons", () => {
     const icon = createToolbarIcon("filter", "test-icon");
     expect(icon.querySelector("svg.test-icon")).toBeTruthy();
     expect(icon.querySelector("polygon")).toBeTruthy();
+  });
+
+  it("createToolbarIcon covers all icon names", () => {
+    for (const name of ["search", "filter", "group", "favorite", "download", "chevron", "close"] as const) {
+      expect(createToolbarIcon(name).querySelector("svg")).toBeTruthy();
+    }
+  });
+
+  it("buildReportActionEntries includes upload import form", () => {
+    const entries = buildReportActionEntries(
+      basePayload({
+        arch: {
+          type: "list",
+          model: "crm.lead",
+          fields: [{ name: "name" }],
+          report: { download: false, upload: true, formats: "", pdfSizes: "", bulkModes: "" },
+        },
+      }),
+      "name",
+    );
+    expect(entries.some((e) => e.label === "Import CSV")).toBe(true);
+    const importEntry = entries.find((e) => e.label === "Import CSV");
+    expect(importEntry?.node.querySelector('input[type="file"]')).toBeTruthy();
+  });
+
+  it("renderReportActions wraps upload forms without restyling", () => {
+    const result = renderReportActions(
+      basePayload({
+        arch: {
+          type: "list",
+          model: "crm.lead",
+          fields: [],
+          report: { download: true, upload: true, formats: "csv,pdf", pdfSizes: "", bulkModes: "" },
+        },
+      }),
+      "name",
+    );
+    expect(result?.querySelector(".sum-list-upload-form")).toBeTruthy();
+    expect(result?.querySelector('a[href*="/web/export/pdf"]')).toBeTruthy();
+  });
+
+  it("pivot and graph export helpers build URLs", () => {
+    const payload = basePayload({
+      arch: {
+        type: "pivot",
+        model: "crm.lead",
+        fields: [
+          { name: "state", pivotType: "row" },
+          { name: "amount", pivotType: "measure" },
+        ],
+      },
+    });
+    expect(pivotExportUrl(payload, ["state"], ["amount"])).toContain("/web/export/pivot");
+    expect(graphExportUrl(payload, "state", "amount")).toContain("/web/export/graph");
+    expect(renderPivotExportLink(payload)?.getAttribute("href")).toContain("group_by=state");
+    expect(renderGraphExportLink(payload, "state", "amount")?.textContent).toBe("Export CSV");
   });
 });
