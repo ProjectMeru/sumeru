@@ -1,4 +1,5 @@
 import { html, type TemplateResult } from "../template/html.js";
+import { debugFieldTitle } from "../devtools/debug.js";
 import type { SwcArchField } from "../types/workspace.js";
 
 export function fieldInputId(field: SwcArchField): string {
@@ -61,10 +62,12 @@ export function fieldLabel(
 ): TemplateResult {
   const label = field.string ?? field.name;
   const cls = row ? "sum-field-label sum-field-label--row" : "sum-field-label";
+  const title = debugFieldTitle("model", field.name, field.type ?? field.widget);
+  const titleAttr = title ? html` title=${title}` : html``;
   if (forId) {
-    return html`<label class=${cls} id=${labelId} for=${forId}>${label}</label>`;
+    return html`<label class=${cls} id=${labelId} for=${forId}${titleAttr}>${label}</label>`;
   }
-  return html`<span class=${cls} id=${labelId}>${label}</span>`;
+  return html`<span class=${cls} id=${labelId}${titleAttr}>${label}</span>`;
 }
 
 export function fieldControl(
