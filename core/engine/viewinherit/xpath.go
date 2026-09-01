@@ -3,6 +3,7 @@ package viewinherit
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -13,10 +14,24 @@ type xpathOp struct {
 	Inner    string
 }
 
+type xpathTarget struct {
+	Tag      string
+	AttrName string
+	AttrVal  string
+	Index    int // 1-based; 0 or negative → 1
+}
+
+func (t xpathTarget) matchIndex() int {
+	if t.Index <= 0 {
+		return 1
+	}
+	return t.Index
+}
+
 var xpathBlockRe = regexp.MustCompile(`(?s)<xpath\s+expr="([^"]+)"\s+position="([^"]+)"\s*>(.*?)</xpath>`)
 var xpathBlockReSingle = regexp.MustCompile(`(?s)<xpath\s+expr='([^']+)'\s+position='([^']+)'\s*>(.*?)</xpath>`)
 var fieldNameFromExpr = regexp.MustCompile(`@name=['"]([^'"]+)['"]`)
-var xpathTargetRe = regexp.MustCompile(`//(field|button|group|sheet|header|notebook|page|div|label|separator|filter|search|tree|list|form|kanban)\[@([a-zA-Z_:][\w-]*)=['"]([^'"]+)['"]\]`)
+var xpathTargetRe = regexp.MustCompile(`//(field|button|group|sheet|header|notebook|page|div|label|separator|filter|search|tree|list|form|kanban)\[@([a-zA-Z_:][\w-]*)=['"]([^'"]+)['"]\](?:\[(\d+)\])?`)
 var xpathTagOnlyRe = regexp.MustCompile(`//(field|button|group|sheet|header|notebook|page|div|label|separator|filter|search|tree|list|form|kanban)\s*$`)
 var dataWrapperRe = regexp.MustCompile(`(?s)^\s*<data[^>]*>(.*)</data>\s*$`)
 var attributeOpRe = regexp.MustCompile(`(?s)<attribute\s+name=['"]([^'"]+)['"]\s*>(.*?)</attribute>`)
@@ -53,19 +68,25 @@ func parseXPaths(s string) []xpathOp {
 	return out
 }
 
-func xpathTargetFromExpr(expr string) (tag, attrName, attrVal string, err error) {
+func parseXPathTarget(expr string) (xpathTarget, error) {
 	expr = strings.TrimSpace(expr)
 	if m := xpathTargetRe.FindStringSubmatch(expr); len(m) >= 4 {
-		return strings.ToLower(m[1]), m[2], m[3], nil
+		idx := 1
+		if len(m) >= 5 && strings.TrimSpace(m[4]) != "" {
+			if n, perr := strconv.Atoi(strings.TrimSpace(m[4])); perr == nil && n > 0 {
+				idx = n
+			}
+		}
+		return xpathTarget{Tag: strings.ToLower(m[1]), AttrName: m[2], AttrVal: m[3], Index: idx}, nil
 	}
 	if m := xpathTagOnlyRe.FindStringSubmatch(expr); len(m) >= 2 {
-		return strings.ToLower(m[1]), "", "", nil
+		return xpathTarget{Tag: strings.ToLower(m[1]), Index: 1}, nil
 	}
 	m := fieldNameFromExpr.FindStringSubmatch(expr)
 	if len(m) >= 2 {
-		return "field", "name", m[1], nil
+		return xpathTarget{Tag: "field", AttrName: "name", AttrVal: m[1], Index: 1}, nil
 	}
-	return "", "", "", fmt.Errorf("unsupported xpath expr (use //tag[@attr='…'] or //field[@name='…']): %q", expr)
+	return xpathTarget{}, fmt.Errorf("unsupported xpath expr (use //tag[@attr='…'] or //field[@name='…']): %q", expr)
 }
 
 func cachedRegex(key string, build func() *regexp.Regexp) *regexp.Regexp {
@@ -77,15 +98,15 @@ func cachedRegex(key string, build func() *regexp.Regexp) *regexp.Regexp {
 	return actual.(*regexp.Regexp)
 }
 
-func openingTagRe(tag, attrName, attrVal string) *regexp.Regexp {
-	key := "open|" + tag + "|" + attrName + "|" + attrVal
+func openingTagRe(target xpathTarget) *regexp.Regexp {
+	key := "open|" + target.Tag + "|" + target.AttrName + "|" + target.AttrVal
 	return cachedRegex(key, func() *regexp.Regexp {
-		if attrName == "" {
-			return regexp.MustCompile(`<` + tag + `(?:\s[^>]*)?>`)
+		if target.AttrName == "" {
+			return regexp.MustCompile(`<` + target.Tag + `(?:\s[^>]*)?>`)
 		}
-		q := regexp.QuoteMeta(attrVal)
-		a := regexp.QuoteMeta(attrName)
-		return regexp.MustCompile(`<` + tag + `\s+[^>]*\b` + a + `=(?:"` + q + `"|'` + q + `')[^>]*>`)
+		q := regexp.QuoteMeta(target.AttrVal)
+		a := regexp.QuoteMeta(target.AttrName)
+		return regexp.MustCompile(`<` + target.Tag + `\s+[^>]*\b` + a + `=(?:"` + q + `"|'` + q + `')[^>]*>`)
 	})
 }
 
@@ -95,22 +116,31 @@ func attrValuePattern(attrName, attrVal string) string {
 	return `\b` + a + `=(?:"` + q + `"|'` + q + `')`
 }
 
-func findElementSpan(arch, tag, attrName, attrVal string) (start, end int, ok bool) {
-	openRe := openingTagRe(tag, attrName, attrVal)
-	loc := openRe.FindStringIndex(arch)
-	if loc == nil {
-		return 0, 0, false
+func findElementSpan(arch string, target xpathTarget) (start, end int, ok bool) {
+	index := target.matchIndex()
+	openRe := openingTagRe(target)
+	searchFrom := 0
+	for n := 0; n < index; n++ {
+		loc := openRe.FindStringIndex(arch[searchFrom:])
+		if loc == nil {
+			return 0, 0, false
+		}
+		abs := searchFrom + loc[0]
+		if n == index-1 {
+			openTag := arch[abs : searchFrom+loc[1]]
+			if strings.HasSuffix(strings.TrimSpace(openTag), "/>") {
+				return abs, searchFrom + loc[1], true
+			}
+			closeAt, found := findMatchingCloseTag(arch, searchFrom+loc[1], target.Tag)
+			if !found {
+				return 0, 0, false
+			}
+			closeEnd := closeAt + len("</"+target.Tag+">")
+			return abs, closeEnd, true
+		}
+		searchFrom = searchFrom + loc[1]
 	}
-	openTag := arch[loc[0]:loc[1]]
-	if strings.HasSuffix(strings.TrimSpace(openTag), "/>") {
-		return loc[0], loc[1], true
-	}
-	closeAt, found := findMatchingCloseTag(arch, loc[1], tag)
-	if !found {
-		return 0, 0, false
-	}
-	closeEnd := closeAt + len("</"+tag+">")
-	return loc[0], closeEnd, true
+	return 0, 0, false
 }
 
 func findMatchingCloseTag(arch string, openEnd int, tag string) (closeStart int, ok bool) {
@@ -159,7 +189,7 @@ func isXMLTagOpen(arch string, idx int, tag string) bool {
 }
 
 func applyOne(arch string, op xpathOp) (string, error) {
-	tag, attrName, attrVal, err := xpathTargetFromExpr(strings.TrimSpace(op.Expr))
+	target, err := parseXPathTarget(strings.TrimSpace(op.Expr))
 	if err != nil {
 		return arch, err
 	}
@@ -168,39 +198,39 @@ func applyOne(arch string, op xpathOp) (string, error) {
 
 	switch pos {
 	case "after":
-		spanStart, spanEnd, ok := findElementSpan(arch, tag, attrName, attrVal)
+		spanStart, spanEnd, ok := findElementSpan(arch, target)
 		if !ok {
 			return arch, fmt.Errorf("inherit xpath: %s not found for position=after", op.Expr)
 		}
 		_ = spanStart
 		insert := inner
-		if tag == "field" && attrName == "name" && !strings.HasPrefix(strings.TrimSpace(insert), "<") {
+		if target.Tag == "field" && target.AttrName == "name" && !strings.HasPrefix(strings.TrimSpace(insert), "<") {
 			insert = "<field name=\"" + insert + "\"/>"
 		}
 		return arch[:spanEnd] + insert + arch[spanEnd:], nil
 	case "before":
-		spanStart, _, ok := findElementSpan(arch, tag, attrName, attrVal)
+		spanStart, _, ok := findElementSpan(arch, target)
 		if !ok {
 			return arch, fmt.Errorf("inherit xpath: %s not found for position=before", op.Expr)
 		}
 		return arch[:spanStart] + inner + arch[spanStart:], nil
 	case "replace":
-		spanStart, spanEnd, ok := findElementSpan(arch, tag, attrName, attrVal)
+		spanStart, spanEnd, ok := findElementSpan(arch, target)
 		if !ok {
 			return arch, fmt.Errorf("inherit xpath: %s not found for position=replace", op.Expr)
 		}
 		return arch[:spanStart] + inner + arch[spanEnd:], nil
 	case "inside":
-		if attrName != "" {
-			openRe := openingTagRe(tag, attrName, attrVal)
+		if target.AttrName != "" {
+			openRe := openingTagRe(target)
 			loc := openRe.FindStringIndex(arch)
 			if loc == nil {
 				return arch, fmt.Errorf("inherit xpath: %s not found for position=inside", op.Expr)
 			}
 			insertAt := loc[1]
-			closeAt, ok := findMatchingCloseTag(arch, insertAt, tag)
+			closeAt, ok := findMatchingCloseTag(arch, insertAt, target.Tag)
 			if !ok {
-				return arch, fmt.Errorf("inherit xpath: no </%s> for position=inside on %s", tag, op.Expr)
+				return arch, fmt.Errorf("inherit xpath: no </%s> for position=inside on %s", target.Tag, op.Expr)
 			}
 			return arch[:closeAt] + inner + arch[closeAt:], nil
 		}
@@ -210,17 +240,17 @@ func applyOne(arch string, op xpathOp) (string, error) {
 		}
 		return arch[:i] + inner + arch[i:], nil
 	case "attributes":
-		return applyAttributes(arch, tag, attrName, attrVal, inner)
+		return applyAttributes(arch, target, inner)
 	default:
 		return arch, fmt.Errorf("unsupported xpath position %q", op.Position)
 	}
 }
 
-func applyAttributes(arch, tag, matchAttr, matchVal, inner string) (string, error) {
-	re := openingTagRe(tag, matchAttr, matchVal)
+func applyAttributes(arch string, target xpathTarget, inner string) (string, error) {
+	re := openingTagRe(target)
 	loc := re.FindStringIndex(arch)
 	if loc == nil {
-		return arch, fmt.Errorf("inherit xpath: %q not found for position=attributes", tag)
+		return arch, fmt.Errorf("inherit xpath: %q not found for position=attributes", target.Tag)
 	}
 	old := arch[loc[0]:loc[1]]
 	attrs := parseAttributeOps(inner)
