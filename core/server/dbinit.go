@@ -12,6 +12,7 @@ import (
 // InitDatabase opens the primary pool (and optional read replica) using INI pool settings.
 func InitDatabase(primaryDSN string) {
 	cfg := config.AppConfig
+	orm.InitDevFeatures(cfg.DevFeatures)
 	pool := orm.DBPoolSettings{
 		MaxOpenConns: cfg.DbMaxOpenConns,
 		MaxIdleConns: cfg.DbMaxIdleConns,
