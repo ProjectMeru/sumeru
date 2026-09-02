@@ -349,3 +349,53 @@ func loadTableColumns(tableName string) (map[string]struct{}, error) {
 func FormatAddColumnDefinition(f FieldDefinition, baseType string) string {
 	return formatAddColumnDefinition(f, baseType)
 }
+
+// EnsureModelColumns adds missing physical columns for the given field definitions on a model.
+func EnsureModelColumns(ctx context.Context, model Model, extra []FieldDefinition) error {
+	if DB == nil || model == nil {
+		return nil
+	}
+	modelName := model.ModelName()
+	tableName, err := ModelToTableName(modelName)
+	if err != nil {
+		return err
+	}
+	quotedTable, err := QuotedTableName(modelName)
+	if err != nil {
+		return err
+	}
+	exists, err := tableExists(tableName)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return createTable(model)
+	}
+	existing, err := loadTableColumns(tableName)
+	if err != nil {
+		return err
+	}
+	for _, field := range extra {
+		if field.Name == "id" || IsVirtualField(field) {
+			continue
+		}
+		if _, ok := existing[strings.ToLower(field.Name)]; ok {
+			continue
+		}
+		baseType, ok := ColumnTypeSQL(field)
+		if !ok {
+			continue
+		}
+		colDef := FormatAddColumnDefinition(field, baseType)
+		colQuoted, err := QuotedColumnForModel(modelName, field.Name)
+		if err != nil {
+			return err
+		}
+		q := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", quotedTable, colQuoted, colDef)
+		if _, err := DB.Exec(q); err != nil {
+			return fmt.Errorf("%s: %w", q, err)
+		}
+		applog.L(ctx).Info("schema_sync_extra", "table", tableName, "field", field.Name)
+	}
+	return nil
+}

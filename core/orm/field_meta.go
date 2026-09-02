@@ -25,6 +25,7 @@ func fieldDefinitionsByName(model Model) map[string]FieldDefinition {
 		}
 		fieldDefs[field.Name] = field
 	}
+	applyFieldMergers(model.ModelName(), fieldDefs)
 	return fieldDefs
 }
 
