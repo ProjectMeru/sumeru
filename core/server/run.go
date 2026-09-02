@@ -14,7 +14,9 @@ import (
 	"sumeru/core/orm"
 	"sumeru/core/runtime"
 	"sumeru/core/scheduler"
+	"sumeru/core/sdk"
 	"sumeru/core/server/config"
+	"sumeru/core/server/router"
 	"sumeru/core/server/web"
 )
 
@@ -107,7 +109,7 @@ func Run() {
 		listenHost := setupListenAddr(config.AppConfig)
 		applog.InfoMsg(ctx, "server", "listen", "Server starting in setup mode",
 			map[string]interface{}{"port": config.AppConfig.HttpPort, "bind": listenHost})
-		setupHandler := web.SecurityMiddleware(nil)
+		setupHandler := router.ApplyMiddleware(web.SecurityMiddleware(nil))
 		if err := http.ListenAndServe(listenHost, setupHandler); err != nil {
 			applog.Fatal(ctx, "Server failed in setup mode", "err", err)
 		}
@@ -135,6 +137,9 @@ func Run() {
 	registerBrandingAndStatic()
 	registerAppRoutes()
 	web.InitRateLimit()
+	if err := sdk.RunStartups(ctx); err != nil {
+		applog.Fatal(ctx, "Startup hooks failed", "err", err)
+	}
 	scheduler.Start(context.Background(), time.Minute)
 	orm.StartOutboxDrain(context.Background(), 5*time.Second)
 
@@ -142,7 +147,7 @@ func Run() {
 	applog.InfoMsg(ctx, "server", "listen", "Server starting",
 		map[string]interface{}{"port": config.AppConfig.HttpPort, "bind": listenHost})
 	runtime.SyncFromGlobals()
-	appHandler := web.SecurityMiddleware(nil)
+	appHandler := router.ApplyMiddleware(web.SecurityMiddleware(nil))
 	srv := &http.Server{
 		Addr:         listenHost,
 		Handler:      appHandler,
