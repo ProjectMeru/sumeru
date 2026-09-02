@@ -347,26 +347,5 @@ func loadTableColumns(tableName string) (map[string]struct{}, error) {
 
 // FormatAddColumnDefinition builds the SQL column definition fragment for ALTER TABLE ... ADD COLUMN.
 func FormatAddColumnDefinition(f FieldDefinition, baseType string) string {
-	if isRuntimeDefaultToken(f.DefaultVal) {
-		f.DefaultVal = nil
-	}
-	if f.Type == Boolean {
-		if f.DefaultVal == true {
-			return baseType + " NOT NULL DEFAULT TRUE"
-		}
-		if f.DefaultVal == false {
-			return baseType + " NOT NULL DEFAULT FALSE"
-		}
-		if lit, ok := sqlDefaultLiteral(f.DefaultVal); ok {
-			return baseType + " DEFAULT " + lit
-		}
-		return baseType
-	}
-	if lit, ok := sqlDefaultLiteral(f.DefaultVal); ok {
-		if f.Required {
-			return baseType + " NOT NULL DEFAULT " + lit
-		}
-		return baseType + " DEFAULT " + lit
-	}
-	return baseType
+	return formatAddColumnDefinition(f, baseType)
 }

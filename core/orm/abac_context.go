@@ -6,6 +6,14 @@ import (
 	"fmt"
 )
 
+func queryUserCompanyID(ctx context.Context, uid int) (sql.NullInt64, error) {
+	var companyID sql.NullInt64
+	err := DB.QueryRowContext(ctx,
+		`SELECT company_id FROM `+MustQuotedTableName("core.user")+` WHERE id = $1`, uid,
+	).Scan(&companyID)
+	return companyID, err
+}
+
 // UserCompanyIDs returns allowed company ids for uid (M2M + current company_id).
 func UserCompanyIDs(ctx context.Context, uid int) ([]int64, error) {
 	if uid <= 0 || DB == nil {
@@ -23,10 +31,7 @@ func UserCompanyIDs(ctx context.Context, uid int) ([]int64, error) {
 		seen[id] = struct{}{}
 		out = append(out, id)
 	}
-	var companyID sql.NullInt64
-	_ = DB.QueryRowContext(ctx,
-		`SELECT company_id FROM `+MustQuotedTableName("core.user")+` WHERE id = $1`, uid,
-	).Scan(&companyID)
+	companyID, _ := queryUserCompanyID(ctx, uid)
 	if companyID.Valid {
 		add(companyID.Int64)
 	}
@@ -69,10 +74,7 @@ func ActiveCompanyIDForUser(ctx context.Context, uid int) int64 {
 	if uid <= 0 || DB == nil {
 		return 0
 	}
-	var companyID sql.NullInt64
-	_ = DB.QueryRowContext(ctx,
-		`SELECT company_id FROM `+MustQuotedTableName("core.user")+` WHERE id = $1`, uid,
-	).Scan(&companyID)
+	companyID, _ := queryUserCompanyID(ctx, uid)
 	if !companyID.Valid {
 		return 0
 	}
