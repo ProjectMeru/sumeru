@@ -145,3 +145,52 @@ func parseMenuIDString(menuQuery string) (menuID int, ok bool) {
 func actionWindowTargetModel(actionData map[string]interface{}) string {
 	return strings.TrimSpace(orm.AsString(actionData["core_model"]))
 }
+
+// CanonicalMenuID rewrites folder/root menu_id to the leaf menu that owns actionID.
+func CanonicalMenuID(ctx context.Context, menuQuery string, actionID int) string {
+	menuID, ok := parseMenuIDString(menuQuery)
+	if !ok || actionID == 0 {
+		return menuQuery
+	}
+	menuRecord, err := orm.SearchOne(ctx, sysMenuModel, map[string]interface{}{"id": menuID})
+	if err != nil {
+		return menuQuery
+	}
+	if aid, ok := menuRecordActionID(menuRecord); ok && aid == actionID {
+		return menuQuery
+	}
+	if leafID := menuIDForWindowAction(ctx, menuID, actionID); leafID > 0 {
+		return strconv.Itoa(leafID)
+	}
+	return menuQuery
+}
+
+func menuIDForWindowAction(ctx context.Context, parentMenuID, actionID int) int {
+	if parentMenuID <= 0 || actionID == 0 {
+		return 0
+	}
+	menuTable := orm.MustQuotedTableName(sysMenuModel)
+	rows, err := orm.DB.QueryContext(ctx,
+		`SELECT id, action_id FROM `+menuTable+` WHERE parent_id = $1 ORDER BY sequence ASC, id ASC`,
+		parentMenuID,
+	)
+	if err != nil {
+		return 0
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var childMenuID int
+		var childActionID sql.NullInt64
+		if err := rows.Scan(&childMenuID, &childActionID); err != nil {
+			continue
+		}
+		if childActionID.Valid && int(childActionID.Int64) == actionID {
+			return childMenuID
+		}
+		if found := menuIDForWindowAction(ctx, childMenuID, actionID); found > 0 {
+			return found
+		}
+	}
+	return 0
+}

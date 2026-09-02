@@ -62,7 +62,7 @@ func analyticsExportDomain(ctx context.Context, r *http.Request, modelName strin
 	if actionData == nil {
 		actionData = map[string]interface{}{}
 	}
-	searchView := loadSearchView(ctx, modelName)
+	searchView := loadSearchViewForAction(ctx, modelName, actionData)
 	return workspaceListDomain(ctx, listDomainInput{
 		ActionData:  actionData,
 		SearchView:  searchView,

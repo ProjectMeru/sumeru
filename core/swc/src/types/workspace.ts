@@ -131,6 +131,7 @@ export interface SwcKanbanColumn {
   label: string;
   sequence: number;
   color: number;
+  rottingDays?: number;
   fold: boolean;
   records: Record<string, unknown>[];
 }

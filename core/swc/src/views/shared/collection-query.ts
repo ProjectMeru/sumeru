@@ -60,8 +60,19 @@ export function navigateCollectionQuery(
   );
 }
 
+/** Mutually exclusive CRM pipeline facets (type and won/lost). */
+const PRESET_EXCLUSIVE_GROUPS: string[][] = [
+  ["opportunity", "lead"],
+  ["won", "lost"],
+];
+
 export function togglePresetFilter(filters: string[], name: string): string[] {
-  return toggleFilterName(filters, name);
+  if (filters.includes(name)) {
+    return filters.filter((n) => n !== name);
+  }
+  const group = PRESET_EXCLUSIVE_GROUPS.find((g) => g.includes(name));
+  const withoutGroup = group ? filters.filter((n) => !group.includes(n)) : filters;
+  return [...withoutGroup, name];
 }
 
 export function toggleGroupByField(active: string[], field: string): string[] {

@@ -7,6 +7,7 @@ import { initPinnedApps } from "./pinned-apps.js";
 import { initSidebar } from "./sidebar.js";
 import { initCompanySwitcher } from "./company-switcher.js";
 import { initViewTabNavigation } from "./view-tab-sync.js";
+import { initBreadcrumbNavigation } from "./breadcrumb-sync.js";
 
 export function initShellChrome(boot: SwcBootstrap, http: HttpService): void {
   const shell = document.getElementById("sum-shell");
@@ -14,6 +15,7 @@ export function initShellChrome(boot: SwcBootstrap, http: HttpService): void {
 
   initSidebar(shell);
   initViewTabNavigation();
+  initBreadcrumbNavigation();
 
   if (boot.activityEnabled) {
     initActivityPanel(shell);

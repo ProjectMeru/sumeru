@@ -27,6 +27,14 @@ func actionViewIDFromContext(actionData map[string]interface{}) string {
 	return strings.TrimSpace(orm.AsString(ctx["view_id"]))
 }
 
+func actionSearchViewIDFromContext(actionData map[string]interface{}) string {
+	ctx := parseActionContext(actionData)
+	if ctx == nil {
+		return ""
+	}
+	return strings.TrimSpace(orm.AsString(ctx["search_view_id"]))
+}
+
 // actionDefaultFieldValues extracts default_* keys from action context for new-record forms.
 func actionDefaultFieldValues(actionData map[string]interface{}) map[string]interface{} {
 	ctx := parseActionContext(actionData)

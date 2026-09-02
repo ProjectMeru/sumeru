@@ -78,48 +78,62 @@ func collectMenuAncestors(ctx context.Context, leafID int) []menuCrumb {
 	return stack
 }
 
-type BreadcrumbInput struct {
-	ActiveMenuID   string
-	ViewType       string
-	Title          string
-	FormBaseQuery  string
-	Record         map[string]interface{}
-	RecordID       int
+// splitModuleMenuChain separates the application root menu from descendant menu folders/items.
+func splitModuleMenuChain(chain []menuCrumb) (module menuCrumb, menus []menuCrumb, ok bool) {
+	if len(chain) == 0 {
+		return menuCrumb{}, nil, false
+	}
+	return chain[0], chain[1:], true
 }
 
-// BuildWorkspaceBreadcrumbs builds app-root menu path + current view/record for /web workspace pages.
-// The trail starts at the active application root (same label as shell ModuleName in normal cases), not Home.
-func BuildWorkspaceBreadcrumbs(ctx context.Context, in BreadcrumbInput) []BreadcrumbItem {
-	var items []BreadcrumbItem
+type BreadcrumbInput struct {
+	ActiveMenuID  string
+	ResModel      string
+	ViewType      string
+	FormBaseQuery string
+	Record        map[string]interface{}
+	RecordID      int
+}
 
+// BuildWorkspaceBreadcrumbs builds module → menu → view → record for workspace pages.
+// Labels come from sys.menu names, generic view-mode names, and record/model metadata — never addon-specific maps in core.
+func BuildWorkspaceBreadcrumbs(ctx context.Context, in BreadcrumbInput) []BreadcrumbItem {
 	mid, err := strconv.Atoi(strings.TrimSpace(in.ActiveMenuID))
 	if err != nil || mid <= 0 {
-		if strings.TrimSpace(in.Title) != "" {
-			return []BreadcrumbItem{{Label: strings.TrimSpace(in.Title), Href: ""}}
+		if label := workspaceRecordBreadcrumbLabel(in); label != "" {
+			return []BreadcrumbItem{{Label: label, Href: ""}}
 		}
-		return items
+		if viewLabel := workspaceViewBreadcrumbLabel(in.ViewType); viewLabel != "" {
+			return []BreadcrumbItem{{Label: viewLabel, Href: ""}}
+		}
+		return nil
 	}
 
 	chain := collectMenuAncestors(ctx, mid)
-	vt := strings.ToLower(strings.TrimSpace(in.ViewType))
-	isMatrix := vt == ViewModeList || vt == ViewModeKanban
-	settingsRootID := 0
-	if IsMenuUnderSettingsRoot(ctx, in.ActiveMenuID) {
-		if rid, _, err := orm.ResolveXmlId(ctx, "base.menu_settings_root"); err == nil && rid > 0 {
-			settingsRootID = rid
-		}
+	module, menus, ok := splitModuleMenuChain(chain)
+	if !ok {
+		return nil
 	}
 
-	for i, m := range chain {
-		isLast := i == len(chain)-1
-		href := MenuWebURL(m.ID, m.ActionID)
-		if settingsRootID > 0 && m.ID == settingsRootID {
-			href = SettingsHomeURL()
-		}
-		if isLast && isMatrix {
+	vt := strings.ToLower(strings.TrimSpace(in.ViewType))
+	isMatrix := vt == ViewModeList || vt == ViewModeKanban
+	settingsRootID := settingsRootMenuID(ctx, in.ActiveMenuID)
+
+	var items []BreadcrumbItem
+
+	// Module (application root menu, e.g. CRM).
+	moduleHref := menuCrumbHref(module, settingsRootID, false)
+	items = append(items, BreadcrumbItem{Label: module.Name, Href: moduleHref})
+
+	// Menu path (folders and leaf action menu below the module root).
+	allMenus := append([]menuCrumb{}, menus...)
+	for i, m := range allMenus {
+		isLastMenu := i == len(allMenus)-1
+		href := menuCrumbHref(m, settingsRootID, false)
+		if isLastMenu && isMatrix {
 			href = ""
 		}
-		if isLast && vt == ViewModeForm && in.RecordID > 0 {
+		if isLastMenu && vt == ViewModeForm && in.RecordID > 0 {
 			if listHref := listViewURL(in.FormBaseQuery); listHref != "" {
 				href = listHref
 			}
@@ -127,31 +141,76 @@ func BuildWorkspaceBreadcrumbs(ctx context.Context, in BreadcrumbInput) []Breadc
 		items = append(items, BreadcrumbItem{Label: m.Name, Href: href})
 	}
 
-	if vt == ViewModeForm && in.RecordID > 0 {
-		label := strings.TrimSpace(in.Title)
+	// View (non-primary modes such as graph/pivot; list/kanban/form omit when menu names the screen).
+	if viewLabel := workspaceViewBreadcrumbLabel(in.ViewType); viewLabel != "" {
+		if len(items) == 0 || items[len(items)-1].Label != viewLabel {
+			items = append(items, BreadcrumbItem{Label: viewLabel, Href: ""})
+		}
+	}
+
+	// Record (existing row name, or new-form model label from generic UIModelName fallback).
+	if recordLabel := workspaceRecordBreadcrumbLabel(in); recordLabel != "" {
+		if len(items) == 0 || items[len(items)-1].Label != recordLabel {
+			items = append(items, BreadcrumbItem{Label: recordLabel, Href: ""})
+		}
+	}
+
+	return items
+}
+
+func settingsRootMenuID(ctx context.Context, activeMenuID string) int {
+	if !IsMenuUnderSettingsRoot(ctx, activeMenuID) {
+		return 0
+	}
+	rid, _, err := orm.ResolveXmlId(ctx, "base.menu_settings_root")
+	if err != nil || rid <= 0 {
+		return 0
+	}
+	return rid
+}
+
+func menuCrumbHref(m menuCrumb, settingsRootID int, current bool) string {
+	if current {
+		return ""
+	}
+	href := MenuWebURL(m.ID, m.ActionID)
+	if settingsRootID > 0 && m.ID == settingsRootID {
+		return SettingsHomeURL()
+	}
+	return href
+}
+
+// workspaceViewBreadcrumbLabel returns a view-mode segment for auxiliary workspace modes.
+func workspaceViewBreadcrumbLabel(viewType string) string {
+	vt := strings.ToLower(strings.TrimSpace(viewType))
+	switch vt {
+	case ViewModeList, ViewModeKanban, ViewModeForm, "":
+		return ""
+	default:
+		if suffix, ok := viewModeSuffix[vt]; ok {
+			return suffix
+		}
+		return ""
+	}
+}
+
+// workspaceRecordBreadcrumbLabel returns the record segment for form views.
+func workspaceRecordBreadcrumbLabel(in BreadcrumbInput) string {
+	vt := strings.ToLower(strings.TrimSpace(in.ViewType))
+	if vt != ViewModeForm {
+		return ""
+	}
+	if in.RecordID > 0 {
+		label := ""
 		if in.Record != nil {
-			if n := strings.TrimSpace(recStr(in.Record, "name")); n != "" {
-				label = n
-			}
+			label = strings.TrimSpace(recStr(in.Record, "name"))
 		}
 		if label == "" {
 			label = "Record"
 		}
-		items = append(items, BreadcrumbItem{Label: label, Href: ""})
-		return items
+		return label
 	}
-
-	// List/kanban: menu chain already names the screen (e.g. "All Companies"); do not append model list title ("Companies").
-	if isMatrix && len(chain) > 0 {
-		return items
-	}
-
-	if strings.TrimSpace(in.Title) != "" {
-		if len(items) == 0 || items[len(items)-1].Label != in.Title {
-			items = append(items, BreadcrumbItem{Label: in.Title, Href: ""})
-		}
-	}
-	return items
+	return UIModelName(strings.TrimSpace(in.ResModel))
 }
 
 // BuildAppsBreadcrumbs returns Home + Apps (+ optional module detail as current).

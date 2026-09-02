@@ -50,6 +50,7 @@ func SwcWorkspaceHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	req := parseWorkspaceRequest(r, actionID)
+	req.menuID = CanonicalMenuID(ctx, req.menuID, actionID)
 	viewRecord, err := buildViewRecordData(ctx, w, r, req, resolved, actionData)
 	if err != nil {
 		respondWorkspaceLoadError(w, ctx, err)

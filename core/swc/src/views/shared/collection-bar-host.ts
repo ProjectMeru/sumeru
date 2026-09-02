@@ -473,16 +473,19 @@ export class CollectionBarHost extends SwcComponent<CollectionBarHostProps> {
       <div class="sum-control-bar-wrap" @click=${() => this.closePanel()}>
         <aside class="sum-search-panel-facets" aria-label="Search facets">
           ${presetDomainFilters(this.searchMeta()?.filters).map(
-            (preset) => html`<button
+            (preset) => {
+              const active = this.query.presetFilters.includes(preset.name);
+              return html`<button
               type="button"
-              class="sum-search-facet"
+              class=${active ? "sum-search-facet sum-search-facet--active" : "sum-search-facet"}
               @click=${(e: Event) => {
                 e.stopPropagation();
                 this.togglePreset(preset.name);
               }}
             >
               ${preset.string || preset.name}
-            </button>`,
+            </button>`;
+            },
           )}
         </aside>
         <div class="sum-control-bar sum-view-toolbar">

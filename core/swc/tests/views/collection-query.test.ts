@@ -66,6 +66,13 @@ describe("collection-query", () => {
     expect(togglePresetFilter(["draft", "my"], "draft")).toEqual(["my"]);
   });
 
+  it("enforces exclusive CRM type and won/lost facets", () => {
+    expect(togglePresetFilter(["opportunity"], "lead")).toEqual(["lead"]);
+    expect(togglePresetFilter(["lead", "my"], "opportunity")).toEqual(["my", "opportunity"]);
+    expect(togglePresetFilter(["won"], "lost")).toEqual(["lost"]);
+    expect(togglePresetFilter(["won", "my"], "lost")).toEqual(["my", "lost"]);
+  });
+
   it("toggles group-by fields", () => {
     expect(toggleGroupByField(["state"], "user_id")).toEqual(["state", "user_id"]);
     expect(toggleGroupByField(["state", "user_id"], "state")).toEqual(["user_id"]);

@@ -14,11 +14,10 @@ func buildSwcWorkspacePayload(
 	viewRecord *render.ViewRecordData,
 	actionData map[string]interface{},
 ) swcmeta.WorkspacePayload {
-	viewBC := render.HumanViewBreadcrumb(resolved.view.Model, resolved.selectedMode)
 	crumbs := render.BuildWorkspaceBreadcrumbs(ctx, render.BreadcrumbInput{
 		ActiveMenuID:  req.menuID,
+		ResModel:      resolved.view.Model,
 		ViewType:      resolved.selectedMode,
-		Title:         viewBC,
 		FormBaseQuery: viewRecord.FormBaseQuery,
 		Record:        viewRecord.Record,
 		RecordID:      viewRecord.RecordID,
@@ -51,7 +50,7 @@ func buildSwcWorkspacePayload(
 	for _, c := range viewRecord.KanbanColumns {
 		input.KanbanColumns = append(input.KanbanColumns, swcmeta.KanbanColumn{
 			Value: c.Value, Label: c.Label, Sequence: c.Sequence,
-			Color: c.Color, Fold: c.Fold, Records: c.Records,
+			Color: c.Color, RottingDays: c.RottingDays, Fold: c.Fold, Records: c.Records,
 		})
 	}
 	if viewRecord.Pivot != nil {

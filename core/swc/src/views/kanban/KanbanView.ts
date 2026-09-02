@@ -1,7 +1,7 @@
 import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
 import type { SwcArchField, SwcWorkspacePayload } from "../../types/workspace.js";
-import { renderKanbanCardInner } from "./kanban-card.js";
+import { renderKanbanCardInner, isKanbanCardRotting } from "./kanban-card.js";
 import { RECORD_UPDATED, VIEW_FORM, VIEW_KANBAN } from "../../constants/routes.js";
 import { SwcError } from "../../runtime/error.js";
 import { inputValueFromEvent } from "../../widgets/field-events.js";
@@ -87,12 +87,13 @@ export class KanbanView extends SwcComponent<KanbanViewProps> {
   private renderCard(
     row: Record<string, unknown>,
     fields: SwcArchField[],
-    options: { draggable?: boolean; dropValue?: number } = {},
+    options: { draggable?: boolean; dropValue?: number; rottingDays?: number } = {},
   ) {
     const draggable = Boolean(options.draggable);
     const dropValue = options.dropValue;
+    const rotting = isKanbanCardRotting(row, options.rottingDays ?? 7);
     return html`<div
-      class="sum-kanban-card"
+      class=${rotting ? "sum-kanban-card sum-kanban-card--rotting" : "sum-kanban-card"}
       draggable=${draggable ? "true" : undefined}
       @click=${() => this.openCard(row)}
       @dragstart=${draggable
@@ -109,6 +110,13 @@ export class KanbanView extends SwcComponent<KanbanViewProps> {
     >
       ${renderKanbanCardInner(row, fields)}
     </div>`;
+  }
+
+  private stageHeaderClass(color: number): string {
+    if (color >= 0 && color <= 11) {
+      return `sum-kanban-stage-header sum-kanban-stage-header--color-${color}`;
+    }
+    return "sum-kanban-stage-header";
   }
 
   override template() {
@@ -135,13 +143,17 @@ export class KanbanView extends SwcComponent<KanbanViewProps> {
           <div class="sum-kanban-stage-columns">
             ${kanban.columns.map(
               (col) => html`<div class="sum-kanban-stage-column" data-column=${String(col.value)}>
-                <div class="sum-kanban-stage-header">
+                <div class=${this.stageHeaderClass(col.color)}>
                   <span>${col.label}</span>
                   <span class="sum-kanban-stage-count">${String(col.records.length)}</span>
                 </div>
                 <div class="sum-kanban-cards">
                   ${col.records.map((row) =>
-                    this.renderCard(row, fields, { draggable: kanban.draggable, dropValue: col.value }),
+                    this.renderCard(row, fields, {
+                      draggable: kanban.draggable,
+                      dropValue: col.value,
+                      rottingDays: col.rottingDays,
+                    }),
                   )}
                 </div>
                 ${kanban.quickCreate

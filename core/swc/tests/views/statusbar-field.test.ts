@@ -51,7 +51,12 @@ describe("StatusbarField", () => {
     document.body.appendChild(host);
     await new Promise((r) => setTimeout(r, 20));
     widget.patch();
-    expect(searchRead).toHaveBeenCalledWith("crm.stage", [], ["id", "name", "sequence"], 200);
+    expect(searchRead).toHaveBeenCalledWith(
+      "crm.stage",
+      [["active", "=", true]],
+      ["id", "name", "sequence", "color"],
+      200,
+    );
     expect(widget.rootElement?.textContent).toContain("New");
     expect(widget.rootElement?.textContent).toContain("Won");
     host.remove();
