@@ -119,54 +119,46 @@ func SubstituteDomainContext(domain [][]interface{}, dc DomainContext) [][]inter
 
 // RecordMatchesDomain evaluates AND of triples for =, !=, in (value list).
 // Prefix Polish "|" markers OR the following leaf triples (same shape as BuildWhereWithRecordRules group OR).
-func RecordMatchesDomain(rec map[string]interface{}, domain [][]interface{}) bool {
-	orLeaves := 0
-	for _, d := range domain {
-		if len(d) == 1 && fmt.Sprint(d[0]) == "|" {
-			orLeaves++
-			continue
-		}
-		break
-	}
+func RecordMatchesDomain(recordMap map[string]interface{}, domain [][]interface{}) bool {
+	orLeaves, leaves, ok := splitDomainORPrefix(domain)
 	if orLeaves > 0 {
-		leaves := domain[orLeaves:]
-		if len(leaves) != orLeaves+1 {
+		if !ok {
 			return false
 		}
 		for _, leaf := range leaves {
-			if RecordMatchesDomain(rec, [][]interface{}{leaf}) {
+			if RecordMatchesDomain(recordMap, [][]interface{}{leaf}) {
 				return true
 			}
 		}
 		return false
 	}
-	for _, d := range domain {
-		if len(d) != 3 {
+	for _, clause := range domain {
+		if len(clause) != 3 {
 			return false
 		}
-		field, _ := d[0].(string)
-		op, _ := d[1].(string)
-		cell, ok := rec[field]
+		fieldName, _ := clause[0].(string)
+		operator, _ := clause[1].(string)
+		cellValue, ok := recordMap[fieldName]
 		if !ok {
-			cell = nil
+			cellValue = nil
 		}
-		switch op {
+		switch operator {
 		case "=":
-			if !valuesEqual(cell, d[2]) {
+			if !valuesEqual(cellValue, clause[2]) {
 				return false
 			}
 		case "!=":
-			if valuesEqual(cell, d[2]) {
+			if valuesEqual(cellValue, clause[2]) {
 				return false
 			}
 		case "in":
-			arr, ok := d[2].([]interface{})
+			valueList, ok := clause[2].([]interface{})
 			if !ok {
 				return false
 			}
 			found := false
-			for _, x := range arr {
-				if valuesEqual(cell, x) {
+			for _, candidate := range valueList {
+				if valuesEqual(cellValue, candidate) {
 					found = true
 					break
 				}
@@ -181,29 +173,29 @@ func RecordMatchesDomain(rec map[string]interface{}, domain [][]interface{}) boo
 	return true
 }
 
-func valuesEqual(dbVal interface{}, want interface{}) bool {
-	if want == nil && (dbVal == nil || AsString(dbVal) == "") {
+func valuesEqual(dbValue interface{}, want interface{}) bool {
+	if want == nil && (dbValue == nil || AsString(dbValue) == "") {
 		return true
 	}
 	switch w := want.(type) {
 	case float64:
-		cv, ok := CoerceInt64(dbVal)
+		cv, ok := CoerceInt64(dbValue)
 		if !ok {
-			f2, ok2 := toFloat64(dbVal)
+			f2, ok2 := toFloat64(dbValue)
 			return ok2 && f2 == w
 		}
 		return float64(cv) == w
 	case bool:
-		return AsBool(dbVal) == w
+		return AsBool(dbValue) == w
 	case string:
-		return strings.TrimSpace(AsString(dbVal)) == strings.TrimSpace(w)
+		return strings.TrimSpace(AsString(dbValue)) == strings.TrimSpace(w)
 	default:
-		cv, ok := CoerceInt64(dbVal)
+		cv, ok := CoerceInt64(dbValue)
 		if ok {
-			wi, ok2 := CoerceInt64(want)
-			return ok2 && cv == wi
+			wantInt, ok2 := CoerceInt64(want)
+			return ok2 && cv == wantInt
 		}
-		return AsString(dbVal) == AsString(want)
+		return AsString(dbValue) == AsString(want)
 	}
 }
 
@@ -250,4 +242,3 @@ func toFloat64(v interface{}) (float64, bool) {
 		return f, err == nil
 	}
 }
-
