@@ -42,7 +42,9 @@ describe("form-sheet", () => {
 
     expect(el.matches(".sum-form-sheet") || el.querySelector(".sum-form-sheet")).toBeTruthy();
     expect(el.querySelector(".sum-form-split-layout")).toBeTruthy();
-    expect(el.querySelector(".sum-form-avatar-initials")?.textContent).toBe("AC");
+    expect(el.querySelector(".sum-form-avatar-img")?.getAttribute("src")).toContain(
+      "/static/img/image_placeholder.jpg",
+    );
     expect(el.textContent).toContain("Acme");
     expect(el.textContent).toContain("Contact");
     expect(el.textContent).toContain("Notes");

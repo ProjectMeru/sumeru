@@ -43,3 +43,17 @@ func TestKanbanDraggableFalse(t *testing.T) {
 		t.Fatal("expected not draggable")
 	}
 }
+
+func TestKanbanColumnsPerRow(t *testing.T) {
+	arch := `<view type="kanban" columns_per_row="6"><field name="name"/></view>`
+	v, err := parser.ParseViewFromArch(arch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := v.KanbanColumnsPerRow(); got != 6 {
+		t.Fatalf("columns per row: got %d want 6", got)
+	}
+	if got := (&parser.View{}).KanbanColumnsPerRow(); got != 4 {
+		t.Fatalf("default columns per row: got %d want 4", got)
+	}
+}

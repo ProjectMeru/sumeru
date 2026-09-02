@@ -58,14 +58,17 @@ func BuildWorkspacePayload(
 
 	if len(rec.KanbanColumns) > 0 || rec.KanbanGroupField != "" {
 		quick := false
+		columnsPerRow := 4
 		if view != nil {
 			quick = view.KanbanQuickCreate()
+			columnsPerRow = view.KanbanColumnsPerRow()
 		}
 		arch.Kanban = &KanbanMeta{
-			GroupField:  rec.KanbanGroupField,
-			Draggable:   rec.KanbanDraggable,
-			QuickCreate: quick,
-			Columns:     rec.KanbanColumns,
+			GroupField:    rec.KanbanGroupField,
+			Draggable:     rec.KanbanDraggable,
+			QuickCreate:   quick,
+			ColumnsPerRow: columnsPerRow,
+			Columns:       rec.KanbanColumns,
 		}
 	}
 	if rec.Pivot != nil {

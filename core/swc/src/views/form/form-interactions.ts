@@ -1,4 +1,5 @@
 import { initPasswordMatchGroups } from "../../widgets/password-match.js";
+import { isUploadedImageSrc } from "../shared/image-placeholder.js";
 
 function onNotebookKeydown(ev: Event): void {
   if (!(ev instanceof KeyboardEvent)) return;
@@ -59,6 +60,76 @@ function applyCropStyle(img: HTMLImageElement, crop: CropState): void {
   img.style.objectPosition = `${c.x}% ${c.y}%`;
   img.style.transform = `scale(${c.zoom})`;
   img.style.transformOrigin = `${c.x}% ${c.y}%`;
+}
+
+function imageHostHasUpload(host: Element): boolean {
+  const hidden = host.querySelector<HTMLInputElement>("[data-sum-avatar-value], [data-sum-image-value]");
+  return Boolean(hidden?.value && isUploadedImageSrc(hidden.value));
+}
+
+function hostFileInput(host: Element): HTMLInputElement | null {
+  return host.querySelector<HTMLInputElement>(".sum-image-file-input, input[type='file']");
+}
+
+function applyUploadedImage(host: Element, dataUrl: string): void {
+  const hidden = host.querySelector<HTMLInputElement>("[data-sum-avatar-value], [data-sum-image-value]");
+  if (hidden) hidden.value = dataUrl;
+  hidden?.dispatchEvent(new Event("input", { bubbles: true }));
+  host.setAttribute("data-sum-has-upload", "1");
+
+  let img = host.querySelector<HTMLImageElement>(".sum-form-avatar-img, .sum-image-thumb-img");
+  if (!img) {
+    const box = host.querySelector(".sum-form-avatar-box, .sum-image-thumb");
+    if (box) {
+      img = document.createElement("img");
+      img.className = box.classList.contains("sum-image-thumb")
+        ? "sum-image-thumb-img"
+        : "sum-form-avatar-img sum-form-avatar-img--visible sum-form-avatar-img--cropped";
+      box.prepend(img);
+    }
+  }
+  if (img) {
+    img.src = dataUrl;
+    img.removeAttribute("data-sum-image-placeholder");
+    img.classList.add("sum-form-avatar-img--visible", "sum-form-avatar-img--cropped");
+  }
+  host.querySelector(".sum-form-avatar-initials")?.remove();
+  host.querySelector(".sum-image-upload-hint")?.remove();
+}
+
+function openImageLightbox(src: string, options: { allowChange?: boolean; onChange?: () => void } = {}): void {
+  const modal = document.createElement("div");
+  modal.className = "sum-image-lightbox";
+  modal.innerHTML = `
+    <div class="sum-image-lightbox-inner" role="dialog" aria-modal="true" aria-label="Image preview">
+      <img class="sum-image-lightbox-img" alt="" />
+      <div class="sum-image-lightbox-actions">
+        ${options.allowChange ? '<button type="button" class="sum-btn sum-btn--ghost sum-image-lightbox-change">Change image</button>' : ""}
+        <button type="button" class="sum-btn sum-btn--ghost sum-image-lightbox-close">Close</button>
+      </div>
+    </div>`;
+
+  const img = modal.querySelector<HTMLImageElement>(".sum-image-lightbox-img")!;
+  img.src = src;
+
+  const close = (): void => modal.remove();
+  modal.addEventListener("click", (ev) => {
+    if (ev.target === modal) close();
+  });
+  modal.querySelector(".sum-image-lightbox-close")?.addEventListener("click", close);
+  modal.querySelector(".sum-image-lightbox-change")?.addEventListener("click", () => {
+    close();
+    options.onChange?.();
+  });
+
+  const onKey = (ev: KeyboardEvent): void => {
+    if (ev.key === "Escape") {
+      close();
+      document.removeEventListener("keydown", onKey);
+    }
+  };
+  document.addEventListener("keydown", onKey);
+  document.body.appendChild(modal);
 }
 
 function openAvatarCropModal(
@@ -145,6 +216,10 @@ function openAvatarCropModal(
   document.body.appendChild(modal);
 }
 
+function triggerImageUpload(host: Element): void {
+  hostFileInput(host)?.click();
+}
+
 function bindAvatarUpload(root: HTMLElement): () => void {
   const onChange = (ev: Event): void => {
     const input = ev.target;
@@ -154,22 +229,60 @@ function bindAvatarUpload(root: HTMLElement): () => void {
     const host =
       input.closest("[data-sum-avatar]") ?? input.closest(".sum-field-widget--image");
     if (!host) return;
-    const hidden = host.querySelector<HTMLInputElement>("[data-sum-avatar-value], [data-sum-image-value]");
     openAvatarCropModal(file, (dataUrl) => {
-      if (hidden) hidden.value = dataUrl;
-      hidden?.dispatchEvent(new Event("input", { bubbles: true }));
-      const img = host.querySelector<HTMLImageElement>(".sum-form-avatar-img, .sum-image-thumb-img");
-      if (img) {
-        img.src = dataUrl;
-        img.classList.add("sum-form-avatar-img--visible", "sum-form-avatar-img--cropped");
-      }
-      const initials = host.querySelector(".sum-form-avatar-initials");
-      initials?.remove();
+      applyUploadedImage(host, dataUrl);
     });
     input.value = "";
   };
   root.addEventListener("change", onChange);
   return () => root.removeEventListener("change", onChange);
+}
+
+function bindImageBoxClick(root: HTMLElement): () => void {
+  const onClick = (ev: Event): void => {
+    const target = ev.target;
+    if (!(target instanceof Element)) return;
+    const box = target.closest(".sum-form-avatar-box--clickable, .sum-image-thumb--clickable");
+    if (!box) return;
+    if (target.closest(".sum-image-lightbox, .sum-avatar-crop-modal")) return;
+
+    const host = box.closest("[data-sum-avatar], .sum-field-widget--image");
+    if (!host) return;
+
+    const readonly = host.getAttribute("data-sum-readonly") === "1";
+    const img = box.querySelector<HTMLImageElement>("img");
+    const src = img?.src ?? "";
+    const hasUpload = imageHostHasUpload(host);
+
+    if (hasUpload && src) {
+      ev.preventDefault();
+      openImageLightbox(src, {
+        allowChange: !readonly,
+        onChange: () => triggerImageUpload(host),
+      });
+      return;
+    }
+
+    if (readonly) return;
+    ev.preventDefault();
+    triggerImageUpload(host);
+  };
+
+  const onKeydown = (ev: Event): void => {
+    if (!(ev instanceof KeyboardEvent) || (ev.key !== "Enter" && ev.key !== " ")) return;
+    const target = ev.target;
+    if (!(target instanceof Element)) return;
+    if (!target.closest(".sum-form-avatar-box--clickable, .sum-image-thumb--clickable")) return;
+    ev.preventDefault();
+    target.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  };
+
+  root.addEventListener("click", onClick);
+  root.addEventListener("keydown", onKeydown);
+  return () => {
+    root.removeEventListener("click", onClick);
+    root.removeEventListener("keydown", onKeydown);
+  };
 }
 
 function bindDateDismiss(root: HTMLElement): () => void {
@@ -193,6 +306,7 @@ export function initFormInteractions(root: HTMLElement): () => void {
   }
   cleanups.push(bindMany2OneDismiss(root));
   cleanups.push(bindAvatarUpload(root));
+  cleanups.push(bindImageBoxClick(root));
   cleanups.push(bindDateDismiss(root));
   initPasswordMatchGroups(root);
   return () => {

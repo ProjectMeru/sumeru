@@ -21,6 +21,7 @@
                     <group string="Identification">
                         <field name="company_registry" string="Company ID"/>
                         <field name="vat" string="Tax ID"/>
+                        <field name="color" string="Color" widget="color"/>
                     </group>
                     <group string="Contact">
                         <field name="mobile" string="Mobile"/>

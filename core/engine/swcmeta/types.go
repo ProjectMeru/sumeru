@@ -165,10 +165,11 @@ type ArchPage struct {
 }
 
 type KanbanMeta struct {
-	GroupField  string         `json:"groupField"`
-	Draggable   bool           `json:"draggable"`
-	QuickCreate bool           `json:"quickCreate,omitempty"`
-	Columns     []KanbanColumn `json:"columns"`
+	GroupField    string         `json:"groupField"`
+	Draggable     bool           `json:"draggable"`
+	QuickCreate   bool           `json:"quickCreate,omitempty"`
+	ColumnsPerRow int            `json:"columnsPerRow,omitempty"`
+	Columns       []KanbanColumn `json:"columns"`
 }
 
 type KanbanColumn struct {

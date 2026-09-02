@@ -27,6 +27,8 @@
                         <field name="login" string="Login"/>
                         <field name="active" string="Active" widget="selection"/>
                         <field name="user_type" string="User Type" widget="selection"/>
+                        <field name="gender" string="Gender" widget="selection"/>
+                        <field name="color" string="Color" widget="color"/>
                     </group>
                     <group string="Company">
                         <field name="company_id" string="Company" widget="selection"/>

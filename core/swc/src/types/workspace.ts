@@ -123,6 +123,7 @@ export interface SwcKanbanMeta {
   groupField: string;
   draggable: boolean;
   quickCreate?: boolean;
+  columnsPerRow?: number;
   columns: SwcKanbanColumn[];
 }
 

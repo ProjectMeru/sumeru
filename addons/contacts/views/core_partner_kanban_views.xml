@@ -2,12 +2,14 @@
 <sumeru>
     <data>
         <view id="view_core_partner_kanban" model="core.partner" type="kanban">
+            <field name="color" invisible="1"/>
+            <field name="gender" invisible="1"/>
             <field name="image"/>
-            <field name="name"/>
-            <field name="email"/>
-            <field name="phone"/>
-            <field name="city_id"/>
-            <field name="is_company"/>
+            <field name="name" string="Name"/>
+            <field name="email" string="Email"/>
+            <field name="phone" string="Phone"/>
+            <field name="city_id" string="City"/>
+            <field name="is_company" string="Is Company"/>
             <templates>
                 <t t-name="kanban-box">
                     <div class="sum-kanban-global-click">

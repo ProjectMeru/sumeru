@@ -47,9 +47,10 @@ func SerializeViewForUser(ctx context.Context, view *parser.View) ViewArch {
 	}
 	if strings.EqualFold(view.Type, "kanban") {
 		arch.Kanban = &KanbanMeta{
-			GroupField:  view.KanbanGroupField(),
-			Draggable:   view.KanbanDraggable(),
-			QuickCreate: view.KanbanQuickCreate(),
+			GroupField:    view.KanbanGroupField(),
+			Draggable:     view.KanbanDraggable(),
+			QuickCreate:   view.KanbanQuickCreate(),
+			ColumnsPerRow: view.KanbanColumnsPerRow(),
 		}
 	}
 	if strings.EqualFold(view.Type, "graph") {

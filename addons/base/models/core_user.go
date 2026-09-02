@@ -26,4 +26,5 @@ type CoreUser struct {
 	TotpEnabled    sdk.Boolean                `sumeru:"string=2FA Enabled,default=false"`
 	PasswordMinLen sdk.Integer                `sumeru:"string=Min Password Length,default=8"`
 	PinnedApps     sdk.Text                   `sumeru:"string=Pinned Apps"`
+	Gender         sdk.String                 `sumeru:"string=Gender,selection=male:Male,female:Female,other:Other"`
 }

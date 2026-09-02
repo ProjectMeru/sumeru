@@ -23,4 +23,5 @@ type CoreCompany struct {
 	InternalNotes            sdk.Text                  `sumeru:"string=Internal Notes"`
 	MailChatterEnabled       sdk.Boolean               `sumeru:"string=Chatter,default=true"`
 	MailActivityPanelEnabled sdk.Boolean               `sumeru:"string=Activity panel,default=true"`
+	Color                    sdk.Integer               `sumeru:"string=Color Index"`
 }
