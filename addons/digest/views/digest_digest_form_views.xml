@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_digest_digest_form" model="digest.digest" type="form">
+            <sheet>
+                <group>
+                    <field name="name" string="Name"/>
+                    <field name="periodicity" string="Periodicity"/>
+                    <field name="next_run_date" string="Next Run Date"/>
+                    <field name="active" string="Active"/>
+                </group>
+                <notebook>
+                    <page string="KPIs">
+                        <field name="kpi_ids">
+                            <list>
+                                <field name="name"/>
+                                <field name="compute_code"/>
+                            </list>
+                        </field>
+                    </page>
+                </notebook>
+            </sheet>
+        </view>
+    </data>
+</sumeru>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <action id="action_digest.digest" type="window" model="digest.digest" name="Digests" view_mode="list,form"/>
+        <action id="action_digest.kpi" type="window" model="digest.kpi" name="KPIs" view_mode="list,form"/>
+    </data>
+</sumeru>

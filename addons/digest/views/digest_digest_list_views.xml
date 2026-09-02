@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_digest_digest_list" model="digest.digest" type="list">
+            <field name="name"/>
+            <field name="periodicity"/>
+            <field name="next_run_date"/>
+            <field name="active"/>
+        </view>
+    </data>
+</sumeru>

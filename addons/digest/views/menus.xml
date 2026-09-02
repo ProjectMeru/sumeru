@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <menuitem id="menu_digest_root" name="Digests" sequence="80" web_icon="settings" groups="base.group_system"/>
+        <menuitem id="menu_digest_digests" name="Digests" parent="menu_digest_root" sequence="10" action="digest.action_digest.digest" web_icon="settings" groups="base.group_system"/>
+        <menuitem id="menu_digest_kpis" name="KPIs" parent="menu_digest_root" sequence="20" action="digest.action_digest.kpi" web_icon="settings" groups="base.group_system"/>
+
+        <menuitem id="menu_digest_settings_section" name="Digests" parent="base.menu_settings_root" sequence="85" web_icon="settings" groups="base.group_system"/>
+        <menuitem id="menu_digest_settings_digests" name="Digests" parent="menu_digest_settings_section" sequence="10" action="digest.action_digest.digest" web_icon="settings" groups="base.group_system"/>
+        <menuitem id="menu_digest_settings_kpis" name="KPIs" parent="menu_digest_settings_section" sequence="20" action="digest.action_digest.kpi" web_icon="settings" groups="base.group_system"/>
+    </data>
+</sumeru>

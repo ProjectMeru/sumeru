@@ -1,0 +1,20 @@
+{
+  "name": "digest",
+  "display_name": "Digest",
+  "version": "1.0.0",
+  "author": "Sumeru",
+  "description": "Periodic KPI digests for application metrics.",
+  "depends": ["base", "mail"],
+  "application": false,
+  "data": [
+    "security/security.xml",
+    "security/sys.access.csv",
+    "data/digest_crm_kpi_data.xml",
+    "views/actions.xml",
+    "views/digest_digest_list_views.xml",
+    "views/digest_digest_form_views.xml",
+    "views/digest_kpi_list_views.xml",
+    "views/digest_kpi_form_views.xml",
+    "views/menus.xml"
+  ]
+}
