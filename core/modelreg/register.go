@@ -38,18 +38,19 @@ func MustRegister(module string, models ...any) {
 		entries = append(entries, modelEntry{structType: structType, spec: spec})
 	}
 
+	var pending []pendingModel
 	for _, entry := range entries {
 		fields, err := reflectFields(ctx, entry.structType)
 		if err != nil {
 			panic(fmt.Sprintf("modelreg: model %s: %v", entry.spec.Name, err))
 		}
-		rm := &reflectedModel{name: entry.spec.Name, fields: fields}
-		if entry.spec.Extend {
-			extendRegisteredModel(entry.spec.Name, rm.fields, module)
-			continue
-		}
-		orm.RegisterModelWithModule(rm, module)
+		pending = append(pending, pendingModel{
+			name:   entry.spec.Name,
+			extend: entry.spec.Extend,
+			fields: fields,
+		})
 	}
+	queueRegistration(module, pending)
 }
 
 type modelEntry struct {

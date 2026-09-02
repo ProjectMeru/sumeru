@@ -11,6 +11,8 @@ import (
 
 	"sumeru/core/applog"
 	_ "sumeru/core/ormmodels"
+	"sumeru/core/modelreg"
+	"sumeru/core/module"
 	"sumeru/core/orm"
 	"sumeru/core/runtime"
 	"sumeru/core/scheduler"
@@ -84,6 +86,34 @@ func Run() {
 		config.AppConfig.DbHost, config.AppConfig.DbPort, config.AppConfig.DbUser,
 		config.AppConfig.DbPass, config.AppConfig.DbName, config.AppConfig.DbSslMode)
 	InitDatabase(databaseSource)
+
+	discovered, err := module.DiscoverAddonRoots(config.AppConfig.AddonPaths)
+	if err != nil {
+		applog.Fatal(ctx, "Addon discovery failed", "err", err)
+	}
+	if err := module.ValidateDiscoveredAddons(discovered); err != nil {
+		applog.Fatal(ctx, "Addon convention validation failed", "err", err)
+	}
+	module.DiscoveredAddons = discovered
+	for name, addon := range discovered {
+		module.LoadedAddons[name] = addon
+	}
+
+	var installed map[string]struct{}
+	if orm.IsInitialized() {
+		installed, err = orm.InstalledModuleNames(ctx)
+		if err != nil {
+			applog.Fatal(ctx, "List installed modules failed", "err", err)
+		}
+	}
+	_ = installed
+	moduleOrder, err := module.ModuleNamesTopo(discovered)
+	if err != nil {
+		applog.Fatal(ctx, "Module topo sort failed", "err", err)
+	}
+	if err := modelreg.ActivateAll(moduleOrder); err != nil {
+		applog.Fatal(ctx, "Model registry activation failed", "err", err)
+	}
 
 	if orm.IsInitialized() {
 		if err := SyncModels(); err != nil {

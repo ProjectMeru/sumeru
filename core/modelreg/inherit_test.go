@@ -22,6 +22,7 @@ type inheritExtend struct {
 
 func TestMustRegisterInheritMergesFields(t *testing.T) {
 	const baseModel = "test.inherit.base"
+	ResetActivationForTest()
 	prev := orm.Registry[baseModel]
 	defer func() {
 		if prev == nil {
@@ -33,6 +34,9 @@ func TestMustRegisterInheritMergesFields(t *testing.T) {
 
 	MustRegister("test_inherit_base", &inheritBase{})
 	MustRegister("test_inherit_extend", &inheritExtend{})
+	if err := ActivateAll(nil); err != nil {
+		t.Fatal(err)
+	}
 
 	m := orm.RegistryModel(baseModel)
 	if m == nil {
@@ -53,6 +57,7 @@ func TestMustRegisterInheritMergesFields(t *testing.T) {
 
 func TestMustRegisterInheritDuplicateFieldPanics(t *testing.T) {
 	const baseModel = "test.inherit.dup"
+	ResetActivationForTest()
 	prev := orm.Registry[baseModel]
 	defer func() {
 		if prev == nil {
@@ -71,16 +76,18 @@ func TestMustRegisterInheritDuplicateFieldPanics(t *testing.T) {
 		Name                modelmeta.String
 	}
 
-	MustRegister("test_inherit_dup_base", &dupBase{})
 	defer func() {
 		if recover() == nil {
 			t.Fatal("expected panic for duplicate field")
 		}
 	}()
+	MustRegister("test_inherit_dup_base", &dupBase{})
 	MustRegister("test_inherit_dup_extend", &dupExtend{})
+	_ = ActivateAll(nil)
 }
 
 func TestMustRegisterInheritUnknownTargetPanics(t *testing.T) {
+	ResetActivationForTest()
 	type orphanExtend struct {
 		modelmeta.ModelMeta `sumeru:"inherit=test.inherit.missing"`
 		Flag                modelmeta.Boolean
@@ -91,6 +98,7 @@ func TestMustRegisterInheritUnknownTargetPanics(t *testing.T) {
 		}
 	}()
 	MustRegister("test_inherit_orphan", &orphanExtend{})
+	_ = ActivateAll(nil)
 }
 
 func TestModelSpecFromStructInherit(t *testing.T) {
