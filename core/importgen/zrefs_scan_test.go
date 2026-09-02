@@ -1,32 +1,72 @@
 package importgen
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
 
-func TestFilterRefsForUsage_prefersDefiningModelOverInherit(t *testing.T) {
-	refs := []modelRef{
-		{
-			GoName:         "PartnerContacts",
-			TechnicalModel: "core.partner",
-			ImportPath:     "sumeru/addons/contacts/models",
-			HeuristicName:  "CorePartner",
-			PhantomName:    "CorePartner",
-			IsExtend:       true,
-		},
-		{
-			GoName:         "CorePartner",
-			TechnicalModel: "core.partner",
-			ImportPath:     "sumeru/addons/base/models",
-			HeuristicName:  "CorePartner",
-			UseAlias:       true,
-			IsExtend:       false,
-		},
+func TestModelSpecFromStructAST(t *testing.T) {
+	dir := t.TempDir()
+	src := `package models
+
+import "sumeru/core/modelmeta"
+
+type CorePartner struct {
+	modelmeta.ModelMeta ` + "`sumeru:\"model=core.partner\"`" + `
+	Name string
+}
+
+type PartnerExt struct {
+	modelmeta.ModelMeta ` + "`sumeru:\"inherit=core.partner\"`" + `
+	Phone string
+}
+
+type Skipped struct {
+	modelmeta.ModelMeta ` + "`sumeru:\"model=-\"`" + `
+}
+
+type DefaultName struct {
+	modelmeta.ModelMeta
+	Title string
+}
+`
+	if err := os.WriteFile(filepath.Join(dir, "partner.go"), []byte(src), 0o644); err != nil {
+		t.Fatal(err)
 	}
-	used := map[string]struct{}{"CorePartner": {}}
-	filtered := filterRefsForUsage(refs, used)
-	if len(filtered) != 1 {
-		t.Fatalf("got %d refs, want 1", len(filtered))
+
+	models, err := parseDirModels(dir)
+	if err != nil {
+		t.Fatalf("parseDirModels: %v", err)
 	}
-	if filtered[0].GoName != "CorePartner" {
-		t.Fatalf("got %q, want CorePartner defining model", filtered[0].GoName)
+	byName := map[string]scannedModel{}
+	for _, m := range models {
+		byName[m.GoName] = m
+	}
+
+	if m := byName["CorePartner"]; m.ModelName != "core.partner" || m.Extend {
+		t.Fatalf("CorePartner: %+v", m)
+	}
+	if m := byName["PartnerExt"]; m.ModelName != "core.partner" || !m.Extend {
+		t.Fatalf("PartnerExt: %+v", m)
+	}
+	if m := byName["Skipped"]; m.ModelName != "-" {
+		t.Fatalf("Skipped: %+v", m)
+	}
+	if m := byName["DefaultName"]; m.ModelName != "default.name" || m.Extend {
+		t.Fatalf("DefaultName: %+v", m)
+	}
+
+	types, err := scanPackageForModels(dir)
+	if err != nil {
+		t.Fatalf("scanPackageForModels: %v", err)
+	}
+	for _, name := range types {
+		if name == "Skipped" {
+			t.Fatal("model=- should be excluded from zmodels scan")
+		}
+	}
+	if len(types) != 3 {
+		t.Fatalf("expected 3 registered types, got %v", types)
 	}
 }

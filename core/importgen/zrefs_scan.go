@@ -43,54 +43,34 @@ func scanModelsInDir(dir string) ([]modelRef, error) {
 		return nil, err
 	}
 
-	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, dir, isSourceGo, 0)
+	models, err := parseDirModels(dir)
 	if err != nil {
 		return nil, err
 	}
 
 	var refs []modelRef
-	for _, pkg := range pkgs {
-		for _, f := range pkg.Files {
-			for _, decl := range f.Decls {
-				gd, ok := decl.(*ast.GenDecl)
-				if !ok || gd.Tok != token.TYPE {
-					continue
-				}
-				for _, spec := range gd.Specs {
-					ts, ok := spec.(*ast.TypeSpec)
-					if !ok || !ts.Name.IsExported() {
-						continue
-					}
-					st, ok := ts.Type.(*ast.StructType)
-					if !ok || !structEmbedsModel(st) {
-						continue
-					}
-					technical, isExtend := modelSpecFromStruct(st)
-					if technical == "" || technical == "-" {
-						continue
-					}
-					heuristic := modelmeta.HeuristicGoName(technical)
-					ref := modelRef{
-						GoName:         ts.Name.Name,
-						TechnicalModel: technical,
-						ImportPath:     importPath,
-						HeuristicName:  heuristic,
-						IsExtend:       isExtend,
-					}
-					if ref.GoName == heuristic ||
-						strings.EqualFold(ref.GoName, heuristic) ||
-						modelmeta.ModelNameFromGo(ref.GoName) == technical {
-						ref.UseAlias = true
-					} else if heuristic != "" {
-						ref.PhantomName = heuristic
-					} else {
-						ref.UseAlias = true
-					}
-					refs = append(refs, ref)
-				}
-			}
+	for _, m := range models {
+		if m.ModelName == "" || m.ModelName == "-" {
+			continue
 		}
+		heuristic := modelmeta.HeuristicGoName(m.ModelName)
+		ref := modelRef{
+			GoName:         m.GoName,
+			TechnicalModel: m.ModelName,
+			ImportPath:     importPath,
+			HeuristicName:  heuristic,
+			IsExtend:       m.Extend,
+		}
+		if ref.GoName == heuristic ||
+			strings.EqualFold(ref.GoName, heuristic) ||
+			modelmeta.ModelNameFromGo(ref.GoName) == m.ModelName {
+			ref.UseAlias = true
+		} else if heuristic != "" {
+			ref.PhantomName = heuristic
+		} else {
+			ref.UseAlias = true
+		}
+		refs = append(refs, ref)
 	}
 	return refs, nil
 }
