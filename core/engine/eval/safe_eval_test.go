@@ -2,6 +2,17 @@ package eval
 
 import "testing"
 
+func TestSafeEvalDomainList(t *testing.T) {
+	got, err := SafeEval(`[('active', '=', True), ('state', 'in', ['draft', 'done'])]`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	domain, ok := got.([][]interface{})
+	if !ok || len(domain) != 2 {
+		t.Fatalf("domain parse: %v", got)
+	}
+}
+
 func TestSafeEvalLiterals(t *testing.T) {
 	for _, tc := range []struct {
 		in   string

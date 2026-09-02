@@ -18,13 +18,7 @@ func MergeStoredComputes(ctx context.Context, modelName string, rec map[string]i
 	if len(order) == 0 {
 		return nil
 	}
-	computeMu.RLock()
-	byField := computes[modelName]
-	specs := make(map[string]computeSpec, len(byField))
-	for k, v := range byField {
-		specs[k] = v
-	}
-	computeMu.RUnlock()
+	specs := snapshotComputeSpecs(modelName)
 	for _, field := range order {
 		spec, ok := specs[field]
 		if !ok || spec.fn == nil {
@@ -116,23 +110,20 @@ func RejectVirtualWrites(model Model, values map[string]interface{}) error {
 	if model == nil || len(values) == 0 {
 		return nil
 	}
-	byName := map[string]FieldDefinition{}
-	for _, f := range model.Fields() {
-		byName[f.Name] = f
-	}
-	for k := range values {
-		fd, ok := byName[k]
+	byName := fieldDefinitionsByName(model)
+	for key := range values {
+		fieldDef, ok := byName[key]
 		if !ok {
 			continue
 		}
-		if IsVirtualField(fd) {
-			return fmt.Errorf("field %q on %s is read-only", k, model.ModelName())
+		if IsVirtualField(fieldDef) {
+			return fmt.Errorf("field %q on %s is read-only", key, model.ModelName())
 		}
-		if fd.Compute != "" && fd.ComputeStore {
-			return fmt.Errorf("field %q on %s is computed", k, model.ModelName())
+		if fieldDef.Compute != "" && fieldDef.ComputeStore {
+			return fmt.Errorf("field %q on %s is computed", key, model.ModelName())
 		}
-		if fd.Related != "" {
-			return fmt.Errorf("field %q on %s is related", k, model.ModelName())
+		if fieldDef.Related != "" {
+			return fmt.Errorf("field %q on %s is related", key, model.ModelName())
 		}
 	}
 	return nil

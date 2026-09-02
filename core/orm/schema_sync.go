@@ -347,26 +347,55 @@ func loadTableColumns(tableName string) (map[string]struct{}, error) {
 
 // FormatAddColumnDefinition builds the SQL column definition fragment for ALTER TABLE ... ADD COLUMN.
 func FormatAddColumnDefinition(f FieldDefinition, baseType string) string {
-	if isRuntimeDefaultToken(f.DefaultVal) {
-		f.DefaultVal = nil
+	return formatAddColumnDefinition(f, baseType)
+}
+
+// EnsureModelColumns adds missing physical columns for the given field definitions on a model.
+func EnsureModelColumns(ctx context.Context, model Model, extra []FieldDefinition) error {
+	if DB == nil || model == nil {
+		return nil
 	}
-	if f.Type == Boolean {
-		if f.DefaultVal == true {
-			return baseType + " NOT NULL DEFAULT TRUE"
-		}
-		if f.DefaultVal == false {
-			return baseType + " NOT NULL DEFAULT FALSE"
-		}
-		if lit, ok := sqlDefaultLiteral(f.DefaultVal); ok {
-			return baseType + " DEFAULT " + lit
-		}
-		return baseType
+	modelName := model.ModelName()
+	tableName, err := ModelToTableName(modelName)
+	if err != nil {
+		return err
 	}
-	if lit, ok := sqlDefaultLiteral(f.DefaultVal); ok {
-		if f.Required {
-			return baseType + " NOT NULL DEFAULT " + lit
-		}
-		return baseType + " DEFAULT " + lit
+	quotedTable, err := QuotedTableName(modelName)
+	if err != nil {
+		return err
 	}
-	return baseType
+	exists, err := tableExists(tableName)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return createTable(model)
+	}
+	existing, err := loadTableColumns(tableName)
+	if err != nil {
+		return err
+	}
+	for _, field := range extra {
+		if field.Name == "id" || IsVirtualField(field) {
+			continue
+		}
+		if _, ok := existing[strings.ToLower(field.Name)]; ok {
+			continue
+		}
+		baseType, ok := ColumnTypeSQL(field)
+		if !ok {
+			continue
+		}
+		colDef := FormatAddColumnDefinition(field, baseType)
+		colQuoted, err := QuotedColumnForModel(modelName, field.Name)
+		if err != nil {
+			return err
+		}
+		q := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", quotedTable, colQuoted, colDef)
+		if _, err := DB.Exec(q); err != nil {
+			return fmt.Errorf("%s: %w", q, err)
+		}
+		applog.L(ctx).Info("schema_sync_extra", "table", tableName, "field", field.Name)
+	}
+	return nil
 }

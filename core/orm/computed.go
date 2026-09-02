@@ -42,17 +42,10 @@ func ApplyComputes(ctx context.Context, model string, rec map[string]interface{}
 	if rec == nil {
 		return nil
 	}
-	computeMu.RLock()
-	byField := computes[model]
-	if len(byField) == 0 {
-		computeMu.RUnlock()
+	specs := snapshotComputeSpecs(model)
+	if len(specs) == 0 {
 		return nil
 	}
-	specs := make(map[string]computeSpec, len(byField))
-	for k, v := range byField {
-		specs[k] = v
-	}
-	computeMu.RUnlock()
 	for field, spec := range specs {
 		val, err := spec.fn(ctx, rec)
 		if err != nil {
@@ -61,6 +54,17 @@ func ApplyComputes(ctx context.Context, model string, rec map[string]interface{}
 		rec[field] = val
 	}
 	return nil
+}
+
+func snapshotComputeSpecs(modelName string) map[string]computeSpec {
+	computeMu.RLock()
+	byField := computes[modelName]
+	specs := make(map[string]computeSpec, len(byField))
+	for fieldName, spec := range byField {
+		specs[fieldName] = spec
+	}
+	computeMu.RUnlock()
+	return specs
 }
 
 // ComputeDeps returns dependency field names for a model's computed fields.

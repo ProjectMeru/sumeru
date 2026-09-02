@@ -26,23 +26,7 @@ type searchPaging struct {
 
 func execSearchQuery(ctx context.Context, modelName string, domain [][]interface{}, paging *searchPaging) ([]map[string]interface{}, error) {
 	ctx = ContextWithReadReplica(ctx, true)
-	if _, ok := Registry[modelName]; !ok {
-		return nil, fmt.Errorf("model %s not found", modelName)
-	}
-	uid := SecurityUID(ctx)
-	if err := CheckModelAccess(ctx, uid, modelName, "read"); err != nil {
-		return nil, err
-	}
-
-	for _, interceptor := range SearchInterceptors {
-		var err error
-		domain, err = interceptor(ctx, modelName, domain)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	whereClause, args, err := BuildWhereWithRecordRules(ctx, uid, modelName, "read", domain)
+	uid, whereClause, args, _, err := prepareSearchRead(ctx, modelName, domain)
 	if err != nil {
 		return nil, err
 	}
@@ -53,8 +37,8 @@ func execSearchQuery(ctx context.Context, modelName string, domain [][]interface
 	}
 	query := fmt.Sprintf("SELECT * FROM %s WHERE %s", table, whereClause)
 	if paging != nil {
-		n := len(args) + 1
-		query += fmt.Sprintf(" ORDER BY %s LIMIT $%d OFFSET $%d", paging.orderBySQL, n, n+1)
+		placeholderIndex := len(args) + 1
+		query += fmt.Sprintf(" ORDER BY %s LIMIT $%d OFFSET $%d", paging.orderBySQL, placeholderIndex, placeholderIndex+1)
 		args = append(args, paging.limit, paging.offset)
 	}
 	rows, err := QueryDB(ctx).QueryContext(ctx, query, args...)
@@ -66,16 +50,35 @@ func execSearchQuery(ctx context.Context, modelName string, domain [][]interface
 	cols, _ := rows.Columns()
 	var results []map[string]interface{}
 	for rows.Next() {
-		m, err := scanRowToMap(cols, rows)
+		recordMap, err := scanRowToMap(cols, rows)
 		if err != nil {
 			return nil, err
 		}
-		RedactRecordForRead(ctx, uid, modelName, m)
-		_ = ApplyComputes(ctx, modelName, m)
-		_ = ApplyRelatedFields(ctx, modelName, m)
-		results = append(results, m)
+		enrichRecordForRead(ctx, uid, modelName, recordMap)
+		results = append(results, recordMap)
 	}
 	return results, rows.Err()
+}
+
+func prepareSearchRead(ctx context.Context, modelName string, domain [][]interface{}) (uid int, whereClause string, args []interface{}, domainOut [][]interface{}, err error) {
+	if _, ok := Registry[modelName]; !ok {
+		return 0, "", nil, nil, fmt.Errorf("model %s not found", modelName)
+	}
+	uid = SecurityUID(ctx)
+	if err := CheckModelAccess(ctx, uid, modelName, "read"); err != nil {
+		return 0, "", nil, nil, err
+	}
+	for _, interceptor := range SearchInterceptors {
+		domain, err = interceptor(ctx, modelName, domain)
+		if err != nil {
+			return 0, "", nil, nil, err
+		}
+	}
+	whereClause, args, err = BuildWhereWithRecordRules(ctx, uid, modelName, "read", domain)
+	if err != nil {
+		return 0, "", nil, nil, err
+	}
+	return uid, whereClause, args, domain, nil
 }
 
 // Search finds records matching the criteria
@@ -147,20 +150,7 @@ func SearchCount(ctx context.Context, modelName string, domain [][]interface{}) 
 		logORMOperationKV(ctx, start, "search_count", modelName, err, "count", n)
 	}()
 	ctx = ContextWithReadReplica(ctx, true)
-	if _, ok := Registry[modelName]; !ok {
-		return 0, fmt.Errorf("model %s not found", modelName)
-	}
-	uid := SecurityUID(ctx)
-	if err := CheckModelAccess(ctx, uid, modelName, "read"); err != nil {
-		return 0, err
-	}
-	for _, interceptor := range SearchInterceptors {
-		domain, err = interceptor(ctx, modelName, domain)
-		if err != nil {
-			return 0, err
-		}
-	}
-	whereClause, args, err := BuildWhereWithRecordRules(ctx, uid, modelName, "read", domain)
+	_, whereClause, args, _, err := prepareSearchRead(ctx, modelName, domain)
 	if err != nil {
 		return 0, err
 	}

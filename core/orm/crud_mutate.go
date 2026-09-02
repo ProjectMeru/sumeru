@@ -66,13 +66,21 @@ func executeCreateMutation(ctx context.Context, model Model, values map[string]i
 	return result, nil
 }
 
+func mutationAccessCheck(ctx context.Context, modelName, op string) (uid int, model Model, err error) {
+	uid = SecurityUID(ctx)
+	if err := CheckModelAccess(ctx, uid, modelName, op); err != nil {
+		return 0, nil, err
+	}
+	model, err = requireRegisteredModel(modelName)
+	if err != nil {
+		return 0, nil, err
+	}
+	return uid, model, nil
+}
+
 func executeUpdateMutation(ctx context.Context, modelName string, domain [][]interface{}, values map[string]interface{}) (mutationResult, error) {
 	var result mutationResult
-	uid := SecurityUID(ctx)
-	if err := CheckModelAccess(ctx, uid, modelName, "write"); err != nil {
-		return result, err
-	}
-	inst, err := requireRegisteredModel(modelName)
+	uid, inst, err := mutationAccessCheck(ctx, modelName, "write")
 	if err != nil {
 		return result, err
 	}
@@ -138,21 +146,24 @@ func executeUpdateMutation(ctx context.Context, modelName string, domain [][]int
 				return err
 			}
 		}
-		var sets []string
+		var setClauses []string
 		var setArgs []interface{}
-		i := 1
+		placeholderIndex := 1
 		for k, v := range prepared {
 			qcol, err := QuotedColumnForModel(modelName, k)
 			if err != nil {
 				return err
 			}
-			sets = append(sets, fmt.Sprintf("%s = $%d", qcol, i))
+			setClauses = append(setClauses, fmt.Sprintf("%s = $%d", qcol, placeholderIndex))
 			setArgs = append(setArgs, v)
-			i++
+			placeholderIndex++
 		}
-		shiftedWhere, _ := shiftPlaceholders(securedSQL, len(setArgs)+1)
+		shiftedWhere, err := shiftPlaceholders(securedSQL, len(setArgs)+1)
+		if err != nil {
+			return err
+		}
 		allArgs := append(setArgs, args...)
-		updQ := fmt.Sprintf(`UPDATE %s SET %s WHERE %s`, table, strings.Join(sets, ", "), shiftedWhere)
+		updQ := fmt.Sprintf(`UPDATE %s SET %s WHERE %s`, table, strings.Join(setClauses, ", "), shiftedWhere)
 		res, err := tx.ExecContext(ctx, updQ, allArgs...)
 		if err != nil {
 			return err
@@ -190,11 +201,8 @@ func executeUpdateMutation(ctx context.Context, modelName string, domain [][]int
 
 func executeDeleteMutation(ctx context.Context, modelName string, domain [][]interface{}) (mutationResult, error) {
 	var result mutationResult
-	uid := SecurityUID(ctx)
-	if err := CheckModelAccess(ctx, uid, modelName, "unlink"); err != nil {
-		return result, err
-	}
-	if _, err := requireRegisteredModel(modelName); err != nil {
+	uid, _, err := mutationAccessCheck(ctx, modelName, "unlink")
+	if err != nil {
 		return result, err
 	}
 	table, err := QuotedTableForModel(modelName)
@@ -212,8 +220,8 @@ func executeDeleteMutation(ctx context.Context, modelName string, domain [][]int
 		if err != nil {
 			return err
 		}
-		for _, rec := range locked {
-			if err := CheckRecordRules(ctx, uid, modelName, "unlink", rec); err != nil {
+		for _, recordMap := range locked {
+			if err := CheckRecordRules(ctx, uid, modelName, "unlink", recordMap); err != nil {
 				return err
 			}
 		}
@@ -228,15 +236,15 @@ func executeDeleteMutation(ctx context.Context, modelName string, domain [][]int
 		}
 		result.RowsAffected = n
 		if shouldEmitSideEffects(ctx, modelName) {
-			for _, rec := range locked {
-				rid, _ := CoerceInt64(rec["id"])
+			for _, recordMap := range locked {
+				recordID, _ := CoerceInt64(recordMap["id"])
 				sideRows = append(sideRows, sideEffectRow{
 					Action:    "unlink",
 					EventName: EventRecordDeleted,
-					ResID:     rid,
-					Before:    rec,
+					ResID:     recordID,
+					Before:    recordMap,
 				})
-				result.PendingEventIDs = append(result.PendingEventIDs, int(rid))
+				result.PendingEventIDs = append(result.PendingEventIDs, int(recordID))
 			}
 			emitSideEffectsOnTx(ctx, tx, modelName, uid, sideRows)
 		}

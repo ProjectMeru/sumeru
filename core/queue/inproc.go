@@ -44,4 +44,5 @@ func Publish(ctx context.Context, topic string, payload interface{}) {
 			_ = fn(ctx, msg)
 		}()
 	}
+	publishRedisMirror(ctx, topic, data)
 }

@@ -15,10 +15,11 @@ type xpathOp struct {
 }
 
 type xpathTarget struct {
-	Tag      string
-	AttrName string
-	AttrVal  string
-	Index    int // 1-based; 0 or negative → 1
+	Tag       string
+	AttrName  string
+	AttrVal   string
+	ClassName string // set when expr uses hasclass('…')
+	Index     int    // 1-based; 0 or negative → 1
 }
 
 func (t xpathTarget) matchIndex() int {
@@ -32,6 +33,7 @@ var xpathBlockRe = regexp.MustCompile(`(?s)<xpath\s+expr="([^"]+)"\s+position="(
 var xpathBlockReSingle = regexp.MustCompile(`(?s)<xpath\s+expr='([^']+)'\s+position='([^']+)'\s*>(.*?)</xpath>`)
 var fieldNameFromExpr = regexp.MustCompile(`@name=['"]([^'"]+)['"]`)
 var xpathTargetRe = regexp.MustCompile(`//(field|button|group|sheet|header|notebook|page|div|label|separator|filter|search|tree|list|form|kanban)\[@([a-zA-Z_:][\w-]*)=['"]([^'"]+)['"]\](?:\[(\d+)\])?`)
+var xpathHasClassRe = regexp.MustCompile(`//(field|button|group|sheet|header|notebook|page|div|label|separator|filter|search|tree|list|form|kanban)\[hasclass\(['"]([^'"]+)['"]\)\](?:\[(\d+)\])?`)
 var xpathTagOnlyRe = regexp.MustCompile(`//(field|button|group|sheet|header|notebook|page|div|label|separator|filter|search|tree|list|form|kanban)\s*$`)
 var dataWrapperRe = regexp.MustCompile(`(?s)^\s*<data[^>]*>(.*)</data>\s*$`)
 var attributeOpRe = regexp.MustCompile(`(?s)<attribute\s+name=['"]([^'"]+)['"]\s*>(.*?)</attribute>`)
@@ -70,6 +72,15 @@ func parseXPaths(s string) []xpathOp {
 
 func parseXPathTarget(expr string) (xpathTarget, error) {
 	expr = strings.TrimSpace(expr)
+	if m := xpathHasClassRe.FindStringSubmatch(expr); len(m) >= 3 {
+		idx := 1
+		if len(m) >= 4 && strings.TrimSpace(m[3]) != "" {
+			if n, perr := strconv.Atoi(strings.TrimSpace(m[3])); perr == nil && n > 0 {
+				idx = n
+			}
+		}
+		return xpathTarget{Tag: strings.ToLower(m[1]), ClassName: m[2], Index: idx}, nil
+	}
 	if m := xpathTargetRe.FindStringSubmatch(expr); len(m) >= 4 {
 		idx := 1
 		if len(m) >= 5 && strings.TrimSpace(m[4]) != "" {
@@ -99,8 +110,12 @@ func cachedRegex(key string, build func() *regexp.Regexp) *regexp.Regexp {
 }
 
 func openingTagRe(target xpathTarget) *regexp.Regexp {
-	key := "open|" + target.Tag + "|" + target.AttrName + "|" + target.AttrVal
+	key := "open|" + target.Tag + "|" + target.AttrName + "|" + target.AttrVal + "|" + target.ClassName
 	return cachedRegex(key, func() *regexp.Regexp {
+		if target.ClassName != "" {
+			cls := regexp.QuoteMeta(target.ClassName)
+			return regexp.MustCompile(`<` + target.Tag + `\s+[^>]*\bclass=(?:"[^"]*\b` + cls + `\b[^"]*"|'[^']*\b` + cls + `\b[^']*')[^>]*>`)
+		}
 		if target.AttrName == "" {
 			return regexp.MustCompile(`<` + target.Tag + `(?:\s[^>]*)?>`)
 		}
@@ -221,24 +236,21 @@ func applyOne(arch string, op xpathOp) (string, error) {
 		}
 		return arch[:spanStart] + inner + arch[spanEnd:], nil
 	case "inside":
-		if target.AttrName != "" {
-			openRe := openingTagRe(target)
-			loc := openRe.FindStringIndex(arch)
-			if loc == nil {
-				return arch, fmt.Errorf("inherit xpath: %s not found for position=inside", op.Expr)
-			}
-			insertAt := loc[1]
-			closeAt, ok := findMatchingCloseTag(arch, insertAt, target.Tag)
-			if !ok {
-				return arch, fmt.Errorf("inherit xpath: no </%s> for position=inside on %s", target.Tag, op.Expr)
-			}
-			return arch[:closeAt] + inner + arch[closeAt:], nil
+		spanStart, spanEnd, ok := findElementSpan(arch, target)
+		if !ok {
+			return arch, fmt.Errorf("inherit xpath: %s not found for position=inside", op.Expr)
 		}
-		i := strings.LastIndex(arch, "</view>")
-		if i < 0 {
-			return arch, fmt.Errorf("inherit xpath: no </view> in arch for position=inside")
+		openRe := openingTagRe(target)
+		loc := openRe.FindStringIndex(arch[spanStart:spanEnd])
+		if loc == nil {
+			return arch, fmt.Errorf("inherit xpath: %s opening tag not found for position=inside", op.Expr)
 		}
-		return arch[:i] + inner + arch[i:], nil
+		insertAt := spanStart + loc[1]
+		closeAt, found := findMatchingCloseTag(arch, insertAt, target.Tag)
+		if !found {
+			return arch, fmt.Errorf("inherit xpath: no </%s> for position=inside on %s", target.Tag, op.Expr)
+		}
+		return arch[:closeAt] + inner + arch[closeAt:], nil
 	case "attributes":
 		return applyAttributes(arch, target, inner)
 	default:

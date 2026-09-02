@@ -146,23 +146,11 @@ func createTable(model Model) error {
 			colType += " UNIQUE"
 		}
 
-		defVal := field.DefaultVal
-		if isRuntimeDefaultToken(defVal) {
-			defVal = nil
+		defaultClause, err := columnDefaultClause(model.ModelName(), field)
+		if err != nil {
+			return err
 		}
-		if defVal != nil {
-			if s, ok := defVal.(string); ok {
-				if strings.Contains(s, ";") || strings.Contains(s, "--") || strings.Contains(s, "/*") {
-					return fmt.Errorf("unsafe string default on %s.%s", model.ModelName(), field.Name)
-				}
-			}
-			switch defVal.(type) {
-			case string, bool, int, int64, float64:
-				if lit, ok := sqlDefaultLiteral(defVal); ok {
-					colType += " DEFAULT " + lit
-				}
-			}
-		}
+		colType += defaultClause
 
 		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(field.Name), colType))
 	}

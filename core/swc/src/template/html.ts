@@ -371,6 +371,11 @@ function applyAttrs(el: HTMLElement, attrs: Record<string, string>, key?: string
       nextNames.add("style");
       continue;
     }
+    if (k === "ref") {
+      el.setAttribute("data-ref", v);
+      nextNames.add("data-ref");
+      continue;
+    }
     if (k === "value") {
       el.setAttribute("value", v);
       nextNames.add("value");

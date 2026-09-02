@@ -75,8 +75,6 @@ func SearchOne(ctx context.Context, modelName string, criteria map[string]interf
 	if err != nil {
 		return nil, err
 	}
-	RedactRecordForRead(ctx, uid, modelName, result)
-	_ = ApplyComputes(ctx, modelName, result)
-	_ = ApplyRelatedFields(ctx, modelName, result)
+	enrichRecordForRead(ctx, uid, modelName, result)
 	return result, nil
 }

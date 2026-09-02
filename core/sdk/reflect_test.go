@@ -75,6 +75,12 @@ func TestMustRegisterReflectsFields(t *testing.T) {
 	if fields["state"].Type != orm.Selection {
 		t.Fatalf("state type: got %s want selection", fields["state"].Type)
 	}
+	if fields["state"].DefaultVal != "low" {
+		t.Fatalf("state default: got %v want low", fields["state"].DefaultVal)
+	}
+	if len(fields["state"].Selection) != 2 {
+		t.Fatalf("state options: got %v", fields["state"].Selection)
+	}
 	if fields["partner_id"].Relation != "core.partner" {
 		t.Fatalf("partner relation: %q", fields["partner_id"].Relation)
 	}

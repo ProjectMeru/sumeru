@@ -87,15 +87,15 @@ func applyGroupsFieldDenial(ctx context.Context, uid int, model, op string, out 
 	if !ok || inst == nil {
 		return out, nil
 	}
-	for _, fd := range inst.Fields() {
-		if strings.TrimSpace(fd.Groups) == "" {
+	for _, fieldDef := range inst.Fields() {
+		if strings.TrimSpace(fieldDef.Groups) == "" {
 			continue
 		}
-		if out[fd.Name] {
+		if out[fieldDef.Name] {
 			continue
 		}
-		if !UserHasGroupXML(ctx, uid, fd.Groups) {
-			out[fd.Name] = true
+		if !UserHasGroupXML(ctx, uid, fieldDef.Groups) {
+			out[fieldDef.Name] = true
 		}
 	}
 	return out, nil

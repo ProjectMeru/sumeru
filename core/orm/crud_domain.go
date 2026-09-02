@@ -10,54 +10,34 @@ func buildSearchWhereClause(modelName string, domain [][]interface{}) (string, [
 		return "1=1", nil, nil
 	}
 	// Prefix Polish OR: ["|", ...] repeated (N-1) times then N leaf triples → OR of leaves.
-	orLeaves := 0
-	for _, d := range domain {
-		if len(d) == 1 && fmt.Sprint(d[0]) == "|" {
-			orLeaves++
-			continue
-		}
-		break
-	}
+	orLeaves, leaves, ok := splitDomainORPrefix(domain)
 	if orLeaves > 0 {
-		leaves := domain[orLeaves:]
-		if len(leaves) != orLeaves+1 {
+		if !ok {
 			return "", nil, fmt.Errorf("invalid OR domain shape")
 		}
-		var parts []string
-		var args []interface{}
-		n := 1
-		for _, leaf := range leaves {
-			frag, a, err := buildSearchWhereClause(modelName, [][]interface{}{leaf})
-			if err != nil {
-				return "", nil, err
-			}
-			shifted, err := shiftPlaceholders(frag, n)
-			if err != nil {
-				return "", nil, err
-			}
-			parts = append(parts, "("+shifted+")")
-			args = append(args, a...)
-			n += len(a)
+		orDomains := make([][][]interface{}, len(leaves))
+		for i, leaf := range leaves {
+			orDomains[i] = [][]interface{}{leaf}
 		}
-		return strings.Join(parts, " OR "), args, nil
+		return joinShiftedWhereFragments(" OR ", modelName, orDomains, 1)
 	}
 	var parts []string
 	var args []interface{}
-	n := 1
-	for _, d := range domain {
-		if len(d) != 3 {
-			return "", nil, fmt.Errorf("invalid domain clause %v", d)
+	placeholderIndex := 1
+	for _, clause := range domain {
+		if len(clause) != 3 {
+			return "", nil, fmt.Errorf("invalid domain clause %v", clause)
 		}
-		field, ok := d[0].(string)
+		field, ok := clause[0].(string)
 		if !ok || strings.TrimSpace(field) == "" {
 			return "", nil, fmt.Errorf("domain field name")
 		}
-		op := strings.TrimSpace(strings.ToLower(fmt.Sprint(d[1])))
+		op := strings.TrimSpace(strings.ToLower(fmt.Sprint(clause[1])))
 		col, err := QuotedColumnForModel(modelName, field)
 		if err != nil {
 			return "", nil, err
 		}
-		if dateLike, isBool := dateLikeNullCheck(modelName, field, d[2]); isBool {
+		if dateLike, isBool := dateLikeNullCheck(modelName, field, clause[2]); isBool {
 			switch op {
 			case "!=":
 				if dateLike {
@@ -77,62 +57,102 @@ func buildSearchWhereClause(modelName string, domain [][]interface{}) (string, [
 		}
 		switch op {
 		case "=":
-			parts = append(parts, fmt.Sprintf("%s = $%d", col, n))
-			args = append(args, d[2])
-			n++
+			parts = append(parts, fmt.Sprintf("%s = $%d", col, placeholderIndex))
+			args = append(args, clause[2])
+			placeholderIndex++
 		case "!=":
-			parts = append(parts, fmt.Sprintf("(%s IS DISTINCT FROM $%d)", col, n))
-			args = append(args, d[2])
-			n++
+			parts = append(parts, fmt.Sprintf("(%s IS DISTINCT FROM $%d)", col, placeholderIndex))
+			args = append(args, clause[2])
+			placeholderIndex++
 		case "in":
-			list, ok := d[2].([]interface{})
+			list, ok := clause[2].([]interface{})
 			if !ok {
 				return "", nil, fmt.Errorf("operator in requires array value")
 			}
-			if len(list) == 0 {
-				parts = append(parts, "FALSE")
-				continue
+			listClause, listArgs, nextIndex, err := appendDomainListClause(col, "in", list, placeholderIndex)
+			if err != nil {
+				return "", nil, err
 			}
-			ph := make([]string, len(list))
-			for i := range list {
-				ph[i] = fmt.Sprintf("$%d", n)
-				args = append(args, list[i])
-				n++
-			}
-			parts = append(parts, fmt.Sprintf("%s IN (%s)", col, strings.Join(ph, ",")))
+			parts = append(parts, listClause)
+			args = append(args, listArgs...)
+			placeholderIndex = nextIndex
 		case "ilike", "like":
-			parts = append(parts, fmt.Sprintf("%s ILIKE $%d", col, n))
-			args = append(args, d[2])
-			n++
+			parts = append(parts, fmt.Sprintf("%s ILIKE $%d", col, placeholderIndex))
+			args = append(args, clause[2])
+			placeholderIndex++
 		case "=like":
-			parts = append(parts, fmt.Sprintf("%s LIKE $%d", col, n))
-			args = append(args, d[2])
-			n++
+			parts = append(parts, fmt.Sprintf("%s LIKE $%d", col, placeholderIndex))
+			args = append(args, clause[2])
+			placeholderIndex++
 		case ">", ">=", "<", "<=":
-			parts = append(parts, fmt.Sprintf("%s %s $%d", col, strings.ToUpper(op), n))
-			args = append(args, d[2])
-			n++
+			parts = append(parts, fmt.Sprintf("%s %s $%d", col, strings.ToUpper(op), placeholderIndex))
+			args = append(args, clause[2])
+			placeholderIndex++
 		case "not in":
-			list, ok := d[2].([]interface{})
+			list, ok := clause[2].([]interface{})
 			if !ok {
 				return "", nil, fmt.Errorf("operator not in requires array value")
 			}
-			if len(list) == 0 {
-				parts = append(parts, "TRUE")
-				continue
+			listClause, listArgs, nextIndex, err := appendDomainListClause(col, "not in", list, placeholderIndex)
+			if err != nil {
+				return "", nil, err
 			}
-			ph := make([]string, len(list))
-			for i := range list {
-				ph[i] = fmt.Sprintf("$%d", n)
-				args = append(args, list[i])
-				n++
-			}
-			parts = append(parts, fmt.Sprintf("%s NOT IN (%s)", col, strings.Join(ph, ",")))
+			parts = append(parts, listClause)
+			args = append(args, listArgs...)
+			placeholderIndex = nextIndex
 		default:
 			return "", nil, fmt.Errorf("unsupported domain operator %q", op)
 		}
 	}
 	return strings.Join(parts, " AND "), args, nil
+}
+
+func appendDomainListClause(col, op string, list []interface{}, placeholderIndex int) (clause string, args []interface{}, nextIndex int, err error) {
+	if op == "in" {
+		if len(list) == 0 {
+			return "FALSE", nil, placeholderIndex, nil
+		}
+		placeholders := make([]string, len(list))
+		for i, item := range list {
+			placeholders[i] = fmt.Sprintf("$%d", placeholderIndex)
+			args = append(args, item)
+			placeholderIndex++
+		}
+		return fmt.Sprintf("%s IN (%s)", col, strings.Join(placeholders, ",")), args, placeholderIndex, nil
+	}
+	if len(list) == 0 {
+		return "TRUE", nil, placeholderIndex, nil
+	}
+	placeholders := make([]string, len(list))
+	for i, item := range list {
+		placeholders[i] = fmt.Sprintf("$%d", placeholderIndex)
+		args = append(args, item)
+		placeholderIndex++
+	}
+	return fmt.Sprintf("%s NOT IN (%s)", col, strings.Join(placeholders, ",")), args, placeholderIndex, nil
+}
+
+func joinShiftedWhereFragments(separator, modelName string, domains [][][]interface{}, startPlaceholder int) (string, []interface{}, error) {
+	if len(domains) == 0 {
+		return "1=1", nil, nil
+	}
+	var parts []string
+	var args []interface{}
+	placeholderIndex := startPlaceholder
+	for _, domain := range domains {
+		whereFragment, fragmentArgs, err := buildSearchWhereClause(modelName, domain)
+		if err != nil {
+			return "", nil, err
+		}
+		shifted, err := shiftPlaceholders(whereFragment, placeholderIndex)
+		if err != nil {
+			return "", nil, err
+		}
+		parts = append(parts, "("+shifted+")")
+		args = append(args, fragmentArgs...)
+		placeholderIndex += len(fragmentArgs)
+	}
+	return strings.Join(parts, separator), args, nil
 }
 
 // dateLikeNullCheck detects date unset/set domains: ("field", "!=", false) means IS NOT NULL.
@@ -145,11 +165,11 @@ func dateLikeNullCheck(modelName, fieldName string, value interface{}) (isSetChe
 	if !has || inst == nil {
 		return false, false
 	}
-	for _, f := range inst.Fields() {
-		if f.Name != fieldName {
+	for _, fieldDef := range inst.Fields() {
+		if fieldDef.Name != fieldName {
 			continue
 		}
-		if f.Type != Date && f.Type != DateTime {
+		if fieldDef.Type != Date && fieldDef.Type != DateTime {
 			return false, false
 		}
 		return !b, true
@@ -160,37 +180,18 @@ func dateLikeNullCheck(modelName, fieldName string, value interface{}) (isSetChe
 // buildAndWhereClauses ANDs independent domain parts, each compiled separately
 // so OR prefixes inside a part remain valid (global AND (g1 OR g2)).
 func buildAndWhereClauses(modelName string, parts [][][]interface{}) (string, []interface{}, error) {
-	if len(parts) == 0 {
-		return "1=1", nil, nil
-	}
-	var sqlParts []string
-	var args []interface{}
-	n := 1
-	for _, p := range parts {
-		frag, a, err := buildSearchWhereClause(modelName, p)
-		if err != nil {
-			return "", nil, err
-		}
-		shifted, err := shiftPlaceholders(frag, n)
-		if err != nil {
-			return "", nil, err
-		}
-		sqlParts = append(sqlParts, "("+shifted+")")
-		args = append(args, a...)
-		n += len(a)
-	}
-	return strings.Join(sqlParts, " AND "), args, nil
+	return joinShiftedWhereFragments(" AND ", modelName, parts, 1)
 }
 
-func shiftPlaceholders(frag string, start int) (string, error) {
+func shiftPlaceholders(whereFragment string, start int) (string, error) {
 	// Replace from highest index downward to avoid $1 colliding with $10.
 	max := 0
 	for i := 1; i <= 256; i++ {
-		if strings.Contains(frag, fmt.Sprintf("$%d", i)) {
+		if strings.Contains(whereFragment, fmt.Sprintf("$%d", i)) {
 			max = i
 		}
 	}
-	out := frag
+	out := whereFragment
 	for i := max; i >= 1; i-- {
 		out = strings.ReplaceAll(out, fmt.Sprintf("$%d", i), fmt.Sprintf("$$TMP%d$$", i))
 	}

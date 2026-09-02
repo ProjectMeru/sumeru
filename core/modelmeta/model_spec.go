@@ -7,30 +7,39 @@ import (
 
 // ModelSpec describes how a Go struct maps to an ORM model name.
 type ModelSpec struct {
-	Name   string
-	Extend bool // true when the struct uses inherit= to extend an existing model
+	Name               string
+	Extend             bool   // true when the struct uses inherit= to extend an existing model
+	DelegationParent   string // set when inherits= names a parent model (_inherits delegation)
 }
 
 // ModelSpecFromStruct reads model= or inherit= from an embedded ModelMeta tag.
-func ModelSpecFromStruct(st reflect.Type) (ModelSpec, error) {
-	for st.Kind() == reflect.Pointer {
-		st = st.Elem()
+func ModelSpecFromStruct(structType reflect.Type) (ModelSpec, error) {
+	for structType.Kind() == reflect.Pointer {
+		structType = structType.Elem()
 	}
-	if st.Kind() != reflect.Struct {
+	if structType.Kind() != reflect.Struct {
 		return ModelSpec{}, nil
 	}
-	tags, ok, err := embeddedModelTags(st)
+	tags, ok, err := embeddedModelTags(structType)
 	if err != nil {
 		return ModelSpec{}, err
 	}
 	if !ok {
-		return ModelSpec{Name: ModelNameFromGo(st.Name()), Extend: false}, nil
+		return ModelSpec{Name: ModelNameFromGo(structType.Name()), Extend: false}, nil
 	}
-	if tags.Model != "" && tags.Inherit != "" {
-		return ModelSpec{}, fmt.Errorf("struct %s: model= and inherit= are mutually exclusive", st.Name())
+	return ModelSpecFromTags(tags, structType.Name())
+}
+
+// ModelSpecFromTags builds a ModelSpec from parsed embedded ModelMeta tags and the Go type name.
+func ModelSpecFromTags(tags FieldTags, goName string) (ModelSpec, error) {
+	if err := validateModelInheritExclusive(tags); err != nil {
+		return ModelSpec{}, fmt.Errorf("struct %s: %w", goName, err)
 	}
 	if tags.Inherit != "" {
 		return ModelSpec{Name: tags.Inherit, Extend: true}, nil
+	}
+	if tags.Inherits != "" {
+		return ModelSpec{Name: ModelNameFromGo(goName), DelegationParent: tags.Inherits}, nil
 	}
 	if tags.Model == "-" {
 		return ModelSpec{Name: "-", Extend: false}, nil
@@ -38,23 +47,26 @@ func ModelSpecFromStruct(st reflect.Type) (ModelSpec, error) {
 	if tags.Model != "" {
 		return ModelSpec{Name: tags.Model, Extend: false}, nil
 	}
-	return ModelSpec{Name: ModelNameFromGo(st.Name()), Extend: false}, nil
+	return ModelSpec{Name: ModelNameFromGo(goName), Extend: false}, nil
 }
 
-func embeddedModelTags(st reflect.Type) (FieldTags, bool, error) {
-	for i := 0; i < st.NumField(); i++ {
-		f := st.Field(i)
-		if !f.Anonymous {
+// ModelNameFromStruct reads the technical model name from an embedded ModelMeta tag,
+// or falls back to ModelNameFromGo for the struct name.
+func ModelNameFromStruct(structType reflect.Type) (string, error) {
+	spec, err := ModelSpecFromStruct(structType)
+	if err != nil {
+		return "", err
+	}
+	return spec.Name, nil
+}
+
+func embeddedModelTags(structType reflect.Type) (FieldTags, bool, error) {
+	for i := 0; i < structType.NumField(); i++ {
+		field := structType.Field(i)
+		if !IsEmbeddedModelMeta(field) {
 			continue
 		}
-		t := f.Type
-		for t.Kind() == reflect.Pointer {
-			t = t.Elem()
-		}
-		if t != reflect.TypeOf(ModelMeta{}) {
-			continue
-		}
-		tags, err := parseSumeruTag(string(f.Tag.Get("sumeru")))
+		tags, err := ParseFieldTag(string(field.Tag.Get("sumeru")))
 		if err != nil {
 			return FieldTags{}, false, err
 		}

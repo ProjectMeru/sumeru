@@ -104,8 +104,8 @@ func (w *loggingDBWrapper) BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx
 	return &loggingTxWrapper{inner: tx, ctx: ctx}, nil
 }
 
-func (w *loggingDBWrapper) Close() error  { return w.inner.Close() }
-func (w *loggingDBWrapper) Ping() error   { return w.inner.Ping() }
+func (w *loggingDBWrapper) Close() error { return w.inner.Close() }
+func (w *loggingDBWrapper) Ping() error  { return w.inner.Ping() }
 
 type loggingTxWrapper struct {
 	inner TxWrapper

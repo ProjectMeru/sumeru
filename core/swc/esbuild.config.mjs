@@ -30,7 +30,9 @@ const sumXmlPlugin = {
   },
 };
 
-await esbuild.build({
+const watch = process.argv.includes("--watch");
+
+const swcBuildOptions = {
   entryPoints: [join(__dirname, "src/main.ts")],
   bundle: true,
   format: "iife",
@@ -43,7 +45,16 @@ await esbuild.build({
     "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV ?? "development"),
   },
   plugins: [sumXmlPlugin],
-});
+};
+
+if (watch) {
+  const ctx = await esbuild.context(swcBuildOptions);
+  await ctx.watch();
+  console.log(`SWC watch → ${swcOutFile}`);
+} else {
+  await esbuild.build(swcBuildOptions);
+  console.log(`SWC bundle → ${swcOutFile}`);
+}
 
 await esbuild.build({
   entryPoints: [join(__dirname, "src/login/password-toggle.ts")],
@@ -65,6 +76,5 @@ await esbuild.build({
   minify: process.env.NODE_ENV === "production",
 });
 
-console.log(`SWC bundle → ${swcOutFile}`);
 console.log(`Login password toggle → ${passwordToggleOutFile}`);
 console.log(`Login password match → ${passwordMatchOutFile}`);

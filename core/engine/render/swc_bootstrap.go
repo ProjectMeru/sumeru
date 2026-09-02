@@ -41,6 +41,7 @@ type swcBootstrap struct {
 	BusEnabled          bool                   `json:"busEnabled"`
 	DocsURL             string                 `json:"docsUrl"`
 	ProfileURL          string                 `json:"profileUrl"`
+	Features            map[string]bool        `json:"features,omitempty"`
 	Workspace           *SWCBootstrapWorkspace `json:"workspace,omitempty"`
 	Toasts              []swcBootstrapToast    `json:"toasts,omitempty"`
 }
@@ -103,6 +104,7 @@ func BuildSWCBootstrapJSON(ctx context.Context, page PageData, ws *SWCBootstrapW
 		BusEnabled:          true,
 		DocsURL:             page.UserDocsHref,
 		ProfileURL:          page.UserProfileHref,
+		Features:            buildSWCFeatureFlags(ctx),
 		Workspace:           ws,
 		ShowCompanySwitcher: page.ShowCompanySwitcher,
 		ActiveCompanyID:     page.ShellActiveCompanyID,
@@ -205,4 +207,19 @@ func parseSWCPinnedApps(raw template.JS) []string {
 	var out []string
 	_ = json.Unmarshal([]byte(raw), &out)
 	return out
+}
+
+func buildSWCFeatureFlags(ctx context.Context) map[string]bool {
+	uid := orm.UIDFromContext(ctx)
+	if uid <= 0 {
+		return nil
+	}
+	flags := map[string]bool{}
+	if orm.UserHasAnyAccessGroup(ctx, uid, "studio.group_studio_user") {
+		flags["studio"] = true
+	}
+	if len(flags) == 0 {
+		return nil
+	}
+	return flags
 }

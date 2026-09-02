@@ -212,7 +212,10 @@ func BuildWhereWithRecordRules(ctx context.Context, uid int, model, op string, b
 			if len(clauses) == 0 {
 				return orSQL, orArgs, nil
 			}
-			shifted, _ := shiftPlaceholders(orSQL, len(andArgs)+1)
+			shifted, err := shiftPlaceholders(orSQL, len(andArgs)+1)
+			if err != nil {
+				return "", nil, err
+			}
 			return andSQL + " AND (" + shifted + ")", append(andArgs, orArgs...), nil
 		}
 	}
@@ -220,20 +223,7 @@ func BuildWhereWithRecordRules(ctx context.Context, uid int, model, op string, b
 }
 
 func buildGroupORWhere(modelName string, groups [][][]interface{}) (string, []interface{}, error) {
-	var parts []string
-	var args []interface{}
-	n := 1
-	for _, g := range groups {
-		frag, a, err := buildSearchWhereClause(modelName, g)
-		if err != nil {
-			return "", nil, err
-		}
-		shifted, _ := shiftPlaceholders(frag, n)
-		parts = append(parts, "("+shifted+")")
-		args = append(args, a...)
-		n += len(a)
-	}
-	return strings.Join(parts, " OR "), args, nil
+	return joinShiftedWhereFragments(" OR ", modelName, groups, 1)
 }
 
 // CheckRecordRules verify record satisfies all applicable rules.

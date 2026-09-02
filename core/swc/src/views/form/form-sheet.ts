@@ -27,7 +27,9 @@ function renderFields(
   record: SwcRecord,
   readonly: boolean,
 ): Array<TemplateResult | HTMLElement> {
-  return visibleFields(fields).map((f) => rf(f, record, readonly));
+  return visibleFields(fields).map((f) =>
+    html`<div class="sum-studio-field-anchor" data-sum-studio-anchor=${`field:${f.name}`}>${rf(f, record, readonly)}</div>`,
+  );
 }
 
 function collectDivFields(div: SwcArchDiv): SwcArchField[] {
@@ -327,7 +329,7 @@ function renderGroup(
 
   if (hasNested && fields.length === 0) {
     const rows = packGroupRows(group, nested);
-    return html`<div class="sum-form-group-outer sum-field-region--sheet">
+    return html`<div class="sum-form-group-outer sum-field-region--sheet" data-sum-studio-anchor=${`group:${group.string || "row"}`}>
       ${rows.map(
         (row) => html`<div class="sum-form-group-row">
           ${row.map(
@@ -346,6 +348,7 @@ function renderGroup(
   return html`<div
     class=${groupClassNames(group, ctx, plain) + innerColsClass}
     style=${innerCols ? `--sum-inner-cols:${innerCols}` : false}
+    data-sum-studio-anchor=${`group:${group.string || "group"}`}
   >
     ${group.string ? html`<div class="sum-form-group-title">${group.string}</div>` : ""}
     <div class="sum-form-group-grid">

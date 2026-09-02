@@ -4,7 +4,36 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 )
+
+// ReadGroupWrapper optionally wraps ReadGroupDirect (enterprise pivot cache).
+type ReadGroupWrapper func(
+	ctx context.Context,
+	modelName string,
+	domain [][]interface{},
+	spec ReadGroupSpec,
+	inner func(context.Context, string, [][]interface{}, ReadGroupSpec) ([]ReadGroupRow, error),
+) ([]ReadGroupRow, error)
+
+var (
+	readGroupWrapperMu sync.RWMutex
+	readGroupWrapper   ReadGroupWrapper
+)
+
+// RegisterReadGroupWrapper sets the optional ReadGroup wrapper.
+func RegisterReadGroupWrapper(w ReadGroupWrapper) {
+	readGroupWrapperMu.Lock()
+	defer readGroupWrapperMu.Unlock()
+	readGroupWrapper = w
+}
+
+// ClearReadGroupWrapper removes the wrapper (tests).
+func ClearReadGroupWrapper() {
+	readGroupWrapperMu.Lock()
+	defer readGroupWrapperMu.Unlock()
+	readGroupWrapper = nil
+}
 
 // ReadGroupSpec defines grouping and aggregation for read_group.
 type ReadGroupSpec struct {
@@ -24,6 +53,17 @@ type ReadGroupRow map[string]interface{}
 
 // ReadGroup aggregates records by group fields with sum/count measures.
 func ReadGroup(ctx context.Context, modelName string, domain [][]interface{}, spec ReadGroupSpec) ([]ReadGroupRow, error) {
+	readGroupWrapperMu.RLock()
+	w := readGroupWrapper
+	readGroupWrapperMu.RUnlock()
+	if w != nil {
+		return w(ctx, modelName, domain, spec, ReadGroupDirect)
+	}
+	return ReadGroupDirect(ctx, modelName, domain, spec)
+}
+
+// ReadGroupDirect runs aggregation without optional wrappers.
+func ReadGroupDirect(ctx context.Context, modelName string, domain [][]interface{}, spec ReadGroupSpec) ([]ReadGroupRow, error) {
 	modelName = strings.TrimSpace(modelName)
 	if modelName == "" {
 		return nil, fmt.Errorf("model required")

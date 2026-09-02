@@ -19,6 +19,12 @@ func Create(ctx context.Context, model Model, values map[string]interface{}) (id
 }
 
 // Upsert inserts or updates a record based on a unique field (usually 'name' or 'id').
+//
+// Intentional differences from prepareCreateWrite (Create path):
+//   - No RejectVirtualWrites (module sync may touch metadata fields)
+//   - No MergeStoredComputes
+//   - No CheckRecordRules
+//   - StrictUnknown follows SecurityBypass instead of always true
 func Upsert(ctx context.Context, model Model, values map[string]interface{}, conflictCol string) (id int, err error) {
 	start := time.Now()
 	defer func() {
@@ -32,13 +38,8 @@ func Upsert(ctx context.Context, model Model, values map[string]interface{}, con
 	if err != nil {
 		return 0, err
 	}
-	defs := map[string]FieldDefinition{}
-	for _, f := range model.Fields() {
-		if f.Name != "" && f.Name != "id" {
-			defs[f.Name] = f
-		}
-	}
-	if err := applySpecialDefaults(ctx, model, defs, prepared); err != nil {
+	fieldDefs := fieldDefinitionsByName(model)
+	if err := applySpecialDefaults(ctx, model, fieldDefs, prepared); err != nil {
 		return 0, err
 	}
 	if !SecurityBypass(ctx) {
@@ -107,16 +108,16 @@ func Upsert(ctx context.Context, model Model, values map[string]interface{}, con
 }
 
 func buildInsertColumns(modelName string, prepared map[string]interface{}) (cols []string, placeholders []string, args []interface{}, err error) {
-	i := 1
-	for col, val := range prepared {
+	placeholderIndex := 1
+	for col, columnValue := range prepared {
 		qcol, err := QuotedColumnForModel(modelName, col)
 		if err != nil {
 			return nil, nil, nil, err
 		}
 		cols = append(cols, qcol)
-		placeholders = append(placeholders, fmt.Sprintf("$%d", i))
-		args = append(args, val)
-		i++
+		placeholders = append(placeholders, fmt.Sprintf("$%d", placeholderIndex))
+		args = append(args, columnValue)
+		placeholderIndex++
 	}
 	return cols, placeholders, args, nil
 }

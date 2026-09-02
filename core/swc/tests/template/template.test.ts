@@ -33,6 +33,11 @@ describe("html template", () => {
     expect(el.textContent).toBe("New");
   });
 
+  it("maps ref attribute to data-ref for template refs", () => {
+    const el = html`<div class="sum-map-canvas" ref="map-canvas"></div>`.render();
+    expect(el.getAttribute("data-ref")).toBe("map-canvas");
+  });
+
   it("binds click handlers on interpolated attributes", () => {
     const onClick = vi.fn();
     const el = html`<button type="button" @click=${onClick}>Save</button>`.render();

@@ -42,6 +42,7 @@ func registerBrandingAndStatic() {
 	scriptURLs := []string{}
 	registerInstalledAddonThemeOverrides(ctx, &stylesheetURLs)
 	registerInstalledAddonManifestAssets(ctx, &stylesheetURLs, &scriptURLs)
+	registerInstalledAddonSwcEntries(ctx, &scriptURLs)
 	registerBrandStylesheet(ctx, &stylesheetURLs)
 	render.SetExtraStylesheetURLs(stylesheetURLs)
 	render.SetExtraScriptURLs(scriptURLs)
@@ -110,6 +111,34 @@ func registerInstalledAddonManifestAssets(ctx context.Context, stylesheetURLs, s
 					map[string]interface{}{"module": moduleName, "bundle": bundle, "path": rel})
 			}
 		}
+	}
+}
+
+func registerInstalledAddonSwcEntries(ctx context.Context, scriptURLs *[]string) {
+	for _, moduleName := range sortedLoadedAddonNames() {
+		addon := module.LoadedAddons[moduleName]
+		if addon == nil || !addonModuleInstalled(moduleName) {
+			continue
+		}
+		entry := strings.TrimSpace(addon.Manifest.SwcEntry)
+		if entry == "" {
+			continue
+		}
+		clean, ok := normalizeManifestAssetRel(entry)
+		if !ok {
+			continue
+		}
+		absPath := filepath.Join(addon.Path, clean)
+		if !isRegularFile(absPath) {
+			applog.WarnMsg(ctx, "web", "static", "swc_entry not found", nil,
+				map[string]interface{}{"module": moduleName, "path": absPath})
+			continue
+		}
+		publicURL := manifestAssetPublicURL(moduleName, clean)
+		registerInstalledModuleFileHandler(publicURL, absPath, moduleName, "text/javascript; charset=utf-8")
+		*scriptURLs = append(*scriptURLs, publicURL)
+		applog.InfoMsg(ctx, "web", "static", "Registered swc_entry",
+			map[string]interface{}{"module": moduleName, "path": absPath, "url": publicURL})
 	}
 }
 

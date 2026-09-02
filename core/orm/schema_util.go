@@ -68,3 +68,53 @@ func isRuntimeDefaultToken(v interface{}) bool {
 		return false
 	}
 }
+
+// columnDefaultClause returns a SQL DEFAULT suffix for DDL, or empty when no SQL default applies.
+func columnDefaultClause(modelName string, field FieldDefinition) (string, error) {
+	defaultVal := field.DefaultVal
+	if isRuntimeDefaultToken(defaultVal) {
+		return "", nil
+	}
+	if defaultVal == nil {
+		return "", nil
+	}
+	if defaultString, ok := defaultVal.(string); ok {
+		if strings.Contains(defaultString, ";") || strings.Contains(defaultString, "--") || strings.Contains(defaultString, "/*") {
+			return "", fmt.Errorf("unsafe string default on %s.%s", modelName, field.Name)
+		}
+	}
+	switch defaultVal.(type) {
+	case string, bool, int, int64, float64:
+		if literal, ok := sqlDefaultLiteral(defaultVal); ok {
+			return " DEFAULT " + literal, nil
+		}
+	}
+	return "", nil
+}
+
+// formatAddColumnDefinition builds the SQL column definition fragment for ALTER TABLE ... ADD COLUMN.
+func formatAddColumnDefinition(field FieldDefinition, baseType string) string {
+	defaultVal := field.DefaultVal
+	if isRuntimeDefaultToken(defaultVal) {
+		defaultVal = nil
+	}
+	if field.Type == Boolean {
+		if defaultVal == true {
+			return baseType + " NOT NULL DEFAULT TRUE"
+		}
+		if defaultVal == false {
+			return baseType + " NOT NULL DEFAULT FALSE"
+		}
+		if literal, ok := sqlDefaultLiteral(defaultVal); ok {
+			return baseType + " DEFAULT " + literal
+		}
+		return baseType
+	}
+	if literal, ok := sqlDefaultLiteral(defaultVal); ok {
+		if field.Required {
+			return baseType + " NOT NULL DEFAULT " + literal
+		}
+		return baseType + " DEFAULT " + literal
+	}
+	return baseType
+}

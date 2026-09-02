@@ -11,9 +11,19 @@ interface PivotViewProps {
 
 export class PivotView extends SwcComponent<PivotViewProps> {
   private collectionBar!: CollectionBarHost;
+  private collapsedRows = new Set<string>();
 
   override setup(): void {
     this.collectionBar = mountCollectionBar(this.props.payload, VIEW_PIVOT, this.env);
+  }
+
+  private toggleRow(row: string): void {
+    if (this.collapsedRows.has(row)) {
+      this.collapsedRows.delete(row);
+    } else {
+      this.collapsedRows.add(row);
+    }
+    this.rerender();
   }
 
   override onPropsChanged(props: PivotViewProps): void {
@@ -46,12 +56,19 @@ export class PivotView extends SwcComponent<PivotViewProps> {
           </thead>
           <tbody>
             ${pivot.rowLabels.map(
-              (row) => html`<tr>
-                <th>${row}</th>
-                ${pivot.colLabels.map((col) => {
-                  const fieldValue = pivot.values[row]?.[col] ?? 0;
-                  return html`<td>${String(fieldValue)}</td>`;
-                })}
+              (row) => html`<tr class=${this.collapsedRows.has(row) ? "is-collapsed" : ""}>
+                <th>
+                  <button type="button" class="sum-pivot-row-toggle" @click=${() => this.toggleRow(row)}>
+                    ${this.collapsedRows.has(row) ? "+" : "−"}
+                  </button>
+                  ${row}
+                </th>
+                ${this.collapsedRows.has(row)
+                  ? pivot.colLabels.map(() => html`<td>…</td>`)
+                  : pivot.colLabels.map((col) => {
+                      const fieldValue = pivot.values[row]?.[col] ?? 0;
+                      return html`<td>${String(fieldValue)}</td>`;
+                    })}
               </tr>`,
             )}
           </tbody>

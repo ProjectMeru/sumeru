@@ -168,12 +168,43 @@ export class GraphView extends SwcComponent<GraphViewProps> {
     });
   }
 
+  private setChartType(next: "bar" | "line" | "pie"): void {
+    this.chart = next;
+    this.chartDataKey = "";
+    this.destroyChart();
+    this.rerender();
+  }
+
   override template() {
     const exportLink = renderGraphExportLink(this.props.payload, this.groupField, this.measureField);
+    const type = this.chartType();
     return html`
       <div class="sum-collection-view sum-graph-view">
         ${this.collectionBar.renderOrPatch()}
-        ${exportLink ?? ""}
+        <div class="sum-graph-toolbar">
+          <button
+            type="button"
+            class=${type === "bar" ? "sum-btn is-active" : "sum-btn"}
+            @click=${() => this.setChartType("bar")}
+          >
+            Bar
+          </button>
+          <button
+            type="button"
+            class=${type === "line" ? "sum-btn is-active" : "sum-btn"}
+            @click=${() => this.setChartType("line")}
+          >
+            Line
+          </button>
+          <button
+            type="button"
+            class=${type === "pie" ? "sum-btn is-active" : "sum-btn"}
+            @click=${() => this.setChartType("pie")}
+          >
+            Pie
+          </button>
+          ${exportLink ?? ""}
+        </div>
         <div class="sum-graph-chart-wrap">
           <canvas data-ref="graph-canvas"></canvas>
         </div>

@@ -18,6 +18,12 @@ func isSourceGo(fi os.FileInfo) bool {
 		name != "zmodels.go" && name != "zrefs.go"
 }
 
+type scannedModel struct {
+	GoName    string
+	ModelName string
+	Extend    bool
+}
+
 func structEmbedsModel(st *ast.StructType) bool {
 	if st == nil {
 		return false
@@ -40,51 +46,52 @@ func structEmbedsModel(st *ast.StructType) bool {
 	return false
 }
 
-func modelTagFromStruct(st *ast.StructType) string {
-	technical, _ := modelSpecFromStruct(st)
-	return technical
-}
-
-// modelSpecFromStruct returns the ORM model name and whether the struct extends via inherit=.
-func modelSpecFromStruct(st *ast.StructType) (technical string, isExtend bool) {
+func embeddedModelMetaTag(st *ast.StructType) (string, bool) {
 	if st == nil {
 		return "", false
 	}
 	for _, field := range st.Fields.List {
-		if field.Type == nil {
+		if field.Type == nil || field.Tag == nil {
 			continue
 		}
 		switch field.Type.(type) {
 		case *ast.Ident, *ast.SelectorExpr:
-			if field.Tag == nil {
-				continue
-			}
 			tag, ok := reflect.StructTag(strings.Trim(field.Tag.Value, "`")).Lookup("sumeru")
 			if !ok {
 				continue
 			}
-			tags, err := modelmeta.ParseFieldTag(tag)
-			if err != nil {
-				continue
-			}
-			if tags.Inherit != "" {
-				return tags.Inherit, true
-			}
-			if tags.Model != "" {
-				return tags.Model, false
-			}
+			return tag, true
 		}
 	}
 	return "", false
 }
 
-func scanPackageForModels(dir string) ([]string, error) {
-	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, dir, isSourceGo, 0)
-	if err != nil {
-		return nil, err
+// modelSpecFromStruct returns the ORM model spec aligned with modelmeta.ModelSpecFromStruct.
+func modelSpecFromStruct(st *ast.StructType, goName string) (modelmeta.ModelSpec, error) {
+	if st == nil {
+		return modelmeta.ModelSpec{}, nil
 	}
-	var types []string
+	tag, ok := embeddedModelMetaTag(st)
+	if !ok {
+		return modelmeta.ModelSpec{Name: modelmeta.ModelNameFromGo(goName), Extend: false}, nil
+	}
+	tags, err := modelmeta.ParseFieldTag(tag)
+	if err != nil {
+		return modelmeta.ModelSpec{}, err
+	}
+	return modelmeta.ModelSpecFromTags(tags, goName)
+}
+
+func modelTagFromStruct(st *ast.StructType, goName string) string {
+	spec, err := modelSpecFromStruct(st, goName)
+	if err != nil {
+		return ""
+	}
+	return spec.Name
+}
+
+func scanPackageModels(pkgs map[string]*ast.Package) []scannedModel {
+	var out []scannedModel
 	for _, pkg := range pkgs {
 		for _, f := range pkg.Files {
 			for _, decl := range f.Decls {
@@ -101,10 +108,42 @@ func scanPackageForModels(dir string) ([]string, error) {
 					if !ok || !structEmbedsModel(st) {
 						continue
 					}
-					types = append(types, ts.Name.Name)
+					modelSpec, err := modelSpecFromStruct(st, ts.Name.Name)
+					if err != nil {
+						continue
+					}
+					out = append(out, scannedModel{
+						GoName:    ts.Name.Name,
+						ModelName: modelSpec.Name,
+						Extend:    modelSpec.Extend,
+					})
 				}
 			}
 		}
+	}
+	return out
+}
+
+func parseDirModels(dir string) ([]scannedModel, error) {
+	fset := token.NewFileSet()
+	pkgs, err := parser.ParseDir(fset, dir, isSourceGo, 0)
+	if err != nil {
+		return nil, err
+	}
+	return scanPackageModels(pkgs), nil
+}
+
+func scanPackageForModels(dir string) ([]string, error) {
+	models, err := parseDirModels(dir)
+	if err != nil {
+		return nil, err
+	}
+	var types []string
+	for _, m := range models {
+		if m.ModelName == "-" {
+			continue
+		}
+		types = append(types, m.GoName)
 	}
 	sort.Strings(types)
 	return types, nil

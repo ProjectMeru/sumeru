@@ -7,7 +7,7 @@ import (
 type SysMenu struct {
 	modelmeta.ModelMeta `sumeru:"model=sys.menu"`
 
-	Name         modelmeta.String                  `sumeru:"required"`
+	Name         modelmeta.String            `sumeru:"required"`
 	ParentID     modelmeta.Many2One[SysMenu] `sumeru:"string=Parent Menu"`
 	ActionID     modelmeta.Integer
 	Action       modelmeta.String
