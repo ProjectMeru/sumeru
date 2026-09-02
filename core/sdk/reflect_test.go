@@ -56,8 +56,12 @@ type cookbookOrder struct {
 }
 
 func TestMustRegisterReflectsFields(t *testing.T) {
+	modelreg.ResetActivationForTest()
 	orm.Registry = map[string]orm.Model{}
 	modelreg.MustRegister("test", &testOrder{}, &testLine{})
+	if err := modelreg.ActivateAll(nil); err != nil {
+		t.Fatal(err)
+	}
 	m, ok := orm.Registry["test.order"]
 	if !ok {
 		t.Fatal("test.order not registered")
@@ -96,8 +100,12 @@ func TestFieldNameFromGo(t *testing.T) {
 }
 
 func TestSelectionTypeRegistration(t *testing.T) {
+	modelreg.ResetActivationForTest()
 	orm.Registry = map[string]orm.Model{}
 	modelreg.MustRegister("test", &cookbookOrder{}, &cookbookLine{})
+	if err := modelreg.ActivateAll(nil); err != nil {
+		t.Fatal(err)
+	}
 	m, ok := orm.Registry["test.cookbook"]
 	if !ok {
 		t.Fatal("test.cookbook not registered")
