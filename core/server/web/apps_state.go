@@ -18,6 +18,8 @@ type appsBrowseState struct {
 	Filter      string
 	Scope       string
 	SearchQuery string
+	Category    string
+	GroupBy     string
 	ModuleName  string
 	Editing     bool
 }
@@ -32,6 +34,8 @@ func parseAppsBrowseState(r *http.Request) appsBrowseState {
 		Filter:      normalizeAppsFilter(query.Get("filter")),
 		Scope:       normalizeAppsScope(query.Get("scope")),
 		SearchQuery: strings.TrimSpace(query.Get("q")),
+		Category:    strings.TrimSpace(query.Get("category")),
+		GroupBy:     normalizeAppsGroupBy(query.Get("group_by")),
 	}
 }
 
@@ -42,6 +46,8 @@ func parseAppsBrowseStateFromForm(r *http.Request) appsBrowseState {
 		Filter:      normalizeAppsFilter(r.FormValue(appsFilterField)),
 		Scope:       normalizeAppsScope(r.FormValue(appsScopeField)),
 		SearchQuery: strings.TrimSpace(r.FormValue(appsSearchField)),
+		Category:    strings.TrimSpace(r.FormValue(appsCategoryField)),
+		GroupBy:     normalizeAppsGroupBy(r.FormValue(appsGroupByField)),
 	}
 }
 
@@ -99,6 +105,10 @@ func normalizeAppsScope(raw string) string {
 	return normalizeAppsChoice(raw, appsScopeApps, appsScopeTechnical, appsScopeAll)
 }
 
+func normalizeAppsGroupBy(raw string) string {
+	return normalizeAppsChoice(raw, appsGroupByCategory, "")
+}
+
 func normalizeAppsChoice(raw string, allowed ...string) string {
 	normalized := strings.ToLower(strings.TrimSpace(raw))
 	for _, choice := range allowed {
@@ -133,10 +143,12 @@ func appsModuleMatchesSearch(moduleEntry appsModule, searchQuery string) bool {
 	return strings.Contains(searchText, needle)
 }
 
-// filterAppsModulesByBrowse applies search/filter and splits by application vs technical scope.
+// filterAppsModulesByBrowse applies search/filter/category and splits by application vs technical scope.
 func filterAppsModulesByBrowse(modules []appsModule, browse appsBrowseState) (appModules, techModules []appsModule) {
 	for _, moduleEntry := range modules {
-		if !appsModuleMatchesSearch(moduleEntry, browse.SearchQuery) || !appsModuleMatchesFilter(moduleEntry, browse.Filter) {
+		if !appsModuleMatchesSearch(moduleEntry, browse.SearchQuery) ||
+			!appsModuleMatchesFilter(moduleEntry, browse.Filter) ||
+			!appsModuleMatchesCategory(moduleEntry, browse.Category) {
 			continue
 		}
 		if moduleEntry.Application {
@@ -166,6 +178,12 @@ func appendAppsQueryBase(query url.Values, browse appsBrowseState) {
 	}
 	if trimmed := strings.TrimSpace(browse.SearchQuery); trimmed != "" {
 		query.Set("q", trimmed)
+	}
+	if trimmed := strings.TrimSpace(browse.Category); trimmed != "" {
+		query.Set("category", trimmed)
+	}
+	if browse.GroupBy == appsGroupByCategory {
+		query.Set("group_by", browse.GroupBy)
 	}
 }
 

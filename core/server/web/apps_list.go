@@ -7,12 +7,20 @@ import (
 	"sumeru/core/engine/render"
 )
 
+type appsModuleDep struct {
+	Name        string
+	DisplayName string
+	DetailURL   string
+}
+
 type appsModule struct {
 	Name          string
 	DisplayName   string
 	Author        string
 	Version       string
 	Description   string
+	Summary       string
+	Category      string
 	State         string
 	Application   bool
 	Active        bool
@@ -21,24 +29,34 @@ type appsModule struct {
 	CanUninstall  bool
 	CanDeactivate bool
 	CanActivate   bool
-	IconLetter    string // first letter for app tile
+	IconLetter    string
+	IconURL       string
+	IconHue       int
+	DetailURL     string
 }
 
 type appsPageData struct {
-	Title          string
-	Message        string
-	CSRFToken      string
-	Modules        []appsModule
-	AppModules     []appsModule
-	TechModules    []appsModule
-	Layout         string
-	Filter         string
-	Scope          string
-	Search         string
-	Nav            appsNavVM
-	ModuleDetail   *appsModuleDetailVM
-	ViewBreadcrumb string
+	Title           string
+	CSRFToken       string
+	Modules         []appsModule
+	AppModules      []appsModule
+	TechModules     []appsModule
+	AppGroups       []appsModuleGroup
+	Layout          string
+	Filter          string
+	Scope           string
+	Search          string
+	Category        string
+	GroupBy         string
+	ShowCategoryCol bool
+	CategoryNav     appsCategoryNavVM
+	Stats           appsCatalogStats
+	Nav             appsNavVM
+	ModuleDetail    *appsModuleDetailVM
+	ViewBreadcrumb  string
 }
+
+const appsPageScriptURL = "/static/js/apps-page.js"
 
 // AppsHandler lists installable apps and exposes install / uninstall / activate controls.
 func AppsHandler(w http.ResponseWriter, r *http.Request) {
@@ -57,19 +75,16 @@ func AppsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	allModules := buildAppsModuleList(moduleRows)
+	allModules := enrichAppsModules(ctx, buildAppsModuleList(moduleRows), browse)
+	navBrowse := browse
+	navBrowse.Category = ""
+	navAppModules, _ := filterAppsModulesByBrowse(allModules, navBrowse)
 	appModules, techModules := filterAppsModulesByBrowse(allModules, browse)
+	appGroups := groupAppsModules(appModules, browse.GroupBy)
+	categoryNav := buildAppsCategoryNav(navAppModules, browse)
+	catalogStats := buildAppsCatalogStats(appModules, navAppModules, browse)
 
-	detail, breadcrumb, ok := loadAppsModuleDetail(
-		w, r,
-		browse.ModuleName,
-		browse.Editing,
-		allModules,
-		browse.Layout,
-		browse.Filter,
-		browse.Scope,
-		browse.SearchQuery,
-	)
+	detail, breadcrumb, ok := loadAppsModuleDetail(ctx, w, r, browse, allModules)
 	if !ok {
 		return
 	}
@@ -80,12 +95,17 @@ func AppsHandler(w http.ResponseWriter, r *http.Request) {
 		detailTitle = detail.DisplayName
 	}
 
+	inlineFlashes, toastFlashes := splitAppsPageFlashes(browse.Message, buildModuleDisplayNameMap(allModules))
+
 	page := render.PageData{
 		Title:           appsPageTitle,
 		ViewBreadcrumb:  breadcrumb,
 		ModuleName:      appsPageTitle,
 		AppsNavActive:   true,
 		SuppressSidebar: true,
+		FlashMessages:   inlineFlashes,
+		ToastMessages:   toastFlashes,
+		ExtraScriptURLs: []string{appsPageScriptURL},
 		ViewTabs: render.AppsViewTabs(
 			browse.Layout,
 			browse.Message,
@@ -93,6 +113,8 @@ func AppsHandler(w http.ResponseWriter, r *http.Request) {
 			browse.Filter,
 			browse.Scope,
 			browse.SearchQuery,
+			browse.Category,
+			browse.GroupBy,
 		),
 		BreadcrumbItems: render.BuildAppsBreadcrumbs(ctx, listHref, detailTitle),
 	}
@@ -105,19 +127,24 @@ func AppsHandler(w http.ResponseWriter, r *http.Request) {
 		Route:         appsRoute,
 		InnerTemplate: appsInnerTemplate,
 		InnerData: appsPageData{
-			Title:          appsPageTitle,
-			Message:        browse.Message,
-			CSRFToken:      CSRFTokenForRequest(r),
-			Modules:        allModules,
-			AppModules:     appModules,
-			TechModules:    techModules,
-			Layout:         browse.Layout,
-			Filter:         browse.Filter,
-			Scope:          browse.Scope,
-			Search:         browse.SearchQuery,
-			Nav:            buildAppsNavVM(browse),
-			ModuleDetail:   detail,
-			ViewBreadcrumb: breadcrumb,
+			Title:           appsPageTitle,
+			CSRFToken:       CSRFTokenForRequest(r),
+			Modules:         allModules,
+			AppModules:      appModules,
+			TechModules:     techModules,
+			AppGroups:       appGroups,
+			Layout:          browse.Layout,
+			Filter:          browse.Filter,
+			Scope:           browse.Scope,
+			Search:          browse.SearchQuery,
+			Category:        browse.Category,
+			GroupBy:         browse.GroupBy,
+			ShowCategoryCol: browse.GroupBy != appsGroupByCategory,
+			CategoryNav:     categoryNav,
+			Stats:           catalogStats,
+			Nav:             buildAppsNavVM(browse),
+			ModuleDetail:    detail,
+			ViewBreadcrumb:  breadcrumb,
 		},
 		Page: page,
 	})
@@ -137,16 +164,33 @@ func buildAppsModuleList(moduleRows []map[string]interface{}) []appsModule {
 	return modules
 }
 
+func enrichAppsModules(ctx context.Context, modules []appsModule, browse appsBrowseState) []appsModule {
+	if len(modules) == 0 {
+		return modules
+	}
+	out := make([]appsModule, len(modules))
+	for i, mod := range modules {
+		out[i] = mod
+		out[i].IconURL = render.ModuleIconURL(ctx, mod.Name)
+		out[i].IconHue = render.IconHueFromString(mod.Name)
+		out[i].DetailURL = appsDetailPageURL(withModuleName(browse, mod.Name), false)
+	}
+	return out
+}
+
 // appsModuleFromParsed maps a normalized module row to the Apps list view model, including action flags.
 func appsModuleFromParsed(parsed moduleRow) appsModule {
 	isCore := parsed.Name == "base"
 	isInstalled := parsed.State == "installed"
+	summary := moduleSummary(parsed.Name, parsed.Description)
 	return appsModule{
 		Name:          parsed.Name,
 		DisplayName:   parsed.DisplayName,
 		Author:        parsed.Author,
 		Version:       parsed.Version,
 		Description:   parsed.Description,
+		Summary:       summary,
+		Category:      moduleCategoryLabel(parsed.CategoryName),
 		State:         parsed.State,
 		Application:   parsed.Application,
 		Active:        parsed.Active,
@@ -161,10 +205,12 @@ func appsModuleFromParsed(parsed moduleRow) appsModule {
 
 func logAppsPageOpen(ctx context.Context, route string, browse appsBrowseState) {
 	fields := map[string]interface{}{
-		"layout": browse.Layout,
-		"filter": browse.Filter,
-		"scope":  browse.Scope,
-		"search": browse.SearchQuery,
+		"layout":   browse.Layout,
+		"filter":   browse.Filter,
+		"scope":    browse.Scope,
+		"search":   browse.SearchQuery,
+		"category": browse.Category,
+		"group_by": browse.GroupBy,
 	}
 	if browse.ModuleName != "" {
 		fields["module"] = browse.ModuleName

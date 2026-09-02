@@ -19,6 +19,7 @@ type (
 	PinnedAppsRequest  = pinnedAppsRequest
 	WorkspaceRequest   = workspaceRequest
 	AppsModule         = appsModule
+	AppsModuleGroup    = appsModuleGroup
 	SettingsHubSection = settingsHubSection
 )
 
@@ -45,7 +46,10 @@ const (
 	TestWorkspaceViewModeList  = workspaceViewModeList
 	TestAppsLayoutList         = appsLayoutList
 	TestAppsLayoutGrid         = appsLayoutGrid
+	TestAppsGroupByCategory    = appsGroupByCategory
 	TestAppsLayoutField        = appsLayoutField
+	TestAppsCategoryField      = appsCategoryField
+	TestAppsGroupByField       = appsGroupByField
 	TestFlashMessageParam      = flashMessageParam
 	TestResetPasswordMsg       = resetPasswordMsg
 	TestResetPasswordRoute     = resetPasswordRoute
@@ -300,8 +304,48 @@ func RunModuleLifecycleAction(ctx context.Context, action, moduleName string) (s
 
 func AppsModuleFromParsed(row ModuleRow) AppsModule { return appsModuleFromParsed(row) }
 
+func EnrichAppsModules(ctx context.Context, modules []AppsModule, browse AppsBrowseState) []AppsModule {
+	return enrichAppsModules(ctx, modules, browse)
+}
+
+func AppsFlashFromMessage(msg string, displayNames map[string]string) (render.FlashMessage, bool) {
+	return appsFlashFromMessage(msg, displayNames)
+}
+
+func SplitAppsPageFlashes(msg string, displayNames map[string]string) (inline, toast []render.FlashMessage) {
+	return splitAppsPageFlashes(msg, displayNames)
+}
+
+func FormatAppsActionError(message string) string { return formatAppsActionError(message) }
+
+func ModuleStatusLabel(row ModuleRow) string { return moduleStatusLabel(row) }
+
+func BuildModuleDisplayNameMap(modules []AppsModule) map[string]string {
+	return buildModuleDisplayNameMap(modules)
+}
+
 func FilterAppsModulesByBrowse(modules []AppsModule, browse AppsBrowseState) (appModules, techModules []AppsModule) {
 	return filterAppsModulesByBrowse(modules, browse)
+}
+
+func GroupAppsModules(modules []AppsModule, groupBy string) []AppsModuleGroup {
+	return groupAppsModules(modules, groupBy)
+}
+
+func ModuleSummary(moduleName, description string) string {
+	return moduleSummary(moduleName, description)
+}
+
+func ModuleSummaryFromDescription(description string) string {
+	return moduleSummaryFromDescription(description)
+}
+
+func ModuleHasLongDescription(summary, description string) bool {
+	return moduleHasLongDescription(summary, description)
+}
+
+func AppsLinkFromBrowse(browse AppsBrowseState) string {
+	return appsLinkFromBrowse(browse)
 }
 
 func AppsDetailURL(browse AppsBrowseState, editing bool) string {

@@ -60,7 +60,7 @@ func redirectToAppsDetail(w http.ResponseWriter, r *http.Request, message string
 
 func handleModuleSaveAction(w http.ResponseWriter, r *http.Request, form moduleActionForm) {
 	if err := saveModuleFromForm(r, form.ModuleName); err != nil {
-		redirectToAppsList(w, r, err.Error(), form.Browse)
+		redirectToAppsList(w, r, formatAppsActionError(err.Error()), form.Browse)
 		return
 	}
 	redirectToAppsDetail(w, r, moduleMsgSaved, withModuleName(form.Browse, form.ModuleName))
@@ -69,14 +69,19 @@ func handleModuleSaveAction(w http.ResponseWriter, r *http.Request, form moduleA
 func handleModuleLifecycleAction(w http.ResponseWriter, r *http.Request, form moduleActionForm) {
 	flashMessage, err := runModuleLifecycleAction(r.Context(), form.Action, form.ModuleName)
 	if err != nil {
-		redirectToAppsList(w, r, err.Error(), form.Browse)
+		redirectToAppsList(w, r, formatAppsActionError(err.Error()), form.Browse)
 		return
 	}
 	WebLogNavigation(r.Context(), moduleActionRoute, "module_action", "Module action completed", map[string]interface{}{
 		"do":     form.Action,
 		"module": form.ModuleName,
 	})
-	redirectToAppsList(w, r, flashMessage, form.Browse)
+	browse := form.Browse
+	if form.Action == moduleActionUninstall {
+		redirectToAppsList(w, r, flashMessage, browse)
+		return
+	}
+	redirectToAppsDetail(w, r, flashMessage, withModuleName(browse, form.ModuleName))
 }
 
 func runModuleLifecycleAction(ctx context.Context, action, moduleName string) (flashMessage string, err error) {

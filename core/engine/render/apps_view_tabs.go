@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func appendAppsTabQuery(q url.Values, layout, msg, module, filter, scope, search string) {
+func appendAppsTabQuery(q url.Values, layout, msg, module, filter, scope, search, category, groupBy string) {
 	if layout == "list" || layout == "grid" {
 		q.Set("layout", layout)
 	}
@@ -24,10 +24,16 @@ func appendAppsTabQuery(q url.Values, layout, msg, module, filter, scope, search
 	if strings.TrimSpace(search) != "" {
 		q.Set("q", strings.TrimSpace(search))
 	}
+	if strings.TrimSpace(category) != "" {
+		q.Set("category", strings.TrimSpace(category))
+	}
+	if strings.TrimSpace(groupBy) != "" {
+		q.Set("group_by", strings.TrimSpace(groupBy))
+	}
 }
 
-// AppsViewTabs builds Grid / List links for the Apps dashboard (?layout=) preserving filter/search/scope.
-func AppsViewTabs(currentLayout, msg, module, filter, scope, search string) []ViewSwitchTab {
+// AppsViewTabs builds Grid / List links for the Apps dashboard (?layout=) preserving browse params.
+func AppsViewTabs(currentLayout, msg, module, filter, scope, search, category, groupBy string) []ViewSwitchTab {
 	cur := strings.ToLower(strings.TrimSpace(currentLayout))
 	if cur == "" {
 		cur = "grid"
@@ -46,6 +52,8 @@ func AppsViewTabs(currentLayout, msg, module, filter, scope, search string) []Vi
 		scope = "all"
 	}
 	search = strings.TrimSpace(search)
+	category = strings.TrimSpace(category)
+	groupBy = strings.TrimSpace(groupBy)
 
 	order := []struct {
 		layoutKey string
@@ -58,7 +66,7 @@ func AppsViewTabs(currentLayout, msg, module, filter, scope, search string) []Vi
 	var out []ViewSwitchTab
 	for _, o := range order {
 		q := url.Values{}
-		appendAppsTabQuery(q, o.layoutKey, msg, module, filter, scope, search)
+		appendAppsTabQuery(q, o.layoutKey, msg, module, filter, scope, search, category, groupBy)
 		out = append(out, ViewSwitchTab{
 			Label:  o.label,
 			Href:   "/web/apps?" + q.Encode(),
