@@ -84,6 +84,13 @@ func executeServerAction(ctx context.Context, row map[string]interface{}, ev eve
 		bypass := orm.ContextWithBypass(ctx, true)
 		return orm.UpdateRecordByID(bypass, modelName, int(resID), vals)
 
+	case strings.HasPrefix(code, "webhook:"):
+		url := strings.TrimSpace(strings.TrimPrefix(code, "webhook:"))
+		if url == "" {
+			return nil
+		}
+		return dispatchWebhook(ctx, url, ev)
+
 	default:
 		applog.DebugMsg(ctx, "module", "automation",
 			"server action code not executed (unknown prefix)",
