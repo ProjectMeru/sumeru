@@ -17,13 +17,8 @@ func prepareCreateWrite(ctx context.Context, model Model, values map[string]inte
 	if err != nil {
 		return nil, 0, err
 	}
-	defs := map[string]FieldDefinition{}
-	for _, f := range model.Fields() {
-		if f.Name != "" && f.Name != "id" {
-			defs[f.Name] = f
-		}
-	}
-	if err := applySpecialDefaults(ctx, model, defs, prepared); err != nil {
+	fieldDefs := fieldDefinitionsByName(model)
+	if err := applySpecialDefaults(ctx, model, fieldDefs, prepared); err != nil {
 		return nil, 0, err
 	}
 	working := mergeRecordMap(map[string]interface{}{}, prepared)

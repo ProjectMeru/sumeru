@@ -31,166 +31,173 @@ func PrepareValues(model Model, values map[string]interface{}, op WriteOp, opts 
 	if values == nil {
 		values = map[string]interface{}{}
 	}
-	defs := map[string]FieldDefinition{}
-	for _, f := range model.Fields() {
-		if f.Name == "" || f.Name == "id" {
-			continue
-		}
-		defs[f.Name] = f
-	}
+	fieldDefs := fieldDefinitionsByName(model)
 
 	out := make(map[string]interface{}, len(values))
 	for k, v := range values {
 		if k == "id" {
 			continue
 		}
-		fd, ok := defs[k]
+		fieldDef, ok := fieldDefs[k]
 		if !ok {
 			if opts.StrictUnknown {
 				return nil, fmt.Errorf("unknown field %q on model %s", k, model.ModelName())
 			}
 			continue
 		}
-		switch fd.Type {
+		switch fieldDef.Type {
 		case Many2Many, One2Many:
 			// Stored via relation tables; not INSERT/UPDATE columns.
 			continue
 		}
-		if IsVirtualField(fd) {
+		if IsVirtualField(fieldDef) {
 			if opts.StrictUnknown {
 				return nil, fmt.Errorf("field %q on %s is read-only", k, model.ModelName())
 			}
 			continue
 		}
-		if fd.Related != "" {
+		if fieldDef.Related != "" {
 			if opts.StrictUnknown {
 				return nil, fmt.Errorf("field %q on %s is related", k, model.ModelName())
 			}
 			continue
 		}
-		if fd.Compute != "" && fd.ComputeStore {
+		if fieldDef.Compute != "" && fieldDef.ComputeStore {
 			if opts.StrictUnknown {
 				return nil, fmt.Errorf("field %q on %s is computed", k, model.ModelName())
 			}
 			continue
 		}
-		cv, err := coerceFieldValue(fd, v)
+		coercedValue, err := coerceFieldValue(fieldDef, v)
 		if err != nil {
 			if fve, ok := err.(*FieldValidationError); ok {
 				return nil, fve
 			}
 			return nil, fmt.Errorf("field %s: %w", k, err)
 		}
-		out[k] = cv
-		if err := validateFieldRange(fd, cv); err != nil {
+		out[k] = coercedValue
+		if err := validateFieldRange(fieldDef, coercedValue); err != nil {
 			return nil, err
 		}
 	}
 
 	if op == WriteOpCreate {
-		for name, fd := range defs {
-			if fd.Type == Many2Many || fd.Type == One2Many || IsVirtualField(fd) {
+		for name, fieldDef := range fieldDefs {
+			if fieldDef.Type == Many2Many || fieldDef.Type == One2Many || IsVirtualField(fieldDef) {
 				continue
 			}
-			if !fd.Required {
+			if !fieldDef.Required {
 				continue
 			}
 			if _, ok := out[name]; ok {
 				continue
 			}
-			if fd.DefaultVal != nil {
-				cv, err := coerceFieldValue(fd, fd.DefaultVal)
+			if fieldDef.DefaultVal != nil {
+				coercedValue, err := coerceFieldValue(fieldDef, fieldDef.DefaultVal)
 				if err != nil {
 					return nil, fmt.Errorf("field %s default: %w", name, err)
 				}
-				out[name] = cv
+				out[name] = coercedValue
 				continue
 			}
-			return nil, newFieldValidationError(fd, fmt.Sprintf("required field %q missing on model %s", name, model.ModelName()))
+			return nil, newFieldValidationError(fieldDef, fmt.Sprintf("required field %q missing on model %s", name, model.ModelName()))
 		}
 	}
 	return out, nil
 }
 
-func coerceFieldValue(fd FieldDefinition, v interface{}) (interface{}, error) {
+func parseFloatFieldValue(raw interface{}) (float64, error) {
+	switch typed := raw.(type) {
+	case float64:
+		return typed, nil
+	case float32:
+		return float64(typed), nil
+	case int, int32, int64:
+		intValue, _ := CoerceInt64(raw)
+		return float64(intValue), nil
+	case string:
+		trimmed := strings.TrimSpace(typed)
+		if trimmed == "" {
+			return 0, nil
+		}
+		parsed, err := strconv.ParseFloat(trimmed, 64)
+		if err != nil {
+			return 0, fmt.Errorf("invalid float %q", typed)
+		}
+		return parsed, nil
+	default:
+		asString := strings.TrimSpace(AsString(raw))
+		parsed, err := strconv.ParseFloat(asString, 64)
+		if err != nil {
+			return 0, fmt.Errorf("invalid float %v", raw)
+		}
+		return parsed, nil
+	}
+}
+
+func coerceFieldValue(fieldDef FieldDefinition, v interface{}) (interface{}, error) {
 	if v == nil {
-		if fd.Required {
-			return nil, newFieldValidationError(fd, "")
+		if fieldDef.Required {
+			return nil, newFieldValidationError(fieldDef, "")
 		}
 		return nil, nil
 	}
-	switch fd.Type {
+	switch fieldDef.Type {
 	case Boolean:
-		switch t := v.(type) {
+		switch typed := v.(type) {
 		case bool:
-			return t, nil
+			return typed, nil
 		case string:
-			s := strings.ToLower(strings.TrimSpace(t))
+			s := strings.ToLower(strings.TrimSpace(typed))
 			if s == "true" || s == "1" || s == "yes" {
 				return true, nil
 			}
 			if s == "false" || s == "0" || s == "no" || s == "" {
 				return false, nil
 			}
-			return nil, fmt.Errorf("invalid boolean %q", t)
+			return nil, fmt.Errorf("invalid boolean %q", typed)
 		case int, int32, int64, float32, float64:
-			n, _ := CoerceInt64(v)
-			return n != 0, nil
+			intValue, _ := CoerceInt64(v)
+			return intValue != 0, nil
 		default:
 			return AsBool(v), nil
 		}
 	case Integer, Many2One:
-		n, ok := CoerceInt64(v)
+		intValue, ok := CoerceInt64(v)
 		if !ok {
 			s := strings.TrimSpace(AsString(v))
 			if s == "" {
-				if fd.Required {
-					return nil, newFieldValidationError(fd, "")
+				if fieldDef.Required {
+					return nil, newFieldValidationError(fieldDef, "")
 				}
 				return nil, nil
 			}
 			return nil, fmt.Errorf("invalid integer %v", v)
 		}
-		return int(n), nil
+		return int(intValue), nil
 	case Float, Float64, Numeric:
-		switch t := v.(type) {
-		case float64:
-			return t, nil
-		case float32:
-			return float64(t), nil
-		case int, int32, int64:
-			n, _ := CoerceInt64(v)
-			return float64(n), nil
-		case string:
-			s := strings.TrimSpace(t)
-			if s == "" {
+		parsed, err := parseFloatFieldValue(v)
+		if err != nil {
+			return nil, err
+		}
+		if parsed == 0 {
+			if s, ok := v.(string); ok && strings.TrimSpace(s) == "" {
 				return nil, nil
 			}
-			f, err := strconv.ParseFloat(s, 64)
-			if err != nil {
-				return nil, fmt.Errorf("invalid float %q", t)
-			}
-			return f, nil
-		default:
-			s := strings.TrimSpace(AsString(v))
-			f, err := strconv.ParseFloat(s, 64)
-			if err != nil {
-				return nil, fmt.Errorf("invalid float %v", v)
-			}
-			return f, nil
 		}
+		return parsed, nil
 	case Selection:
 		s := strings.TrimSpace(AsString(v))
 		if s == "" {
-			if fd.Required {
-				return nil, newFieldValidationError(fd, "")
+			if fieldDef.Required {
+				return nil, newFieldValidationError(fieldDef, "")
 			}
 			return "", nil
 		}
-		if len(fd.Selection) == 0 {
+		if len(fieldDef.Selection) == 0 {
 			return s, nil
 		}
-		for _, opt := range fd.Selection {
+		for _, opt := range fieldDef.Selection {
 			if len(opt) >= 1 && opt[0] == s {
 				return s, nil
 			}
@@ -198,15 +205,15 @@ func coerceFieldValue(fd FieldDefinition, v interface{}) (interface{}, error) {
 		return nil, fmt.Errorf("invalid selection %q", s)
 	case Char, Text, Json:
 		s := strings.TrimSpace(AsString(v))
-		if s == "" && fd.Required {
-			return nil, newFieldValidationError(fd, "")
+		if s == "" && fieldDef.Required {
+			return nil, newFieldValidationError(fieldDef, "")
 		}
 		return AsString(v), nil
 	case Date, DateTime:
 		s := strings.TrimSpace(AsString(v))
 		if s == "" {
-			if fd.Required {
-				return nil, newFieldValidationError(fd, "")
+			if fieldDef.Required {
+				return nil, newFieldValidationError(fieldDef, "")
 			}
 			return nil, nil
 		}
@@ -216,48 +223,48 @@ func coerceFieldValue(fd FieldDefinition, v interface{}) (interface{}, error) {
 	}
 }
 
-func validateFieldRange(fd FieldDefinition, v interface{}) error {
-	if fd.Min == nil && fd.Max == nil {
+func validateFieldRange(fieldDef FieldDefinition, v interface{}) error {
+	if fieldDef.Min == nil && fieldDef.Max == nil {
 		return nil
 	}
 	if v == nil {
 		return nil
 	}
-	var n float64
-	switch t := v.(type) {
+	var numericValue float64
+	switch typed := v.(type) {
 	case int:
-		n = float64(t)
+		numericValue = float64(typed)
 	case int64:
-		n = float64(t)
+		numericValue = float64(typed)
 	case float32:
-		n = float64(t)
+		numericValue = float64(typed)
 	case float64:
-		n = t
+		numericValue = typed
 	default:
 		return nil
 	}
-	if fd.Min != nil && n < *fd.Min {
-		return newFieldValidationError(fd, fmt.Sprintf("value %v below minimum %v", n, *fd.Min))
+	if fieldDef.Min != nil && numericValue < *fieldDef.Min {
+		return newFieldValidationError(fieldDef, fmt.Sprintf("value %v below minimum %v", numericValue, *fieldDef.Min))
 	}
-	if fd.Max != nil && n > *fd.Max {
-		return newFieldValidationError(fd, fmt.Sprintf("value %v above maximum %v", n, *fd.Max))
+	if fieldDef.Max != nil && numericValue > *fieldDef.Max {
+		return newFieldValidationError(fieldDef, fmt.Sprintf("value %v above maximum %v", numericValue, *fieldDef.Max))
 	}
 	return nil
 }
 
-func applySpecialDefaults(ctx context.Context, model Model, defs map[string]FieldDefinition, out map[string]interface{}) error {
-	for name, fd := range defs {
+func applySpecialDefaults(ctx context.Context, model Model, fieldDefs map[string]FieldDefinition, out map[string]interface{}) error {
+	for name, fieldDef := range fieldDefs {
 		if _, ok := out[name]; ok {
 			continue
 		}
-		if fd.DefaultVal == nil {
+		if fieldDef.DefaultVal == nil {
 			continue
 		}
-		s, ok := fd.DefaultVal.(string)
+		defaultToken, ok := fieldDef.DefaultVal.(string)
 		if !ok {
 			continue
 		}
-		switch strings.TrimSpace(s) {
+		switch strings.TrimSpace(defaultToken) {
 		case "current_user":
 			uid := SecurityUID(ctx)
 			if uid > 0 {
@@ -266,12 +273,12 @@ func applySpecialDefaults(ctx context.Context, model Model, defs map[string]Fiel
 		case "current_company":
 			uid := SecurityUID(ctx)
 			if uid > 0 {
-				if cid := ActiveCompanyIDForUser(ctx, uid); cid > 0 {
-					out[name] = int(cid)
+				if companyID := ActiveCompanyIDForUser(ctx, uid); companyID > 0 {
+					out[name] = int(companyID)
 				}
 			}
 		case "uuid":
-			if fd.Type == Char {
+			if fieldDef.Type == Char {
 				out[name] = newUUID()
 			}
 		}
