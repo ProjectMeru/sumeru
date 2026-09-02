@@ -17,6 +17,20 @@ func RunGen(repoRoot, configPath, outPath, packageName string) (written string, 
 	if err != nil {
 		return "", err
 	}
+	catalog, err := buildModelCatalog(repoRoot, result.discovered)
+	if err != nil {
+		return "", err
+	}
+	if err := validateInheritDepends(result.discovered, catalog); err != nil {
+		return "", err
+	}
+	workspace := inferWorkspaceFromDiscovered(result.discovered)
+	if workspace == "" {
+		workspace = repoRoot
+	}
+	if err := validateRelationDepends(workspace, repoRoot, inferAddonsRoot(repoRoot), result.discovered, catalog); err != nil {
+		return "", err
+	}
 	if err := module.ValidateDiscoveredAddons(result.discovered); err != nil {
 		return "", fmt.Errorf("convention: %w", err)
 	}
@@ -38,7 +52,7 @@ func RunGen(repoRoot, configPath, outPath, packageName string) (written string, 
 		if isBuiltinAddonPath(addon.Path) {
 			continue
 		}
-		if err := generateRepoAddon(repoRoot, addonsRoot, addon); err != nil {
+		if err := generateRepoAddon(repoRoot, addonsRoot, result.discovered, addon); err != nil {
 			return "", fmt.Errorf("%s: %w", addon.Manifest.Name, err)
 		}
 	}
@@ -46,7 +60,10 @@ func RunGen(repoRoot, configPath, outPath, packageName string) (written string, 
 	return result.dest, nil
 }
 
-func generateRepoAddon(repoRoot, addonsRoot string, addon *module.Addon) error {
+func generateRepoAddon(repoRoot, addonsRoot string, discovered map[string]*module.Addon, addon *module.Addon) error {
+	if err := writeAddonInit(discovered, addon); err != nil {
+		return err
+	}
 	if err := writeAddonModelFiles(addon.Path, addon.Manifest.Name); err != nil {
 		return err
 	}
