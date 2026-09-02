@@ -31,11 +31,11 @@ func parseAppsBrowseState(r *http.Request) appsBrowseState {
 		Layout:      layoutFromQuery(r),
 		ModuleName:  strings.TrimSpace(query.Get("module")),
 		Editing:     strings.TrimSpace(query.Get("edit")) == "1",
-		Filter:      normalizeAppsFilter(query.Get("filter")),
-		Scope:       normalizeAppsScope(query.Get("scope")),
+		Filter:      normalizeAppsChoiceParam("filter", query.Get("filter")),
+		Scope:       normalizeAppsChoiceParam("scope", query.Get("scope")),
 		SearchQuery: strings.TrimSpace(query.Get("q")),
 		Category:    strings.TrimSpace(query.Get("category")),
-		GroupBy:     normalizeAppsGroupBy(query.Get("group_by")),
+		GroupBy:     normalizeAppsChoiceParam("group_by", query.Get("group_by")),
 	}
 }
 
@@ -43,11 +43,11 @@ func parseAppsBrowseState(r *http.Request) appsBrowseState {
 func parseAppsBrowseStateFromForm(r *http.Request) appsBrowseState {
 	return appsBrowseState{
 		Layout:      layoutFromForm(r, appsLayoutField),
-		Filter:      normalizeAppsFilter(r.FormValue(appsFilterField)),
-		Scope:       normalizeAppsScope(r.FormValue(appsScopeField)),
+		Filter:      normalizeAppsChoiceParam("filter", r.FormValue(appsFilterField)),
+		Scope:       normalizeAppsChoiceParam("scope", r.FormValue(appsScopeField)),
 		SearchQuery: strings.TrimSpace(r.FormValue(appsSearchField)),
 		Category:    strings.TrimSpace(r.FormValue(appsCategoryField)),
-		GroupBy:     normalizeAppsGroupBy(r.FormValue(appsGroupByField)),
+		GroupBy:     normalizeAppsChoiceParam("group_by", r.FormValue(appsGroupByField)),
 	}
 }
 
@@ -97,16 +97,18 @@ func appendAppsBrowseQuery(query url.Values, browse appsBrowseState) {
 	}
 }
 
-func normalizeAppsFilter(raw string) string {
-	return normalizeAppsChoice(raw, appsFilterInstalled, appsFilterUninstalled, appsFilterAll)
+func normalizeAppsChoiceParam(kind, raw string) string {
+	allowed, ok := appsAllowedChoices[kind]
+	if !ok {
+		return strings.ToLower(strings.TrimSpace(raw))
+	}
+	return normalizeAppsChoice(raw, allowed...)
 }
 
-func normalizeAppsScope(raw string) string {
-	return normalizeAppsChoice(raw, appsScopeApps, appsScopeTechnical, appsScopeAll)
-}
-
-func normalizeAppsGroupBy(raw string) string {
-	return normalizeAppsChoice(raw, appsGroupByCategory, "")
+var appsAllowedChoices = map[string][]string{
+	"filter":   {appsFilterInstalled, appsFilterUninstalled, appsFilterAll},
+	"scope":    {appsScopeApps, appsScopeTechnical, appsScopeAll},
+	"group_by": {appsGroupByCategory, ""},
 }
 
 func normalizeAppsChoice(raw string, allowed ...string) string {

@@ -12,6 +12,6 @@ type MailMessage struct {
 	Body       sdk.Text    `sumeru:"required"`
 	Subtype    sdk.String  `sumeru:"required"`
 	Author     sdk.String
-	CreateDate sdk.DateTime          `sumeru:"required"`
+	CreateDate sdk.DateTime              `sumeru:"required"`
 	CompanyID  sdk.Many2One[CoreCompany] `sumeru:"string=Company"`
 }

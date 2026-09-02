@@ -11,7 +11,7 @@ import (
 )
 
 func TestUserFacingRecordErrorRecordRule(t *testing.T) {
-	title, body, details, fields := web.UserFacingRecordError("record_save", "crm.lead", errors.New("record rule failed for model crm.lead"))
+	title, body, details, fields := web.UserFacingRecordError("record_save", "crm.lead", &orm.RecordRuleError{Model: "crm.lead"})
 	if title != "Save failed" || body == "" || details == "" {
 		t.Fatalf("got title=%q body=%q details=%q", title, body, details)
 	}

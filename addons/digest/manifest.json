@@ -9,7 +9,6 @@
   "data": [
     "security/security.xml",
     "security/sys.access.csv",
-    "data/digest_crm_kpi_data.xml",
     "views/actions.xml",
     "views/digest_digest_list_views.xml",
     "views/digest_digest_form_views.xml",

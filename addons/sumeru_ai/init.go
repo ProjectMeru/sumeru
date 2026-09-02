@@ -4,4 +4,5 @@ package sumeru_ai
 
 import (
 	_ "sumeru/addons/base"
+	_ "sumeru/addons/contacts"
 )

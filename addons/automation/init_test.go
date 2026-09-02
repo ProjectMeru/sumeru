@@ -5,10 +5,12 @@ import (
 	"testing"
 
 	"sumeru/core/event"
+	"sumeru/core/modelreg"
 	"sumeru/core/orm"
 )
 
 func TestShouldMaterializeServerActionRequiresAutomationModule(t *testing.T) {
+	_ = modelreg.ActivateAll([]string{"base", "mail", "automation"})
 	installed := map[string]struct{}{"base": {}, "mail": {}}
 	if orm.ShouldMaterializeModel("sys.server.action", installed) {
 		t.Fatal("sys.server.action should not materialize without automation module")

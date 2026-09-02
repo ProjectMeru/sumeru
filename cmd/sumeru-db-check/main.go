@@ -2,7 +2,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -13,22 +12,16 @@ import (
 )
 
 func main() {
+	cliboot.StripLeadingArgsSeparator()
 	configPath := flag.String("c", "sumeru.conf", "Path to config file (INI)")
 	flag.Parse()
 
-	if err := cliboot.LoadConfig(*configPath); err != nil {
+	_, db, cancel, err := cliboot.OpenConfiguredDB(*configPath, 10*time.Second)
+	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-
-	db, err := cliboot.OpenDB(ctx)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "db: %v\n", err)
-		os.Exit(1)
-	}
 	defer db.Close()
 
 	c := config.AppConfig

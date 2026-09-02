@@ -24,6 +24,23 @@ func viewArchXML(viewDef *parser.View) string {
 	return string(marshaledXml)
 }
 
+func upsertSysActionWindowFromRecord(ctx context.Context, moduleName string, xmlRecord parser.Record) {
+	recordValues := recordValuesFromXML(xmlRecord)
+	if cm := strings.TrimSpace(orm.AsString(recordValues["core_model"])); cm == "" {
+		syncWarn(ctx, "Warning: sys.action.window record %s (module %s): core_model is required", xmlRecord.ID, moduleName)
+		return
+	}
+	if _, ok := recordValues["name"]; !ok || recordValues["name"] == "" {
+		recordValues["name"] = xmlRecord.ID
+	}
+	id, err := orm.Upsert(ctx, orm.RegistryModel("sys.action.window"), recordValues, "name")
+	if err != nil {
+		syncWarn(ctx, platformmsg.FmtGenericUpsertWarn, "sys.action.window", xmlRecord.ID, err)
+		return
+	}
+	_ = linkXMLRecord(ctx, moduleName, xmlRecord.ID, "sys.action.window", id)
+}
+
 // upsertSysViewFromRecord persists <record model="sys.view">…</record> data (non-inherit rows).
 // Inline <view> elements use upsertInlineViewDef instead; inherit-only records are handled elsewhere.
 func upsertSysViewFromRecord(ctx context.Context, moduleName string, xmlRecord parser.Record) {
@@ -110,9 +127,11 @@ func upsertInlineViewDef(ctx context.Context, moduleName string, viewDef *parser
 		"arch":     viewArchitecture,
 		"priority": viewDef.Priority,
 	}, "name")
-	if err == nil {
-		_ = linkXMLRecord(ctx, moduleName, viewDef.ID, "sys.view", id)
+	if err != nil {
+		syncWarn(ctx, platformmsg.FmtGenericUpsertWarn, "sys.view", viewDef.ID, err)
+		return
 	}
+	_ = linkXMLRecord(ctx, moduleName, viewDef.ID, "sys.view", id)
 }
 
 // applySysUIViewInherit merges an sys.view inherit <record> into the parent view row (same DB id).
@@ -147,14 +166,7 @@ func applySysUIViewInherit(ctx context.Context, moduleName string, xmlRecord par
 		return err
 	}
 	if xmlRecord.ID != "" {
-		if _, err := orm.Upsert(ctx, orm.RegistryModel("sys.model.data"), map[string]interface{}{
-			"module":  moduleName,
-			"name":    xmlRecord.ID,
-			"model":   "sys.view",
-			"core_id": parentID,
-		}, "name"); err != nil {
-			return err
-		}
+		return linkXMLRecord(ctx, moduleName, xmlRecord.ID, "sys.view", parentID)
 	}
 	return nil
 }

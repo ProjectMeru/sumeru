@@ -13,5 +13,5 @@ type MailActivity struct {
 	UserID       sdk.Many2One[CoreUser] `sumeru:"string=Assigned To"`
 	Summary      sdk.Text               `sumeru:"string=Summary"`
 	DateDeadline sdk.Date               `sumeru:"string=Due Date"`
-	State        sdk.String `sumeru:"string=State,default=planned,selection=planned:Planned,done:Done,cancelled:Cancelled"`
+	State        sdk.String             `sumeru:"string=State,default=planned,selection=planned:Planned,done:Done,cancelled:Cancelled"`
 }

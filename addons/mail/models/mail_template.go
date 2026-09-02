@@ -10,6 +10,6 @@ type MailTemplate struct {
 	Name     sdk.String  `sumeru:"required,string=Name"`
 	ResModel sdk.String  `sumeru:"required,index,column=model,string=Applies to"`
 	Subject  sdk.String  `sumeru:"string=Subject"`
-	BodyHTML sdk.Text   `sumeru:"string=Body"`
+	BodyHTML sdk.Text    `sumeru:"string=Body"`
 	Active   sdk.Boolean `sumeru:"string=Active,default=true"`
 }

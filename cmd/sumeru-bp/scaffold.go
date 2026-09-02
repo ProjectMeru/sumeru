@@ -6,11 +6,17 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"text/template"
 )
 
 //go:embed templates/*.tmpl
 var templateFS embed.FS
+
+var (
+	templateCache   map[string]*template.Template
+	templateCacheMu sync.Once
+)
 
 type ScaffoldConfig struct {
 	Name        string
@@ -30,14 +36,11 @@ func RunScaffold(cfg *ScaffoldConfig) {
 		os.Exit(1)
 	}
 
-	// Create directory structure
 	dirs := []string{
 		"models",
 		"views",
 		"security",
 		"static/src/img",
-		"static/src/css",
-		"static/src/js",
 	}
 	for _, d := range dirs {
 		if err := os.MkdirAll(filepath.Join(target, filepath.FromSlash(d)), 0o755); err != nil {
@@ -46,16 +49,11 @@ func RunScaffold(cfg *ScaffoldConfig) {
 		}
 	}
 
-	// Render templates
 	renderTemplate(cfg, "manifest.json.tmpl", filepath.Join(target, "manifest.json"))
 	renderTemplate(cfg, "init.go.tmpl", filepath.Join(target, "init.go"))
 	renderTemplate(cfg, "models.go.tmpl", filepath.Join(target, "models", "models.go"))
-
-	// Security
 	renderTemplate(cfg, "security.xml.tmpl", filepath.Join(target, "security", "security.xml"))
 	renderTemplate(cfg, "sys.access.csv.tmpl", filepath.Join(target, "security", "sys.access.csv"))
-
-	// Views & Actions
 	renderTemplate(cfg, "actions.xml.tmpl", filepath.Join(target, "views", "actions.xml"))
 	renderTemplate(cfg, "form_view.xml.tmpl", filepath.Join(target, "views", "form_view.xml"))
 	renderTemplate(cfg, "list_view.xml.tmpl", filepath.Join(target, "views", "list_view.xml"))
@@ -73,10 +71,34 @@ func RunScaffold(cfg *ScaffoldConfig) {
 	}
 }
 
+func loadTemplates() {
+	templateCacheMu.Do(func() {
+		names, err := templateFS.ReadDir("templates")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error reading templates: %v\n", err)
+			os.Exit(1)
+		}
+		templateCache = make(map[string]*template.Template, len(names))
+		for _, entry := range names {
+			if entry.IsDir() {
+				continue
+			}
+			name := entry.Name()
+			t, err := template.ParseFS(templateFS, "templates/"+name)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "error parsing template %s: %v\n", name, err)
+				os.Exit(1)
+			}
+			templateCache[name] = t
+		}
+	})
+}
+
 func renderTemplate(cfg *ScaffoldConfig, tmplName, outPath string) {
-	t, err := template.ParseFS(templateFS, "templates/"+tmplName)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error parsing template %s: %v\n", tmplName, err)
+	loadTemplates()
+	t := templateCache[tmplName]
+	if t == nil {
+		fmt.Fprintf(os.Stderr, "missing template %s\n", tmplName)
 		os.Exit(1)
 	}
 

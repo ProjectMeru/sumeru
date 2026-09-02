@@ -20,7 +20,7 @@ func CheckModelAccess(ctx context.Context, uid int, model string, op string) err
 	}
 	if uid <= 0 {
 		LogAccessDeny(ctx, model, op, "not authenticated")
-		return fmt.Errorf("access denied on %s: not authenticated", model)
+		return &AccessDeniedError{Model: model, Operation: op}
 	}
 	groups, err := EffectiveGroupIDs(ctx, uid)
 	if err != nil {
@@ -54,7 +54,7 @@ func CheckModelAccess(ctx context.Context, uid int, model string, op string) err
 		}
 	}
 	LogAccessDeny(ctx, model, op, "no matching ACL")
-	return fmt.Errorf("access denied on %s for operation %s", model, op)
+	return &AccessDeniedError{Model: model, Operation: op}
 }
 
 func permColumnForOp(op string) string {

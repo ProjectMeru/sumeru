@@ -12,30 +12,20 @@ import (
 )
 
 func main() {
-	// Support multiple aliases for the module name
 	namePtr := flag.String("name", "", "technical module name (folder + manifest name)")
 	bpPtr := flag.String("bp", "", "alias for -name")
-	boilerplatePtr := flag.String("boilerplate", "", "alias for -name")
-	blueprintPtr := flag.String("blueprint", "", "alias for -name")
 
 	outDir := flag.String("out", "", "parent directory for the new module (default: detected workspace addons/)")
 	flag.Parse()
 
-	// Resolve the final module name
 	name := *namePtr
 	if name == "" {
 		name = *bpPtr
 	}
-	if name == "" {
-		name = *boilerplatePtr
-	}
-	if name == "" {
-		name = *blueprintPtr
-	}
 
 	if strings.TrimSpace(name) == "" {
-		fmt.Fprintln(os.Stderr, "usage: sumeru-bp -bp <my_module> [-out <path>]")
-		fmt.Fprintln(os.Stderr, "aliases: -name, -bp, -boilerplate, -blueprint")
+		fmt.Fprintln(os.Stderr, "usage: sumeru-bp -name <my_module> [-out <path>]")
+		fmt.Fprintln(os.Stderr, "alias: -bp")
 		os.Exit(2)
 	}
 	if !module.ModuleNamePattern.MatchString(name) {

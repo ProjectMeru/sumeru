@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "author": "Sumeru",
   "description": "AI assistance and schema discovery for Sumeru ERP.",
-  "depends": ["base"],
+  "depends": ["base", "contacts"],
   "application": true,
   "auto_import": false,
   "data": []

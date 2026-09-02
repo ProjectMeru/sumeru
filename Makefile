@@ -75,10 +75,10 @@ db-check:
 	go run ./cmd/sumeru-db-check -- -c sumeru.conf
 
 i18n-export:
-	go run ./cmd/sumeru-i18n-export -- -c sumeru.conf -o translations.csv
+	go run ./cmd/sumeru-i18n -- -c sumeru.conf export -o translations.csv
 
 i18n-import:
-	go run ./cmd/sumeru-i18n-import -- -c sumeru.conf -i translations.csv
+	go run ./cmd/sumeru-i18n -- -c sumeru.conf import -i translations.csv
 
 module:
 	go run ./cmd/sumeru-module -- -c sumeru.conf $(ARGS)

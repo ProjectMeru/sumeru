@@ -19,6 +19,7 @@ import {
   parseCellValue,
   serverLineValues,
 } from "./one2many-line-utils.js";
+import { resolveM2oDisplayNames } from "./one2many-m2o-resolve.js";
 
 interface O2MLine {
   id: number;
@@ -107,7 +108,9 @@ export class One2ManyField extends SwcComponent<FieldWidgetProps> {
       names,
       200,
     )) ?? [];
-    await this.resolveM2oNames(cols, rows);
+    await resolveM2oDisplayNames(cols, rows, (col) => this.m2oComodel(col), (model, domain, fields, limit) =>
+      this.env.services.rpc.searchRead(model, domain, fields, limit),
+    );
     this.lines = rows.map((row) => ({
       id: Number(row.id ?? 0),
       data: { ...row },
@@ -494,43 +497,6 @@ export class One2ManyField extends SwcComponent<FieldWidgetProps> {
   private closeM2oPopover(): void {
     this.m2oPopover?.remove();
     this.m2oPopover = null;
-  }
-
-  private async resolveM2oNames(
-    cols: SwcArchField[],
-    rows: Record<string, unknown>[],
-  ): Promise<void> {
-    for (const col of cols) {
-      if (col.type !== "many2one") continue;
-      const comodel = this.m2oComodel(col);
-      if (!comodel) continue;
-      const ids = rows
-        .map((r) => Number(r[col.name]))
-        .filter((id) => Number.isFinite(id) && id > 0);
-      if (ids.length === 0) continue;
-      const uniq = Array.from(new Set(ids));
-      let refs: Record<string, unknown>[] = [];
-      try {
-        refs =
-          (await this.env.services.rpc.searchRead(
-            comodel,
-            [["id", "in", uniq]],
-            ["id", "name"],
-            uniq.length + 1,
-          )) ?? [];
-      } catch {
-        continue;
-      }
-      const nameById = new Map<number, string>();
-      for (const ref of refs) {
-        nameById.set(Number(ref.id), String(ref.name ?? ""));
-      }
-      for (const r of rows) {
-        const id = Number(r[col.name]);
-        const name = nameById.get(id);
-        if (name !== undefined) r[`${col.name}_name`] = name;
-      }
-    }
   }
 
   private renderCellEditor(col: SwcArchField, line: O2MLine): ReturnType<typeof html> {

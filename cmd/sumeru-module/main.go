@@ -2,6 +2,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"strings"
@@ -11,46 +12,45 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 2 {
+	cliboot.StripLeadingArgsSeparator()
+	configPath := flag.String("c", "sumeru.conf", "Path to config file (INI)")
+	flag.Parse()
+
+	args := flag.Args()
+	if len(args) == 0 {
 		usage()
 		os.Exit(2)
-	}
-	configPath := "sumeru.conf"
-	args := os.Args[1:]
-	if len(args) >= 2 && args[0] == "-c" {
-		configPath = args[1]
-		args = args[2:]
 	}
 	cmd := strings.ToLower(strings.TrimSpace(args[0]))
 	subArgs := args[1:]
 
 	switch cmd {
 	case "list":
-		runList(configPath)
+		runList(*configPath)
 	case "depends-tree", "depends":
 		if len(subArgs) == 0 {
 			fmt.Fprintln(os.Stderr, "usage: sumeru-module depends-tree MODULE")
 			os.Exit(1)
 		}
-		runDepends(configPath, subArgs[0])
+		runDepends(*configPath, subArgs[0])
 	case "install":
 		if len(subArgs) == 0 {
 			fmt.Fprintln(os.Stderr, "usage: sumeru-module install mod1,mod2")
 			os.Exit(1)
 		}
-		runInstall(configPath, strings.Join(subArgs, " "))
+		runInstall(*configPath, strings.Join(subArgs, " "))
 	case "update":
 		if len(subArgs) == 0 {
 			fmt.Fprintln(os.Stderr, "usage: sumeru-module update mod|all")
 			os.Exit(1)
 		}
-		runUpdate(configPath, strings.Join(subArgs, " "))
+		runUpdate(*configPath, strings.Join(subArgs, " "))
 	case "uninstall":
 		if len(subArgs) == 0 {
 			fmt.Fprintln(os.Stderr, "usage: sumeru-module uninstall MODULE")
 			os.Exit(1)
 		}
-		runUninstall(configPath, subArgs[0])
+		runUninstall(*configPath, subArgs[0])
 	default:
 		usage()
 		os.Exit(2)
@@ -104,12 +104,10 @@ func runDepends(configPath, mod string) {
 }
 
 func runInstall(configPath, csv string) {
-	ctx, err := cliboot.Init(configPath)
-	if err != nil {
+	if _, err := cliboot.Init(configPath); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	_ = ctx
 	if err := module.RunModuleCLI(csv, ""); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -118,12 +116,10 @@ func runInstall(configPath, csv string) {
 }
 
 func runUpdate(configPath, csv string) {
-	ctx, err := cliboot.Init(configPath)
-	if err != nil {
+	if _, err := cliboot.Init(configPath); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	_ = ctx
 	if err := module.RunModuleCLI("", csv); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

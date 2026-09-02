@@ -13,3 +13,13 @@ func TestComputeKPIUnknownCode(t *testing.T) {
 		t.Fatal("expected error for unknown compute code")
 	}
 }
+
+func TestComputeKPIMissingModelReturnsZero(t *testing.T) {
+	v, err := digest.ComputeKPI(context.Background(), "crm.lead_count")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if v != 0 {
+		t.Fatalf("expected 0 when crm.lead absent, got %v", v)
+	}
+}

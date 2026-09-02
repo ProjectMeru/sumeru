@@ -1,4 +1,4 @@
-/** Workspace JSON from GET /web/swc/workspace */
+/** Workspace JSON from GET /web/swc/workspace — keep field names in sync with core/engine/swcmeta/types.go WorkspacePayload. */
 
 export interface SwcViewArch {
   type: string;

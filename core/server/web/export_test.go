@@ -106,18 +106,6 @@ func WorkspaceRequestFields(req WorkspaceRequest) (actionID int, menuID, viewTyp
 	return req.actionID, req.menuID, req.viewType, req.recordID, req.formEdit
 }
 
-func HomeRouteWithMenu(menuID string) string { return homeRouteWithMenu(menuID) }
-
-func PrependViewMode(mode string, modes []string) []string { return prependViewMode(mode, modes) }
-
-func IsNumericRecordID(recordID string) bool { return isNumericRecordID(recordID) }
-
-func WorkspaceViewModeCandidates(r *http.Request, actionData map[string]interface{}) []string {
-	return workspaceViewModeCandidates(r, actionData)
-}
-
-func ParsePositiveRecordID(recordIDRaw string) (int, bool) { return parsePositiveRecordID(recordIDRaw) }
-
 func URLWithQueryParam(path, param, value string) (string, error) {
 	return urlWithQueryParam(path, param, value)
 }
@@ -362,10 +350,6 @@ func ParseModuleRow(values map[string]interface{}) (ModuleRow, bool) { return pa
 
 func ModuleDisplayName(moduleName, displayName string) string {
 	return moduleDisplayName(moduleName, displayName)
-}
-
-func ActionViewModesForTabs(actionData map[string]interface{}) []string {
-	return actionViewModesForTabs(actionData)
 }
 
 // ExportXLSXHandlerForTest exposes the XLSX export handler for external tests.

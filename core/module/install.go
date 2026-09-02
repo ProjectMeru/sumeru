@@ -167,31 +167,6 @@ func finalizeModuleReload(ctx context.Context, moduleName string, mode moduleRel
 	return nil
 }
 
-func setModuleState(ctx context.Context, moduleName, state string, active bool) error {
-	_, err := orm.DB.ExecContext(ctx,
-		`UPDATE `+orm.MustQuotedTableName("sys.module")+` SET state = $1, active = $2 WHERE name = $3`,
-		state, active, moduleName,
-	)
-	return err
-}
-
-// setModuleStateOnly updates state without changing active (CLI -u must not force active=true).
-func setModuleStateOnly(ctx context.Context, moduleName, state string) error {
-	_, err := orm.DB.ExecContext(ctx,
-		`UPDATE `+orm.MustQuotedTableName("sys.module")+` SET state = $1 WHERE name = $2`,
-		state, moduleName,
-	)
-	return err
-}
-
-func setModuleLastError(ctx context.Context, moduleName, msg string) error {
-	_, err := orm.DB.ExecContext(ctx,
-		`UPDATE `+orm.MustQuotedTableName("sys.module")+` SET last_error = $1 WHERE name = $2`,
-		msg, moduleName,
-	)
-	return err
-}
-
 // UninstallModuleByName removes XML-linked metadata for the module and marks it uninstalled.
 func UninstallModuleByName(ctx context.Context, moduleName string) error {
 	if err := orm.CheckModelAccess(ctx, orm.SecurityUID(ctx), "sys.module", "write"); err != nil {
@@ -214,10 +189,7 @@ func UninstallModuleByName(ctx context.Context, moduleName string) error {
 		return fmt.Errorf("module %q is required by installed module %q; uninstall that first", moduleName, dependency)
 	}
 
-	if _, err := orm.DB.ExecContext(systemContext,
-		`UPDATE `+orm.MustQuotedTableName("sys.module")+` SET state = 'to_remove' WHERE name = $1`,
-		moduleName,
-	); err != nil {
+	if err := setModuleToRemove(systemContext, moduleName); err != nil {
 		return err
 	}
 
@@ -297,10 +269,7 @@ func SetModuleActive(ctx context.Context, moduleName string, active bool) error 
 		return fmt.Errorf("module %q is not installed; activate/install it first", moduleName)
 	}
 
-	if _, err := orm.DB.ExecContext(systemContext,
-		`UPDATE `+orm.MustQuotedTableName("sys.module")+` SET active = $1 WHERE name = $2`,
-		active, moduleName,
-	); err != nil {
+	if err := setModuleActiveOnly(systemContext, moduleName, active); err != nil {
 		return err
 	}
 	if active {

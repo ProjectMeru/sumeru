@@ -9,6 +9,9 @@ import (
 	"sumeru/core/orm"
 )
 
+// ponytail: 16 rounds cover any sane menu depth; raise if addons nest deeper.
+const maxMenuParentRounds = 16
+
 func syncMenusFromItems(ctx context.Context, moduleName string, menus []parser.MenuItem) {
 	buildValues := func(menu parser.MenuItem) map[string]interface{} {
 		menuValues := map[string]interface{}{
@@ -52,7 +55,7 @@ func syncMenusFromItems(ctx context.Context, moduleName string, menus []parser.M
 		}
 		pending = append(pending, menu)
 	}
-	for round := 0; round < 16 && len(pending) > 0; round++ {
+	for round := 0; round < maxMenuParentRounds && len(pending) > 0; round++ {
 		var next []parser.MenuItem
 		progress := 0
 		for _, menu := range pending {
