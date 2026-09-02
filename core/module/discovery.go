@@ -27,14 +27,18 @@ func LoadAddonPaths(rootPaths []string) error {
 		return fmt.Errorf("no addon roots configured")
 	}
 
-	discoveredAddons, err := DiscoverAddonRoots(sanitizedRoots)
-	if err != nil {
-		return err
+	discoveredAddons := DiscoveredAddons
+	if len(discoveredAddons) == 0 {
+		var err error
+		discoveredAddons, err = DiscoverAddonRoots(sanitizedRoots)
+		if err != nil {
+			return err
+		}
+		if err := ValidateDiscoveredAddons(discoveredAddons); err != nil {
+			return err
+		}
+		DiscoveredAddons = discoveredAddons
 	}
-	if err := ValidateDiscoveredAddons(discoveredAddons); err != nil {
-		return err
-	}
-	DiscoveredAddons = discoveredAddons
 	for addonName, addon := range discoveredAddons {
 		LoadedAddons[addonName] = addon
 	}
