@@ -50,7 +50,7 @@ export default defineConfig({
         "src/widgets/StatusbarField.ts",
         "src/widgets/PriorityField.ts",
         "src/views/form/form-sheet.ts",
-        "src/views/shared/collection-view-shell.ts",
+        "src/views/shared/collection-bar-panels.ts",
       ],
       thresholds: {
         lines: 90,

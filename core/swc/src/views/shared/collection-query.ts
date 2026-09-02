@@ -187,3 +187,32 @@ export function removeFilterTag(query: CollectionQuery, tag: FilterTag): Collect
   const field = tag.key.replace(/^group:/, "");
   return { ...query, groupBy: query.groupBy.filter((f) => f !== field) };
 }
+
+const FILTER_OPERATORS_BY_TYPE: Record<string, string[]> = {
+  char: ["=", "!=", "ilike"],
+  text: ["=", "!=", "ilike"],
+  integer: ["=", "!=", ">", "<", ">=", "<="],
+  float: ["=", "!=", ">", "<", ">=", "<="],
+  boolean: ["=", "!="],
+  date: ["=", "!=", ">", "<", ">=", "<="],
+  datetime: ["=", "!=", ">", "<", ">=", "<="],
+  selection: ["=", "!="],
+  many2one: ["=", "!="],
+};
+
+export function filterOperatorsForField(fieldName: string, filterFields: SwcArchField[]): string[] {
+  const field = filterFields.find((f) => f.name === fieldName);
+  return FILTER_OPERATORS_BY_TYPE[field?.type ?? "char"] ?? ["=", "!="];
+}
+
+/** Coerce a custom filter input string to the appropriate type for the field. */
+export function coerceFilterValue(fieldName: string, raw: string, filterFields: SwcArchField[]): unknown {
+  const field = filterFields.find((f) => f.name === fieldName);
+  const trimmed = raw.trim();
+  if (field?.type === "boolean") return trimmed === "true" || trimmed === "1";
+  if (field?.type === "integer" || field?.type === "float") {
+    const n = Number(trimmed);
+    return Number.isNaN(n) ? trimmed : n;
+  }
+  return trimmed;
+}

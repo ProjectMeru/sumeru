@@ -1,4 +1,3 @@
-import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
 import type { SwcArchButton, SwcWorkspacePayload } from "../../types/workspace.js";
 import { headerButton } from "../shared/view-toolbar.js";
@@ -15,14 +14,11 @@ import { forEach } from "../../template/helpers.js";
 import { VIEW_FORM, VIEW_LIST } from "../../constants/routes.js";
 import { runObjectAction } from "../shared/object-action.js";
 import { formatFieldValue } from "../shared/field-display.js";
-import { CollectionBarHost, mountCollectionBar } from "../shared/collection-bar-host.js";
+import { CollectionView } from "../shared/collection-view.js";
 import { navigateCollectionQuery } from "../shared/collection-query.js";
 
-interface ListViewProps {
-  payload: SwcWorkspacePayload;
-}
-
-export class ListView extends SwcComponent<ListViewProps> {
+export class ListView extends CollectionView {
+  protected readonly collectionViewType = VIEW_LIST;
   private panelState: ControlPanelState = {
     search: "",
     offset: 0,
@@ -33,21 +29,18 @@ export class ListView extends SwcComponent<ListViewProps> {
   private foldedSections = new Set<string>();
   private deleting = false;
   private acting = false;
-  private collectionBar!: CollectionBarHost;
 
-  override setup(): void {
+  protected override collectionBarExtra() {
+    return this.listExtras();
+  }
+
+  protected override onCollectionSetup(): void {
     this.syncFromPayload(this.props.payload);
-    this.collectionBar = mountCollectionBar(this.props.payload, VIEW_LIST, this.env, this.listExtras());
   }
 
-  override onPropsChanged(props: ListViewProps): void {
-    this.syncFromPayload(props.payload);
+  protected override onCollectionPropsChanged(): void {
+    this.syncFromPayload(this.props.payload);
     this.panelState.selectedIds = new Set();
-    this.collectionBar.updateProps({ payload: props.payload, viewType: VIEW_LIST, extraPrimary: this.listExtras() });
-  }
-
-  override onWillUnmount(): void {
-    this.collectionBar.destroy();
   }
 
   private syncFromPayload(payload: SwcWorkspacePayload): void {

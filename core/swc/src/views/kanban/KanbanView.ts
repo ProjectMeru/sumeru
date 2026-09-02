@@ -1,32 +1,14 @@
-import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
-import type { SwcArchField, SwcWorkspacePayload } from "../../types/workspace.js";
+import type { SwcArchField } from "../../types/workspace.js";
 import { renderKanbanCardInner, isKanbanCardRotting } from "./kanban-card.js";
 import { RECORD_UPDATED, VIEW_FORM, VIEW_KANBAN } from "../../constants/routes.js";
 import { SwcError } from "../../runtime/error.js";
 import { inputValueFromEvent } from "../../widgets/field-events.js";
-import { CollectionBarHost, mountCollectionBar } from "../shared/collection-bar-host.js";
+import { CollectionView } from "../shared/collection-view.js";
 
-interface KanbanViewProps {
-  payload: SwcWorkspacePayload;
-}
-
-export class KanbanView extends SwcComponent<KanbanViewProps> {
+export class KanbanView extends CollectionView {
+  protected readonly collectionViewType = VIEW_KANBAN;
   private drafts: Record<string, string> = {};
-  private collectionBar!: CollectionBarHost;
-
-  override setup(): void {
-    this.collectionBar = mountCollectionBar(this.props.payload, VIEW_KANBAN, this.env);
-  }
-
-  override onPropsChanged(props: KanbanViewProps): void {
-    this.collectionBar.updateProps({ payload: props.payload, viewType: VIEW_KANBAN });
-  }
-
-  override onWillUnmount(): void {
-    this.collectionBar.destroy();
-  }
-
   private cardFields(): SwcArchField[] {
     return this.props.payload.arch.fields.filter((f) => !f.invisible);
   }

@@ -1,30 +1,12 @@
-import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
-import type { SwcWorkspacePayload } from "../../types/workspace.js";
 import { VIEW_ACTIVITY, VIEW_FORM } from "../../constants/routes.js";
-import { CollectionBarHost, mountCollectionBar } from "../shared/collection-bar-host.js";
+import { CollectionView } from "../shared/collection-view.js";
 import { formatFieldValue } from "../shared/field-display.js";
 import { forEach } from "../../template/helpers.js";
 
-interface ActivityViewProps {
-  payload: SwcWorkspacePayload;
-}
-
 /** Activity view — list-style table for sys.activity (or activity arch on any model). */
-export class ActivityView extends SwcComponent<ActivityViewProps> {
-  private collectionBar!: CollectionBarHost;
-
-  override setup(): void {
-    this.collectionBar = mountCollectionBar(this.props.payload, VIEW_ACTIVITY, this.env);
-  }
-
-  override onPropsChanged(props: ActivityViewProps): void {
-    this.collectionBar.updateProps({ payload: props.payload, viewType: VIEW_ACTIVITY });
-  }
-
-  override onWillUnmount(): void {
-    this.collectionBar.destroy();
-  }
+export class ActivityView extends CollectionView {
+  protected readonly collectionViewType = VIEW_ACTIVITY;
 
   private columns() {
     return this.props.payload.arch.fields.filter((f) => !f.invisible);

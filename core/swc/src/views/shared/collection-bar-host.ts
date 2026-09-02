@@ -7,11 +7,11 @@ import { renderNewButton, buildReportActionEntries, exportFieldNamesCsv, createT
 import {
   activeFilterTags,
   appendDomainTriple,
+  coerceFilterValue,
   filterCount,
   groupByCount,
   navigateCollectionQuery,
   presetDomainFilters,
-  presetGroupByFilters,
   removeFilterTag,
   syncCollectionQuery,
   toggleGroupByField,
@@ -20,6 +20,12 @@ import {
   type DomainTriple,
   type FilterTag,
 } from "./collection-query.js";
+import {
+  renderActionsPopover,
+  renderFiltersPopover,
+  renderFavoritesPopover,
+  renderGroupPopover,
+} from "./collection-bar-panels.js";
 
 export interface CollectionBarHostProps {
   payload: SwcWorkspacePayload;
@@ -33,18 +39,6 @@ const SEGMENT_TOOLTIPS: Record<Exclude<PanelKind, "actions">, string> = {
   filters: "Filter records using presets or custom field rules",
   group: "Group records by field values",
   favorites: "Save and reopen favorite searches",
-};
-
-const OPERATORS_BY_TYPE: Record<string, string[]> = {
-  char: ["=", "!=", "ilike"],
-  text: ["=", "!=", "ilike"],
-  integer: ["=", "!=", ">", "<", ">=", "<="],
-  float: ["=", "!=", ">", "<", ">=", "<="],
-  boolean: ["=", "!="],
-  date: ["=", "!=", ">", "<", ">=", "<="],
-  datetime: ["=", "!=", ">", "<", ">=", "<="],
-  selection: ["=", "!="],
-  many2one: ["=", "!="],
 };
 
 export class CollectionBarHost extends SwcComponent<CollectionBarHostProps> {
@@ -110,22 +104,11 @@ export class CollectionBarHost extends SwcComponent<CollectionBarHostProps> {
   private applyCustomFilter(): void {
     const field = this.customField.trim();
     if (!field) return;
-    const triple: DomainTriple = [field, this.customOp, this.coerceValue(field)];
+    const triple: DomainTriple = [field, this.customOp, coerceFilterValue(field, this.customValue, this.filterFields())];
     this.applyQuery({ customDomain: appendDomainTriple(this.query.customDomain, triple) });
     this.customValue = "";
     this.panelOpen = null;
     this.rerender();
-  }
-
-  private coerceValue(fieldName: string): unknown {
-    const field = this.filterFields().find((f) => f.name === fieldName);
-    const raw = this.customValue.trim();
-    if (field?.type === "boolean") return raw === "true" || raw === "1";
-    if (field?.type === "integer" || field?.type === "float") {
-      const n = Number(raw);
-      return Number.isNaN(n) ? raw : n;
-    }
-    return raw;
   }
 
   private filterFields(): SwcArchField[] {
@@ -139,11 +122,6 @@ export class CollectionBarHost extends SwcComponent<CollectionBarHostProps> {
       .filter((f) => f.groupBy && !fromModel.some((m) => m.name === f.groupBy))
       .map((f) => ({ name: f.groupBy!, string: f.string, type: "char" }));
     return [...fromModel, ...extras];
-  }
-
-  private operatorsForField(fieldName: string): string[] {
-    const field = this.filterFields().find((f) => f.name === fieldName);
-    return OPERATORS_BY_TYPE[field?.type ?? "char"] ?? ["=", "!="];
   }
 
   private removeTag(tag: FilterTag): void {
@@ -205,10 +183,6 @@ export class CollectionBarHost extends SwcComponent<CollectionBarHostProps> {
     return html`<span class="sum-control-bar-badge">${count}</span>`;
   }
 
-  private renderCheckmark(active: boolean): TemplateResult {
-    return html`<span class="sum-popover-check" aria-hidden="true">${active ? "✓" : ""}</span>`;
-  }
-
   private clearSearch(): void {
     this.query.search = "";
     const input = this.rootElement?.querySelector(".sum-control-bar-search") as HTMLInputElement | null;
@@ -267,121 +241,64 @@ export class CollectionBarHost extends SwcComponent<CollectionBarHostProps> {
     </span>`;
   }
 
-  private renderPopoverItem(label: string, active: boolean, onClick: () => void): TemplateResult {
-    return html`<li>
-      <button
-        type="button"
-        class=${active ? "sum-popover-item sum-popover-item--active" : "sum-popover-item"}
-        @click=${onClick}
-      >
-        ${this.renderCheckmark(active)}
-        <span class="sum-popover-item-label">${label}</span>
-      </button>
-    </li>`;
-  }
-
-  private renderFiltersPopover(): TemplateResult {
+  private renderOpenPanel(): TemplateResult | string {
+    if (!this.panelOpen) return "";
     const meta = this.searchMeta();
-    const domainPresets = presetDomainFilters(meta?.filters);
-    const fields = this.filterFields();
-    if (!this.customField && fields[0]) this.customField = fields[0].name;
+    const filterFields = this.filterFields();
+    if (!this.customField && filterFields[0]) this.customField = filterFields[0].name;
 
-    return html`
-      <div class="sum-popover sum-popover--filters" @click=${(e: Event) => e.stopPropagation()}>
-        <h3 class="sum-popover-heading">Filters</h3>
-        <ul class="sum-popover-list">
-          ${domainPresets.map((f) =>
-            this.renderPopoverItem(
-              f.string || f.name,
-              this.query.presetFilters.includes(f.name),
-              () => this.togglePreset(f.name),
-            ),
-          )}
-        </ul>
-        <div class="sum-popover-custom">
-          <strong class="sum-popover-custom-title">Custom filter</strong>
-          <select class="sum-popover-select" @change=${(e: Event) => { this.customField = (e.target as HTMLSelectElement).value; this.customOp = this.operatorsForField(this.customField)[0] ?? "="; this.rerender(); }}>
-            ${fields.map((f) => html`<option value=${f.name} selected=${f.name === this.customField ? "selected" : undefined}>${f.string || f.name}</option>`)}
-          </select>
-          <select class="sum-popover-select" @change=${(e: Event) => { this.customOp = (e.target as HTMLSelectElement).value; }}>
-            ${this.operatorsForField(this.customField).map((op) => html`<option value=${op} selected=${op === this.customOp ? "selected" : undefined}>${op}</option>`)}
-          </select>
-          <input
-            type="text"
-            class="sum-popover-input"
-            placeholder="Value"
-            value=${this.customValue}
-            @input=${(e: Event) => { this.customValue = inputValueFromEvent(e); }}
-          />
-          <button type="button" class="sum-btn sum-btn--secondary" @click=${() => this.applyCustomFilter()}>Apply</button>
-        </div>
-      </div>
-    `;
-  }
-
-  private renderGroupPopover(): TemplateResult {
-    const meta = this.searchMeta();
-    const groupPresets = presetGroupByFilters(meta?.filters);
-
-    return html`
-      <div class="sum-popover sum-popover--group" @click=${(e: Event) => e.stopPropagation()}>
-        <h3 class="sum-popover-heading">Group By</h3>
-        <ul class="sum-popover-list">
-          ${groupPresets.map((f) =>
-            this.renderPopoverItem(
-              f.string || f.name,
-              this.query.groupBy.includes(f.groupBy!),
-              () => this.toggleGroupBy(f.groupBy!),
-            ),
-          )}
-          ${this.groupByFields().map((f) =>
-            this.renderPopoverItem(
-              f.string || f.name,
-              this.query.groupBy.includes(f.name),
-              () => this.toggleGroupBy(f.name),
-            ),
-          )}
-        </ul>
-      </div>
-    `;
-  }
-
-  private renderFavoritesPopover(): TemplateResult {
-    const favorites = this.props.payload.favorites ?? [];
-
-    return html`
-      <div class="sum-popover sum-popover--favorites" @click=${(e: Event) => e.stopPropagation()}>
-        <h3 class="sum-popover-heading">Favorites</h3>
-        <ul class="sum-popover-list">
-          ${favorites.map(
-            (f) => html`<li class="sum-popover-fav">
-              <button type="button" class="sum-popover-item" @click=${() => this.applyFavorite(f)}>
-                <span class="sum-popover-item-label">${f.name}${f.isShared ? " (shared)" : ""}</span>
-              </button>
-              <button type="button" class="sum-popover-fav-delete" @click=${() => void this.deleteFavorite(f.id)} title="Delete">×</button>
-            </li>`,
-          )}
-        </ul>
-        <div class="sum-popover-custom">
-          <input
-            type="text"
-            class="sum-popover-input"
-            placeholder="Favorite name"
-            value=${this.saveName}
-            @input=${(e: Event) => { this.saveName = inputValueFromEvent(e); }}
-          />
-          <label class="sum-popover-check">
-            <input
-              type="checkbox"
-              ?checked=${this.saveShared}
-              @change=${(e: Event) => { this.saveShared = (e.target as HTMLInputElement).checked; }}
-            />
-            Share with all users
-          </label>
-          <button type="button" class="sum-btn sum-btn--secondary" disabled=${this.savingFavorite ? "disabled" : undefined} @click=${() => void this.saveFavorite()}>Save current search</button>
-        </div>
-      </div>
-    `;
+    if (this.panelOpen === "filters") {
+      return renderFiltersPopover(
+        {
+          query: this.query,
+          customField: this.customField,
+          customOp: this.customOp,
+          customValue: this.customValue,
+          domainPresets: presetDomainFilters(meta?.filters),
+          filterFields,
+        },
+        {
+          onTogglePreset: (name) => this.togglePreset(name),
+          onCustomFieldChange: (field, defaultOp) => {
+            this.customField = field;
+            this.customOp = defaultOp;
+            this.rerender();
+          },
+          onCustomOpChange: (op) => { this.customOp = op; },
+          onCustomValueInput: (value) => { this.customValue = value; },
+          onApplyCustom: () => this.applyCustomFilter(),
+        },
+      );
+    }
+    if (this.panelOpen === "group") {
+      return renderGroupPopover(
+        {
+          query: this.query,
+          groupPresets: (meta?.filters ?? []).filter((f) => f.groupBy),
+          groupByFields: this.groupByFields(),
+        },
+        { onToggleGroupBy: (field) => this.toggleGroupBy(field) },
+      );
+    }
+    if (this.panelOpen === "favorites") {
+      return renderFavoritesPopover(
+        {
+          favorites: this.props.payload.favorites ?? [],
+          saveName: this.saveName,
+          saveShared: this.saveShared,
+          savingFavorite: this.savingFavorite,
+        },
+        {
+          onApplyFavorite: (fav) => this.applyFavorite(fav),
+          onDeleteFavorite: (id) => void this.deleteFavorite(id),
+          onSaveNameInput: (name) => { this.saveName = name; },
+          onSaveSharedChange: (shared) => { this.saveShared = shared; },
+          onSaveFavorite: () => void this.saveFavorite(),
+        },
+      );
+    }
+    const fields = exportFieldNamesCsv((this.props.payload.arch.fields ?? []).filter((f) => !f.invisible));
+    return renderActionsPopover(this.props.payload, fields);
   }
 
   private renderSegmentButton(
@@ -409,27 +326,7 @@ export class CollectionBarHost extends SwcComponent<CollectionBarHostProps> {
           <span class="sum-control-bar-segment-label">${label}</span>
           ${this.renderBadge(badgeCount)}
         </button>
-        ${open
-          ? (kind === "filters"
-            ? this.renderFiltersPopover()
-            : kind === "group"
-              ? this.renderGroupPopover()
-              : this.renderFavoritesPopover())
-          : ""}
-      </div>
-    `;
-  }
-
-  private renderActionsPopover(): TemplateResult {
-    const fields = exportFieldNamesCsv((this.props.payload.arch.fields ?? []).filter((f) => !f.invisible));
-    const entries = buildReportActionEntries(this.props.payload, fields);
-
-    return html`
-      <div class="sum-popover sum-popover--actions" @click=${(e: Event) => e.stopPropagation()}>
-        <h3 class="sum-popover-heading">Actions</h3>
-        <ul class="sum-popover-menu">
-          ${entries.map((entry) => html`<li class="sum-popover-menu-item">${entry.node}</li>`)}
-        </ul>
+        ${open ? this.renderOpenPanel() : ""}
       </div>
     `;
   }
@@ -456,7 +353,7 @@ export class CollectionBarHost extends SwcComponent<CollectionBarHostProps> {
           <span class="sum-control-bar-actions-label">Actions</span>
           ${chevron}
         </button>
-        ${open ? this.renderActionsPopover() : ""}
+        ${open ? this.renderOpenPanel() : ""}
       </div>
     `;
   }
