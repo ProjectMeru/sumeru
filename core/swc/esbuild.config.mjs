@@ -8,9 +8,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const swcOutFile = join(__dirname, "../engine/assets/swc/swc.js");
 const passwordToggleOutFile = join(__dirname, "../engine/assets/js/sumeru-password-toggle.js");
 const passwordMatchOutFile = join(__dirname, "../engine/assets/js/sumeru-password-match.js");
+const appsPageOutFile = join(__dirname, "../engine/assets/js/apps-page.js");
 
 mkdirSync(dirname(swcOutFile), { recursive: true });
 mkdirSync(dirname(passwordMatchOutFile), { recursive: true });
+mkdirSync(dirname(appsPageOutFile), { recursive: true });
 
 const compileSumXml = await loadCompileSumXml();
 
@@ -76,5 +78,16 @@ await esbuild.build({
   minify: process.env.NODE_ENV === "production",
 });
 
+await esbuild.build({
+  entryPoints: [join(__dirname, "src/apps/apps-page-entry.ts")],
+  bundle: true,
+  format: "iife",
+  outfile: appsPageOutFile,
+  target: "es2022",
+  sourcemap: true,
+  minify: process.env.NODE_ENV === "production",
+});
+
 console.log(`Login password toggle → ${passwordToggleOutFile}`);
 console.log(`Login password match → ${passwordMatchOutFile}`);
+console.log(`Apps page script → ${appsPageOutFile}`);

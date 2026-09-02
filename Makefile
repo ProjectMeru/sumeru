@@ -9,6 +9,7 @@ SWC_DIR := core/swc
 SWC_BUNDLE := core/engine/assets/swc/swc.js
 SWC_JS_TOGGLE := core/engine/assets/js/sumeru-password-toggle.js
 SWC_JS_MATCH := core/engine/assets/js/sumeru-password-match.js
+SWC_JS_APPS_PAGE := core/engine/assets/js/apps-page.js
 SWC_ASSET_INPUTS := $(SWC_DIR)/esbuild.config.mjs $(SWC_DIR)/sum-compile.mjs $(SWC_DIR)/package.json
 
 check-sql:
@@ -28,7 +29,7 @@ swc: swc-build
 
 # Build client assets when missing or when SWC sources changed (used by run/build).
 assets:
-	@if [ ! -f $(SWC_BUNDLE) ] || [ ! -f $(SWC_JS_TOGGLE) ] || [ ! -f $(SWC_JS_MATCH) ]; then \
+	@if [ ! -f $(SWC_BUNDLE) ] || [ ! -f $(SWC_JS_TOGGLE) ] || [ ! -f $(SWC_JS_MATCH) ] || [ ! -f $(SWC_JS_APPS_PAGE) ]; then \
 		echo "Building SWC assets (bundles missing)..."; \
 		$(MAKE) swc-build; \
 	elif find $(SWC_DIR)/src $(SWC_ASSET_INPUTS) -type f -newer $(SWC_BUNDLE) 2>/dev/null | grep -q .; then \
