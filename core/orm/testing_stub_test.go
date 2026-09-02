@@ -9,8 +9,8 @@ type stubModel struct {
 	fields []FieldDefinition
 }
 
-func (m stubModel) ModelName() string              { return m.name }
-func (m stubModel) Fields() []FieldDefinition       { return m.fields }
+func (m stubModel) ModelName() string         { return m.name }
+func (m stubModel) Fields() []FieldDefinition { return m.fields }
 
 func registerStubModel(t *testing.T, name string, fields []FieldDefinition) stubModel {
 	t.Helper()

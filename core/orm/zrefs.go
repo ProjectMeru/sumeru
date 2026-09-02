@@ -13,4 +13,3 @@ type CoreGroup struct {
 type CoreUser struct {
 	modelmeta.ModelMeta `sumeru:"model=core.user"`
 }
-

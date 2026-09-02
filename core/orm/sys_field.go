@@ -7,7 +7,7 @@ import (
 type SysField struct {
 	modelmeta.ModelMeta `sumeru:"model=sys.field"`
 
-	Name      modelmeta.String                  `sumeru:"required"`
+	Name      modelmeta.String             `sumeru:"required"`
 	ModelID   modelmeta.Many2One[SysModel] `sumeru:"required,string=Model"`
 	CoreModel modelmeta.String
 	FieldType modelmeta.String
