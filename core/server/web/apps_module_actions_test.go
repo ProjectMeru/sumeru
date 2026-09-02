@@ -30,8 +30,24 @@ func TestAppsRedirectURL(t *testing.T) {
 	}
 }
 
+func TestAppsRedirectAfterInstallIncludesModule(t *testing.T) {
+	browse := web.AppsBrowseState{
+		Layout:     "grid",
+		Filter:     "all",
+		Scope:      "apps",
+		ModuleName: "account",
+	}
+	got := web.AppsRedirectURL("installed_account", browse)
+	assertQueryContains(t, got, map[string]string{
+		"msg":    "installed_account",
+		"module": "account",
+		"layout": "grid",
+		"scope":  "apps",
+	})
+}
+
 func TestParseAppsBrowseStateFromForm(t *testing.T) {
-	body := "apps_layout=list&apps_filter=installed&apps_scope=technical&apps_q=sale"
+	body := "apps_layout=list&apps_filter=installed&apps_scope=technical&apps_q=sale&apps_category=CRM&apps_group_by=category"
 	req := httptest.NewRequest("POST", web.TestModuleActionRoute, strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	if err := req.ParseForm(); err != nil {
@@ -40,6 +56,9 @@ func TestParseAppsBrowseStateFromForm(t *testing.T) {
 	browse := web.ParseAppsBrowseStateFromForm(req)
 	if browse.Layout != "list" || browse.Filter != "installed" || browse.Scope != "technical" || browse.SearchQuery != "sale" {
 		t.Fatalf("unexpected browse: %+v", browse)
+	}
+	if browse.Category != "CRM" || browse.GroupBy != web.TestAppsGroupByCategory {
+		t.Fatalf("unexpected category/group_by: %+v", browse)
 	}
 }
 

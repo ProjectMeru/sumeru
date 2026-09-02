@@ -246,9 +246,7 @@
                     <div class="sum-content">
                         {{range .FlashMessages}}
                         <div class="sum-flash-prem sum-flash-prem--{{.Kind}}" role="{{if eq .Kind "error"}}alert{{else}}status{{end}}">
-                            {{if eq .Kind "error"}}
                             <button type="button" class="sum-flash-dismiss" aria-label="Dismiss">×</button>
-                            {{end}}
                             {{if .Title}}<strong class="sum-flash-title">{{.Title}}</strong>{{end}}
                             {{if .Body}}<p class="sum-flash-body">{{.Body}}</p>{{end}}
                             {{if .Details}}
@@ -343,6 +341,16 @@
         </div>
     </dialog>
     <div id="sum-toast-stack" class="sum-toast-stack" aria-live="polite"></div>
+    <script>
+    (function () {
+      document.addEventListener("click", function (event) {
+        var button = event.target.closest(".sum-flash-dismiss");
+        if (!button) return;
+        var flash = button.closest(".sum-flash-prem");
+        if (flash) flash.remove();
+      });
+    })();
+    </script>
     {{range .ExtraScriptURLs}}
     <script src="{{.}}" defer></script>
     {{end}}
