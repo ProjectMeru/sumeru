@@ -59,6 +59,7 @@ export interface SwcBootstrap {
   busEnabled?: boolean;
   docsUrl: string;
   profileUrl: string;
+  features?: Record<string, boolean>;
   workspace?: SwcBootstrapWorkspace;
   translations?: Record<string, string>;
   toasts?: SwcToastMessage[];

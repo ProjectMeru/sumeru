@@ -1,18 +1,18 @@
 import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
-import { forEach } from "../../template/helpers.js";
 import type { SwcWorkspacePayload } from "../../types/workspace.js";
 import { VIEW_FORM, VIEW_MAP } from "../../constants/routes.js";
+import { onMount, useTemplateRef } from "../../runtime/hooks.js";
+import { onWillUnmount } from "../../runtime/lifecycle.js";
 import {
   CollectionBarHost,
   mountCollectionBar,
 } from "../shared/collection-bar-host.js";
+import { mountLeafletMap, type MapMarker } from "./map-leaflet.js";
 
 interface MapViewProps {
   payload: SwcWorkspacePayload;
 }
-
-const OPEN_STREET_MAP_URL = "https://www.openstreetmap.org/";
 
 function numberField(
   row: Record<string, unknown>,
@@ -26,13 +26,21 @@ function numberField(
 
 export class MapView extends SwcComponent<MapViewProps> {
   private collectionBar!: CollectionBarHost;
+  private mapContainerRef!: { current: Element | null };
+  private teardownMap: (() => void) | null = null;
 
   override setup(): void {
+    this.mapContainerRef = useTemplateRef("map-canvas");
     this.collectionBar = mountCollectionBar(
       this.props.payload,
       VIEW_MAP,
       this.env,
     );
+    onMount(() => void this.renderMap());
+    onWillUnmount(() => {
+      this.teardownMap?.();
+      this.teardownMap = null;
+    });
   }
 
   override onPropsChanged(props: MapViewProps): void {
@@ -40,10 +48,12 @@ export class MapView extends SwcComponent<MapViewProps> {
       payload: props.payload,
       viewType: VIEW_MAP,
     });
+    void this.renderMap();
   }
 
   override onWillUnmount(): void {
     this.collectionBar.destroy();
+    this.teardownMap?.();
   }
 
   private latField(): string {
@@ -63,63 +73,63 @@ export class MapView extends SwcComponent<MapViewProps> {
     );
   }
 
-  private openRecord(row: Record<string, unknown>): void {
-    const id = Number(row.id ?? 0);
-    if (id <= 0) return;
-    const payload = this.props.payload;
-    this.env.services.action.openRecord({
-      actionId: payload.actionId,
-      menuId: payload.menuId,
-      recordId: id,
-      viewType: VIEW_FORM,
-    });
-  }
-
-  override template() {
+  private markers(): MapMarker[] {
     const latName = this.latField();
     const lngName = this.lngField();
-    const markers = (this.props.payload.records ?? [])
+    return (this.props.payload.records ?? [])
       .map((row) => {
         const lat = numberField(row, latName);
         const lng = numberField(row, lngName);
         if (lat == null || lng == null) return null;
-        return { row, lat, lng };
+        const id = Number(row.id ?? 0);
+        return {
+          id,
+          lat,
+          lng,
+          label: String(row.name ?? row.display_name ?? id),
+        };
       })
-      .filter(
-        (m): m is { row: Record<string, unknown>; lat: number; lng: number } =>
-          m != null,
-      );
+      .filter((m): m is MapMarker => m != null && m.id > 0);
+  }
 
+  private openRecord(recordId: number): void {
+    const payload = this.props.payload;
+    this.env.services.action.openRecord({
+      actionId: payload.actionId,
+      menuId: payload.menuId,
+      recordId,
+      viewType: VIEW_FORM,
+    });
+  }
+
+  private async renderMap(): Promise<void> {
+    const el = this.mapContainerRef.current;
+    if (!(el instanceof HTMLElement)) return;
+    this.teardownMap?.();
+    this.teardownMap = null;
+    el.innerHTML = "";
+    const markers = this.markers();
+    try {
+      this.teardownMap = await mountLeafletMap(el, markers, (id) =>
+        this.openRecord(id),
+      );
+    } catch {
+      el.textContent = `${markers.length} located record(s). Map tiles unavailable.`;
+    }
+  }
+
+  override template() {
+    const count = this.markers().length;
     return html`
       <div class="sum-collection-view sum-map-view">
         ${this.collectionBar.renderOrPatch()}
         <h2>${this.props.payload.arch.title ?? "Map"}</h2>
-        <p class="sum-map-hint">${markers.length} located record(s).</p>
-        <ul class="sum-map-list">
-          ${forEach(
-            markers,
-            (marker) => Number(marker.row.id ?? 0),
-            (marker) =>
-              html`<li class="sum-map-item">
-                <button
-                  type="button"
-                  class="sum-map-name"
-                  @click=${() => this.openRecord(marker.row)}
-                >
-                  ${String(
-                    marker.row.name ?? marker.row.display_name ?? marker.row.id,
-                  )}
-                </button>
-                <a
-                  class="sum-map-link"
-                  href=${`${OPEN_STREET_MAP_URL}?mlat=${marker.lat}&mlon=${marker.lng}#map=16/${marker.lat}/${marker.lng}`}
-                  target="_blank"
-                  rel="noopener"
-                  >${marker.lat.toFixed(4)}, ${marker.lng.toFixed(4)}</a
-                >
-              </li>`,
-          )}
-        </ul>
+        <p class="sum-map-hint">${count} located record(s).</p>
+        <div
+          class="sum-map-canvas"
+          ref="map-canvas"
+          style="height:480px;border-radius:8px;border:1px solid var(--sum-border,#ddd)"
+        ></div>
       </div>
     `;
   }
