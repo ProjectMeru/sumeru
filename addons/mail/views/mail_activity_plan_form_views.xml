@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_mail_activity_plan_form" model="mail.activity.plan" type="form">
+            <sheet>
+                <group>
+                    <field name="name" string="Name"/>
+                    <field name="model" string="Model"/>
+                    <field name="active" string="Active"/>
+                </group>
+                <notebook>
+                    <page string="Templates">
+                        <field name="template_ids">
+                            <list>
+                                <field name="sequence"/>
+                                <field name="activity_type_id"/>
+                                <field name="summary"/>
+                            </list>
+                        </field>
+                    </page>
+                </notebook>
+            </sheet>
+        </view>
+    </data>
+</sumeru>

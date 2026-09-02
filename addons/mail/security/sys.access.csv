@@ -1,3 +1,7 @@
 id,name,model,group_id,perm_read,perm_write,perm_create,perm_unlink
 access_mail_message_user,access_mail_message_user,mail.message,,1,1,1,0
 access_mail_activity_user,access_mail_activity_user,mail.activity,,1,1,1,1
+access_mail_activity_type_user,access_mail_activity_type_user,mail.activity.type,,1,1,1,1
+access_mail_activity_plan_user,access_mail_activity_plan_user,mail.activity.plan,,1,1,1,1
+access_mail_activity_plan_template_user,access_mail_activity_plan_template_user,mail.activity.plan.template,,1,1,1,1
+access_mail_template_user,access_mail_template_user,mail.template,,1,1,1,1

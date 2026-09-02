@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_mail_activity_type_list" model="mail.activity.type" type="list">
+            <field name="name"/>
+            <field name="summary"/>
+            <field name="category"/>
+            <field name="delay_count"/>
+            <field name="delay_unit"/>
+            <field name="active"/>
+        </view>
+    </data>
+</sumeru>

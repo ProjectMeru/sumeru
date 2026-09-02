@@ -3,5 +3,9 @@
     <data>
         <action id="action_mail.message" type="window" model="mail.message" name="Messages" view_mode="list,form"/>
         <action id="action_mail.activity" type="window" model="mail.activity" name="Activities" view_mode="list,form"/>
+        <action id="action_mail.activity.type" type="window" model="mail.activity.type" name="Activity Types" view_mode="list,form"/>
+        <action id="action_mail.activity.plan" type="window" model="mail.activity.plan" name="Activity Plans" view_mode="list,form"/>
+        <action id="action_mail.activity.plan.template" type="window" model="mail.activity.plan.template" name="Activity Plan Templates" view_mode="list,form"/>
+        <action id="action_mail.template" type="window" model="mail.template" name="Email Templates" view_mode="list,form"/>
     </data>
 </sumeru>
