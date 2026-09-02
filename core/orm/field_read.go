@@ -53,3 +53,9 @@ func RedactSearchResults(ctx context.Context, uid int, model string, rows []map[
 		RedactRecordForRead(ctx, uid, model, rows[i])
 	}
 }
+
+func enrichRecordForRead(ctx context.Context, uid int, modelName string, record map[string]interface{}) {
+	RedactRecordForRead(ctx, uid, modelName, record)
+	_ = ApplyComputes(ctx, modelName, record)
+	_ = ApplyRelatedFields(ctx, modelName, record)
+}

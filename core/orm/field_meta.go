@@ -14,6 +14,20 @@ func IsVirtualField(f FieldDefinition) bool {
 	return false
 }
 
+func fieldDefinitionsByName(model Model) map[string]FieldDefinition {
+	fieldDefs := map[string]FieldDefinition{}
+	if model == nil {
+		return fieldDefs
+	}
+	for _, field := range model.Fields() {
+		if field.Name == "" || field.Name == "id" {
+			continue
+		}
+		fieldDefs[field.Name] = field
+	}
+	return fieldDefs
+}
+
 // FieldDef returns the field definition for model.field, or nil.
 func FieldDef(modelName, fieldName string) *FieldDefinition {
 	inst, ok := Registry[modelName]
