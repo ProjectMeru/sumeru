@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <action id="action_res.config.settings" type="window" model="res.config.settings" name="General Settings" view_mode="form"/>
+    </data>
+</sumeru>

@@ -12,6 +12,8 @@
     "views/core_company_actions.xml",
     "views/core_users_actions.xml",
     "views/platform_actions.xml",
+    "views/res_config_settings_actions.xml",
+    "views/res_config_settings_form_views.xml",
     "views/geo_actions.xml",
     "views/i18n_actions.xml",
     "views/apikey_actions.xml",

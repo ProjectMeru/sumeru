@@ -7,6 +7,7 @@
 
         <!-- sys.menu : Settings application (company registry + users) -->
         <menuitem id="menu_settings_root" name="Settings" sequence="5" web_icon="settings" groups="base.group_user"/>
+        <menuitem id="menu_general_settings" name="General Settings" parent="menu_settings_root" sequence="1" action="base.action_res.config.settings" web_icon="settings" groups="base.group_system"/>
 
         <!-- Companies -->
         <menuitem id="menu_company_section" name="Companies" parent="menu_settings_root" sequence="10" web_icon="building" groups="base.group_user"/>
