@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"sumeru/addons/mail"
+	"sumeru/core/applog"
 	"sumeru/core/metrics"
 	"sumeru/core/orm"
 )
@@ -24,7 +25,29 @@ func InstallModuleByName(ctx context.Context, moduleName string) error {
 	systemContext := orm.ContextWithBypass(ctx, true)
 	installMu.Lock()
 	defer installMu.Unlock()
-	return installModuleUnlocked(systemContext, moduleName)
+	if closure, err := ResolveInstallClosure(DiscoveredAddons, moduleName); err != nil {
+		return err
+	} else {
+		var deps []string
+		for _, name := range closure {
+			if name != moduleName {
+				deps = append(deps, name)
+			}
+		}
+		if len(deps) > 0 {
+			applog.InfoMsg(systemContext, "module", "install",
+				fmt.Sprintf("Installing %s (+ deps: %s)", moduleName, strings.Join(deps, ", ")),
+				map[string]interface{}{"module": moduleName, "depends": deps})
+		} else {
+			applog.InfoMsg(systemContext, "module", "install",
+				fmt.Sprintf("Installing %s", moduleName),
+				map[string]interface{}{"module": moduleName})
+		}
+	}
+	if err := installModuleUnlocked(systemContext, moduleName); err != nil {
+		return err
+	}
+	return runAutoInstallPass(systemContext)
 }
 
 func installModuleUnlocked(ctx context.Context, moduleName string) error {
@@ -46,7 +69,7 @@ func installModuleUnlocked(ctx context.Context, moduleName string) error {
 			continue
 		}
 		if _, has := DiscoveredAddons[dependencyName]; !has {
-			continue
+			return fmt.Errorf("module %q depends on %q which is not on addons_path", moduleName, dependencyName)
 		}
 		moduleRow, err := moduleRow(ctx, dependencyName)
 		if err != nil {
@@ -290,9 +313,11 @@ func SetModuleActive(ctx context.Context, moduleName string, active bool) error 
 
 // ListModules returns sys.module rows for the Apps UI (non-application modules included for completeness).
 func ListModules(ctx context.Context) ([]map[string]interface{}, error) {
+	moduleTable := orm.MustQuotedTableName("sys.module")
+	categoryTable := orm.MustQuotedTableName("sys.module.category")
 	moduleRows, err := orm.DB.QueryContext(ctx,
-		`SELECT id, name, display_name, author, version, description, state, application, active FROM `+
-			orm.MustQuotedTableName("sys.module")+` ORDER BY application DESC, name`,
+		`SELECT m.id, m.name, m.display_name, m.author, m.version, m.description, m.state, m.application, m.active, m.category_id, c.name AS category_name FROM `+
+			moduleTable+` m LEFT JOIN `+categoryTable+` c ON c.id = m.category_id ORDER BY m.application DESC, m.name`,
 	)
 	if err != nil {
 		return nil, err
@@ -300,14 +325,16 @@ func ListModules(ctx context.Context) ([]map[string]interface{}, error) {
 	defer moduleRows.Close()
 
 	var moduleList []map[string]interface{}
-	columnNames := []string{"id", "name", "display_name", "author", "version", "description", "state", "application", "active"}
+	columnNames := []string{"id", "name", "display_name", "author", "version", "description", "state", "application", "active", "category_id", "category_name"}
 
 	for moduleRows.Next() {
 		var id int64
 		var name, display, author, version, state string
 		var desc sql.NullString
+		var categoryName sql.NullString
+		var categoryID sql.NullInt64
 		var application, active bool
-		if err := moduleRows.Scan(&id, &name, &display, &author, &version, &desc, &state, &application, &active); err != nil {
+		if err := moduleRows.Scan(&id, &name, &display, &author, &version, &desc, &state, &application, &active, &categoryID, &categoryName); err != nil {
 			return nil, err
 		}
 		moduleMap := make(map[string]interface{})
@@ -324,6 +351,14 @@ func ListModules(ctx context.Context) ([]map[string]interface{}, error) {
 		moduleMap[columnNames[6]] = state
 		moduleMap[columnNames[7]] = application
 		moduleMap[columnNames[8]] = active
+		if categoryID.Valid {
+			moduleMap[columnNames[9]] = categoryID.Int64
+		}
+		if categoryName.Valid {
+			moduleMap[columnNames[10]] = categoryName.String
+		} else {
+			moduleMap[columnNames[10]] = ""
+		}
 		moduleList = append(moduleList, moduleMap)
 	}
 	return moduleList, moduleRows.Err()
@@ -352,26 +387,11 @@ func reloadInstalledDependencies(ctx context.Context, moduleName string) error {
 
 // transitiveDependencies returns manifest depends (recursive) in topological order.
 func transitiveDependencies(moduleName string) []string {
-	needed := map[string]struct{}{}
-	var walk func(string)
-	walk = func(name string) {
-		addon, ok := DiscoveredAddons[name]
-		if !ok {
-			return
-		}
-		for _, depName := range addon.Manifest.Depends {
-			depName = strings.TrimSpace(depName)
-			if depName == "" || depName == name {
-				continue
-			}
-			if _, has := DiscoveredAddons[depName]; !has {
-				continue
-			}
-			walk(depName)
-			needed[depName] = struct{}{}
-		}
+	needed, err := installClosureSet(DiscoveredAddons, moduleName)
+	if err != nil {
+		return nil
 	}
-	walk(moduleName)
+	delete(needed, moduleName)
 
 	topo, err := sortAddonsTopo(DiscoveredAddons)
 	if err != nil || len(topo) == 0 {

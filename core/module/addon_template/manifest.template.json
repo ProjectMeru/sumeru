@@ -4,7 +4,9 @@
   "version": "1.0.0",
   "depends": ["base"],
   "author": "Your Company",
-  "description": "Short summary shown in Apps.",
+  "summary": "One-line tagline for Apps cards and detail.",
+  "description": "Longer description shown when it differs from the summary.",
+  "category": "Sales",
   "application": true,
   "data": [
     "security/security.xml",
