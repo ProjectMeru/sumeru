@@ -71,3 +71,28 @@ func TestActionHelpNestedInnerXML(t *testing.T) {
 		t.Fatalf("merged action records=%d", len(vl.Records))
 	}
 }
+
+func TestActionSearchViewIDInContext(t *testing.T) {
+	in := []byte(`<sumeru><data>
+		<action id="action_crm" type="window" model="crm.lead" name="Pipeline" view_mode="kanban,list,form"
+			search_view_id="view_crm_pipeline_search" context='{"default_type":"opportunity"}'/>
+	</data></sumeru>`)
+	var vl parser.ViewList
+	if err := xml.Unmarshal(in, &vl); err != nil {
+		t.Fatal(err)
+	}
+	vl.MergeViewListData()
+	if len(vl.Actions) != 1 {
+		t.Fatalf("actions=%d", len(vl.Actions))
+	}
+	rec := vl.Actions[0].ToRecord()
+	var ctx string
+	for _, f := range rec.Field {
+		if f.Name == "context" {
+			ctx = f.Body
+		}
+	}
+	if !strings.Contains(ctx, "search_view_id") || !strings.Contains(ctx, "default_type") {
+		t.Fatalf("context missing search_view_id or default_type: %q", ctx)
+	}
+}

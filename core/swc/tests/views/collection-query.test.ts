@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   activeFilterTags,
   appendDomainTriple,
+  coerceFilterValue,
+  filterOperatorsForField,
   parseDomainJSON,
   parseGroupByCSV,
   removeDomainTriple,
@@ -66,6 +68,13 @@ describe("collection-query", () => {
     expect(togglePresetFilter(["draft", "my"], "draft")).toEqual(["my"]);
   });
 
+  it("enforces exclusive CRM type and won/lost facets", () => {
+    expect(togglePresetFilter(["opportunity"], "lead")).toEqual(["lead"]);
+    expect(togglePresetFilter(["lead", "my"], "opportunity")).toEqual(["my", "opportunity"]);
+    expect(togglePresetFilter(["won"], "lost")).toEqual(["lost"]);
+    expect(togglePresetFilter(["won", "my"], "lost")).toEqual(["my", "lost"]);
+  });
+
   it("toggles group-by fields", () => {
     expect(toggleGroupByField(["state"], "user_id")).toEqual(["state", "user_id"]);
     expect(toggleGroupByField(["state", "user_id"], "state")).toEqual(["user_id"]);
@@ -100,5 +109,18 @@ describe("collection-query", () => {
     const tag = activeFilterTags(q, payload().arch.search).find((t) => t.key === "group:state")!;
     const next = removeFilterTag(q, tag);
     expect(next.groupBy).toEqual(["user_id"]);
+  });
+
+  it("coerces filter values by field type", () => {
+    const fields = payload().arch.search!.filterFields!;
+    expect(coerceFilterValue("priority", "3", fields)).toBe(3);
+    expect(coerceFilterValue("priority", "x", fields)).toBe("x");
+    expect(coerceFilterValue("active", "true", [{ name: "active", type: "boolean" }])).toBe(true);
+  });
+
+  it("returns operators for filter field types", () => {
+    const fields = payload().arch.search!.filterFields!;
+    expect(filterOperatorsForField("priority", fields)).toContain(">");
+    expect(filterOperatorsForField("missing", fields)).toContain("=");
   });
 });

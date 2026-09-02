@@ -29,9 +29,10 @@ type Action struct {
 	Type     string     `xml:"type,attr"`
 	Model    string     `xml:"model,attr"`
 	Name     string     `xml:"name,attr"`
-	ViewMode string     `xml:"view_mode,attr"`
-	ViewID   string     `xml:"view_id,attr"`
-	Context  string     `xml:"context,attr"`
+	ViewMode     string `xml:"view_mode,attr"`
+	ViewID       string `xml:"view_id,attr"`
+	SearchViewID string `xml:"search_view_id,attr"`
+	Context      string `xml:"context,attr"`
 	Domain   string     `xml:"domain,attr"`
 	Help     actionHelp `xml:"help"`
 }
@@ -46,17 +47,20 @@ func (a Action) ToRecord() Record {
 	if d := strings.TrimSpace(a.Domain); d != "" {
 		fields = append(fields, RecordField{Name: "domain", Body: d})
 	}
+	ctxMap := map[string]interface{}{}
+	if c := strings.TrimSpace(a.Context); c != "" {
+		_ = json.Unmarshal([]byte(c), &ctxMap)
+	}
 	if vid := strings.TrimSpace(a.ViewID); vid != "" {
-		ctxMap := map[string]interface{}{}
-		if c := strings.TrimSpace(a.Context); c != "" {
-			_ = json.Unmarshal([]byte(c), &ctxMap)
-		}
 		ctxMap["view_id"] = vid
+	}
+	if svid := strings.TrimSpace(a.SearchViewID); svid != "" {
+		ctxMap["search_view_id"] = svid
+	}
+	if len(ctxMap) > 0 {
 		if b, err := json.Marshal(ctxMap); err == nil {
 			fields = append(fields, RecordField{Name: "context", Body: string(b)})
 		}
-	} else if c := strings.TrimSpace(a.Context); c != "" {
-		fields = append(fields, RecordField{Name: "context", Body: c})
 	}
 	if help := strings.TrimSpace(a.Help.Body); help != "" {
 		fields = append(fields, RecordField{Name: "help", Type: "html", Body: help})

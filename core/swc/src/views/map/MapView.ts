@@ -1,59 +1,33 @@
-import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
-import type { SwcWorkspacePayload } from "../../types/workspace.js";
 import { VIEW_FORM, VIEW_MAP } from "../../constants/routes.js";
 import { onMount, useTemplateRef } from "../../runtime/hooks.js";
-import { onWillUnmount } from "../../runtime/lifecycle.js";
-import {
-  CollectionBarHost,
-  mountCollectionBar,
-} from "../shared/collection-bar-host.js";
+import { CollectionView } from "../shared/collection-view.js";
 import { mountLeafletMap, type MapMarker } from "./map-leaflet.js";
 
-interface MapViewProps {
-  payload: SwcWorkspacePayload;
-}
-
-function numberField(
-  row: Record<string, unknown>,
-  name: string,
-): number | null {
+function numberField(row: Record<string, unknown>, name: string): number | null {
   const raw = row[name];
   if (raw == null || raw === "") return null;
   const n = Number(raw);
   return Number.isFinite(n) ? n : null;
 }
 
-export class MapView extends SwcComponent<MapViewProps> {
-  private collectionBar!: CollectionBarHost;
+export class MapView extends CollectionView {
+  protected readonly collectionViewType = VIEW_MAP;
   private mapContainerRef!: { current: Element | null };
   private teardownMap: (() => void) | null = null;
 
-  override setup(): void {
+  protected override onCollectionSetup(): void {
     this.mapContainerRef = useTemplateRef("map-canvas");
-    this.collectionBar = mountCollectionBar(
-      this.props.payload,
-      VIEW_MAP,
-      this.env,
-    );
     onMount(() => void this.renderMap());
-    onWillUnmount(() => {
-      this.teardownMap?.();
-      this.teardownMap = null;
-    });
   }
 
-  override onPropsChanged(props: MapViewProps): void {
-    this.collectionBar.updateProps({
-      payload: props.payload,
-      viewType: VIEW_MAP,
-    });
+  protected override onCollectionPropsChanged(): void {
     void this.renderMap();
   }
 
-  override onWillUnmount(): void {
-    this.collectionBar.destroy();
+  protected override onCollectionTeardown(): void {
     this.teardownMap?.();
+    this.teardownMap = null;
   }
 
   private latField(): string {
@@ -67,8 +41,7 @@ export class MapView extends SwcComponent<MapViewProps> {
   private lngField(): string {
     return (
       this.props.payload.arch.map?.longitude ||
-      this.props.payload.arch.fields.find((f) => /lng|lon/i.test(f.name))
-        ?.name ||
+      this.props.payload.arch.fields.find((f) => /lng|lon/i.test(f.name))?.name ||
       "longitude"
     );
   }
@@ -110,9 +83,7 @@ export class MapView extends SwcComponent<MapViewProps> {
     el.innerHTML = "";
     const markers = this.markers();
     try {
-      this.teardownMap = await mountLeafletMap(el, markers, (id) =>
-        this.openRecord(id),
-      );
+      this.teardownMap = await mountLeafletMap(el, markers, (id) => this.openRecord(id));
     } catch {
       el.textContent = `${markers.length} located record(s). Map tiles unavailable.`;
     }

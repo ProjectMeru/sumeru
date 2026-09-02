@@ -1,30 +1,12 @@
-import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
-import type { SwcWorkspacePayload } from "../../types/workspace.js";
 import { VIEW_FORM, VIEW_HIERARCHY } from "../../constants/routes.js";
-import { CollectionBarHost, mountCollectionBar } from "../shared/collection-bar-host.js";
+import { CollectionView } from "../shared/collection-view.js";
 import { formatFieldValue } from "../shared/field-display.js";
 import { forEach } from "../../template/helpers.js";
 
-interface HierarchyViewProps {
-  payload: SwcWorkspacePayload;
-}
-
 /** Hierarchy view — indented tree table using parent_field on arch. */
-export class HierarchyView extends SwcComponent<HierarchyViewProps> {
-  private collectionBar!: CollectionBarHost;
-
-  override setup(): void {
-    this.collectionBar = mountCollectionBar(this.props.payload, VIEW_HIERARCHY, this.env);
-  }
-
-  override onPropsChanged(props: HierarchyViewProps): void {
-    this.collectionBar.updateProps({ payload: props.payload, viewType: VIEW_HIERARCHY });
-  }
-
-  override onWillUnmount(): void {
-    this.collectionBar.destroy();
-  }
+export class HierarchyView extends CollectionView {
+  protected readonly collectionViewType = VIEW_HIERARCHY;
 
   private columns() {
     return this.props.payload.arch.fields.filter((f) => !f.invisible);

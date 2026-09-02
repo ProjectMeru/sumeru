@@ -729,6 +729,19 @@
   color: var(--sum-ink);
 }
 
+.sum-statusbar-stage--current.sum-statusbar-stage--color-0 { border-color: #875a7b; color: #875a7b; }
+.sum-statusbar-stage--current.sum-statusbar-stage--color-1 { border-color: #9c9c9c; color: #666; }
+.sum-statusbar-stage--current.sum-statusbar-stage--color-2 { border-color: #67917a; color: #67917a; }
+.sum-statusbar-stage--current.sum-statusbar-stage--color-3 { border-color: #a06666; color: #a06666; }
+.sum-statusbar-stage--current.sum-statusbar-stage--color-4 { border-color: #8899aa; color: #556677; }
+.sum-statusbar-stage--current.sum-statusbar-stage--color-5 { border-color: #d4a017; color: #b8860b; }
+.sum-statusbar-stage--current.sum-statusbar-stage--color-6 { border-color: #6a5acd; color: #6a5acd; }
+.sum-statusbar-stage--current.sum-statusbar-stage--color-7 { border-color: #4682b4; color: #4682b4; }
+.sum-statusbar-stage--current.sum-statusbar-stage--color-8 { border-color: #c0392b; color: #c0392b; }
+.sum-statusbar-stage--current.sum-statusbar-stage--color-9 { border-color: #e67e22; color: #e67e22; }
+.sum-statusbar-stage--current.sum-statusbar-stage--color-10 { border-color: #27ae60; color: #27ae60; }
+.sum-statusbar-stage--current.sum-statusbar-stage--color-11 { border-color: #3498db; color: #3498db; }
+
 .sum-priority-stars {
   display: inline-flex;
   align-items: center;

@@ -1,21 +1,9 @@
-import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
-import type { SwcWorkspacePayload } from "../../types/workspace.js";
 import { VIEW_COHORT } from "../../constants/routes.js";
-import { CollectionBarHost, mountCollectionBar } from "../shared/collection-bar-host.js";
-
-interface CohortViewProps {
-  payload: SwcWorkspacePayload;
-}
+import { CollectionView } from "../shared/collection-view.js";
+import { parseArchDate, resolveArchDateField } from "../shared/arch-date.js";
 
 type CohortInterval = "week" | "month";
-
-function parseDate(raw: unknown): Date | null {
-  const text = String(raw ?? "").trim();
-  if (!text) return null;
-  const date = new Date(text);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
 
 function bucketKey(date: Date, interval: CohortInterval): string {
   if (interval === "month") {
@@ -29,33 +17,20 @@ function bucketKey(date: Date, interval: CohortInterval): string {
   return `${tmp.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
 }
 
-export class CohortView extends SwcComponent<CohortViewProps> {
-  private collectionBar!: CollectionBarHost;
-
-  override setup(): void {
-    this.collectionBar = mountCollectionBar(this.props.payload, VIEW_COHORT, this.env);
-  }
-
-  override onPropsChanged(props: CohortViewProps): void {
-    this.collectionBar.updateProps({ payload: props.payload, viewType: VIEW_COHORT });
-  }
-
-  override onWillUnmount(): void {
-    this.collectionBar.destroy();
-  }
+/** Cohort view — retention-style table grouped by date_start bucket. */
+export class CohortView extends CollectionView {
+  protected readonly collectionViewType = VIEW_COHORT;
 
   private dateField(): string {
-    return this.props.payload.arch.cohort?.dateStart
-      || this.props.payload.arch.calendar?.dateStart
-      || this.props.payload.arch.gantt?.dateStart
-      || this.props.payload.arch.fields.find((f) => f.type === "date" || f.type === "datetime")?.name
-      || "create_date";
+    return resolveArchDateField(this.props.payload.arch, ["cohort", "calendar", "gantt"], "create_date");
   }
 
   private measureField(): string {
-    return this.props.payload.arch.cohort?.measure
-      || this.props.payload.arch.fields.find((f) => f.pivotType === "measure")?.name
-      || "";
+    return (
+      this.props.payload.arch.cohort?.measure ||
+      this.props.payload.arch.fields.find((f) => f.pivotType === "measure")?.name ||
+      ""
+    );
   }
 
   private interval(): CohortInterval {
@@ -69,7 +44,7 @@ export class CohortView extends SwcComponent<CohortViewProps> {
     const interval = this.interval();
     const groups = new Map<string, number>();
     for (const row of this.props.payload.records ?? []) {
-      const date = parseDate(row[dateField]);
+      const date = parseArchDate(row[dateField]);
       if (!date) continue;
       const key = bucketKey(date, interval);
       const amount = measureField ? Number(row[measureField] ?? 0) : 1;

@@ -334,6 +334,35 @@
   background: color-mix(in srgb, var(--sum-accent, var(--sum-header)) 8%, var(--sum-surface-alt));
 }
 
+.sum-search-panel-facets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0 0 0.5rem;
+}
+
+.sum-search-facet {
+  border: 1px solid var(--sum-line);
+  background: var(--sum-surface);
+  color: var(--sum-ink);
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+  font-size: var(--sum-font-size-sm);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.sum-search-facet:hover {
+  border-color: color-mix(in srgb, var(--sum-header) 45%, var(--sum-line));
+}
+
+.sum-search-facet--active {
+  border-color: var(--sum-header);
+  background: color-mix(in srgb, var(--sum-header) 16%, var(--sum-surface));
+  font-weight: var(--sum-font-weight-semibold);
+}
+
 .sum-control-bar-search {
   flex: 1 1 120px;
   min-width: 6rem;
@@ -942,6 +971,14 @@
   font-size: var(--sum-font-size-sm);
 }
 
+.sum-ws-toolbar-right .sum-statusbar-stages {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  max-width: 100%;
+}
+
 .sum-list-title {
   margin: 0;
   font-size: var(--sum-font-size-lg);
@@ -1340,6 +1377,26 @@
   border-bottom: 1px solid var(--sum-line);
   font-weight: var(--sum-font-weight-semibold);
   font-size: var(--sum-font-size-sm);
+  border-top: 3px solid var(--sum-line-strong);
+}
+
+.sum-kanban-stage-header--color-0 { border-top-color: #875a7b; }
+.sum-kanban-stage-header--color-1 { border-top-color: #9c9c9c; }
+.sum-kanban-stage-header--color-2 { border-top-color: #67917a; }
+.sum-kanban-stage-header--color-3 { border-top-color: #a06666; }
+.sum-kanban-stage-header--color-4 { border-top-color: #8899aa; }
+.sum-kanban-stage-header--color-5 { border-top-color: #d4a017; }
+.sum-kanban-stage-header--color-6 { border-top-color: #6a5acd; }
+.sum-kanban-stage-header--color-7 { border-top-color: #4682b4; }
+.sum-kanban-stage-header--color-8 { border-top-color: #c0392b; }
+.sum-kanban-stage-header--color-9 { border-top-color: #e67e22; }
+.sum-kanban-stage-header--color-10 { border-top-color: #27ae60; }
+.sum-kanban-stage-header--color-11 { border-top-color: #3498db; }
+
+.sum-kanban-card-activity {
+  margin-top: 0.35rem;
+  font-size: var(--sum-font-size-xs, 0.75rem);
+  color: var(--sum-muted);
 }
 
 .sum-kanban-stage-count {

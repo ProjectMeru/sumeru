@@ -1,32 +1,14 @@
-import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
-import type { SwcArchField, SwcWorkspacePayload } from "../../types/workspace.js";
-import { renderKanbanCardInner } from "./kanban-card.js";
+import type { SwcArchField } from "../../types/workspace.js";
+import { renderKanbanCardInner, isKanbanCardRotting } from "./kanban-card.js";
 import { RECORD_UPDATED, VIEW_FORM, VIEW_KANBAN } from "../../constants/routes.js";
 import { SwcError } from "../../runtime/error.js";
 import { inputValueFromEvent } from "../../widgets/field-events.js";
-import { CollectionBarHost, mountCollectionBar } from "../shared/collection-bar-host.js";
+import { CollectionView } from "../shared/collection-view.js";
 
-interface KanbanViewProps {
-  payload: SwcWorkspacePayload;
-}
-
-export class KanbanView extends SwcComponent<KanbanViewProps> {
+export class KanbanView extends CollectionView {
+  protected readonly collectionViewType = VIEW_KANBAN;
   private drafts: Record<string, string> = {};
-  private collectionBar!: CollectionBarHost;
-
-  override setup(): void {
-    this.collectionBar = mountCollectionBar(this.props.payload, VIEW_KANBAN, this.env);
-  }
-
-  override onPropsChanged(props: KanbanViewProps): void {
-    this.collectionBar.updateProps({ payload: props.payload, viewType: VIEW_KANBAN });
-  }
-
-  override onWillUnmount(): void {
-    this.collectionBar.destroy();
-  }
-
   private cardFields(): SwcArchField[] {
     return this.props.payload.arch.fields.filter((f) => !f.invisible);
   }
@@ -87,12 +69,13 @@ export class KanbanView extends SwcComponent<KanbanViewProps> {
   private renderCard(
     row: Record<string, unknown>,
     fields: SwcArchField[],
-    options: { draggable?: boolean; dropValue?: number } = {},
+    options: { draggable?: boolean; dropValue?: number; rottingDays?: number } = {},
   ) {
     const draggable = Boolean(options.draggable);
     const dropValue = options.dropValue;
+    const rotting = isKanbanCardRotting(row, options.rottingDays ?? 7);
     return html`<div
-      class="sum-kanban-card"
+      class=${rotting ? "sum-kanban-card sum-kanban-card--rotting" : "sum-kanban-card"}
       draggable=${draggable ? "true" : undefined}
       @click=${() => this.openCard(row)}
       @dragstart=${draggable
@@ -109,6 +92,13 @@ export class KanbanView extends SwcComponent<KanbanViewProps> {
     >
       ${renderKanbanCardInner(row, fields)}
     </div>`;
+  }
+
+  private stageHeaderClass(color: number): string {
+    if (color >= 0 && color <= 11) {
+      return `sum-kanban-stage-header sum-kanban-stage-header--color-${color}`;
+    }
+    return "sum-kanban-stage-header";
   }
 
   override template() {
@@ -135,13 +125,17 @@ export class KanbanView extends SwcComponent<KanbanViewProps> {
           <div class="sum-kanban-stage-columns">
             ${kanban.columns.map(
               (col) => html`<div class="sum-kanban-stage-column" data-column=${String(col.value)}>
-                <div class="sum-kanban-stage-header">
+                <div class=${this.stageHeaderClass(col.color)}>
                   <span>${col.label}</span>
                   <span class="sum-kanban-stage-count">${String(col.records.length)}</span>
                 </div>
                 <div class="sum-kanban-cards">
                   ${col.records.map((row) =>
-                    this.renderCard(row, fields, { draggable: kanban.draggable, dropValue: col.value }),
+                    this.renderCard(row, fields, {
+                      draggable: kanban.draggable,
+                      dropValue: col.value,
+                      rottingDays: col.rottingDays,
+                    }),
                   )}
                 </div>
                 ${kanban.quickCreate

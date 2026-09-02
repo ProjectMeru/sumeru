@@ -391,7 +391,7 @@ func loadWorkspaceListData(ctx context.Context, in workspaceLoadInput) error {
 	viewRecord := in.ViewRecord
 	targetModel := in.Resolved.targetModel
 	req := in.Req
-	searchView := loadSearchView(ctx, targetModel)
+	searchView := loadSearchViewForAction(ctx, targetModel, in.ActionData)
 	domain := workspaceListDomain(ctx, listDomainInput{
 		ActionData:  in.ActionData,
 		View:        in.Resolved.view,
@@ -429,7 +429,7 @@ func loadWorkspaceCollectionData(ctx context.Context, in workspaceLoadInput, row
 	viewRecord := in.ViewRecord
 	targetModel := in.Resolved.targetModel
 	req := in.Req
-	searchView := loadSearchView(ctx, targetModel)
+	searchView := loadSearchViewForAction(ctx, targetModel, in.ActionData)
 	domain := workspaceListDomain(ctx, listDomainInput{
 		ActionData:  in.ActionData,
 		View:        in.Resolved.view,
@@ -450,7 +450,7 @@ func loadWorkspaceKanbanData(ctx context.Context, in workspaceLoadInput) error {
 	viewRecord := in.ViewRecord
 	resolved := in.Resolved
 	req := in.Req
-	searchView := loadSearchView(ctx, resolved.targetModel)
+	searchView := loadSearchViewForAction(ctx, resolved.targetModel, in.ActionData)
 	domain := workspaceListDomain(ctx, listDomainInput{
 		ActionData:  in.ActionData,
 		View:        resolved.view,
@@ -474,7 +474,7 @@ func loadWorkspaceKanbanData(ctx context.Context, in workspaceLoadInput) error {
 		for _, c := range columns {
 			viewRecord.KanbanColumns = append(viewRecord.KanbanColumns, render.KanbanColumn{
 				Value: c.Value, Label: c.Label, Sequence: c.Sequence,
-				Color: c.Color, Fold: c.Fold, Records: c.Records,
+				Color: c.Color, RottingDays: c.RottingDays, Fold: c.Fold, Records: c.Records,
 			})
 		}
 	}
@@ -485,7 +485,7 @@ func loadWorkspacePivotData(ctx context.Context, in workspaceLoadInput) error {
 	viewRecord := in.ViewRecord
 	resolved := in.Resolved
 	req := in.Req
-	searchView := loadSearchView(ctx, resolved.targetModel)
+	searchView := loadSearchViewForAction(ctx, resolved.targetModel, in.ActionData)
 	domain := workspaceListDomain(ctx, listDomainInput{
 		ActionData:  in.ActionData,
 		View:        resolved.view,
@@ -523,6 +523,34 @@ func searchWorkspaceRows(ctx context.Context, in workspaceLoadInput, rowLimit in
 		SearchQuery:        "",
 		RowLimit:           rowLimit,
 	})
+}
+
+func loadSearchViewForAction(ctx context.Context, model string, actionData map[string]interface{}) *parser.View {
+	if searchViewID := actionSearchViewIDFromContext(actionData); searchViewID != "" {
+		if view := loadSearchViewByName(ctx, model, searchViewID); view != nil {
+			return view
+		}
+	}
+	return loadSearchView(ctx, model)
+}
+
+func loadSearchViewByName(ctx context.Context, model, viewName string) *parser.View {
+	if orm.DB == nil {
+		return nil
+	}
+	viewData, err := orm.FindUIViewByName(ctx, model, "search", viewName)
+	if err != nil || viewData == nil {
+		return nil
+	}
+	arch := strings.TrimSpace(orm.AsString(viewData["arch"]))
+	if arch == "" {
+		return nil
+	}
+	parsed, err := parser.ParseViewFromArch(arch)
+	if err != nil {
+		return nil
+	}
+	return parsed
 }
 
 func loadSearchView(ctx context.Context, model string) *parser.View {

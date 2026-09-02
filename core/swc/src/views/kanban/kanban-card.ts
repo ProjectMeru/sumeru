@@ -25,6 +25,34 @@ function displayValue(row: Record<string, unknown>, field: SwcArchField): string
   return String(raw);
 }
 
+export function isKanbanCardRotting(row: Record<string, unknown>, thresholdDays = 7): boolean {
+  if (thresholdDays <= 0) {
+    thresholdDays = 7;
+  }
+  const raw = row.date_last_stage_update;
+  if (raw == null || raw === false || raw === "") {
+    return false;
+  }
+  const text = String(raw).trim();
+  const updated = Date.parse(text.length >= 10 ? text.slice(0, 10) : text);
+  if (Number.isNaN(updated)) {
+    return false;
+  }
+  const ageMs = Date.now() - updated;
+  return ageMs >= thresholdDays * 24 * 60 * 60 * 1000;
+}
+
+function renderActivityIndicator(row: Record<string, unknown>): TemplateResult | null {
+  const deadline = row.activity_deadline;
+  const summary = row.activity_summary;
+  if ((deadline == null || deadline === "") && (summary == null || summary === "")) {
+    return null;
+  }
+  const label = summary ? String(summary) : "Activity";
+  const when = deadline ? String(deadline) : "";
+  return html`<div class="sum-kanban-card-activity" title=${when}>📅 ${label}${when ? html` · ${when}` : ""}</div>`;
+}
+
 function imageSrc(row: Record<string, unknown>, field: SwcArchField): string {
   const raw = row[field.name];
   if (typeof raw !== "string" || !raw.trim()) return "";
@@ -101,10 +129,11 @@ export function renderKanbanCardInner(row: Record<string, unknown>, fields: SwcA
     .filter(Boolean)
     .map((text) => html`<div class="sum-kanban-card-sub">${text}</div>`);
   const priorityEl = priorityField ? renderPriority(row, priorityField) : null;
+  const activityEl = renderActivityIndicator(row);
 
   if (media) {
-    return html`${media}<div class="sum-kanban-card-body">${titleEl}${subEls}${priorityEl}</div>`;
+    return html`${media}<div class="sum-kanban-card-body">${titleEl}${subEls}${priorityEl}${activityEl}</div>`;
   }
 
-  return html`${titleEl}${subEls}${priorityEl}`;
+  return html`${titleEl}${subEls}${priorityEl}${activityEl}`;
 }

@@ -1,38 +1,15 @@
-import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
 import { forEach } from "../../template/helpers.js";
-import type { SwcWorkspacePayload } from "../../types/workspace.js";
 import { VIEW_FORM, VIEW_GANTT } from "../../constants/routes.js";
-import { CollectionBarHost, mountCollectionBar } from "../shared/collection-bar-host.js";
-
-interface GanttViewProps {
-  payload: SwcWorkspacePayload;
-}
+import { CollectionView } from "../shared/collection-view.js";
+import { parseArchDate, resolveArchDateField } from "../shared/arch-date.js";
 
 type GanttScale = "day" | "week" | "month";
 
-function parseDate(raw: unknown): Date | null {
-  const text = String(raw ?? "").trim();
-  if (!text) return null;
-  const date = new Date(text);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
-export class GanttView extends SwcComponent<GanttViewProps> {
+/** Gantt view — horizontal timeline bars from date_start / date_stop arch fields. */
+export class GanttView extends CollectionView {
+  protected readonly collectionViewType = VIEW_GANTT;
   private scale: GanttScale = "week";
-  private collectionBar!: CollectionBarHost;
-
-  override setup(): void {
-    this.collectionBar = mountCollectionBar(this.props.payload, VIEW_GANTT, this.env);
-  }
-
-  override onPropsChanged(props: GanttViewProps): void {
-    this.collectionBar.updateProps({ payload: props.payload, viewType: VIEW_GANTT });
-  }
-
-  override onWillUnmount(): void {
-    this.collectionBar.destroy();
-  }
 
   private setScale(next: GanttScale): void {
     this.scale = next;
@@ -40,16 +17,18 @@ export class GanttView extends SwcComponent<GanttViewProps> {
   }
 
   private dateStartField(): string {
-    return this.props.payload.arch.gantt?.dateStart
-      || this.props.payload.arch.calendar?.dateStart
-      || this.props.payload.arch.fields.find((f) => f.type === "date" || f.type === "datetime")?.name
-      || "date_start";
+    return (
+      this.props.payload.arch.gantt?.dateStart ||
+      resolveArchDateField(this.props.payload.arch, ["gantt", "calendar"], "date_start")
+    );
   }
 
   private dateStopField(): string {
-    return this.props.payload.arch.gantt?.dateStop
-      || this.props.payload.arch.calendar?.dateStop
-      || this.dateStartField();
+    return (
+      this.props.payload.arch.gantt?.dateStop ||
+      this.props.payload.arch.calendar?.dateStop ||
+      this.dateStartField()
+    );
   }
 
   private openRecord(row: Record<string, unknown>): void {
@@ -70,8 +49,8 @@ export class GanttView extends SwcComponent<GanttViewProps> {
     let min = Infinity;
     let max = -Infinity;
     for (const row of this.props.payload.records ?? []) {
-      const start = parseDate(row[startField])?.getTime();
-      const stop = parseDate(row[stopField])?.getTime() ?? start;
+      const start = parseArchDate(row[startField])?.getTime();
+      const stop = parseArchDate(row[stopField])?.getTime() ?? start;
       if (start == null) continue;
       min = Math.min(min, start);
       max = Math.max(max, stop ?? start);
@@ -108,8 +87,8 @@ export class GanttView extends SwcComponent<GanttViewProps> {
         </div>
         <ul class="sum-gantt-rows">
           ${forEach(rows, (row) => Number(row.id ?? 0), (row) => {
-            const from = parseDate(row[startField])?.getTime();
-            const to = parseDate(row[stopField])?.getTime() ?? from;
+            const from = parseArchDate(row[startField])?.getTime();
+            const to = parseArchDate(row[stopField])?.getTime() ?? from;
             if (from == null || to == null) {
               return html`<li class="sum-gantt-row">
                 <span class="sum-gantt-label">${String(row.name ?? row.display_name ?? row.id)}</span>

@@ -8,6 +8,7 @@ import type { FieldWidgetProps } from "./field-props.js";
 interface StageRow {
   id: number | string;
   label: string;
+  color?: number;
 }
 
 function isClickable(field: SwcArchField): boolean {
@@ -48,11 +49,17 @@ export class StatusbarField extends SwcComponent<FieldWidgetProps> {
       return;
     }
 
-    const rows = await this.env.services.rpc.searchRead(comodel, [], ["id", "name", "sequence"], 200);
+    const rows = await this.env.services.rpc.searchRead(
+      comodel,
+      [["active", "=", true]],
+      ["id", "name", "sequence", "color"],
+      200,
+    );
     rows.sort((a, b) => Number(a.sequence ?? 0) - Number(b.sequence ?? 0));
     this.stages = rows.map((row) => ({
       id: Number(row.id),
       label: String(row.name ?? row.id),
+      color: Number(row.color ?? -1),
     }));
     this.loaded = true;
     this.asyncCtrl.commitIfCurrent(gen);
@@ -73,8 +80,12 @@ export class StatusbarField extends SwcComponent<FieldWidgetProps> {
     return html`<div class="sum-statusbar-stages" role="group" aria-label=${field.string ?? field.name}>
       ${this.stages.map((stage) => {
         const active = stage.id === current || String(stage.id) === String(current);
+        const colorClass =
+          active && stage.color != null && stage.color >= 0 && stage.color <= 11
+            ? ` sum-statusbar-stage--color-${stage.color}`
+            : "";
         const stageClass = active
-          ? "sum-statusbar-stage sum-statusbar-stage--current"
+          ? `sum-statusbar-stage sum-statusbar-stage--current${colorClass}`
           : "sum-statusbar-stage";
         return html`<button type="button" class=${stageClass} disabled=${!clickable ? "disabled" : undefined} @click=${() => {
           if (!clickable) return;

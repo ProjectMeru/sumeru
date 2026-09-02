@@ -14,6 +14,11 @@ import { renderField as defaultRenderField } from "../../widgets/registry.js";
 import { fieldInputId, fieldPlaceholder, fieldAutocomplete } from "../../widgets/field-shell.js";
 import { inputValueFromEvent } from "../../widgets/field-events.js";
 import { isFieldReadonly } from "../../model/modifiers.js";
+import {
+  groupClassNames,
+  packGroupRows,
+  type GroupLayoutContext,
+} from "./form-group-layout.js";
 
 export type RenderFieldFn = (
   field: SwcArchField,
@@ -255,66 +260,6 @@ function renderTitleDiv(
     ${renderTitleBody(rf, div, record, readonly)}
   </div>`;
 }
-
-type GroupLayoutContext = "sheet" | "row" | "inner";
-
-/** Max logical columns for an outer group row (group `col` attribute, else nested child count). */
-function outerGroupMaxCols(group: SwcArchGroup, childCount: number): number {
-  if (group.col && group.col > 0) return group.col;
-  return Math.max(childCount, 1);
-}
-
-function childGroupColspan(group: SwcArchGroup): number {
-  return group.colspan && group.colspan > 0 ? group.colspan : 1;
-}
-
-/** Map colspan within a maxCols row onto a 12-column grid span. */
-function gridSpan12(maxCols: number, colspan: number): number {
-  const cols = Math.max(maxCols, 1);
-  const span = Math.max(colspan, 1);
-  return Math.min(12, Math.max(1, Math.round((span * 12) / cols)));
-}
-
-interface GroupRowItem {
-  group: SwcArchGroup;
-  gridSpan: number;
-}
-
-function packGroupRows(parent: SwcArchGroup, nested: SwcArchGroup[]): GroupRowItem[][] {
-  const maxCols = outerGroupMaxCols(parent, nested.length);
-  const rows: GroupRowItem[][] = [];
-  let current: GroupRowItem[] = [];
-  let used = 0;
-
-  for (const child of nested) {
-    const colspan = childGroupColspan(child);
-    if (used + colspan > maxCols && current.length > 0) {
-      rows.push(current);
-      current = [];
-      used = 0;
-    }
-    current.push({ group: child, gridSpan: gridSpan12(maxCols, colspan) });
-    used += colspan;
-  }
-  if (current.length > 0) rows.push(current);
-  return rows;
-}
-
-function groupClassNames(group: SwcArchGroup, ctx: GroupLayoutContext, plain: boolean): string {
-  const parts = ["sum-form-group"];
-  if (plain || !group.string) {
-    parts.push("sum-form-group--plain");
-  } else if (ctx === "row" || ctx === "inner") {
-    parts.push("sum-form-group--col");
-  } else {
-    parts.push("sum-form-group--full");
-  }
-  if ((group.fields ?? []).length > 0) {
-    parts.push("sum-form-group--row-layout");
-  }
-  return parts.join(" ");
-}
-
 function renderGroup(
   rf: RenderFieldFn,
   group: SwcArchGroup,

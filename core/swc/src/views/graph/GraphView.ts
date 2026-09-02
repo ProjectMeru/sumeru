@@ -1,39 +1,36 @@
 import Chart from "chart.js/auto";
-import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
-import type { SwcWorkspacePayload } from "../../types/workspace.js";
 import { onWillStart, onWillUnmount } from "../../runtime/lifecycle.js";
 import { onMount, useTemplateRef } from "../../runtime/hooks.js";
 import { VIEW_GRAPH, VIEW_LIST } from "../../constants/routes.js";
-import { CollectionBarHost, mountCollectionBar } from "../shared/collection-bar-host.js";
+import { CollectionView } from "../shared/collection-view.js";
 import { navigateCollectionQuery } from "../shared/collection-query.js";
 import { renderGraphExportLink } from "../shared/view-toolbar.js";
-
-interface GraphViewProps {
-  payload: SwcWorkspacePayload;
-}
 
 const CHART_PALETTE = ["#2563eb", "#16a34a", "#f59e0b", "#dc2626", "#7c3aed", "#0891b2"];
 
 /** Graph view over read_group RPC (bar / line / pie) via Chart.js. */
-export class GraphView extends SwcComponent<GraphViewProps> {
+export class GraphView extends CollectionView {
+  protected readonly collectionViewType = VIEW_GRAPH;
   private groups: Record<string, unknown>[] = [];
   private measureField = "id";
   private groupField = "create_date";
   private chart = "bar";
-  private collectionBar!: CollectionBarHost;
   private chartInstance: Chart | null = null;
   private chartInstanceType: "bar" | "line" | "pie" | "" = "";
   private canvasRef!: { current: Element | null };
   private chartDataKey = "";
   private loadSeq = 0;
 
-  override setup(): void {
+  protected override onCollectionSetup(): void {
     this.canvasRef = useTemplateRef("graph-canvas");
-    this.collectionBar = mountCollectionBar(this.props.payload, VIEW_GRAPH, this.env);
     onWillStart(() => this.load());
     onMount(() => this.syncChart());
     onWillUnmount(() => this.destroyChart());
+  }
+
+  protected override onCollectionPropsChanged(): void {
+    void this.load();
   }
 
   override afterPatch(): void {
@@ -43,15 +40,6 @@ export class GraphView extends SwcComponent<GraphViewProps> {
     }
     this.chartDataKey = key;
     this.syncChart();
-  }
-
-  override onPropsChanged(props: GraphViewProps): void {
-    this.collectionBar.updateProps({ payload: props.payload, viewType: VIEW_GRAPH });
-    void this.load();
-  }
-
-  override onWillUnmount(): void {
-    this.collectionBar.destroy();
   }
 
   private async load(): Promise<void> {

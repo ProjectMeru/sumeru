@@ -109,15 +109,16 @@ export class ActionService {
   }
 
   private navigateCurrent(open: ActionOpenSpec): void {
+    const current = this.router?.parse();
     this.navigate(
       RouterService.buildUrl({
-        actionId: open.actionId ?? 0,
+        actionId: open.actionId ?? current?.actionId ?? 0,
         viewType: open.viewType || VIEW_FORM,
         recordId: open.recordId ?? 0,
         model: open.model,
         formEdit: false,
         listSearch: "",
-        menuId: "",
+        menuId: current?.menuId ?? "",
       }),
     );
   }

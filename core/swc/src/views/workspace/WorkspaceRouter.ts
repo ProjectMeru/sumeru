@@ -7,6 +7,7 @@ import { registry, type ViewConstructor } from "../../runtime/registry.js";
 import { logWorkspacePayload, logViewArch } from "../../devtools/debug.js";
 import { ShellPageView } from "../../shell/ShellPageView.js";
 import { syncWorkspaceViewTabs } from "../../shell/view-tab-sync.js";
+import { syncWorkspaceBreadcrumbs } from "../../shell/breadcrumb-sync.js";
 import { ACTION_CLOSED, RECORD_UPDATED, SWC_API_BASE } from "../../constants/routes.js";
 import { RouterService } from "../../services/router.js";
 import { runWillStart } from "../../runtime/lifecycle.js";
@@ -64,6 +65,7 @@ export class WorkspaceRouter extends SwcComponent {
       logWorkspacePayload("workspace", this.payload);
       logViewArch(this.payload.arch);
       syncWorkspaceViewTabs(this.payload.viewTabs);
+      syncWorkspaceBreadcrumbs(this.payload.breadcrumbs);
       this.syncView();
     } catch (err) {
       this.error = err instanceof SwcError ? err.message : String(err);
@@ -113,6 +115,7 @@ export class WorkspaceRouter extends SwcComponent {
       .then((payload) => {
         this.payload = payload;
         syncWorkspaceViewTabs(payload.viewTabs);
+        syncWorkspaceBreadcrumbs(payload.breadcrumbs);
         this.syncView();
         this.patch();
       })

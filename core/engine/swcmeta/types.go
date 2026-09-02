@@ -172,12 +172,13 @@ type KanbanMeta struct {
 }
 
 type KanbanColumn struct {
-	Value    int64                    `json:"value"`
-	Label    string                   `json:"label"`
-	Sequence int                      `json:"sequence"`
-	Color    int                      `json:"color"`
-	Fold     bool                     `json:"fold"`
-	Records  []map[string]interface{} `json:"records"`
+	Value       int64                    `json:"value"`
+	Label       string                   `json:"label"`
+	Sequence    int                      `json:"sequence"`
+	Color       int                      `json:"color"`
+	RottingDays int                      `json:"rottingDays,omitempty"`
+	Fold        bool                     `json:"fold"`
+	Records     []map[string]interface{} `json:"records"`
 }
 
 type PivotMeta struct {

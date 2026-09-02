@@ -148,13 +148,14 @@ type ViewSwitchTab struct {
 
 // KanbanColumn is one grouped kanban lane (e.g. a pipeline stage).
 type KanbanColumn struct {
-	Value    int64
-	Label    string
-	Sequence int
-	Color    int
-	Tooltip  string
-	Fold     bool
-	Records  []map[string]interface{}
+	Value       int64
+	Label       string
+	Sequence    int
+	Color       int
+	RottingDays int
+	Tooltip     string
+	Fold        bool
+	Records     []map[string]interface{}
 }
 
 // SidebarMenu is a sidebar group with child menu links.

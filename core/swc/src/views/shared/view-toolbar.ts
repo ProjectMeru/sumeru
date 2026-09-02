@@ -80,15 +80,19 @@ function pivotExportFields(payload: SwcWorkspacePayload): { groups: string[]; me
   return { groups, measures };
 }
 
+function renderReadGroupExportLink(url: string, label = "Export CSV"): HTMLElement {
+  return linkButton(url, label);
+}
+
 export function renderPivotExportLink(payload: SwcWorkspacePayload): HTMLElement | null {
   const { groups, measures } = pivotExportFields(payload);
   if (!groups.length || !measures.length) return null;
-  return linkButton(pivotExportUrl(payload, groups, measures), "Export CSV");
+  return renderReadGroupExportLink(pivotExportUrl(payload, groups, measures));
 }
 
 export function renderGraphExportLink(payload: SwcWorkspacePayload, groupField: string, measureField: string): HTMLElement | null {
   if (!groupField || !measureField) return null;
-  return linkButton(graphExportUrl(payload, groupField, measureField), "Export CSV");
+  return renderReadGroupExportLink(graphExportUrl(payload, groupField, measureField));
 }
 
 export type ToolbarIconName = "search" | "filter" | "group" | "favorite" | "download" | "chevron" | "close";
@@ -256,6 +260,12 @@ export type ReportActionEntry = {
   node: HTMLElement;
 };
 
+const EXPORT_FORMAT_LINKS = [
+  { fmt: "csv", route: EXPORT_CSV_ROUTE, label: "Export CSV" },
+  { fmt: "pdf", route: EXPORT_PDF_ROUTE, label: "Export PDF" },
+  { fmt: "xlsx", route: EXPORT_XLSX_ROUTE, label: "Export Excel" },
+] as const;
+
 export function buildReportActionEntries(
   payload: SwcWorkspacePayload,
   fields: string,
@@ -273,23 +283,13 @@ export function buildReportActionEntries(
       .map((f) => f.trim().toLowerCase())
       .filter(Boolean);
     const showAll = formats.length === 0;
-    if (showAll || formats.includes("csv")) {
-      entries.push({
-        label: "Export CSV",
-        node: linkButton(`${EXPORT_CSV_ROUTE}?${exportParams.toString()}`, "Export CSV", "sum-popover-menu-link"),
-      });
-    }
-    if (showAll || formats.includes("pdf")) {
-      entries.push({
-        label: "Export PDF",
-        node: linkButton(`${EXPORT_PDF_ROUTE}?${exportParams.toString()}`, "Export PDF", "sum-popover-menu-link"),
-      });
-    }
-    if (formats.includes("xlsx")) {
-      entries.push({
-        label: "Export Excel",
-        node: linkButton(`${EXPORT_XLSX_ROUTE}?${exportParams.toString()}`, "Export Excel", "sum-popover-menu-link"),
-      });
+    for (const { fmt, route, label } of EXPORT_FORMAT_LINKS) {
+      if (showAll || formats.includes(fmt)) {
+        entries.push({
+          label,
+          node: linkButton(`${route}?${exportParams.toString()}`, label, "sum-popover-menu-link"),
+        });
+      }
     }
   }
   if (report.upload && fields) {

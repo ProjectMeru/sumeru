@@ -1,21 +1,11 @@
-import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
-import type { SwcWorkspacePayload } from "../../types/workspace.js";
 import { VIEW_PIVOT } from "../../constants/routes.js";
-import { CollectionBarHost, mountCollectionBar } from "../shared/collection-bar-host.js";
+import { CollectionView } from "../shared/collection-view.js";
 import { renderPivotExportLink } from "../shared/view-toolbar.js";
 
-interface PivotViewProps {
-  payload: SwcWorkspacePayload;
-}
-
-export class PivotView extends SwcComponent<PivotViewProps> {
-  private collectionBar!: CollectionBarHost;
+export class PivotView extends CollectionView {
+  protected readonly collectionViewType = VIEW_PIVOT;
   private collapsedRows = new Set<string>();
-
-  override setup(): void {
-    this.collectionBar = mountCollectionBar(this.props.payload, VIEW_PIVOT, this.env);
-  }
 
   private toggleRow(row: string): void {
     if (this.collapsedRows.has(row)) {
@@ -24,14 +14,6 @@ export class PivotView extends SwcComponent<PivotViewProps> {
       this.collapsedRows.add(row);
     }
     this.rerender();
-  }
-
-  override onPropsChanged(props: PivotViewProps): void {
-    this.collectionBar.updateProps({ payload: props.payload, viewType: VIEW_PIVOT });
-  }
-
-  override onWillUnmount(): void {
-    this.collectionBar.destroy();
   }
 
   override template() {

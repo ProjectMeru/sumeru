@@ -60,8 +60,8 @@ func RenderSWCWorkspace(ctx context.Context, in SWCPageInput) string {
 		SettingsNavActive:       IsMenuUnderSettingsRoot(ctx, activeMenuID),
 		BreadcrumbItems: BuildWorkspaceBreadcrumbs(ctx, BreadcrumbInput{
 			ActiveMenuID:  activeMenuID,
+			ResModel:      view.Model,
 			ViewType:      selectedMode,
-			Title:         viewBC,
 			FormBaseQuery: recData.FormBaseQuery,
 			Record:        recData.Record,
 			RecordID:      recData.RecordID,

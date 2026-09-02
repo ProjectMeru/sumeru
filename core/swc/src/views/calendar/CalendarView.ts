@@ -1,42 +1,26 @@
-import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
-import type { SwcWorkspacePayload } from "../../types/workspace.js";
 import { VIEW_CALENDAR, VIEW_FORM } from "../../constants/routes.js";
-import { CollectionBarHost, mountCollectionBar } from "../shared/collection-bar-host.js";
-
-interface CalendarViewProps {
-  payload: SwcWorkspacePayload;
-}
+import { CollectionView } from "../shared/collection-view.js";
+import { resolveArchDateField } from "../shared/arch-date.js";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-export class CalendarView extends SwcComponent<CalendarViewProps> {
+/** Calendar view — month grid with events keyed by arch date_start. */
+export class CalendarView extends CollectionView {
+  protected readonly collectionViewType = VIEW_CALENDAR;
   private dateField = "date_deadline";
   private year = 0;
   private month = 0;
-  private collectionBar!: CollectionBarHost;
 
-  override setup(): void {
-    this.collectionBar = mountCollectionBar(this.props.payload, VIEW_CALENDAR, this.env);
+  protected override onCollectionSetup(): void {
     const now = new Date();
     this.year = now.getFullYear();
     this.month = now.getMonth();
-    const archStart = this.props.payload.arch.calendar?.dateStart;
-    if (archStart) {
-      this.dateField = archStart;
-    } else {
-      const fields = this.props.payload.arch.fields;
-      const dateField = fields.find((f) => f.type === "date" || f.type === "datetime");
-      if (dateField) this.dateField = dateField.name;
-    }
+    this.dateField = resolveArchDateField(this.props.payload.arch, ["calendar"], "date_deadline");
   }
 
-  override onPropsChanged(props: CalendarViewProps): void {
-    this.collectionBar.updateProps({ payload: props.payload, viewType: VIEW_CALENDAR });
-  }
-
-  override onWillUnmount(): void {
-    this.collectionBar.destroy();
+  protected override onCollectionPropsChanged(): void {
+    this.dateField = resolveArchDateField(this.props.payload.arch, ["calendar"], "date_deadline");
   }
 
   private eventsByDay(): Map<string, Record<string, unknown>[]> {
