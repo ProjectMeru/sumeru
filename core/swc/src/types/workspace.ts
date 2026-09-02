@@ -133,6 +133,8 @@ export interface SwcKanbanColumn {
   color: number;
   rottingDays?: number;
   fold: boolean;
+  progressSum?: number;
+  progressMax?: number;
   records: Record<string, unknown>[];
 }
 

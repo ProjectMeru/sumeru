@@ -123,12 +123,21 @@ export class KanbanView extends CollectionView {
         ${this.collectionBar.renderOrPatch()}
         <div class="sum-kanban-board sum-kanban-board--grouped">
           <div class="sum-kanban-stage-columns">
-            ${kanban.columns.map(
-              (col) => html`<div class="sum-kanban-stage-column" data-column=${String(col.value)}>
+            ${kanban.columns.map((col) => {
+              const max = col.progressMax && col.progressMax > 0 ? col.progressMax : col.progressSum ?? 0;
+              const pct = max > 0 ? Math.min(100, Math.round(((col.progressSum ?? 0) / max) * 100)) : 0;
+              return html`<div class="sum-kanban-stage-column" data-column=${String(col.value)}>
                 <div class=${this.stageHeaderClass(col.color)}>
                   <span>${col.label}</span>
                   <span class="sum-kanban-stage-count">${String(col.records.length)}</span>
                 </div>
+                ${col.progressSum != null && col.progressSum > 0
+                  ? html`<div class="sum-kanban-column-progress" title=${`MRR ${col.progressSum}`}>
+                      <div class="sum-progress">
+                        <div class="sum-progress-bar" style=${`width:${pct}%`}></div>
+                      </div>
+                    </div>`
+                  : ""}
                 <div class="sum-kanban-cards">
                   ${col.records.map((row) =>
                     this.renderCard(row, fields, {
@@ -158,8 +167,8 @@ export class KanbanView extends CollectionView {
                       <button type="submit" class="sum-btn sum-btn--ghost">Add</button>
                     </form>`
                   : ""}
-              </div>`,
-            )}
+              </div>`;
+            })}
           </div>
         </div>
       </div>

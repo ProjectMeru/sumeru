@@ -28,7 +28,11 @@ export async function runObjectAction(
     if (await env.services.action.applyCallResult(result)) {
       return true;
     }
-    env.services.notification.success(options.buttonLabel, "Action completed.");
+    if (options.methodName === "action_set_won") {
+      env.services.notification.success("Congratulations!", "Another win!");
+    } else {
+      env.services.notification.success(options.buttonLabel, "Action completed.");
+    }
     await options.onSuccess?.();
     return false;
   } catch (error) {

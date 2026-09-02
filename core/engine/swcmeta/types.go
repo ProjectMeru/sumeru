@@ -178,6 +178,8 @@ type KanbanColumn struct {
 	Color       int                      `json:"color"`
 	RottingDays int                      `json:"rottingDays,omitempty"`
 	Fold        bool                     `json:"fold"`
+	ProgressSum float64                  `json:"progressSum,omitempty"`
+	ProgressMax float64                  `json:"progressMax,omitempty"`
 	Records     []map[string]interface{} `json:"records"`
 }
 
