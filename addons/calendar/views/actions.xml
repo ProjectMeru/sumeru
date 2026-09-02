@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <action id="action_calendar.event" type="window" model="calendar.event" name="Meetings" view_mode="calendar,list,form"/>
+    </data>
+</sumeru>

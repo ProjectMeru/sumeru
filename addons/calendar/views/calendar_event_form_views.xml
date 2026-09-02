@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_calendar_event_form" model="calendar.event" type="form">
+            <sheet>
+                <group>
+                    <field name="name" string="Meeting Subject"/>
+                    <field name="start" string="Start"/>
+                    <field name="stop" string="Stop"/>
+                    <field name="allday" string="All Day"/>
+                    <field name="user_id" string="Organizer"/>
+                    <field name="partner_ids" string="Attendees"/>
+                    <field name="model" string="Linked Document Model"/>
+                    <field name="res_id" string="Linked Document"/>
+                    <field name="active" string="Active"/>
+                </group>
+                <group>
+                    <field name="description" string="Description"/>
+                </group>
+            </sheet>
+        </view>
+    </data>
+</sumeru>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <record id="module_category_calendar" model="sys.module.category">
+            <field name="name">Calendar</field>
+            <field name="sequence">45</field>
+        </record>
+
+        <record id="group_calendar_user" model="core.group">
+            <field name="name">Calendar / User</field>
+            <field name="category_id" ref="module_category_calendar"/>
+            <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+        </record>
+    </data>
+</sumeru>

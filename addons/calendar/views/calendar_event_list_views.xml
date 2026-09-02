@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_calendar_event_list" model="calendar.event" type="list">
+            <field name="name"/>
+            <field name="start"/>
+            <field name="stop"/>
+            <field name="allday"/>
+            <field name="user_id"/>
+            <field name="model"/>
+            <field name="res_id"/>
+            <field name="active"/>
+        </view>
+    </data>
+</sumeru>
