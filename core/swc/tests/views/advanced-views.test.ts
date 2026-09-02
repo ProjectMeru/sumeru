@@ -1,4 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const mountLeafletMap = vi.fn(async () => () => {});
+
+vi.mock("../../src/views/map/map-leaflet.js", () => ({
+  mountLeafletMap: (...args: unknown[]) => mountLeafletMap(...args),
+}));
+
 import { GanttView } from "../../src/views/gantt/GanttView.js";
 import { MapView } from "../../src/views/map/MapView.js";
 import { CohortView } from "../../src/views/cohort/CohortView.js";
@@ -36,6 +43,10 @@ function payload(arch: Partial<SwcViewArch>, records: Record<string, unknown>[])
 }
 
 describe("advanced views", () => {
+  beforeEach(() => {
+    mountLeafletMap.mockClear();
+  });
+
   it("renders gantt bars from date_start and date_stop", () => {
     const view = new GanttView(
       {
@@ -53,7 +64,7 @@ describe("advanced views", () => {
     view.destroy();
   });
 
-  it("renders map markers with an OpenStreetMap link", () => {
+  it("renders map canvas and mounts Leaflet with record coordinates", async () => {
     const view = new MapView(
       {
         payload: payload(
@@ -65,9 +76,16 @@ describe("advanced views", () => {
     );
     view.callSetup();
     const el = view.render();
-    const link = el.querySelector(".sum-map-link") as HTMLAnchorElement;
-    expect(link.href).toContain("openstreetmap.org");
-    expect(link.href).toContain("mlat=12.97");
+    expect(el.querySelector(".sum-map-canvas")).toBeTruthy();
+    expect(el.querySelector(".sum-map-hint")?.textContent).toContain(
+      "1 located record(s)",
+    );
+    await vi.waitFor(() => expect(mountLeafletMap).toHaveBeenCalled());
+    expect(mountLeafletMap).toHaveBeenCalledWith(
+      expect.any(HTMLElement),
+      [{ id: 8, lat: 12.97, lng: 77.59, label: "Depot" }],
+      expect.any(Function),
+    );
     view.destroy();
   });
 
