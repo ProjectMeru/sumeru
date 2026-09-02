@@ -119,6 +119,9 @@ func EnrichShellPageData(ctx context.Context, d *PageData) {
 	if len(d.ExtraScriptURLs) == 0 {
 		d.ExtraScriptURLs = ExtraScriptURLs
 	}
+	if d.SWCEnabled && len(d.SwcAddonEntriesJSON) == 0 {
+		d.SwcAddonEntriesJSON = BuildSwcAddonEntriesJSON()
+	}
 	if d.SuppressActivityDock {
 		d.ActivityEnabled = false
 	}

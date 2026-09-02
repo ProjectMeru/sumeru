@@ -7,8 +7,9 @@ import (
 
 // ModelSpec describes how a Go struct maps to an ORM model name.
 type ModelSpec struct {
-	Name   string
-	Extend bool // true when the struct uses inherit= to extend an existing model
+	Name               string
+	Extend             bool   // true when the struct uses inherit= to extend an existing model
+	DelegationParent   string // set when inherits= names a parent model (_inherits delegation)
 }
 
 // ModelSpecFromStruct reads model= or inherit= from an embedded ModelMeta tag.
@@ -36,6 +37,9 @@ func ModelSpecFromTags(tags FieldTags, goName string) (ModelSpec, error) {
 	}
 	if tags.Inherit != "" {
 		return ModelSpec{Name: tags.Inherit, Extend: true}, nil
+	}
+	if tags.Inherits != "" {
+		return ModelSpec{Name: ModelNameFromGo(goName), DelegationParent: tags.Inherits}, nil
 	}
 	if tags.Model == "-" {
 		return ModelSpec{Name: "-", Extend: false}, nil

@@ -7,6 +7,18 @@ import (
 	"sumeru/core/engine/viewinherit"
 )
 
+func TestApplyInheritArchHasClass(t *testing.T) {
+	parent := `<form><sheet><group class="sum_contact_block"><field name="name"/></group></sheet></form>`
+	frag := `<xpath expr="//group[hasclass('sum_contact_block')]" position="inside"><field name="phone"/></xpath>`
+	out, err := viewinherit.ApplyInheritArch(parent, frag)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, `name="phone"`) {
+		t.Fatalf("hasclass xpath failed: %s", out)
+	}
+}
+
 func TestApplyInheritArchAfter(t *testing.T) {
 	parent := `<view model="sale.order" type="list"><field name="a" string="A"/><field name="b" string="B"/></view>`
 	frag := `<xpath expr="//field[@name='a']" position="after"><field name="z" string="Z"/></xpath>`

@@ -15,6 +15,7 @@ const (
 type FieldTags struct {
 	Model      string
 	Inherit    string
+	Inherits   string // delegation parent model (Enterprise _inherits)
 	Required   bool
 	Unique     bool
 	Index      bool
@@ -163,6 +164,8 @@ func setTagOption(tags *FieldTags, key, value string) error {
 		tags.Model = value
 	case "inherit":
 		tags.Inherit = value
+	case "inherits":
+		tags.Inherits = value
 	case "required":
 		tags.Required = true
 	case "unique":
