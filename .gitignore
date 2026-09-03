@@ -13,6 +13,7 @@ core/swc/devtools-extension/dist/
 
 # Node (SWC workspace only)
 core/swc/node_modules/
+core/swc/coverage/
 
 # Logs and runtime output
 logs/
