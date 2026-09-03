@@ -1,4 +1,4 @@
-import { html, type TemplateResult, type TemplateValue } from "../../template/html.js";
+import { html, type TemplateResult } from "../../template/html.js";
 import type { SwcArchField, SwcWorkspacePayload } from "../../types/workspace.js";
 import { inputValueFromEvent } from "../../widgets/field-events.js";
 import {
@@ -10,9 +10,9 @@ import {
   EXPORT_PIVOT_ROUTE,
   EXPORT_GRAPH_ROUTE,
   VIEW_FORM,
-  VIEW_KANBAN,
 } from "../../constants/routes.js";
 import { RouterService } from "../../services/router.js";
+import { pivotFields } from "./arch-fields.js";
 
 function linkButton(href: string, label: string, className = "sum-btn sum-btn--secondary"): HTMLElement {
   const a = document.createElement("a");
@@ -70,14 +70,8 @@ export function graphExportUrl(payload: SwcWorkspacePayload, groupField: string,
 }
 
 function pivotExportFields(payload: SwcWorkspacePayload): { groups: string[]; measures: string[] } {
-  const groups: string[] = [];
-  const measures: string[] = [];
-  for (const f of payload.arch.fields ?? []) {
-    const kind = (f.pivotType ?? "").toLowerCase();
-    if (kind === "row" || kind === "col" || kind === "column") groups.push(f.name);
-    if (kind === "measure") measures.push(f.name);
-  }
-  return { groups, measures };
+  const { rowFields, colFields, measureFields } = pivotFields(payload.arch);
+  return { groups: [...rowFields, ...colFields], measures: measureFields };
 }
 
 function renderReadGroupExportLink(url: string, label = "Export CSV"): HTMLElement {
@@ -194,29 +188,6 @@ export function renderSearchField(
 
 export function renderNewButton(payload: SwcWorkspacePayload): HTMLElement {
   return linkButton(newRecordUrl(payload), "New", "sum-btn sum-list-btn-new");
-}
-
-export function renderCollectionToolbar(options: {
-  payload: SwcWorkspacePayload;
-  viewType: string;
-  search: string;
-  onSearch: () => void;
-  onInput: (next: string) => void;
-  extraPrimary?: TemplateValue;
-}): TemplateResult {
-  const fields = exportFieldNamesCsv((options.payload.arch.fields ?? []).filter((f) => !f.invisible));
-  const reportActions = renderReportActions(options.payload, fields);
-  const toolbarClass = options.viewType === VIEW_KANBAN ? "sum-kanban-report-bar" : "sum-list-toolbar";
-  return html`
-    <div class="sum-view-toolbar ${toolbarClass}">
-      <div class="sum-view-toolbar-primary">
-        ${renderNewButton(options.payload)}
-        ${renderSearchField(options.search, options.onSearch, options.onInput)}
-        ${options.extraPrimary ?? ""}
-      </div>
-      ${reportActions ?? ""}
-    </div>
-  `;
 }
 
 export function toolbarButton(

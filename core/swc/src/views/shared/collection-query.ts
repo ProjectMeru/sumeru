@@ -153,7 +153,8 @@ export function parseDomainJSON(raw: string): DomainTriple[] {
     return parsed.filter((row): row is DomainTriple =>
       Array.isArray(row) && row.length === 3 && typeof row[0] === "string" && typeof row[1] === "string",
     );
-  } catch {
+  } catch (err) {
+    console.warn("parseDomainJSON: invalid domain JSON", err);
     return [];
   }
 }

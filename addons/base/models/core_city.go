@@ -7,8 +7,8 @@ import (
 type CoreCity struct {
 	sdk.Model `sumeru:"model=core.city"`
 
-	Name      sdk.String            `sumeru:"required,string=City"`
+	Name      sdk.String                     `sumeru:"required,string=City"`
 	StateID   sdk.Many2One[CoreCountryState] `sumeru:"index,string=State"`
-	CountryID sdk.Many2One[CoreCountry]        `sumeru:"required,index,string=Country"`
-	Active    sdk.Boolean           `sumeru:"string=Active,default=true"`
+	CountryID sdk.Many2One[CoreCountry]      `sumeru:"required,index,string=Country"`
+	Active    sdk.Boolean                    `sumeru:"string=Active,default=true"`
 }

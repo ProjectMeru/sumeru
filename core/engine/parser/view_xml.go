@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -32,6 +33,7 @@ type View struct {
 	GroupBy          string `xml:"group_by,attr"`
 	RecordsDraggable string `xml:"records_draggable,attr"`
 	QuickCreate      string `xml:"quick_create,attr"`
+	ColumnsPerRow    string `xml:"columns_per_row,attr"`
 
 	// Calendar / graph extras (ignored on other view types).
 	Chart     string `xml:"chart,attr"`
@@ -104,6 +106,28 @@ func (v *View) KanbanQuickCreate() bool {
 		return false
 	}
 	return true
+}
+
+const kanbanColumnsPerRowDefault = 4
+const kanbanColumnsPerRowMax = 12
+
+// KanbanColumnsPerRow returns cards per row from columns_per_row (default 4, max 12).
+func (v *View) KanbanColumnsPerRow() int {
+	if v == nil {
+		return kanbanColumnsPerRowDefault
+	}
+	s := strings.TrimSpace(v.ColumnsPerRow)
+	if s == "" {
+		return kanbanColumnsPerRowDefault
+	}
+	n, err := strconv.Atoi(s)
+	if err != nil || n < 1 {
+		return kanbanColumnsPerRowDefault
+	}
+	if n > kanbanColumnsPerRowMax {
+		return kanbanColumnsPerRowMax
+	}
+	return n
 }
 
 // GraphChart returns the chart kind (bar, line, pie); default bar.

@@ -81,6 +81,45 @@ describe("WorkspaceRouter", () => {
     removeSpy.mockRestore();
   });
 
+  it("reload refreshes payload after bus event", async () => {
+    const getJSON = vi.fn().mockResolvedValue(workspacePayload());
+    const env = routerEnv(getJSON);
+    const router = new WorkspaceRouter({}, env);
+    router.callSetup();
+    router.render();
+    await vi.waitFor(() => expect(getJSON).toHaveBeenCalled());
+    getJSON.mockClear();
+    router.reload();
+    await vi.waitFor(() => expect(getJSON).toHaveBeenCalled());
+    router.destroy();
+  });
+
+  it("shows error flash when workspace fetch fails", async () => {
+    const router = new WorkspaceRouter(
+      {},
+      routerEnv(vi.fn().mockRejectedValue(new Error("network down"))),
+    );
+    router.callSetup();
+    document.body.append(router.render());
+    await vi.waitFor(() => {
+      expect(document.body.querySelector(".sum-flash--error")?.textContent).toContain("network down");
+    });
+    router.destroy();
+  });
+
+  it("renders shell page for home route", () => {
+    const env = routerEnv();
+    env.bootstrap = { swcApiBase: "/web/swc", user: { name: "Admin" }, apps: [] } as never;
+    env.services.router = {
+      parse: () => ({ shell: "home" as const, search: "" }),
+    } as never;
+    const router = new WorkspaceRouter({}, env);
+    router.callSetup();
+    document.body.append(router.render());
+    expect(document.body.querySelector(".sum-workspace-root--shell")).toBeTruthy();
+    router.destroy();
+  });
+
   it("ShellLayout mounts WorkspaceRouter via callSetup", async () => {
     const layout = new ShellLayout({}, routerEnv());
     expect(() => layout.callSetup()).not.toThrow();

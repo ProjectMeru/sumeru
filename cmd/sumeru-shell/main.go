@@ -15,6 +15,7 @@ import (
 )
 
 func main() {
+	cliboot.StripLeadingArgsSeparator()
 	configPath := flag.String("c", "sumeru.conf", "Path to config file (INI)")
 	uidFlag := flag.Int("uid", 1, "Security uid for ORM calls")
 	flag.Parse()

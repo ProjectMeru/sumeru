@@ -3,6 +3,7 @@ import { html } from "../../template/html.js";
 import { onWillStart, onWillUnmount } from "../../runtime/lifecycle.js";
 import { onMount, useTemplateRef } from "../../runtime/hooks.js";
 import { VIEW_GRAPH, VIEW_LIST } from "../../constants/routes.js";
+import { graphAxes } from "../shared/arch-fields.js";
 import { CollectionView } from "../shared/collection-view.js";
 import { navigateCollectionQuery } from "../shared/collection-query.js";
 import { renderGraphExportLink } from "../shared/view-toolbar.js";
@@ -45,9 +46,10 @@ export class GraphView extends CollectionView {
   private async load(): Promise<void> {
     const seq = ++this.loadSeq;
     const payload = this.props.payload;
-    this.chart = (payload.arch.graph?.chart || "bar").toLowerCase();
-    this.groupField = payload.arch.fields.find((f) => f.pivotType === "row")?.name ?? "create_date";
-    this.measureField = payload.arch.fields.find((f) => f.pivotType === "measure")?.name ?? "id";
+    const axes = graphAxes(payload.arch);
+    this.chart = axes.chart;
+    this.groupField = axes.groupField;
+    this.measureField = axes.measureField;
     const groups = await this.env.services.rpc.readGroup(
       payload.model,
       [],
@@ -166,37 +168,34 @@ export class GraphView extends CollectionView {
   override template() {
     const exportLink = renderGraphExportLink(this.props.payload, this.groupField, this.measureField);
     const type = this.chartType();
-    return html`
-      <div class="sum-collection-view sum-graph-view">
-        ${this.collectionBar.renderOrPatch()}
-        <div class="sum-graph-toolbar">
-          <button
-            type="button"
-            class=${type === "bar" ? "sum-btn is-active" : "sum-btn"}
-            @click=${() => this.setChartType("bar")}
-          >
-            Bar
-          </button>
-          <button
-            type="button"
-            class=${type === "line" ? "sum-btn is-active" : "sum-btn"}
-            @click=${() => this.setChartType("line")}
-          >
-            Line
-          </button>
-          <button
-            type="button"
-            class=${type === "pie" ? "sum-btn is-active" : "sum-btn"}
-            @click=${() => this.setChartType("pie")}
-          >
-            Pie
-          </button>
-          ${exportLink ?? ""}
-        </div>
-        <div class="sum-graph-chart-wrap">
-          <canvas data-ref="graph-canvas"></canvas>
-        </div>
+    return this.renderShell(html`
+      <div class="sum-graph-toolbar">
+        <button
+          type="button"
+          class=${type === "bar" ? "sum-btn is-active" : "sum-btn"}
+          @click=${() => this.setChartType("bar")}
+        >
+          Bar
+        </button>
+        <button
+          type="button"
+          class=${type === "line" ? "sum-btn is-active" : "sum-btn"}
+          @click=${() => this.setChartType("line")}
+        >
+          Line
+        </button>
+        <button
+          type="button"
+          class=${type === "pie" ? "sum-btn is-active" : "sum-btn"}
+          @click=${() => this.setChartType("pie")}
+        >
+          Pie
+        </button>
+        ${exportLink ?? ""}
       </div>
-    `;
+      <div class="sum-graph-chart-wrap">
+        <canvas data-ref="graph-canvas"></canvas>
+      </div>
+    `);
   }
 }

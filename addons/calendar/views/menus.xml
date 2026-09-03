@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <menuitem id="menu_calendar_root" name="Calendar" sequence="12" web_icon="apps"/>
+        <menuitem id="menu_calendar_events" name="Meetings" parent="menu_calendar_root" sequence="10" action="calendar.action_calendar.event" web_icon="apps"/>
+    </data>
+</sumeru>

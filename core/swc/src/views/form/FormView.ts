@@ -4,14 +4,9 @@ import type { SwcArchButton, SwcWorkspacePayload } from "../../types/workspace.j
 import { RecordStore, SwcRecord } from "../../model/record.js";
 import { takePendingChildren } from "../../model/pending-children.js";
 import { SwcError } from "../../runtime/error.js";
-import {
-  headerButton,
-  renderNewButton,
-  renderReportActions,
-  exportFieldNamesCsv,
-} from "../shared/view-toolbar.js";
+import { headerButton } from "../shared/view-toolbar.js";
+import { renderFormToolbar } from "./form-chrome.js";
 import { collectFormFields, renderFormSheet } from "./form-sheet.js";
-import { isButtonVisible } from "../../model/modifiers.js";
 import { initFormInteractions } from "./form-interactions.js";
 import { validatePasswordMatchGroups } from "../../widgets/password-match.js";
 import { FieldHost } from "../../widgets/field-host.js";
@@ -134,10 +129,6 @@ export class FormView extends SwcComponent<FormViewProps> {
   private fields() {
     const arch = this.props.payload.arch;
     return collectFormFields(arch.sheet, arch.header?.fields ?? []);
-  }
-
-  private headerButtons(): SwcArchButton[] {
-    return this.props.payload.arch.header?.buttons ?? [];
   }
 
   private startEdit(): void {
@@ -301,50 +292,9 @@ export class FormView extends SwcComponent<FormViewProps> {
     if (!navigated) this.rerender();
   }
 
-  private renderToolbarPrimary(): Array<HTMLElement> {
-    const payload = this.props.payload;
-    const busy = this.toolbarBusy();
-    const items: HTMLElement[] = [];
-
-    if (payload.recordId > 0 && this.isReadonly()) {
-      if (!this.props.inDialog) {
-        items.push(renderNewButton(payload));
-        items.push(headerButton("Edit", undefined, () => this.startEdit(), busy));
-        items.push(headerButton("Duplicate", undefined, () => void this.duplicateRecord(), busy));
-        items.push(
-          headerButton("Delete", "sum-btn--danger", () => void this.deleteRecord(), busy),
-        );
-      } else {
-        items.push(headerButton("Edit", undefined, () => this.startEdit(), busy));
-      }
-    } else {
-      items.push(headerButton("Save", "sum_highlight", () => void this.save(), busy));
-      items.push(headerButton("Cancel", undefined, () => this.cancelEdit(), busy || this.saving));
-    }
-
-    for (const archButton of this.headerButtons()) {
-      if (archButton.type !== "object") continue;
-      if (!isButtonVisible(archButton, this.record)) continue;
-      items.push(
-        headerButton(
-          archButton.string || archButton.name,
-          archButton.class,
-          () => void this.runObjectButton(archButton),
-          busy,
-        ),
-      );
-    }
-
-    return items;
-  }
-
   override template() {
     const payload = this.props.payload;
     const readonly = this.isReadonly();
-    const headerFields = payload.arch.header?.fields ?? [];
-    const exportFields = exportFieldNamesCsv(this.fields());
-    const reportActions = payload.recordId > 0 ? renderReportActions(payload, exportFields, payload.recordId) : null;
-    const toolbarItems = this.renderToolbarPrimary();
     const busy = this.toolbarBusy();
 
     const sheet = renderFormSheet({
@@ -367,15 +317,22 @@ export class FormView extends SwcComponent<FormViewProps> {
 
     return html`
       <div class="sum-form-view sum-form-view--workspace-chrome${readonly ? " sum-form-view--readonly" : ""}">
-        <div class="sum-ws-record-toolbar sum-view-toolbar sum-form-toolbar">
-          <div class="sum-statusbar-buttons sum-view-toolbar-primary">${toolbarItems}</div>
-          ${headerFields.length > 0
-            ? html`<div class="sum-statusbar-status sum-ws-toolbar-right">
-                ${headerFields.map((f) => this.renderFieldCached(f, this.record, readonly))}
-              </div>`
-            : ""}
-          ${reportActions ?? ""}
-        </div>
+        ${renderFormToolbar({
+          payload,
+          inDialog: this.props.inDialog,
+          readonly,
+          busy,
+          saving: this.saving,
+          record: this.record,
+          fields: this.fields(),
+          onStartEdit: () => this.startEdit(),
+          onCancelEdit: () => this.cancelEdit(),
+          onSave: () => void this.save(),
+          onDelete: () => void this.deleteRecord(),
+          onDuplicate: () => void this.duplicateRecord(),
+          onObjectButton: (btn) => void this.runObjectButton(btn),
+          renderField: this.renderFieldCached,
+        })}
         ${this.error ? html`<div class="sum-flash sum-flash--error">${this.error}</div>` : ""}
         <div class="sum-form-layout${showChatter ? " sum-form-layout--with-chatter" : ""}">
           <div class="sum-form-sheet-bg">

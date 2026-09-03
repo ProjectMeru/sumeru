@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_mail_activity_plan_list" model="mail.activity.plan" type="list">
+            <field name="name"/>
+            <field name="model"/>
+            <field name="active"/>
+        </view>
+    </data>
+</sumeru>

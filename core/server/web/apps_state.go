@@ -18,6 +18,8 @@ type appsBrowseState struct {
 	Filter      string
 	Scope       string
 	SearchQuery string
+	Category    string
+	GroupBy     string
 	ModuleName  string
 	Editing     bool
 }
@@ -29,9 +31,11 @@ func parseAppsBrowseState(r *http.Request) appsBrowseState {
 		Layout:      layoutFromQuery(r),
 		ModuleName:  strings.TrimSpace(query.Get("module")),
 		Editing:     strings.TrimSpace(query.Get("edit")) == "1",
-		Filter:      normalizeAppsFilter(query.Get("filter")),
-		Scope:       normalizeAppsScope(query.Get("scope")),
+		Filter:      normalizeAppsChoiceParam("filter", query.Get("filter")),
+		Scope:       normalizeAppsChoiceParam("scope", query.Get("scope")),
 		SearchQuery: strings.TrimSpace(query.Get("q")),
+		Category:    strings.TrimSpace(query.Get("category")),
+		GroupBy:     normalizeAppsChoiceParam("group_by", query.Get("group_by")),
 	}
 }
 
@@ -39,9 +43,11 @@ func parseAppsBrowseState(r *http.Request) appsBrowseState {
 func parseAppsBrowseStateFromForm(r *http.Request) appsBrowseState {
 	return appsBrowseState{
 		Layout:      layoutFromForm(r, appsLayoutField),
-		Filter:      normalizeAppsFilter(r.FormValue(appsFilterField)),
-		Scope:       normalizeAppsScope(r.FormValue(appsScopeField)),
+		Filter:      normalizeAppsChoiceParam("filter", r.FormValue(appsFilterField)),
+		Scope:       normalizeAppsChoiceParam("scope", r.FormValue(appsScopeField)),
 		SearchQuery: strings.TrimSpace(r.FormValue(appsSearchField)),
+		Category:    strings.TrimSpace(r.FormValue(appsCategoryField)),
+		GroupBy:     normalizeAppsChoiceParam("group_by", r.FormValue(appsGroupByField)),
 	}
 }
 
@@ -91,12 +97,18 @@ func appendAppsBrowseQuery(query url.Values, browse appsBrowseState) {
 	}
 }
 
-func normalizeAppsFilter(raw string) string {
-	return normalizeAppsChoice(raw, appsFilterInstalled, appsFilterUninstalled, appsFilterAll)
+func normalizeAppsChoiceParam(kind, raw string) string {
+	allowed, ok := appsAllowedChoices[kind]
+	if !ok {
+		return strings.ToLower(strings.TrimSpace(raw))
+	}
+	return normalizeAppsChoice(raw, allowed...)
 }
 
-func normalizeAppsScope(raw string) string {
-	return normalizeAppsChoice(raw, appsScopeApps, appsScopeTechnical, appsScopeAll)
+var appsAllowedChoices = map[string][]string{
+	"filter":   {appsFilterInstalled, appsFilterUninstalled, appsFilterAll},
+	"scope":    {appsScopeApps, appsScopeTechnical, appsScopeAll},
+	"group_by": {appsGroupByCategory, ""},
 }
 
 func normalizeAppsChoice(raw string, allowed ...string) string {
@@ -133,10 +145,12 @@ func appsModuleMatchesSearch(moduleEntry appsModule, searchQuery string) bool {
 	return strings.Contains(searchText, needle)
 }
 
-// filterAppsModulesByBrowse applies search/filter and splits by application vs technical scope.
+// filterAppsModulesByBrowse applies search/filter/category and splits by application vs technical scope.
 func filterAppsModulesByBrowse(modules []appsModule, browse appsBrowseState) (appModules, techModules []appsModule) {
 	for _, moduleEntry := range modules {
-		if !appsModuleMatchesSearch(moduleEntry, browse.SearchQuery) || !appsModuleMatchesFilter(moduleEntry, browse.Filter) {
+		if !appsModuleMatchesSearch(moduleEntry, browse.SearchQuery) ||
+			!appsModuleMatchesFilter(moduleEntry, browse.Filter) ||
+			!appsModuleMatchesCategory(moduleEntry, browse.Category) {
 			continue
 		}
 		if moduleEntry.Application {
@@ -166,6 +180,12 @@ func appendAppsQueryBase(query url.Values, browse appsBrowseState) {
 	}
 	if trimmed := strings.TrimSpace(browse.SearchQuery); trimmed != "" {
 		query.Set("q", trimmed)
+	}
+	if trimmed := strings.TrimSpace(browse.Category); trimmed != "" {
+		query.Set("category", trimmed)
+	}
+	if browse.GroupBy == appsGroupByCategory {
+		query.Set("group_by", browse.GroupBy)
 	}
 }
 

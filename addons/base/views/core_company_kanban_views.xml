@@ -3,6 +3,7 @@
     <data>
         <!-- sys.view : core.company (kanban) -->
         <view id="view_core.company_kanban" model="core.company" type="kanban">
+            <field name="color" invisible="1"/>
             <field name="name" string="Company"/>
             <field name="city" string="City"/>
             <field name="email" string="Email"/>

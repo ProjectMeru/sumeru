@@ -19,6 +19,11 @@ import {
   packGroupRows,
   type GroupLayoutContext,
 } from "./form-group-layout.js";
+import {
+  isUploadedImageSrc,
+  resolveImageDisplaySrc,
+} from "../shared/image-placeholder.js";
+import { visibleArchFields } from "../shared/arch-fields.js";
 
 export type RenderFieldFn = (
   field: SwcArchField,
@@ -32,7 +37,7 @@ function renderFields(
   record: SwcRecord,
   readonly: boolean,
 ): Array<TemplateResult | HTMLElement> {
-  return visibleFields(fields).map((f) =>
+  return visibleArchFields(fields).map((f) =>
     html`<div class="sum-studio-field-anchor" data-sum-studio-anchor=${`field:${f.name}`}>${rf(f, record, readonly)}</div>`,
   );
 }
@@ -47,7 +52,7 @@ function collectDivFields(div: SwcArchDiv): SwcArchField[] {
 
 export function collectFormFields(sheet?: SwcArchSheet, headerFields: SwcArchField[] = []): SwcArchField[] {
   const out = [...headerFields];
-  if (!sheet) return out.filter((f) => !f.invisible);
+  if (!sheet) return visibleArchFields(out);
 
   out.push(...(sheet.fields ?? []));
   for (const div of sheet.divs ?? []) {
@@ -64,7 +69,7 @@ export function collectFormFields(sheet?: SwcArchSheet, headerFields: SwcArchFie
       }
     }
   }
-  return out.filter((f) => !f.invisible);
+  return visibleArchFields(out);
 }
 
 function collectGroupFields(group: SwcArchGroup): SwcArchField[] {
@@ -73,10 +78,6 @@ function collectGroupFields(group: SwcArchGroup): SwcArchField[] {
     out.push(...collectGroupFields(nested));
   }
   return out;
-}
-
-function visibleFields(fields: SwcArchField[]): SwcArchField[] {
-  return fields.filter((f) => !f.invisible);
 }
 
 function renderSeparators(separators: SwcArchSeparator[] = []): TemplateResult {
@@ -97,13 +98,6 @@ function renderLabels(labels: SwcArchLabel[] = []): TemplateResult {
     }
     return html`<div class="sum-form-label sum-form-label--hint">${text}</div>`;
   })}`;
-}
-
-function initialsFromName(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 function renderHeroField(
@@ -166,38 +160,46 @@ function renderContactItem(
 }
 
 function renderAvatar(record: SwcRecord, readonly: boolean): TemplateResult {
-  const image = String(record.get("image") ?? "");
-  const name = String(record.get("name") ?? "");
-  const hasImage = image.length > 0;
-  const initials = initialsFromName(name);
+  const rawImage = record.get("image");
+  const ctx = {
+    model: record.model,
+    gender: record.get("gender"),
+    isCompany: record.get("is_company"),
+  };
+  const displaySrc = resolveImageDisplaySrc(rawImage, ctx);
+  const uploaded = typeof rawImage === "string" && isUploadedImageSrc(rawImage);
+  const storedImage = uploaded ? String(rawImage) : "";
 
-  return html`<div class="sum-form-avatar sum-form-avatar--compact" data-sum-avatar>
-    <div class="sum-form-avatar-box sum-form-avatar-box--circle">
-      ${hasImage
-        ? html`<img
-            .sum-form-avatar-img
-            .sum-form-avatar-img--visible
-            class=${image.includes("data:") ? "sum-form-avatar-img--cropped" : ""}
-            src=${image}
-            alt=""
-          />`
-        : html`<span class="sum-form-avatar-initials">${initials}</span>`}
+  return html`<div
+    class="sum-form-avatar sum-form-avatar--compact"
+    data-sum-avatar
+    data-sum-has-upload=${uploaded ? "1" : "0"}
+    data-sum-readonly=${readonly ? "1" : "0"}
+  >
+    <div
+      class="sum-form-avatar-box sum-form-avatar-box--circle sum-form-avatar-box--clickable"
+      role="button"
+      tabindex="0"
+      aria-label=${uploaded ? "View or change photo" : "Upload photo"}
+    >
+      <img
+        class="sum-form-avatar-img sum-form-avatar-img--visible${uploaded && String(rawImage).includes("data:") ? " sum-form-avatar-img--cropped" : ""}"
+        src=${displaySrc}
+        alt=""
+        ${uploaded ? "" : 'data-sum-image-placeholder="1"'}
+      />
+      ${readonly || uploaded
+        ? ""
+        : html`<span class="sum-image-upload-hint">Click to upload photo</span>`}
+      <input type="file" class="sum-image-file-input" accept="image/*" hidden />
     </div>
-    ${readonly
-      ? ""
-      : html`<div class="sum-form-avatar-actions">
-          <input
-            type="hidden"
-            name="image"
-            data-sum-avatar-value
-            value=${image}
-            @input=${(event: Event) => record.set("image", inputValueFromEvent(event))}
-          />
-          <label class="sum-form-avatar-upload">
-            Upload
-            <input type="file" accept="image/*" />
-          </label>
-        </div>`}
+    <input
+      type="hidden"
+      name="image"
+      data-sum-avatar-value
+      value=${storedImage}
+      @input=${(event: Event) => record.set("image", inputValueFromEvent(event))}
+    />
   </div>`;
 }
 
@@ -207,9 +209,9 @@ function renderTitleBody(
   record: SwcRecord,
   readonly: boolean,
 ): TemplateResult {
-  const h1Fields = visibleFields(div.h1Fields ?? []);
+  const h1Fields = visibleArchFields(div.h1Fields ?? []);
   const contactDiv = (div.divs ?? []).find((d) => (d.class ?? "").includes("sum-title-contact-row"));
-  const contactFields = visibleFields(contactDiv?.fields ?? []);
+  const contactFields = visibleArchFields(contactDiv?.fields ?? []);
 
   return html`<div class="sum-form-title-body sum-form-title-body--main">
     ${h1Fields.length > 0 ? renderHeroField(h1Fields[0], record, readonly) : ""}
@@ -374,7 +376,7 @@ export function renderFormSheet(options: RenderFormSheetOptions): TemplateResult
     parts.push(renderTitleDiv(rf, div, record, readonly, hasImageField, onStatButton));
   }
 
-  const topFields = visibleFields(sheet.fields ?? []);
+  const topFields = visibleArchFields(sheet.fields ?? []);
   const groups = sheet.groups ?? [];
   if (topFields.length > 0 || groups.length > 0) {
     parts.push(

@@ -7,6 +7,7 @@
 
         <!-- sys.menu : Settings application (company registry + users) -->
         <menuitem id="menu_settings_root" name="Settings" sequence="5" web_icon="settings" groups="base.group_user"/>
+        <menuitem id="menu_general_settings" name="General Settings" parent="menu_settings_root" sequence="1" action="base.action_res.config.settings" web_icon="settings" groups="base.group_system"/>
 
         <!-- Companies -->
         <menuitem id="menu_company_section" name="Companies" parent="menu_settings_root" sequence="10" web_icon="building" groups="base.group_user"/>
@@ -46,7 +47,6 @@
         <menuitem id="menu_sys_sequence" name="Sequences" parent="menu_company_configuration" sequence="50" action="base.action_sys.sequence" web_icon="settings"/>
         <menuitem id="menu_sys_config" name="System Parameters" parent="menu_company_configuration" sequence="60" action="base.action_sys.config.parameter" web_icon="settings"/>
         <menuitem id="menu_sys_report_action" name="Report Actions" parent="menu_company_configuration" sequence="65" action="base.action_sys.report.action" groups="base.group_system" web_icon="settings"/>
-        <menuitem id="menu_sys_activity" name="Activities" parent="menu_company_configuration" sequence="66" action="base.action_sys.activity" groups="base.group_system" web_icon="settings"/>
 
         <!-- App Logs: module lifecycle event history (install / uninstall / update) -->
         <menuitem id="menu_app_logs_section" name="App Logs" parent="menu_settings_root" sequence="90" web_icon="log" groups="base.group_system"/>

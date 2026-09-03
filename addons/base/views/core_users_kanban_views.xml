@@ -3,6 +3,8 @@
     <data>
         <!-- sys.view : core.user (kanban) -->
         <view id="view_core.user_kanban" model="core.user" type="kanban">
+            <field name="color" invisible="1"/>
+            <field name="gender" invisible="1"/>
             <field name="image"/>
             <field name="name" string="Name"/>
             <field name="login" string="Login"/>

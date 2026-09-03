@@ -9,11 +9,20 @@
   "data": [
     "security/security.xml",
     "security/sys.access.csv",
+    "data/mail_activity_type_data.xml",
     "views/actions.xml",
     "views/mail_message_list_views.xml",
     "views/mail_message_form_views.xml",
     "views/mail_activity_list_views.xml",
     "views/mail_activity_form_views.xml",
+    "views/mail_activity_type_list_views.xml",
+    "views/mail_activity_type_form_views.xml",
+    "views/mail_activity_plan_list_views.xml",
+    "views/mail_activity_plan_form_views.xml",
+    "views/mail_activity_plan_template_list_views.xml",
+    "views/mail_activity_plan_template_form_views.xml",
+    "views/mail_template_list_views.xml",
+    "views/mail_template_form_views.xml",
     "views/menus.xml"
   ]
 }

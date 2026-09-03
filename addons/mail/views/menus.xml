@@ -4,5 +4,15 @@
         <menuitem id="menu_mail_root" name="Discuss" sequence="15" web_icon="apps"/>
         <menuitem id="menu_mail_messages" name="Messages" parent="menu_mail_root" sequence="10" action="mail.action_mail.message" web_icon="log"/>
         <menuitem id="menu_mail_activities" name="Activities" parent="menu_mail_root" sequence="20" action="mail.action_mail.activity" web_icon="users"/>
+
+        <menuitem id="menu_mail_config_section" name="Configuration" parent="menu_mail_root" sequence="90" web_icon="settings" groups="base.group_system"/>
+        <menuitem id="menu_mail_activity_types" name="Activity Types" parent="menu_mail_config_section" sequence="10" action="mail.action_mail.activity.type" web_icon="settings" groups="base.group_system"/>
+        <menuitem id="menu_mail_activity_plans" name="Activity Plans" parent="menu_mail_config_section" sequence="20" action="mail.action_mail.activity.plan" web_icon="settings" groups="base.group_system"/>
+        <menuitem id="menu_mail_templates" name="Email Templates" parent="menu_mail_config_section" sequence="30" action="mail.action_mail.template" web_icon="settings" groups="base.group_system"/>
+
+        <menuitem id="menu_mail_settings_section" name="Discuss" parent="base.menu_settings_root" sequence="55" web_icon="settings" groups="base.group_system"/>
+        <menuitem id="menu_mail_settings_activity_types" name="Activity Types" parent="menu_mail_settings_section" sequence="10" action="mail.action_mail.activity.type" web_icon="settings" groups="base.group_system"/>
+        <menuitem id="menu_mail_settings_activity_plans" name="Activity Plans" parent="menu_mail_settings_section" sequence="20" action="mail.action_mail.activity.plan" web_icon="settings" groups="base.group_system"/>
+        <menuitem id="menu_mail_settings_templates" name="Email Templates" parent="menu_mail_settings_section" sequence="30" action="mail.action_mail.template" web_icon="settings" groups="base.group_system"/>
     </data>
 </sumeru>

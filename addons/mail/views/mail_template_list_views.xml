@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_mail_template_list" model="mail.template" type="list">
+            <field name="name"/>
+            <field name="model"/>
+            <field name="subject"/>
+            <field name="active"/>
+        </view>
+    </data>
+</sumeru>

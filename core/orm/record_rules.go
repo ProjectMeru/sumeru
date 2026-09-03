@@ -232,7 +232,7 @@ func CheckRecordRules(ctx context.Context, uid int, model string, op string, rec
 		return nil
 	}
 	if uid <= 0 {
-		return fmt.Errorf("access denied")
+		return &AccessDeniedError{Model: model, Operation: op}
 	}
 	parts, err := loadRuleDomainParts(ctx, uid, model, op)
 	if err != nil {
@@ -240,7 +240,7 @@ func CheckRecordRules(ctx context.Context, uid int, model string, op string, rec
 	}
 	for _, dom := range parts.globals {
 		if !RecordMatchesDomain(rec, dom) {
-			return fmt.Errorf("record rule failed for model %s", model)
+			return &RecordRuleError{Model: model}
 		}
 	}
 	if parts.allowAllGroups {
@@ -254,5 +254,5 @@ func CheckRecordRules(ctx context.Context, uid int, model string, op string, rec
 			return nil
 		}
 	}
-	return fmt.Errorf("record rule failed for model %s", model)
+	return &RecordRuleError{Model: model}
 }

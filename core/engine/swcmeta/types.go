@@ -165,10 +165,11 @@ type ArchPage struct {
 }
 
 type KanbanMeta struct {
-	GroupField  string         `json:"groupField"`
-	Draggable   bool           `json:"draggable"`
-	QuickCreate bool           `json:"quickCreate,omitempty"`
-	Columns     []KanbanColumn `json:"columns"`
+	GroupField    string         `json:"groupField"`
+	Draggable     bool           `json:"draggable"`
+	QuickCreate   bool           `json:"quickCreate,omitempty"`
+	ColumnsPerRow int            `json:"columnsPerRow,omitempty"`
+	Columns       []KanbanColumn `json:"columns"`
 }
 
 type KanbanColumn struct {
@@ -178,6 +179,8 @@ type KanbanColumn struct {
 	Color       int                      `json:"color"`
 	RottingDays int                      `json:"rottingDays,omitempty"`
 	Fold        bool                     `json:"fold"`
+	ProgressSum float64                  `json:"progressSum,omitempty"`
+	ProgressMax float64                  `json:"progressMax,omitempty"`
 	Records     []map[string]interface{} `json:"records"`
 }
 

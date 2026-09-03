@@ -17,7 +17,7 @@ func init() {
 		&CoreUser{},
 		&CoreUserAPIKey{},
 		&CoreUserLog{},
-		&SysActivity{},
+		&ResConfigSettings{},
 		&SysAttachment{},
 		&SysAudit{},
 		&SysBulkImport{},

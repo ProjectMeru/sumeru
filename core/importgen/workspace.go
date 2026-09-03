@@ -4,29 +4,30 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"sumeru/core/module"
 )
 
-func generateWorkspaceAddon(workspaceRoot, sumeruRoot, addonsRoot, workspaceModule, addonName string) error {
-	addonRoot := filepath.Join(workspaceRoot, "addons", addonName)
+func generateWorkspaceAddon(workspaceRoot, sumeruRoot, addonsRoot, addonName string, discovered map[string]*module.Addon) error {
+	addon, ok := discovered[addonName]
+	if !ok {
+		return fmt.Errorf("addon %q not in discovery map", addonName)
+	}
+	addonRoot := addon.Path
 	modelsDir := filepath.Join(addonRoot, "models")
+	m := &addon.Manifest
 
-	m, err := module.ReadManifest(filepath.Join(addonRoot, "manifest.json"))
-	if err != nil {
+	if isBuiltinAddonPath(addonRoot) {
+		return nil
+	}
+	if err := writeAddonInit(discovered, addon); err != nil {
 		return err
 	}
-
-	initPath := filepath.Join(addonRoot, "init.go")
-	if err := os.WriteFile(initPath, []byte(renderAddonInit(workspaceModule, addonName)), 0o644); err != nil {
-		return err
-	}
-
 	if err := writeAddonModelFiles(addonRoot, m.Name); err != nil {
 		return err
 	}
-
 	return writeAddonZRefs(workspaceRoot, sumeruRoot, addonsRoot, addonName, modelsDir, m)
 }
 
@@ -114,17 +115,29 @@ func RunWorkspaceGen(workspaceRoot, sumeruRoot, addonsRoot, configPath, outPath,
 	if err != nil {
 		return "", fmt.Errorf("module name not found in %s/go.mod: %w", workspaceRoot, err)
 	}
+	_ = workspaceModule
 
-	addonNames, err := workspaceAddonNames(workspaceRoot)
-	if err != nil {
-		return "", err
+	addonNames := make([]string, 0, len(result.discovered))
+	for name := range result.discovered {
+		addonNames = append(addonNames, name)
 	}
+	sort.Strings(addonNames)
 	for _, name := range addonNames {
-		if err := generateWorkspaceAddon(workspaceRoot, sumeruRoot, addonsRoot, workspaceModule, name); err != nil {
+		if err := generateWorkspaceAddon(workspaceRoot, sumeruRoot, addonsRoot, name, result.discovered); err != nil {
 			return "", fmt.Errorf("%s: %w", name, err)
 		}
 	}
 
+	catalog, err := buildModelCatalog(sumeruRoot, result.discovered)
+	if err != nil {
+		return "", err
+	}
+	if err := validateInheritDepends(result.discovered, catalog); err != nil {
+		return "", err
+	}
+	if err := validateRelationDepends(workspaceRoot, sumeruRoot, addonsRoot, result.discovered, catalog); err != nil {
+		return "", err
+	}
 	if err := module.ValidateDiscoveredAddons(result.discovered); err != nil {
 		return "", fmt.Errorf("convention: %w", err)
 	}

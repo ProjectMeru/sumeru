@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_digest_kpi_list" model="digest.kpi" type="list">
+            <field name="name"/>
+            <field name="digest_id"/>
+            <field name="compute_code"/>
+        </view>
+    </data>
+</sumeru>

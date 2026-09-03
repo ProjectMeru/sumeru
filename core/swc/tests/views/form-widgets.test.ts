@@ -91,9 +91,12 @@ describe("form field widgets", () => {
   });
 
   it("image widget shows placeholder when empty", () => {
-    const record = new SwcRecord("m", 1, { avatar: "" });
+    const record = new SwcRecord("core.partner", 1, { avatar: "" });
     const el = renderField(env, field({ name: "avatar", widget: "image" }), record, false);
-    expect(el.querySelector(".sum-image-thumb--empty")).toBeTruthy();
+    expect(el.querySelector(".sum-image-thumb-img")?.getAttribute("src")).toContain(
+      "/static/img/image_placeholder.jpg",
+    );
+    expect(el.querySelector(".sum-image-upload-hint")).toBeTruthy();
   });
 
   it("image widget shows thumbnail when value set", () => {

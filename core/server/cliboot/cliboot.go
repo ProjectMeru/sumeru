@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	_ "github.com/lib/pq"
 
@@ -13,6 +14,11 @@ import (
 	"sumeru/core/server"
 	"sumeru/core/server/config"
 )
+
+// StripLeadingArgsSeparator removes a leading "--" from os.Args (Makefile / go run convention).
+func StripLeadingArgsSeparator() {
+	server.StripLeadingArgsSeparator()
+}
 
 // LoadConfig loads INI config and resolves relative paths.
 func LoadConfig(configPath string) error {
@@ -40,12 +46,22 @@ func OpenDB(ctx context.Context) (*sql.DB, error) {
 	return db, nil
 }
 
-// Init loads INI config, connects to PostgreSQL, syncs models, and discovers addons.
-// Requires an initialized database (not setup mode).
-func Init(configPath string) (context.Context, error) {
+// OpenConfiguredDB loads config and returns a pinged DB handle with a timeout context.
+// The caller must call cancel when done.
+func OpenConfiguredDB(configPath string, timeout time.Duration) (context.Context, *sql.DB, context.CancelFunc, error) {
 	if err := LoadConfig(configPath); err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	db, err := OpenDB(ctx)
+	if err != nil {
+		cancel()
+		return nil, nil, nil, err
+	}
+	return ctx, db, cancel, nil
+}
+
+func initFromLoadedConfig() (context.Context, error) {
 	c := config.AppConfig
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		c.DbHost, c.DbPort, c.DbUser, c.DbPass, c.DbName, c.DbSslMode)
@@ -69,6 +85,15 @@ func Init(configPath string) (context.Context, error) {
 	return ctx, nil
 }
 
+// Init loads INI config, connects to PostgreSQL, syncs models, and discovers addons.
+// Requires an initialized database (not setup mode).
+func Init(configPath string) (context.Context, error) {
+	if err := LoadConfig(configPath); err != nil {
+		return nil, err
+	}
+	return initFromLoadedConfig()
+}
+
 // InitOptionalDB loads config and addons without requiring DB (for list/depends-tree on disk only).
 func InitOptionalDB(configPath string, requireDB bool) (context.Context, error) {
 	if err := LoadConfig(configPath); err != nil {
@@ -80,7 +105,7 @@ func InitOptionalDB(configPath string, requireDB bool) (context.Context, error) 
 	if !requireDB {
 		return context.Background(), nil
 	}
-	return Init(configPath)
+	return initFromLoadedConfig()
 }
 
 // ContextWithUID returns ctx with security uid set for ORM calls.

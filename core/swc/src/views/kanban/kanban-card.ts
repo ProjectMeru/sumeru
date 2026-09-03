@@ -1,5 +1,13 @@
 import { html, type TemplateResult } from "../../template/html.js";
 import type { SwcArchField } from "../../types/workspace.js";
+import { formatFieldValue } from "../shared/field-display.js";
+import {
+  isPlaceholderDisplaySrc,
+  isUploadedImageSrc,
+  resolveImageDisplaySrc,
+  type ImagePlaceholderContext,
+} from "../shared/image-placeholder.js";
+import { isKanbanColorField } from "./kanban-color.js";
 
 export function isKanbanImageField(field: SwcArchField): boolean {
   const name = field.name.toLowerCase();
@@ -9,10 +17,6 @@ export function isKanbanImageField(field: SwcArchField): boolean {
     field.widget === "image" ||
     field.widget === "circle"
   );
-}
-
-export function isKanbanImageCircle(field: SwcArchField): boolean {
-  return field.widget === "circle" || field.options?.shape === "circle";
 }
 
 export function isPriorityField(field: SwcArchField): boolean {
@@ -53,30 +57,19 @@ function renderActivityIndicator(row: Record<string, unknown>): TemplateResult |
   return html`<div class="sum-kanban-card-activity" title=${when}>📅 ${label}${when ? html` · ${when}` : ""}</div>`;
 }
 
-function imageSrc(row: Record<string, unknown>, field: SwcArchField): string {
-  const raw = row[field.name];
-  if (typeof raw !== "string" || !raw.trim()) return "";
-  const v = raw.trim();
-  if (v.startsWith("data:") || v.startsWith("http://") || v.startsWith("https://") || v.startsWith("/")) {
-    return v;
-  }
-  return "";
-}
-
-function initials(row: Record<string, unknown>, fields: SwcArchField[]): string {
-  const nameField = fields.find((f) => f.name === "name") ?? fields.find((f) => !isKanbanImageField(f));
-  const text = nameField ? displayValue(row, nameField) : "";
-  const parts = text.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  if (parts.length === 1) return parts[0].slice(0, 1).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+function imageContext(row: Record<string, unknown>, modelName?: string): ImagePlaceholderContext {
+  return {
+    model: modelName,
+    gender: row.gender,
+    isCompany: row.is_company,
+  };
 }
 
 function titleField(fields: SwcArchField[]): SwcArchField | undefined {
   return (
     fields.find((f) => f.name === "name") ??
     fields.find((f) => f.name === "display_name") ??
-    fields.find((f) => !isKanbanImageField(f) && !isPriorityField(f))
+    fields.find((f) => !isKanbanImageField(f) && !isPriorityField(f) && !isKanbanColorField(f))
   );
 }
 
@@ -90,50 +83,67 @@ function renderPriority(row: Record<string, unknown>, field: SwcArchField): Temp
   return html`<div class="sum-kanban-priority">${stars}</div>`;
 }
 
-function renderMedia(row: Record<string, unknown>, imageField: SwcArchField, fields: SwcArchField[]): HTMLElement | null {
-  const src = imageSrc(row, imageField);
-  const label = displayValue(row, titleField(fields) ?? imageField);
-  if (!src && !label) return null;
+function renderMedia(
+  row: Record<string, unknown>,
+  imageField: SwcArchField,
+  modelName?: string,
+): HTMLElement {
+  const ctx = imageContext(row, modelName);
+  const src = resolveImageDisplaySrc(row[imageField.name], ctx);
+  const uploaded = typeof row[imageField.name] === "string" && isUploadedImageSrc(String(row[imageField.name]));
 
   const media = document.createElement("div");
-  media.className = `sum-kanban-card-media${isKanbanImageCircle(imageField) ? " sum-kanban-card-media--circle" : " sum-kanban-card-media--square"}`;
+  media.className = "sum-kanban-card-media sum-kanban-card-media--rect";
 
-  if (src) {
-    const img = document.createElement("img");
-    img.className = "sum-kanban-card-media-img";
-    img.src = src;
-    img.alt = "";
-    media.appendChild(img);
-  } else {
-    const initialsEl = document.createElement("span");
-    initialsEl.className = "sum-kanban-card-media-initials";
-    initialsEl.textContent = initials(row, fields);
-    media.appendChild(initialsEl);
+  const img = document.createElement("img");
+  img.className = "sum-kanban-card-media-img";
+  img.src = src;
+  img.alt = "";
+  if (!uploaded || isPlaceholderDisplaySrc(src, ctx)) {
+    img.setAttribute("data-sum-image-placeholder", "1");
   }
+  media.appendChild(img);
   return media;
 }
 
-export function renderKanbanCardInner(row: Record<string, unknown>, fields: SwcArchField[]): TemplateResult {
+function renderLabeledField(row: Record<string, unknown>, field: SwcArchField): TemplateResult | null {
+  const value = formatFieldValue(row, field);
+  if (!value) return null;
+  const label = field.string ?? field.name;
+  return html`<div class="sum-kanban-card-field">
+    <span class="sum-kanban-card-field-label">${label}:</span>
+    <span class="sum-kanban-card-field-value">${value}</span>
+  </div>`;
+}
+
+export function renderKanbanCardInner(
+  row: Record<string, unknown>,
+  fields: SwcArchField[],
+  modelName?: string,
+): TemplateResult {
   const imageField = fields.find(isKanbanImageField);
   const priorityField = fields.find(isPriorityField);
   const title = titleField(fields);
   const subs = fields.filter(
-    (f) => f !== imageField && f !== title && f !== priorityField && !isKanbanImageField(f) && !isPriorityField(f),
+    (f) =>
+      f !== imageField &&
+      f !== title &&
+      f !== priorityField &&
+      !isKanbanImageField(f) &&
+      !isPriorityField(f) &&
+      !isKanbanColorField(f) &&
+      f.name !== "color" &&
+      f.name !== "gender",
   );
 
-  const media = imageField ? renderMedia(row, imageField, fields) : null;
-
+  const media = imageField ? renderMedia(row, imageField, modelName) : null;
   const titleEl = title ? html`<div class="sum-kanban-card-title">${displayValue(row, title)}</div>` : null;
-  const subEls = subs
-    .map((f) => displayValue(row, f))
-    .filter(Boolean)
-    .map((text) => html`<div class="sum-kanban-card-sub">${text}</div>`);
+  const subEls = subs.map((f) => renderLabeledField(row, f)).filter(Boolean);
   const priorityEl = priorityField ? renderPriority(row, priorityField) : null;
   const activityEl = renderActivityIndicator(row);
 
-  if (media) {
-    return html`${media}<div class="sum-kanban-card-body">${titleEl}${subEls}${priorityEl}${activityEl}</div>`;
-  }
-
-  return html`${titleEl}${subEls}${priorityEl}${activityEl}`;
+  return html`<div class="sum-kanban-card-inner">
+    ${media ?? ""}
+    <div class="sum-kanban-card-body">${titleEl}${subEls}${priorityEl}${activityEl}</div>
+  </div>`;
 }

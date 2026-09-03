@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_mail_template_form" model="mail.template" type="form">
+            <sheet>
+                <group>
+                    <field name="name" string="Name"/>
+                    <field name="model" string="Applies to"/>
+                    <field name="subject" string="Subject"/>
+                    <field name="active" string="Active"/>
+                </group>
+                <group>
+                    <field name="body_html" string="Body"/>
+                </group>
+            </sheet>
+        </view>
+    </data>
+</sumeru>

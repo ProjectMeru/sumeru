@@ -145,10 +145,12 @@ const (
 
 // Apps module action form fields (POST apps_*).
 const (
-	appsLayoutField = "apps_layout"
-	appsFilterField = "apps_filter"
-	appsScopeField  = "apps_scope"
-	appsSearchField = "apps_q"
+	appsLayoutField   = "apps_layout"
+	appsFilterField   = "apps_filter"
+	appsScopeField    = "apps_scope"
+	appsSearchField   = "apps_q"
+	appsCategoryField = "apps_category"
+	appsGroupByField  = "apps_group_by"
 )
 
 // Apps module action form fields (POST do=, module=, etc.).
@@ -295,6 +297,7 @@ const (
 	appsScopeTechnical    = "technical"
 	appsLayoutGrid        = "grid"
 	appsLayoutList        = "list"
+	appsGroupByCategory   = "category"
 	moduleStateInstalled  = "installed"
 )
 

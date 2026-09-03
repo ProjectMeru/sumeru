@@ -82,6 +82,9 @@ func ValidateDiscoveredAddons(discoveredAddons map[string]*Addon) error {
 	if len(discoveredAddons) == 0 {
 		return nil
 	}
+	if err := ValidateDiscoveredDepends(discoveredAddons); err != nil {
+		return err
+	}
 
 	addonNames := make([]string, 0, len(discoveredAddons))
 	for name := range discoveredAddons {
@@ -92,7 +95,7 @@ func ValidateDiscoveredAddons(discoveredAddons map[string]*Addon) error {
 	var validationErrors []string
 	for _, name := range addonNames {
 		addon := discoveredAddons[name]
-		if err := validateOneAddon(addon); err != nil {
+		if err := validateOneAddon(discoveredAddons, addon); err != nil {
 			validationErrors = append(validationErrors, fmt.Sprintf("%s: %v", addon.Manifest.Name, err))
 		}
 	}
@@ -102,7 +105,7 @@ func ValidateDiscoveredAddons(discoveredAddons map[string]*Addon) error {
 	return nil
 }
 
-func validateOneAddon(addon *Addon) error {
+func validateOneAddon(discoveredAddons map[string]*Addon, addon *Addon) error {
 	manifest := &addon.Manifest
 	directoryName := filepath.Base(addon.Path)
 
@@ -151,7 +154,8 @@ func validateOneAddon(addon *Addon) error {
 	if err != nil {
 		return fmt.Errorf("strict addon requires init.go: %w", err)
 	}
-	if err := validateRootInitGo(string(initFileBytes), manifest.Name); err != nil {
+	initSource := string(initFileBytes)
+	if err := validateRootInitGo(initSource, manifest.Name); err != nil {
 		return err
 	}
 
@@ -165,12 +169,97 @@ func validateOneAddon(addon *Addon) error {
 		if err != nil {
 			return err
 		}
-		if !strings.Contains(string(initFileBytes), `"`+expectedImport+`"`) {
+		if !strings.Contains(initSource, `"`+expectedImport+`"`) {
 			return fmt.Errorf("init.go must blank-import models package %q (found models/*.go)", expectedImport)
 		}
 	}
 
+	if err := validateInitDependsImports(initSource, discoveredAddons, addon); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+var initSubpackages = []string{"models", "services", "wizard", "controllers"}
+
+func validateInitDependsImports(initSource string, discoveredAddons map[string]*Addon, addon *Addon) error {
+	expected, err := ExpectedInitDependsImportPaths(discoveredAddons, addon)
+	if err != nil {
+		return err
+	}
+	got := parseInitDependsImports(initSource, addon.Path)
+	if sameImportPathSet(expected, got) {
+		return nil
+	}
+	return fmt.Errorf("init.go depends imports out of sync with manifest (expected %v, got %v); run make generate", expected, got)
+}
+
+func parseInitDependsImports(initSource, addonPath string) []string {
+	lines := strings.Split(initSource, "\n")
+	inImport := false
+	var paths []string
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "import (") {
+			inImport = true
+			continue
+		}
+		if inImport && trimmed == ")" {
+			break
+		}
+		if !inImport {
+			continue
+		}
+		const prefix = `_ "`
+		if !strings.HasPrefix(trimmed, prefix) || !strings.HasSuffix(trimmed, `"`) {
+			continue
+		}
+		path := strings.TrimSuffix(strings.TrimPrefix(trimmed, prefix), `"`)
+		if isLocalInitSubpackageImport(addonPath, path) {
+			continue
+		}
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+	return paths
+}
+
+func isLocalInitSubpackageImport(addonPath, importPath string) bool {
+	for _, sub := range initSubpackages {
+		local, err := expectedSubpackageImport(addonPath, sub)
+		if err != nil {
+			continue
+		}
+		if importPath == local {
+			return true
+		}
+	}
+	return false
+}
+
+func expectedSubpackageImport(addonPath, sub string) (string, error) {
+	_, moduleImportPath, relativePath, err := addonGoModuleContext(addonPath)
+	if err != nil {
+		return "", err
+	}
+	return moduleImportPath + "/" + filepath.ToSlash(relativePath) + "/" + sub, nil
+}
+
+func sameImportPathSet(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	aa := append([]string(nil), a...)
+	bb := append([]string(nil), b...)
+	sort.Strings(aa)
+	sort.Strings(bb)
+	for i := range aa {
+		if aa[i] != bb[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func validateRootInitGo(sourceCode, expectedPackage string) error {
@@ -249,15 +338,14 @@ func validateModuleXMLRoot(xmlFilePath string) error {
 // AddonImportPaths returns blank-import paths for every strict addon that ships Go (init.go).
 // Each path is under its own Go module root (e.g. sumeru/addons/sales and
 // sumeru_custom_addons/addons/acme_demo for a workspace sibling).
+// Import order follows manifest dependency topo sort (alphabetical tie-break).
 func AddonImportPaths(discoveredAddons map[string]*Addon) ([]string, error) {
-	var importPaths []string
-	addonNames := make([]string, 0, len(discoveredAddons))
-	for name := range discoveredAddons {
-		addonNames = append(addonNames, name)
+	type addonImport struct {
+		name       string
+		importPath string
 	}
-	sort.Strings(addonNames)
-	for _, name := range addonNames {
-		addon := discoveredAddons[name]
+	var candidates []addonImport
+	for name, addon := range discoveredAddons {
 		if isBuiltinAddonPath(addon.Path) {
 			continue
 		}
@@ -272,8 +360,37 @@ func AddonImportPaths(discoveredAddons map[string]*Addon) ([]string, error) {
 		if err != nil {
 			return nil, fmt.Errorf("addon %s: %w", addon.Manifest.Name, err)
 		}
-		importPaths = append(importPaths, moduleImportPath+"/"+filepath.ToSlash(relativePath))
+		candidates = append(candidates, addonImport{
+			name:       name,
+			importPath: moduleImportPath + "/" + filepath.ToSlash(relativePath),
+		})
 	}
-	sort.Strings(importPaths)
+
+	topo, err := SortDiscoveredAddonsTopo(discoveredAddons)
+	if err != nil {
+		return nil, err
+	}
+	topoIndex := map[string]int{}
+	for i, addon := range topo {
+		topoIndex[addon.Manifest.Name] = i
+	}
+
+	sort.Slice(candidates, func(i, j int) bool {
+		left, right := candidates[i].name, candidates[j].name
+		li, lok := topoIndex[left]
+		ri, rok := topoIndex[right]
+		if lok && rok && li != ri {
+			return li < ri
+		}
+		if lok != rok {
+			return lok
+		}
+		return left < right
+	})
+
+	importPaths := make([]string, 0, len(candidates))
+	for _, c := range candidates {
+		importPaths = append(importPaths, c.importPath)
+	}
 	return importPaths, nil
 }

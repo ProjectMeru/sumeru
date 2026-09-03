@@ -1,8 +1,3 @@
 package scheduler
 
-import "context"
-
-// ExecuteCronForTest runs one cron tick handler (tests).
-func ExecuteCronForTest(ctx context.Context, in CronRunInput) {
-	executeCron(ctx, in)
-}
+// Test hooks for scheduler live in testexports.go (used by test/core/* packages).

@@ -117,4 +117,20 @@ describe("GraphView", () => {
     expect(chartDestroy).toHaveBeenCalled();
     view.destroy();
   });
+
+  it("toolbar switches chart type via setChartType buttons", async () => {
+    const readGroup = vi.fn(async () => [{ create_date: "2026-01", amount: 3 }]);
+    const view = new GraphView({ payload: graphPayload("bar") }, graphEnv(readGroup));
+    view.callSetup();
+    view.render();
+    await runWillStart(view);
+    await flushScheduledRenders();
+    const lineBtn = [...view.render().querySelectorAll(".sum-graph-toolbar button")].find(
+      (b) => b.textContent?.trim() === "Line",
+    ) as HTMLButtonElement;
+    lineBtn.click();
+    await flushScheduledRenders();
+    expect(chartDestroy).toHaveBeenCalled();
+    view.destroy();
+  });
 });

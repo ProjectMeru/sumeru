@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"sumeru/core/applog"
 	"sumeru/core/orm"
 )
 
@@ -24,6 +25,25 @@ func SyncSysModuleRegistry(ctx context.Context) error {
 	return syncSysModuleRows(ctx, DiscoveredAddons)
 }
 
+func resolveModuleCategoryID(ctx context.Context, categoryName string) (interface{}, error) {
+	categoryName = strings.TrimSpace(categoryName)
+	if categoryName == "" {
+		return nil, nil
+	}
+	rows, err := orm.Search(ctx, "sys.module.category", nil)
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		if strings.EqualFold(strings.TrimSpace(orm.AsString(row["name"])), categoryName) {
+			return row["id"], nil
+		}
+	}
+	applog.WarnMsg(ctx, "module", "sync", "manifest category not found in sys.module.category",
+		nil, map[string]interface{}{"category": categoryName})
+	return nil, nil
+}
+
 // syncSysModuleRows upserts registry metadata. New DB: only the base module row is inserted as installed;
 // every other discovered addon is uninstalled until explicitly installed from Apps or CLI.
 func syncSysModuleRows(ctx context.Context, discovered map[string]*Addon) error {
@@ -34,7 +54,12 @@ func syncSysModuleRows(ctx context.Context, discovered map[string]*Addon) error 
 	isBootstrap := totalModules == 0
 
 	for _, addon := range discovered {
-		_, err := orm.SearchOne(ctx, "sys.module", map[string]interface{}{"name": addon.Manifest.Name})
+		categoryID, err := resolveModuleCategoryID(ctx, addon.Manifest.Category)
+		if err != nil {
+			return fmt.Errorf("resolve category for %s: %w", addon.Manifest.Name, err)
+		}
+
+		_, err = orm.SearchOne(ctx, "sys.module", map[string]interface{}{"name": addon.Manifest.Name})
 		if err == sql.ErrNoRows {
 			state := "uninstalled"
 			if isBootstrap {
@@ -42,7 +67,7 @@ func syncSysModuleRows(ctx context.Context, discovered map[string]*Addon) error 
 					state = "installed"
 				}
 			}
-			_, err = orm.Create(ctx, orm.RegistryModel("sys.module"), map[string]interface{}{
+			createValues := map[string]interface{}{
 				"name":         addon.Manifest.Name,
 				"display_name": irModuleDisplayName(addon),
 				"author":       addon.Manifest.Author,
@@ -52,7 +77,11 @@ func syncSysModuleRows(ctx context.Context, discovered map[string]*Addon) error 
 				"state":        state,
 				"application":  addon.Manifest.IsApplication(),
 				"active":       true,
-			})
+			}
+			if categoryID != nil {
+				createValues["category_id"] = categoryID
+			}
+			_, err = orm.Create(ctx, orm.RegistryModel("sys.module"), createValues)
 			if err != nil {
 				return fmt.Errorf("create sys.module %s: %w", addon.Manifest.Name, err)
 			}
@@ -63,13 +92,14 @@ func syncSysModuleRows(ctx context.Context, discovered map[string]*Addon) error 
 		}
 		_, err = orm.DB.ExecContext(ctx,
 			`UPDATE `+orm.MustQuotedTableName("sys.module")+
-				` SET display_name = $1, author = $2, version = $3, description = $4, icon = $5, application = $6 WHERE name = $7`,
+				` SET display_name = $1, author = $2, version = $3, description = $4, icon = $5, application = $6, category_id = $7 WHERE name = $8`,
 			irModuleDisplayName(addon),
 			addon.Manifest.Author,
 			addon.Manifest.Version,
 			addon.Manifest.Description,
 			strings.TrimSpace(addon.Manifest.Icon),
 			addon.Manifest.IsApplication(),
+			categoryID,
 			addon.Manifest.Name,
 		)
 		if err != nil {

@@ -1,14 +1,13 @@
 import { defineConfig } from "vitest/config";
 
-/** Source files we enforce ≥90% coverage on (unit-testable core; excludes full view/page shells). */
+/** Source files we enforce ≥90% coverage on (see tests/README.md). */
 const COVERED_GLOB = [
   "src/template/**/*.ts",
   "src/runtime/**/*.ts",
   "src/services/**/*.ts",
   "src/model/**/*.ts",
   "src/widgets/**/*.ts",
-  "src/views/shared/**/*.ts",
-  "src/views/list/control-panel.ts",
+  "src/views/**/*.ts",
   "src/login/**/*.ts",
   "src/util/**/*.ts",
   "src/constants/**/*.ts",
@@ -50,6 +49,10 @@ export default defineConfig({
         "src/widgets/StatusbarField.ts",
         "src/widgets/PriorityField.ts",
         "src/views/form/form-sheet.ts",
+        "src/views/form/FormView.ts",
+        "src/views/form/form-interactions.ts",
+        "src/views/kanban/KanbanView.ts",
+        "src/views/map/map-leaflet.ts",
         "src/views/shared/collection-bar-panels.ts",
       ],
       thresholds: {

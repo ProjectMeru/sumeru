@@ -13,10 +13,13 @@ type Manifest struct {
 	Depends      []string            `json:"depends"`
 	Author       string              `json:"author"`
 	Description  string              `json:"description"`
-	Icon         string              `json:"icon"`        // optional relative path under addon, e.g. static/icon.png
+	Summary      string              `json:"summary"`  // short Apps tagline; falls back to description
+	Category     string              `json:"category"` // matches sys.module.category name
+	Icon         string              `json:"icon"`     // optional relative path under addon, e.g. static/icon.png
 	Data         []string            `json:"data"`        // XML files to load
 	Application  *bool               `json:"application"` // nil = true (show in Apps)
 	AutoImport   *bool               `json:"auto_import"` // nil = true; false = omit from generated zimports blank imports
+	AutoInstall  *bool               `json:"auto_install"` // nil = false; true = install when all depends are installed
 	SwcEntry     string              `json:"swc_entry"`   // optional SWC addon entry module URL
 	Assets       []string            `json:"assets"`      // optional CSS/JS paths relative to addon root
 	AssetBundles map[string][]string `json:"asset_bundles"` // named lazy bundles, e.g. swc.backend
@@ -27,6 +30,13 @@ func (manifest *Manifest) IsAutoImport() bool {
 		return true
 	}
 	return *manifest.AutoImport
+}
+
+func (manifest *Manifest) IsAutoInstall() bool {
+	if manifest.AutoInstall == nil {
+		return false
+	}
+	return *manifest.AutoInstall
 }
 
 func (manifest *Manifest) IsApplication() bool {

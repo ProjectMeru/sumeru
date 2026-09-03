@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_mail_activity_type_form" model="mail.activity.type" type="form">
+            <sheet>
+                <group>
+                    <field name="name" string="Name"/>
+                    <field name="summary" string="Default Summary"/>
+                    <field name="category" string="Category"/>
+                    <field name="delay_count" string="Schedule Delay"/>
+                    <field name="delay_unit" string="Delay Unit"/>
+                    <field name="icon" string="Icon"/>
+                    <field name="active" string="Active"/>
+                </group>
+            </sheet>
+        </view>
+    </data>
+</sumeru>

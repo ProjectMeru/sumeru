@@ -33,8 +33,6 @@ func userFacingRecordError(operation, model string, err error) (title, body, det
 		return title, body, details, fieldErrors
 	}
 
-	msg := strings.ToLower(err.Error())
-
 	switch operation {
 	case "record_save":
 		title = "Save failed"
@@ -48,7 +46,7 @@ func userFacingRecordError(operation, model string, err error) (title, body, det
 		title = "Request failed"
 	}
 
-	if strings.Contains(msg, "record rule failed") {
+	if orm.IsRecordRuleFailed(err) {
 		if operation == "record_delete" {
 			body = "You don't have permission to delete this record."
 		} else {
@@ -56,10 +54,12 @@ func userFacingRecordError(operation, model string, err error) (title, body, det
 		}
 		return title, body, details, fieldErrors
 	}
-	if strings.Contains(msg, "access denied") || strings.Contains(msg, "permission") {
+	if orm.IsAccessDenied(err) {
 		body = "You don't have permission to perform this action."
 		return title, body, details, fieldErrors
 	}
+
+	msg := strings.ToLower(err.Error())
 	if strings.Contains(msg, "required") || strings.HasPrefix(msg, "field ") {
 		body = friendlyRequiredMessage(model, err)
 		fieldErrors = inferFieldErrorsFromMessage(err.Error())

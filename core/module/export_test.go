@@ -1,8 +1,3 @@
 package module
 
-import "context"
-
-// ExpandInstallModuleNamesForTest exposes expandInstallModuleNames for tests.
-func ExpandInstallModuleNamesForTest(ctx context.Context, parts []string) ([]string, error) {
-	return expandInstallModuleNames(ctx, parts)
-}
+// Test hooks for module live in testexports.go (used by test/core/* packages).

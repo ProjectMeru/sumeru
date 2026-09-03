@@ -2,6 +2,8 @@ package api
 
 import (
 	"strings"
+
+	"sumeru/core/orm"
 )
 
 const (
@@ -40,6 +42,9 @@ func newRPCError(code, msg string, details map[string]interface{}) error {
 func Classify(err error) (code string, details map[string]interface{}) {
 	if err == nil {
 		return CodeInternalError, nil
+	}
+	if orm.IsAccessDenied(err) {
+		return CodeAccessDenied, map[string]interface{}{}
 	}
 	msg := strings.ToLower(err.Error())
 	details = map[string]interface{}{}

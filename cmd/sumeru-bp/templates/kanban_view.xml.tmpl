@@ -2,21 +2,8 @@
 <sumeru>
     <data>
         <view id="view_{{.Name}}_kanban" model="{{.ModelDotted}}" type="kanban">
-            <field name="name"/>
-            <templates>
-                <t t-name="kanban-box">
-                    <div class="sum-kanban-global-click">
-                        <div class="sum-kanban-details">
-                            <strong class="sum-kanban-record-title">
-                                <field name="name"/>
-                            </strong>
-                            <div>
-                                <field name="description"/>
-                            </div>
-                        </div>
-                    </div>
-                </t>
-            </templates>
+            <field name="color" invisible="1"/>
+            <field name="name" string="Name"/>
         </view>
     </data>
 </sumeru>

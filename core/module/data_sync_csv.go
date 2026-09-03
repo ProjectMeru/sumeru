@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"sumeru/core/orm"
+	"sumeru/core/sdk/platformmsg"
 )
 
 func (addon *Addon) syncCSVModelAccess(ctx context.Context) error {
@@ -31,6 +32,7 @@ func (addon *Addon) syncCSVModelAccess(ctx context.Context) error {
 		return err
 	}
 
+	moduleName := addon.Manifest.Name
 	for {
 		csvRecord, err := csvReader.Read()
 		if err == io.EOF {
@@ -54,7 +56,10 @@ func (addon *Addon) syncCSVModelAccess(ctx context.Context) error {
 
 		var groupId int
 		if groupXmlId != "" {
-			gid, _ := resolveXMLIDInModule(ctx, addon.Manifest.Name, groupXmlId)
+			gid, resolveErr := resolveXMLIDInModule(ctx, moduleName, groupXmlId)
+			if resolveErr != nil {
+				syncWarn(ctx, "Warning: sys.access %s group %q unresolved: %v", recordXmlId, groupXmlId, resolveErr)
+			}
 			groupId = gid
 		}
 
@@ -71,14 +76,11 @@ func (addon *Addon) syncCSVModelAccess(ctx context.Context) error {
 		}
 
 		id, err := orm.Upsert(ctx, orm.RegistryModel("sys.access"), accessValues, "name")
-		if err == nil {
-			_, _ = orm.Upsert(ctx, orm.RegistryModel("sys.model.data"), map[string]interface{}{
-				"module":  addon.Manifest.Name,
-				"name":    recordXmlId,
-				"model":   "sys.access",
-				"core_id": id,
-			}, "name")
+		if err != nil {
+			syncWarn(ctx, platformmsg.FmtGenericUpsertWarn, "sys.access", recordXmlId, err)
+			continue
 		}
+		_ = linkXMLRecord(ctx, moduleName, recordXmlId, "sys.access", id)
 	}
 	return nil
 }

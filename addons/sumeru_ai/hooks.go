@@ -5,7 +5,6 @@ import (
 	"html/template"
 
 	"sumeru/core/engine/render"
-	"sumeru/core/orm"
 )
 
 func init() {
@@ -13,10 +12,6 @@ func init() {
 }
 
 func registerHooks() {
-	orm.RegisterSearchInterceptor(func(ctx context.Context, model string, domain [][]interface{}) ([][]interface{}, error) {
-		return domain, nil
-	})
-
 	render.RegisterShellHook(func(ctx context.Context, vr *render.ViewRecordData, ro bool) template.HTML {
 		return template.HTML(`
 			<div id="sumeru-ai-assistant">

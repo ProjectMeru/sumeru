@@ -13,7 +13,9 @@
                         <field name="email" string="Email" />
                         <field name="phone" string="Phone" />
                         <field name="is_company" string="Is a Company" />
+                        <field name="gender" string="Gender" widget="selection" invisible_expr="is_company"/>
                         <field name="active" string="Active" />
+                        <field name="color" string="Color" widget="color"/>
                     </group>
                     <group string="Address">
                         <field name="street" string="Street" />

@@ -1,28 +1,177 @@
-/* /web/apps catalog — loaded after core shell CSS (see base.html link order). */
+/* /web/apps catalog — uses shell theme tokens (sumeru-theme.css). */
 
 .sum-apps-premium {
   position: relative;
-  padding: 0 1.25rem 2.5rem;
-  max-width: 1400px;
+  padding: 0.75rem 1rem 2.5rem;
+  max-width: 1280px;
   margin: 0 auto;
 }
 
-.sum-apps-premium-bg {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(1200px 400px at 50% -10%, var(--sum-header-tint-12), transparent);
-  pointer-events: none;
-  z-index: 0;
-}
-
-.sum-apps-hero-prem {
+.sum-apps-topbar {
   position: relative;
-  z-index: 1;
-  padding: 1.75rem 0 1rem;
+  z-index: 2;
+  margin-bottom: 1rem;
 }
 
-.sum-apps-hero-prem-inner {
-  max-width: 42rem;
+.sum-apps-topbar-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+  grid-template-areas:
+    "brand controls"
+    "meta controls";
+  gap: 0.75rem 1.25rem;
+  align-items: center;
+  padding: 0.75rem 0.85rem;
+  background: var(--sum-surface);
+  border: 1px solid var(--sum-line-strong);
+  border-radius: var(--sum-radius-sm);
+  box-shadow: var(--sum-shadow-sm);
+}
+
+.sum-apps-topbar-brand-block {
+  grid-area: brand;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.sum-apps-topbar-brand {
+  min-width: 0;
+}
+
+.sum-apps-topbar-title {
+  margin: 0 0 0.25rem;
+  font-size: 1.5rem;
+  font-weight: var(--sum-font-weight-bold);
+  letter-spacing: var(--sum-letter-spacing-tight);
+  color: var(--sum-ink);
+  line-height: 1.15;
+}
+
+.sum-apps-topbar-lead {
+  margin: 0;
+  font-size: var(--sum-font-size-md);
+  line-height: 1.45;
+  color: var(--sum-muted);
+}
+
+.sum-apps-topbar-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.sum-apps-stat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.18rem 0.55rem;
+  border-radius: var(--sum-radius-pill);
+  border: 1px solid var(--sum-line);
+  background: var(--sum-gray-50);
+  color: var(--sum-muted-ink);
+  font-size: var(--sum-font-size-sm);
+  line-height: 1.35;
+}
+
+.sum-apps-stat-chip strong {
+  color: var(--sum-ink);
+  font-weight: var(--sum-font-weight-semibold);
+}
+
+.sum-apps-stat-chip--success {
+  border-color: color-mix(in srgb, var(--sum-success) 28%, var(--sum-line));
+  background: color-mix(in srgb, var(--sum-success) 8%, var(--sum-surface));
+  color: color-mix(in srgb, var(--sum-success) 78%, var(--sum-ink));
+}
+
+.sum-apps-stat-chip--success strong {
+  color: var(--sum-success);
+}
+
+.sum-apps-stat-chip--muted {
+  color: var(--sum-muted);
+  background: var(--sum-surface-alt);
+}
+
+.sum-apps-topbar-controls {
+  grid-area: controls;
+  min-width: 0;
+}
+
+.sum-apps-topbar-meta {
+  grid-area: meta;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.5rem;
+  padding-top: 0.15rem;
+  border-top: 1px solid var(--sum-line);
+  font-size: var(--sum-font-size-sm);
+  color: var(--sum-muted-ink);
+}
+
+.sum-apps-meta-label {
+  font-size: 0.6875rem;
+  font-weight: var(--sum-font-weight-bold);
+  letter-spacing: var(--sum-letter-spacing-ui);
+  text-transform: uppercase;
+  color: var(--sum-muted);
+}
+
+.sum-apps-meta-text strong {
+  color: var(--sum-header-dark);
+  font-weight: var(--sum-font-weight-semibold);
+}
+
+.sum-apps-topbar--detail .sum-apps-topbar-shell {
+  grid-template-columns: 1fr;
+  grid-template-areas: "brand";
+  gap: 0.5rem;
+}
+
+.sum-apps-topbar-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+  font-size: var(--sum-font-size-sm);
+  font-weight: var(--sum-font-weight-medium);
+  color: var(--sum-header);
+  text-decoration: none;
+}
+
+.sum-apps-topbar-back:hover {
+  color: var(--sum-header-dark);
+  text-decoration: underline;
+}
+
+.sum-apps-topbar-detail-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem 0.75rem;
+}
+
+.sum-apps-topbar--detail .sum-apps-topbar-title {
+  font-size: 1.35rem;
+  margin: 0;
+}
+
+@media (max-width: 960px) {
+  .sum-apps-topbar-shell {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "brand"
+      "controls"
+      "meta";
+  }
+
+  .sum-apps-topbar-controls .sum-control-bar-tools {
+    margin-left: 0;
+  }
 }
 
 .sum-apps-eyebrow {
@@ -56,7 +205,7 @@
   grid-template-columns: minmax(11rem, 14rem) 1fr;
   gap: 1.5rem;
   align-items: start;
-  margin-top: 0.5rem;
+  margin-top: 0;
 }
 
 .sum-shell--no-sidebar .sum-apps-layout {
@@ -189,7 +338,7 @@
   position: relative;
   z-index: 1;
   margin: 0 0 1rem;
-  padding: 0.65rem 1rem;
+  padding: 0.65rem 2.25rem 0.65rem 1rem;
   border-radius: var(--sum-radius-sm);
   background: rgba(245, 158, 11, 0.12);
   border: 1px solid rgba(245, 158, 11, 0.35);
@@ -201,7 +350,6 @@
   background: rgba(239, 68, 68, 0.1);
   border-color: rgba(239, 68, 68, 0.4);
   color: var(--sum-gray-900);
-  padding-right: 2.25rem;
 }
 
 .sum-flash-prem--success {
@@ -419,10 +567,29 @@
   background: var(--sum-surface);
   border: 1px solid var(--sum-line);
   border-radius: var(--sum-radius-sm);
-  padding: 1.1rem 1.15rem;
   box-shadow: var(--sum-shadow-sm);
   overflow: hidden;
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.sum-app-card-prem-link {
+  display: block;
+  padding: 1.1rem 1.15rem 0.75rem;
+  color: inherit;
+  text-decoration: none;
+  flex: 1;
+}
+
+.sum-app-card-prem-link:hover .sum-app-card-prem-name,
+.sum-app-card-prem-link:focus-visible .sum-app-card-prem-name {
+  color: var(--sum-header-dark);
+}
+
+.sum-app-card-prem-link:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--sum-header) 65%, transparent);
+  outline-offset: -2px;
 }
 
 .sum-app-card-prem:hover {
@@ -458,6 +625,19 @@
   align-items: center;
   justify-content: center;
   font-size: var(--sum-font-size-md);
+  overflow: hidden;
+}
+
+.sum-app-card-prem-icon--hue {
+  background: hsl(calc(var(--sum-app-icon-hue, 265) * 1deg) 52% 42%);
+}
+
+.sum-app-card-prem-icon-img,
+.sum-apps-detail-icon-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .sum-app-card-prem-headtext {
@@ -488,6 +668,10 @@
   color: var(--sum-muted-ink);
   line-height: 1.45;
   min-height: 2.5rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .sum-app-card-prem-author {
@@ -497,10 +681,46 @@
 }
 
 .sum-app-card-prem-actions {
-  margin-top: 1rem;
+  margin-top: 0;
+  padding: 0 1.15rem 1.1rem;
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.sum-app-card-prem-more {
+  display: inline-block;
+  margin-top: 0.65rem;
+  font-size: var(--sum-font-size-sm);
+  font-weight: var(--sum-font-weight-semibold);
+  color: var(--sum-header);
+}
+
+.sum-apps-list-name-link {
+  color: var(--sum-ink);
+  text-decoration: none;
+  font-weight: var(--sum-font-weight-semibold);
+}
+
+.sum-apps-list-name-link:hover,
+.sum-apps-list-name-link:focus-visible {
+  color: var(--sum-header-dark);
+  text-decoration: underline;
+}
+
+.sum-apps-list-row:hover {
+  background: var(--sum-row-hover-bg);
+}
+
+.sum-apps-tech-link {
+  color: var(--sum-header);
+  text-decoration: none;
+  font-family: var(--sum-font-mono);
+  font-size: var(--sum-font-size-sm);
+}
+
+.sum-apps-tech-link:hover {
+  text-decoration: underline;
 }
 
 .sum-apps-list-wrap {
@@ -826,4 +1046,583 @@
 
 .sum-apps-btn-primary:hover {
   background: var(--sum-header-dark);
+}
+
+/* App detail page */
+.sum-apps-detail {
+  position: relative;
+  z-index: 1;
+  background: var(--sum-surface);
+  border: 1px solid var(--sum-line);
+  border-radius: var(--sum-radius-sm);
+  box-shadow: var(--sum-shadow-sm);
+  padding: 1.5rem 1.75rem 2rem;
+}
+
+.sum-apps-detail-hero {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.sum-apps-detail-icon {
+  width: 4rem;
+  height: 4rem;
+  font-size: 1.35rem;
+}
+
+.sum-apps-detail-head {
+  min-width: 0;
+  flex: 1;
+}
+
+.sum-apps-detail-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.sum-apps-detail-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: var(--sum-font-weight-bold);
+  letter-spacing: -0.02em;
+  color: var(--sum-ink);
+}
+
+.sum-apps-detail-meta {
+  margin: 0.35rem 0 0;
+  font-size: var(--sum-font-size-sm);
+  color: var(--sum-muted);
+  font-family: var(--sum-font-mono);
+}
+
+.sum-apps-detail-author {
+  margin: 0.35rem 0 0;
+  font-size: var(--sum-font-size-sm);
+  color: var(--sum-muted);
+}
+
+.sum-apps-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--sum-line);
+}
+
+.sum-apps-detail-form {
+  display: inline;
+}
+
+.sum-apps-detail-block {
+  margin-top: 1.5rem;
+}
+
+.sum-apps-detail-block-title {
+  margin: 0 0 0.65rem;
+  font-size: var(--sum-font-size-sm);
+  font-weight: var(--sum-font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--sum-letter-spacing-ui);
+  color: var(--sum-muted);
+}
+
+.sum-apps-detail-description {
+  margin: 0;
+  line-height: 1.6;
+  color: var(--sum-muted-ink);
+  white-space: pre-wrap;
+}
+
+.sum-apps-detail-panels {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .sum-apps-detail-panels {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.sum-apps-detail-dl {
+  margin: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.sum-apps-detail-dl div {
+  display: grid;
+  grid-template-columns: 8rem 1fr;
+  gap: 0.75rem;
+  align-items: baseline;
+}
+
+.sum-apps-detail-dl dt {
+  margin: 0;
+  font-size: var(--sum-font-size-sm);
+  color: var(--sum-muted);
+}
+
+.sum-apps-detail-dl dd {
+  margin: 0;
+  color: var(--sum-ink);
+}
+
+.sum-apps-detail-hint {
+  margin: 0 0 0.65rem;
+  font-size: var(--sum-font-size-sm);
+  color: var(--sum-muted);
+}
+
+.sum-apps-detail-deps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.sum-apps-dep-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--sum-header) 25%, var(--sum-line));
+  background: color-mix(in srgb, var(--sum-header) 8%, var(--sum-surface));
+  color: var(--sum-header-dark);
+  font-size: var(--sum-font-size-sm);
+  font-weight: var(--sum-font-weight-medium);
+  text-decoration: none;
+}
+
+.sum-apps-dep-chip:hover {
+  background: color-mix(in srgb, var(--sum-header) 14%, var(--sum-surface));
+}
+
+.sum-apps-detail-edit {
+  margin-top: 1.75rem;
+  border-top: 1px solid var(--sum-line);
+  padding-top: 1rem;
+}
+
+.sum-apps-detail-edit-summary {
+  cursor: pointer;
+  font-size: var(--sum-font-size-sm);
+  font-weight: var(--sum-font-weight-semibold);
+  color: var(--sum-muted-ink);
+  user-select: none;
+}
+
+.sum-apps-detail-edit .sum-apps-module-form {
+  margin-top: 1rem;
+  max-width: none;
+  padding: 1.25rem;
+}
+
+.sum-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.sum-apps-categories {
+  border: 1px solid var(--sum-line-strong);
+  border-radius: var(--sum-radius-sm);
+  background: var(--sum-surface);
+  padding: 0.75rem 0.85rem;
+  box-shadow: var(--sum-shadow-sm);
+}
+
+.sum-apps-categories-title {
+  margin: 0 0 0.65rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid var(--sum-line);
+  font-size: var(--sum-font-size-sm);
+  font-weight: var(--sum-font-weight-bold);
+  letter-spacing: var(--sum-letter-spacing-ui);
+  text-transform: uppercase;
+  color: var(--sum-muted);
+}
+
+.sum-apps-category-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.sum-apps-category-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.4rem 0.45rem;
+  border-radius: var(--sum-radius-sm);
+  color: var(--sum-muted-ink);
+  text-decoration: none;
+  font-size: var(--sum-font-size-sm);
+  transition: background var(--sum-dur) var(--sum-ease), color var(--sum-dur) var(--sum-ease);
+}
+
+.sum-apps-category-link:hover {
+  background: var(--sum-launcher-hover-bg);
+  color: var(--sum-ink);
+}
+
+.sum-apps-category-link.is-active {
+  background: var(--sum-launcher-active-bg);
+  color: var(--sum-header-dark);
+  font-weight: var(--sum-font-weight-semibold);
+  box-shadow: inset 3px 0 0 var(--sum-launcher-active-accent);
+}
+
+.sum-apps-category-count {
+  font-size: 0.6875rem;
+  font-weight: var(--sum-font-weight-bold);
+  color: var(--sum-muted);
+  background: var(--sum-gray-50);
+  border: 1px solid var(--sum-line);
+  border-radius: var(--sum-radius-pill);
+  padding: 0.1rem 0.45rem;
+  min-width: 1.35rem;
+  text-align: center;
+}
+
+.sum-apps-category-link.is-active .sum-apps-category-count {
+  color: var(--sum-header-dark);
+  border-color: color-mix(in srgb, var(--sum-header) 25%, var(--sum-line));
+  background: var(--sum-surface);
+}
+
+.sum-apps-control-bar.sum-control-bar-wrap {
+  position: relative;
+  margin: 0;
+  z-index: 1;
+  width: 100%;
+}
+
+.sum-apps-topbar-controls .sum-control-bar-search-area {
+  flex: 1 1 auto;
+  max-width: none;
+  min-width: 0;
+}
+
+.sum-apps-topbar-controls .sum-control-bar-row {
+  flex-wrap: nowrap;
+}
+
+@media (max-width: 720px) {
+  .sum-apps-topbar-controls .sum-control-bar-row {
+    flex-wrap: wrap;
+  }
+}
+
+.sum-apps-control-bar .sum-control-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.sum-apps-control-bar .sum-control-bar-search-area {
+  display: flex;
+  flex: 0 1 20rem;
+  max-width: 20rem;
+  min-width: 11rem;
+}
+
+.sum-apps-control-bar .sum-control-bar-search-wrap {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.25rem;
+  padding: 0.25rem 0.55rem 0.25rem 0.65rem;
+  border: 1px solid var(--sum-border-input);
+  border-radius: var(--sum-radius-sm);
+  background: var(--sum-surface);
+  transition: border-color var(--sum-dur) var(--sum-ease), box-shadow var(--sum-dur) var(--sum-ease);
+}
+
+.sum-apps-control-bar .sum-control-bar-search-wrap:focus-within {
+  border-color: color-mix(in srgb, var(--sum-header) 45%, var(--sum-line-strong));
+  box-shadow: var(--sum-focus-ring);
+}
+
+.sum-apps-control-bar .sum-control-bar-search-wrap:focus-within .sum-control-bar-search-submit {
+  color: var(--sum-header);
+  background: color-mix(in srgb, var(--sum-header) 10%, var(--sum-surface-alt));
+}
+
+.sum-apps-control-bar .sum-control-bar-search-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  align-items: center;
+}
+
+.sum-apps-control-bar .sum-control-bar-search {
+  width: 100%;
+  padding: 0.15rem 0;
+  border: none;
+  background: transparent;
+  color: var(--sum-ink);
+  font-size: var(--sum-font-size-root);
+}
+
+.sum-apps-control-bar .sum-control-bar-search:focus {
+  outline: none;
+}
+
+.sum-apps-control-bar .sum-control-bar-search::-webkit-search-cancel-button,
+.sum-apps-control-bar .sum-control-bar-search::-webkit-search-decoration {
+  -webkit-appearance: none;
+}
+
+.sum-apps-control-bar .sum-control-bar-search-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  margin-left: 0.1rem;
+  border: none;
+  border-radius: var(--sum-radius-sm);
+  background: transparent;
+  color: var(--sum-muted);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.sum-apps-control-bar .sum-control-bar-search-submit:hover {
+  color: var(--sum-header);
+  background: color-mix(in srgb, var(--sum-header) 10%, var(--sum-surface-alt));
+}
+
+.sum-apps-control-bar .sum-control-bar-search-icon-svg {
+  display: block;
+}
+
+.sum-apps-control-bar .sum-control-bar-tools {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.45rem;
+  margin-left: auto;
+}
+
+.sum-apps-control-bar .sum-control-bar-segment {
+  display: inline-flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  border: 1px solid var(--sum-line-strong);
+  border-radius: var(--sum-radius-sm);
+  background: var(--sum-surface);
+  overflow: hidden;
+}
+
+.sum-apps-segment-select {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.sum-apps-segment-select:not(:last-child) .sum-control-bar-segment-btn {
+  border-right: 1px solid var(--sum-line);
+}
+
+.sum-apps-segment-select select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.sum-apps-control-bar .sum-control-bar-segment-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 2.25rem;
+  padding: 0.35rem 0.65rem;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--sum-ink);
+  font-size: var(--sum-font-size-sm);
+  font-weight: var(--sum-font-weight-medium);
+  pointer-events: none;
+  white-space: nowrap;
+  transition: background var(--sum-dur) var(--sum-ease), color var(--sum-dur) var(--sum-ease);
+}
+
+.sum-apps-segment-select:hover .sum-control-bar-segment-btn {
+  background: var(--sum-launcher-hover-bg);
+}
+
+.sum-apps-control-bar .sum-control-bar-segment-btn--active {
+  background: var(--sum-launcher-active-bg);
+  color: var(--sum-header-dark);
+}
+
+.sum-apps-control-bar .sum-control-bar-segment-icon {
+  flex-shrink: 0;
+  color: var(--sum-muted);
+}
+
+.sum-apps-control-bar .sum-control-bar-segment-btn--active .sum-control-bar-segment-icon {
+  color: var(--sum-header);
+}
+
+.sum-apps-control-bar .sum-control-bar-segment-label {
+  line-height: 1.1;
+}
+
+.sum-apps-control-bar .sum-control-bar-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 0.3rem;
+  border-radius: var(--sum-radius-pill);
+  background: var(--sum-header);
+  color: var(--sum-topbar-fg);
+  font-size: 0.625rem;
+  font-weight: var(--sum-font-weight-bold);
+  line-height: 1;
+}
+
+@media (max-width: 720px) {
+  .sum-apps-control-bar .sum-control-bar-row {
+    flex-wrap: wrap;
+  }
+
+  .sum-apps-control-bar .sum-control-bar-search-area {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+
+  .sum-apps-control-bar .sum-control-bar-tools {
+    margin-left: 0;
+    width: 100%;
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 520px) {
+  .sum-apps-control-bar .sum-control-bar-segment-label {
+    display: none;
+  }
+
+  .sum-apps-control-bar .sum-control-bar-segment-btn {
+    padding: 0.35rem 0.5rem;
+  }
+}
+
+.sum-apps-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--sum-header);
+  text-decoration: none;
+}
+
+.sum-apps-back-link:hover {
+  text-decoration: underline;
+}
+
+.sum-apps-back-icon {
+  flex-shrink: 0;
+}
+
+.sum-apps-group-heading {
+  margin: 0 0 0.85rem;
+  font-size: 1rem;
+  font-weight: var(--sum-font-weight-bold);
+  color: var(--sum-ink);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0.35rem 0;
+  background: color-mix(in srgb, var(--sum-bg) 92%, transparent);
+}
+
+.sum-apps-group-section + .sum-apps-group-section {
+  margin-top: 1.5rem;
+}
+
+.sum-apps-detail-summary {
+  margin: 0.35rem 0 0;
+  font-size: var(--sum-font-size-md);
+  color: var(--sum-muted-ink);
+  line-height: 1.45;
+}
+
+.sum-apps-list-row[data-detail-url] {
+  cursor: pointer;
+}
+
+.sum-apps-list-row[data-detail-url]:hover {
+  background: color-mix(in srgb, var(--sum-header) 6%, var(--sum-surface));
+}
+
+.sum-apps-list-group td {
+  padding: 0.65rem 0.75rem 0.35rem;
+  font-size: 0.6875rem;
+  font-weight: var(--sum-font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--sum-letter-spacing-ui);
+  color: var(--sum-muted);
+  background: var(--sum-bg);
+  border-bottom: 1px solid var(--sum-line);
+}
+
+.sum-apps-list-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--sum-radius-xs);
+  font-size: 0.75rem;
+  font-weight: var(--sum-font-weight-bold);
+  background: color-mix(in srgb, var(--sum-header) 12%, var(--sum-surface));
+  color: var(--sum-header-dark);
+  overflow: hidden;
+}
+
+.sum-apps-list-icon--hue {
+  background: hsl(var(--sum-app-icon-hue, 210) 55% 88%);
+}
+
+.sum-apps-list-icon-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sum-apps-list-category {
+  font-size: var(--sum-font-size-sm);
+  color: var(--sum-muted-ink);
 }

@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
+import { createElement } from "../harness/dom.js";
 import { html } from "../../src/template/html.js";
 import { CollectionView } from "../../src/views/shared/collection-view.js";
+import { renderCollectionShell } from "../../src/views/shared/collection-layout.js";
 import type { SwcEnv } from "../../src/runtime/env.js";
 import type { SwcWorkspacePayload } from "../../src/types/workspace.js";
 
@@ -9,6 +11,14 @@ class StubCollectionView extends CollectionView {
 
   override template() {
     return html`<div class="sum-stub-collection">${this.collectionBar.renderOrPatch()}</div>`;
+  }
+}
+
+class ShellCollectionView extends CollectionView {
+  protected readonly collectionViewType = "kanban";
+
+  override template() {
+    return this.renderShell(html`<p class="sum-stub-body">content</p>`);
   }
 }
 
@@ -40,6 +50,24 @@ function basePayload(): SwcWorkspacePayload {
   };
 }
 
+describe("renderCollectionShell", () => {
+  it("emits sum-collection-view and sum-{type}-view wrapper classes", () => {
+    const bar = {
+      renderOrPatch: () => {
+        return createElement("div", { className: "sum-control-bar" });
+      },
+    };
+    const root = renderCollectionShell("kanban", bar as never, html`<p class="sum-body">x</p>`).render();
+    const shell = root.matches(".sum-collection-view")
+      ? root
+      : root.querySelector(".sum-collection-view");
+    expect(shell).toBeTruthy();
+    expect(shell!.classList.contains("sum-kanban-view")).toBe(true);
+    expect(shell!.querySelector(".sum-control-bar")).toBeTruthy();
+    expect(shell!.querySelector(".sum-body")?.textContent).toBe("x");
+  });
+});
+
 describe("CollectionView", () => {
   it("mounts and destroys the collection bar on lifecycle hooks", () => {
     const view = new StubCollectionView({ payload: basePayload() }, testEnv());
@@ -50,5 +78,18 @@ describe("CollectionView", () => {
     const destroySpy = vi.spyOn(view["collectionBar"], "destroy");
     view.onWillUnmount();
     expect(destroySpy).toHaveBeenCalled();
+  });
+
+  it("renderShell nests control bar and body inside collection wrapper", () => {
+    const view = new ShellCollectionView({ payload: basePayload() }, testEnv());
+    view.callSetup();
+    const root = view.render();
+    const shell = root.matches(".sum-collection-view")
+      ? root
+      : root.querySelector(".sum-collection-view");
+    expect(shell).toBeTruthy();
+    expect(shell!.classList.contains("sum-kanban-view")).toBe(true);
+    expect(shell!.querySelector(".sum-control-bar")).toBeTruthy();
+    expect(shell!.querySelector(".sum-stub-body")?.textContent).toBe("content");
   });
 });

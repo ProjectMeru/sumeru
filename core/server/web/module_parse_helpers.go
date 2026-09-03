@@ -10,14 +10,15 @@ import (
 
 // moduleRow holds normalized fields from a sys.module ORM row.
 type moduleRow struct {
-	Name        string
-	DisplayName string
-	Author      string
-	Version     string
-	Description string
-	State       string
-	Application bool
-	Active      bool
+	Name         string
+	DisplayName  string
+	Author       string
+	Version      string
+	Description  string
+	CategoryName string
+	State        string
+	Application  bool
+	Active       bool
 }
 
 func moduleDisplayName(name, displayName string) string {
@@ -36,14 +37,15 @@ func parseModuleRow(row map[string]interface{}) (moduleRow, bool) {
 	}
 	displayName := orm.AsString(row["display_name"])
 	return moduleRow{
-		Name:        name,
-		DisplayName: moduleDisplayName(name, displayName),
-		Author:      orm.AsString(row["author"]),
-		Version:     orm.AsString(row["version"]),
-		Description: orm.AsString(row["description"]),
-		State:       orm.AsString(row["state"]),
-		Application: orm.AsBool(row["application"]),
-		Active:      orm.AsBool(row["active"]),
+		Name:         name,
+		DisplayName:  moduleDisplayName(name, displayName),
+		Author:       orm.AsString(row["author"]),
+		Version:      orm.AsString(row["version"]),
+		Description:  orm.AsString(row["description"]),
+		CategoryName: orm.AsString(row["category_name"]),
+		State:        orm.AsString(row["state"]),
+		Application:  orm.AsBool(row["application"]),
+		Active:       orm.AsBool(row["active"]),
 	}, true
 }
 

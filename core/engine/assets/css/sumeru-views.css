@@ -1739,18 +1739,100 @@ label.sum-form-label--hint {
 }
 
 .sum-image-thumb {
-  width: 6rem;
-  height: 6rem;
+  position: relative;
+  width: 8rem;
+  height: 8rem;
   border: 1px solid var(--sum-line);
   border-radius: var(--sum-radius-sm);
   overflow: hidden;
+  background: var(--sum-surface);
+}
+
+.sum-image-thumb--clickable,
+.sum-form-avatar-box--clickable {
+  cursor: pointer;
+}
+
+.sum-image-thumb--clickable:focus-visible,
+.sum-form-avatar-box--clickable:focus-visible {
+  outline: none;
+  box-shadow: var(--sum-focus-ring);
 }
 
 .sum-image-thumb-img {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  background: color-mix(in srgb, var(--sum-header) 6%, var(--sum-surface));
+}
+
+.sum-image-upload-hint {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 0.35rem 0.4rem;
+  font-size: var(--sum-font-size-xs, 0.75rem);
+  line-height: 1.25;
+  text-align: center;
+  color: #fff;
+  background: linear-gradient(transparent, rgba(15, 23, 42, 0.72));
+  pointer-events: none;
+}
+
+.sum-form-avatar-box--clickable {
+  position: relative;
+}
+
+.sum-form-avatar-box--clickable .sum-image-upload-hint {
+  border-radius: 0 0 999px 999px;
+}
+
+.sum-image-file-input {
+  display: none;
+}
+
+.sum-image-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(15, 23, 42, 0.72);
+}
+
+.sum-image-lightbox-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: min(92vw, 56rem);
+  max-height: 92vh;
+}
+
+.sum-image-lightbox-img {
+  max-width: 100%;
+  max-height: calc(92vh - 4rem);
+  object-fit: contain;
+  border-radius: var(--sum-radius-sm);
+  background: var(--sum-surface);
+  box-shadow: var(--sum-shadow-sm);
+}
+
+.sum-image-lightbox-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.sum-image-thumb--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sum-muted);
+  font-size: var(--sum-font-size-sm);
 }
 
 .sum-pivot-view {

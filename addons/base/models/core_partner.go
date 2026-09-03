@@ -20,4 +20,6 @@ type CorePartner struct {
 	Active                      sdk.Boolean                    `sumeru:"string=Active,default=true"`
 	PropertyAccountReceivableID sdk.Many2One[sdk.Any]          `sumeru:"string=Receivable Account,comodel=account.account"`
 	PropertyAccountPayableID    sdk.Many2One[sdk.Any]          `sumeru:"string=Payable Account,comodel=account.account"`
+	Color                       sdk.Integer                    `sumeru:"string=Color Index"`
+	Gender                      sdk.String                     `sumeru:"string=Gender,selection=male:Male,female:Female,other:Other"`
 }

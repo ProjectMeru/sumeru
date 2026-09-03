@@ -36,6 +36,7 @@ type archKanbanRoot struct {
 	GroupBy          string         `xml:"group_by,attr"`
 	RecordsDraggable string         `xml:"records_draggable,attr"`
 	QuickCreate      string         `xml:"quick_create,attr"`
+	ColumnsPerRow    string         `xml:"columns_per_row,attr"`
 	Report           *ReportElement `xml:"report"`
 	ReportDownload   string         `xml:"report_download,attr"`
 	BulkUpload       string         `xml:"bulk_upload,attr"`
@@ -106,6 +107,7 @@ func applyKanbanRootAttrs(v *View, k archKanbanRoot) {
 	v.GroupBy = k.GroupBy
 	v.RecordsDraggable = k.RecordsDraggable
 	v.QuickCreate = k.QuickCreate
+	v.ColumnsPerRow = k.ColumnsPerRow
 }
 
 // promoteNestedForm lifts children of a nested <form> under <view> onto View so

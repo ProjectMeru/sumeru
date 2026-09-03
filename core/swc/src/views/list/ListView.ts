@@ -11,11 +11,13 @@ import {
   type ControlPanelState,
 } from "./control-panel.js";
 import { forEach } from "../../template/helpers.js";
-import { VIEW_FORM, VIEW_LIST } from "../../constants/routes.js";
+import { VIEW_LIST } from "../../constants/routes.js";
 import { runObjectAction } from "../shared/object-action.js";
 import { formatFieldValue } from "../shared/field-display.js";
-import { CollectionView } from "../shared/collection-view.js";
+import { listColumns } from "../shared/arch-fields.js";
 import { navigateCollectionQuery } from "../shared/collection-query.js";
+import { CollectionView } from "../shared/collection-view.js";
+import { openWorkspaceRecord } from "../shared/collection-navigation.js";
 
 export class ListView extends CollectionView {
   protected readonly collectionViewType = VIEW_LIST;
@@ -84,7 +86,7 @@ export class ListView extends CollectionView {
   }
 
   private columns() {
-    return this.props.payload.arch.fields.filter((f) => !f.invisible);
+    return listColumns(this.props.payload.arch);
   }
 
   private pageRows() {
@@ -122,14 +124,7 @@ export class ListView extends CollectionView {
   }
 
   private openRow(row: Record<string, unknown>): void {
-    const id = Number(row.id ?? 0);
-    if (id <= 0) return;
-    this.env.services.action.openRecord({
-      actionId: this.props.payload.actionId,
-      menuId: this.props.payload.menuId,
-      recordId: id,
-      viewType: VIEW_FORM,
-    });
+    openWorkspaceRecord(this.env, this.props.payload, row);
   }
 
   private toggleRow(id: number, checked: boolean): void {
@@ -254,21 +249,22 @@ export class ListView extends CollectionView {
           )}`
         : flatBody;
 
-    return html`
-      <div class="sum-collection-view sum-list-view">
-        ${this.collectionBar.renderOrPatch()}
-        ${renderControlPanel({
-          payload,
-          state: this.panelState,
-          onPage: (o) => this.applyPage(o),
-        })}
+    return this.renderShell(
+      html`
         <div class="sum-list-table-wrap">
           <table class="sum-list-table">
             ${tableHead}
             ${this.useSections() ? sectionBody : flatBody}
           </table>
         </div>
-      </div>
-    `;
+      `,
+      {
+        extraBeforeBody: renderControlPanel({
+          payload,
+          state: this.panelState,
+          onPage: (o) => this.applyPage(o),
+        }),
+      },
+    );
   }
 }

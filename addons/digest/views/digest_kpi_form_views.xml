@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_digest_kpi_form" model="digest.kpi" type="form">
+            <sheet>
+                <group>
+                    <field name="name" string="Name"/>
+                    <field name="digest_id" string="Digest"/>
+                    <field name="compute_code" string="Compute Code"/>
+                </group>
+            </sheet>
+        </view>
+    </data>
+</sumeru>

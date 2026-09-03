@@ -41,67 +41,101 @@ func RecordsFromActions(actions []parser.Action) []parser.Record {
 	return out
 }
 
+type parsedManifestFile struct {
+	noUpdate  bool
+	records   []parser.Record
+	views     []parser.View
+	menuItems []parser.MenuItem
+}
+
+func (p parsedManifestFile) hasContent() bool {
+	return len(p.records) > 0 || len(p.views) > 0 || len(p.menuItems) > 0
+}
+
+func manifestFromViewList(xmlPath string) (parsedManifestFile, error) {
+	parsedViewData, err := parser.ParseViewList(xmlPath)
+	if err != nil {
+		return parsedManifestFile{}, err
+	}
+	out := parsedManifestFile{
+		noUpdate:  parsedViewData.NoUpdate,
+		records:   append([]parser.Record(nil), parsedViewData.Records...),
+		views:     parsedViewData.Views,
+		menuItems: parsedViewData.MenuItems,
+	}
+	out.records = append(out.records, RecordsFromActions(parsedViewData.Actions)...)
+	return out, nil
+}
+
+func manifestFromMenuList(xmlPath string) (parsedManifestFile, error) {
+	menuList, err := parser.ParseMenuList(xmlPath)
+	if err != nil {
+		return parsedManifestFile{}, err
+	}
+	out := parsedManifestFile{
+		noUpdate:  menuList.NoUpdate,
+		records:   append([]parser.Record(nil), menuList.Records...),
+		menuItems: menuList.MenuItems,
+	}
+	out.records = append(out.records, RecordsFromActions(menuList.Actions)...)
+	return out, nil
+}
+
+func resolveManifestFile(xmlPath string, acceptView func(parsedManifestFile) bool) (parsedManifestFile, error) {
+	viewParsed, viewErr := manifestFromViewList(xmlPath)
+	if viewErr == nil && acceptView(viewParsed) {
+		return viewParsed, nil
+	}
+	if viewErr != nil && !AllowMenuParseFallback(viewErr) {
+		return parsedManifestFile{}, viewErr
+	}
+
+	menuParsed, menuErr := manifestFromMenuList(xmlPath)
+	if menuErr == nil {
+		if menuParsed.hasContent() {
+			return menuParsed, nil
+		}
+		return parsedManifestFile{}, nil
+	}
+	if viewErr != nil {
+		return parsedManifestFile{}, fmt.Errorf("ParseViewList: %v; ParseMenuList: %v", viewErr, menuErr)
+	}
+	return parsedManifestFile{}, menuErr
+}
+
+func syncParsedManifestFile(ctx context.Context, moduleName string, parsed parsedManifestFile, inheritQueue *[]parser.Record, menuCollector *[]parser.MenuItem) {
+	if len(parsed.records) > 0 {
+		processXMLRecords(ctx, moduleName, parsed.records, inheritQueue, dataFileOpts{noUpdate: parsed.noUpdate})
+	}
+	for i := range parsed.views {
+		upsertInlineViewDef(ctx, moduleName, &parsed.views[i])
+	}
+	if len(parsed.menuItems) > 0 {
+		*menuCollector = append(*menuCollector, parsed.menuItems...)
+	}
+}
+
 // loadManifestDataFile parses one manifest XML path (view or menu layout) and syncs its content.
 // Menu items are appended to menuCollector for a deferred sync pass after all manifest files load.
 func loadManifestDataFile(ctx context.Context, moduleName, xmlPath, relFile string, inheritQueue *[]parser.Record, menuCollector *[]parser.MenuItem) []error {
-	parsedViewData, viewErr := parser.ParseViewList(xmlPath)
-	if viewErr == nil {
-		opts := dataFileOpts{noUpdate: parsedViewData.NoUpdate}
-		records := append([]parser.Record(nil), parsedViewData.Records...)
-		records = append(records, RecordsFromActions(parsedViewData.Actions)...)
-		if len(records) > 0 || len(parsedViewData.Views) > 0 || len(parsedViewData.MenuItems) > 0 {
-			processXMLRecords(ctx, moduleName, records, inheritQueue, opts)
-			for i := range parsedViewData.Views {
-				upsertInlineViewDef(ctx, moduleName, &parsedViewData.Views[i])
-			}
-			if len(parsedViewData.MenuItems) > 0 {
-				*menuCollector = append(*menuCollector, parsedViewData.MenuItems...)
-			}
-			return nil
-		}
-	} else if !AllowMenuParseFallback(viewErr) {
-		return []error{RecoverableSync(moduleName, "ParseViewList "+relFile, viewErr)}
+	parsed, err := resolveManifestFile(xmlPath, func(p parsedManifestFile) bool { return p.hasContent() })
+	if err != nil {
+		return []error{RecoverableSync(moduleName, "parse "+relFile, err)}
 	}
-
-	menuList, menuErr := parser.ParseMenuList(xmlPath)
-	if menuErr == nil {
-		opts := dataFileOpts{noUpdate: menuList.NoUpdate}
-		records := append([]parser.Record(nil), menuList.Records...)
-		records = append(records, RecordsFromActions(menuList.Actions)...)
-		if len(menuList.MenuItems) > 0 || len(records) > 0 {
-			if len(menuList.MenuItems) > 0 {
-				*menuCollector = append(*menuCollector, menuList.MenuItems...)
-			}
-			processXMLRecords(ctx, moduleName, records, inheritQueue, opts)
-			return nil
-		}
+	if !parsed.hasContent() {
 		return nil
 	}
-
-	if viewErr != nil {
-		return []error{RecoverableSync(moduleName, "parse "+relFile,
-			fmt.Errorf("ParseViewList: %v; ParseMenuList: %v", viewErr, menuErr))}
-	}
-	return []error{RecoverableSync(moduleName, "ParseMenuList "+relFile, menuErr)}
+	syncParsedManifestFile(ctx, moduleName, parsed, inheritQueue, menuCollector)
+	return nil
 }
 
 // CollectMenuItemsFromManifestFile parses menu items from one manifest XML path (for tests and tooling).
 func CollectMenuItemsFromManifestFile(xmlPath string) ([]parser.MenuItem, error) {
-	parsedViewData, viewErr := parser.ParseViewList(xmlPath)
-	if viewErr == nil && len(parsedViewData.MenuItems) > 0 {
-		return append([]parser.MenuItem(nil), parsedViewData.MenuItems...), nil
+	parsed, err := resolveManifestFile(xmlPath, func(p parsedManifestFile) bool { return len(p.menuItems) > 0 })
+	if err != nil {
+		return nil, err
 	}
-	if viewErr != nil && !AllowMenuParseFallback(viewErr) {
-		return nil, viewErr
-	}
-	menuList, menuErr := parser.ParseMenuList(xmlPath)
-	if menuErr != nil {
-		if viewErr != nil {
-			return nil, fmt.Errorf("ParseViewList: %v; ParseMenuList: %v", viewErr, menuErr)
-		}
-		return nil, menuErr
-	}
-	return append([]parser.MenuItem(nil), menuList.MenuItems...), nil
+	return append([]parser.MenuItem(nil), parsed.menuItems...), nil
 }
 
 func AllowMenuParseFallback(viewErr error) bool {

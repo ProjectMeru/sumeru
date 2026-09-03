@@ -27,45 +27,57 @@ type Row struct {
 	CoreID     int64
 }
 
-// firstCompanyID returns the primary company row id, or 0 if none.
-func firstCompanyID(ctx context.Context) int64 {
+type companyMailSettings struct {
+	id                   int64
+	chatterEnabled       bool
+	activityPanelEnabled bool
+}
+
+func firstCompanyMailSettings(ctx context.Context) (companyMailSettings, bool) {
 	if orm.DB == nil {
-		return 0
+		return companyMailSettings{chatterEnabled: true, activityPanelEnabled: true}, false
 	}
 	tn := orm.MustQuotedTableName("core.company")
 	var id sql.NullInt64
-	if err := orm.DB.QueryRowContext(ctx, `SELECT id FROM `+tn+` ORDER BY id ASC LIMIT 1`).Scan(&id); err != nil || !id.Valid {
+	var chatter, activity sql.NullBool
+	err := orm.DB.QueryRowContext(ctx,
+		`SELECT id, mail_chatter_enabled, mail_activity_panel_enabled FROM `+tn+` ORDER BY id ASC LIMIT 1`,
+	).Scan(&id, &chatter, &activity)
+	if err != nil {
+		return companyMailSettings{chatterEnabled: true, activityPanelEnabled: true}, false
+	}
+	out := companyMailSettings{chatterEnabled: true, activityPanelEnabled: true}
+	if id.Valid {
+		out.id = id.Int64
+	}
+	if chatter.Valid {
+		out.chatterEnabled = chatter.Bool
+	}
+	if activity.Valid {
+		out.activityPanelEnabled = activity.Bool
+	}
+	return out, id.Valid
+}
+
+// firstCompanyID returns the primary company row id, or 0 if none.
+func firstCompanyID(ctx context.Context) int64 {
+	settings, ok := firstCompanyMailSettings(ctx)
+	if !ok {
 		return 0
 	}
-	return id.Int64
+	return settings.id
 }
 
 // CompanyChatterEnabled reads mail_chatter_enabled from the first core.company row (default true).
 func CompanyChatterEnabled(ctx context.Context) bool {
-	if orm.DB == nil {
-		return true
-	}
-	tn := orm.MustQuotedTableName("core.company")
-	var b sql.NullBool
-	err := orm.DB.QueryRowContext(ctx, `SELECT mail_chatter_enabled FROM `+tn+` ORDER BY id ASC LIMIT 1`).Scan(&b)
-	if err != nil || !b.Valid {
-		return true
-	}
-	return b.Bool
+	settings, _ := firstCompanyMailSettings(ctx)
+	return settings.chatterEnabled
 }
 
 // CompanyActivityPanelEnabled reads mail_activity_panel_enabled from the first core.company row (default true).
 func CompanyActivityPanelEnabled(ctx context.Context) bool {
-	if orm.DB == nil {
-		return true
-	}
-	tn := orm.MustQuotedTableName("core.company")
-	var b sql.NullBool
-	err := orm.DB.QueryRowContext(ctx, `SELECT mail_activity_panel_enabled FROM `+tn+` ORDER BY id ASC LIMIT 1`).Scan(&b)
-	if err != nil || !b.Valid {
-		return true
-	}
-	return b.Bool
+	settings, _ := firstCompanyMailSettings(ctx)
+	return settings.activityPanelEnabled
 }
 
 // PostMessage inserts a mail.message row. author may be empty (stored as "System").
@@ -105,8 +117,8 @@ func PostMessage(ctx context.Context, model string, coreID int64, body, subtype,
 		"author":      author,
 		"create_date": time.Now().UTC(),
 	}
-	if cid := firstCompanyID(ctx); cid > 0 {
-		vals["company_id"] = int(cid)
+	if settings, ok := firstCompanyMailSettings(ctx); ok && settings.id > 0 {
+		vals["company_id"] = int(settings.id)
 	}
 	_, err := orm.Create(ctx, inst, vals)
 	return err
