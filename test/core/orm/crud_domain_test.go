@@ -46,6 +46,44 @@ func TestBuildSearchWhereClauseDateEqualsFalseIsNull(t *testing.T) {
 	}
 }
 
+func TestBuildSearchWhereClauseMany2OneNotFalseIsNotNull(t *testing.T) {
+	orm.RegisterStubModelForTest(t, "test.m2o.domain", []orm.FieldDefinition{
+		{Name: "team_id", Type: orm.Many2One, Relation: "crm.team"},
+	})
+
+	where, args, err := orm.BuildSearchWhereClauseForTest("test.m2o.domain", [][]interface{}{
+		{"team_id", "!=", false},
+	})
+	if err != nil {
+		t.Fatalf("buildSearchWhereClause: %v", err)
+	}
+	if len(args) != 0 {
+		t.Fatalf("expected no args, got %v", args)
+	}
+	if where == "" || !strings.Contains(where, "IS NOT NULL") {
+		t.Fatalf("expected IS NOT NULL, got %q", where)
+	}
+}
+
+func TestBuildSearchWhereClauseMany2OneEqualsFalseIsNull(t *testing.T) {
+	orm.RegisterStubModelForTest(t, "test.m2o.domain.eq", []orm.FieldDefinition{
+		{Name: "company_id", Type: orm.Many2One, Relation: "core.company"},
+	})
+
+	where, args, err := orm.BuildSearchWhereClauseForTest("test.m2o.domain.eq", [][]interface{}{
+		{"company_id", "=", false},
+	})
+	if err != nil {
+		t.Fatalf("buildSearchWhereClause: %v", err)
+	}
+	if len(args) != 0 {
+		t.Fatalf("expected no args, got %v", args)
+	}
+	if where == "" || !strings.Contains(where, "IS NULL") {
+		t.Fatalf("expected IS NULL, got %q", where)
+	}
+}
+
 func TestBuildSearchWhereClauseNonDateFalseUsesDistinctFrom(t *testing.T) {
 	orm.RegisterStubModelForTest(t, "test.bool.domain", []orm.FieldDefinition{
 		{Name: "active", Type: orm.Boolean},

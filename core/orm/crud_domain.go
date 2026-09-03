@@ -155,7 +155,9 @@ func joinShiftedWhereFragments(separator, modelName string, domains [][][]interf
 	return strings.Join(parts, separator), args, nil
 }
 
-// dateLikeNullCheck detects date unset/set domains: ("field", "!=", false) means IS NOT NULL.
+// dateLikeNullCheck detects falsy domain sentinels on nullable non-boolean columns.
+// ("field", "!=", false) → IS NOT NULL; ("field", "=", false) → IS NULL.
+// Applies to Date, DateTime, and Many2One (unset FK stored as NULL).
 func dateLikeNullCheck(modelName, fieldName string, value interface{}) (isSetCheck bool, ok bool) {
 	b, ok := value.(bool)
 	if !ok {
@@ -169,10 +171,12 @@ func dateLikeNullCheck(modelName, fieldName string, value interface{}) (isSetChe
 		if fieldDef.Name != fieldName {
 			continue
 		}
-		if fieldDef.Type != Date && fieldDef.Type != DateTime {
+		switch fieldDef.Type {
+		case Date, DateTime, Many2One:
+			return !b, true
+		default:
 			return false, false
 		}
-		return !b, true
 	}
 	return false, false
 }
