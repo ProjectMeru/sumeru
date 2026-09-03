@@ -1,14 +1,15 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { stubFetch, unstubFetch } from "../harness/dom.js";
 import { HttpService } from "../../src/services/http.js";
 import { SwcError } from "../../src/runtime/error.js";
 
 describe("HttpService", () => {
   beforeEach(() => {
-    vi.stubGlobal("fetch", vi.fn());
+    stubFetch();
   });
 
   afterEach(() => {
-    vi.unstubAllGlobals();
+    unstubFetch();
   });
 
   it("getJSON returns parsed body on success", async () => {

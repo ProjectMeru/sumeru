@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { createElement } from "../harness/dom.js";
 import { html } from "../../src/template/html.js";
 import { CollectionView } from "../../src/views/shared/collection-view.js";
 import { renderCollectionShell } from "../../src/views/shared/collection-layout.js";
@@ -53,9 +54,7 @@ describe("renderCollectionShell", () => {
   it("emits sum-collection-view and sum-{type}-view wrapper classes", () => {
     const bar = {
       renderOrPatch: () => {
-        const el = document.createElement("div");
-        el.className = "sum-control-bar";
-        return el;
+        return createElement("div", { className: "sum-control-bar" });
       },
     };
     const root = renderCollectionShell("kanban", bar as never, html`<p class="sum-body">x</p>`).render();

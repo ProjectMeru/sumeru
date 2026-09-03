@@ -17,5 +17,27 @@ describe("formatFieldValue", () => {
   it("formats boolean fields", () => {
     expect(formatFieldValue({ active: true }, { name: "active", type: "boolean" })).toBe("Yes");
     expect(formatFieldValue({ active: false }, { name: "active", type: "boolean" })).toBe("No");
+    expect(formatFieldValue({}, { name: "active", type: "boolean" })).toBe("");
+  });
+
+  it("formats selection fields", () => {
+    const field = {
+      name: "state",
+      type: "selection" as const,
+      selection: [
+        ["draft", "Draft"],
+        ["done", "Done"],
+      ],
+    };
+    expect(formatFieldValue({ state: "done" }, field)).toBe("Done");
+    expect(formatFieldValue({ state: "unknown" }, field)).toBe("unknown");
+    expect(formatFieldValue({}, field)).toBe("");
+  });
+
+  it("prefers _name suffix and skips falsey values", () => {
+    expect(formatFieldValue({ partner_id_name: "Acme" }, { name: "partner_id", type: "many2one" })).toBe(
+      "Acme",
+    );
+    expect(formatFieldValue({ note: false }, { name: "note", type: "text" })).toBe("");
   });
 });

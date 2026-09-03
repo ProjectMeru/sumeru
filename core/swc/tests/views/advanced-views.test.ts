@@ -89,6 +89,47 @@ describe("advanced views", () => {
     view.destroy();
   });
 
+  it("gantt row click opens record", () => {
+    const openRecord = vi.fn();
+    const env = testEnv();
+    env.services.action.openRecord = openRecord;
+    const view = new GanttView(
+      {
+        payload: payload(
+          { type: "gantt", gantt: { dateStart: "date_start", dateStop: "date_stop" } },
+          [{ id: 4, name: "Task", date_start: "2026-01-01", date_stop: "2026-01-08" }],
+        ),
+      },
+      env,
+    );
+    view.callSetup();
+    (view.render().querySelector(".sum-gantt-row") as HTMLElement).click();
+    expect(openRecord).toHaveBeenCalled();
+    view.destroy();
+  });
+
+  it("gantt scale buttons switch active scale", () => {
+    const view = new GanttView(
+      {
+        payload: payload(
+          { type: "gantt", gantt: { dateStart: "date_start", dateStop: "date_stop" } },
+          [{ id: 4, name: "Task", date_start: "2026-01-01", date_stop: "2026-01-08" }],
+        ),
+      },
+      testEnv(),
+    );
+    view.callSetup();
+    const el = view.render();
+    const monthBtn = [...el.querySelectorAll(".sum-gantt-scale button")].find(
+      (b) => b.textContent === "month",
+    ) as HTMLButtonElement;
+    monthBtn.click();
+    expect(view.render().querySelector(".sum-gantt-scale .sum-btn--secondary")?.textContent).toBe(
+      "month",
+    );
+    view.destroy();
+  });
+
   it("buckets cohort rows by month", () => {
     const view = new CohortView(
       {
