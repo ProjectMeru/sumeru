@@ -282,7 +282,7 @@ func TestForTestExports_orm(t *testing.T) {
 		t.Fatalf("BuildAndWhereClausesForTest: err=%v", err)
 	}
 	_ = args
-	if !orm.RecordMatchesDomainForTest(map[string]interface{}{"name": "a"}, [][]interface{}{{"name", "=", "a"}}) {
+	if !orm.RecordMatchesDomainForTest("", map[string]interface{}{"name": "a"}, [][]interface{}{{"name", "=", "a"}}) {
 		t.Fatal("RecordMatchesDomainForTest")
 	}
 	stub := orm.NewStubModelForTest("test.stub.only", nil)

@@ -33,27 +33,17 @@ func buildSearchWhereClause(modelName string, domain [][]interface{}) (string, [
 			return "", nil, fmt.Errorf("domain field name")
 		}
 		op := strings.TrimSpace(strings.ToLower(fmt.Sprint(clause[1])))
+		if frag, fragArgs, handled, err := buildFalsyDomainClause(modelName, field, op, clause[2]); handled {
+			if err != nil {
+				return "", nil, err
+			}
+			parts = append(parts, frag)
+			args = append(args, fragArgs...)
+			continue
+		}
 		col, err := QuotedColumnForModel(modelName, field)
 		if err != nil {
 			return "", nil, err
-		}
-		if dateLike, isBool := dateLikeNullCheck(modelName, field, clause[2]); isBool {
-			switch op {
-			case "!=":
-				if dateLike {
-					parts = append(parts, fmt.Sprintf("%s IS NOT NULL", col))
-				} else {
-					parts = append(parts, fmt.Sprintf("%s IS NULL", col))
-				}
-				continue
-			case "=":
-				if dateLike {
-					parts = append(parts, fmt.Sprintf("%s IS NULL", col))
-				} else {
-					parts = append(parts, fmt.Sprintf("%s IS NOT NULL", col))
-				}
-				continue
-			}
 		}
 		switch op {
 		case "=":
@@ -153,32 +143,6 @@ func joinShiftedWhereFragments(separator, modelName string, domains [][][]interf
 		placeholderIndex += len(fragmentArgs)
 	}
 	return strings.Join(parts, separator), args, nil
-}
-
-// dateLikeNullCheck detects falsy domain sentinels on nullable non-boolean columns.
-// ("field", "!=", false) → IS NOT NULL; ("field", "=", false) → IS NULL.
-// Applies to Date, DateTime, and Many2One (unset FK stored as NULL).
-func dateLikeNullCheck(modelName, fieldName string, value interface{}) (isSetCheck bool, ok bool) {
-	b, ok := value.(bool)
-	if !ok {
-		return false, false
-	}
-	inst, has := Registry[modelName]
-	if !has || inst == nil {
-		return false, false
-	}
-	for _, fieldDef := range inst.Fields() {
-		if fieldDef.Name != fieldName {
-			continue
-		}
-		switch fieldDef.Type {
-		case Date, DateTime, Many2One:
-			return !b, true
-		default:
-			return false, false
-		}
-	}
-	return false, false
 }
 
 // buildAndWhereClauses ANDs independent domain parts, each compiled separately
