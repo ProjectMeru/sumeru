@@ -6,10 +6,12 @@ import (
 	"testing"
 
 	"sumeru/core/module"
+	"sumeru/test/harness"
 )
 
 func TestValidateDiscoveredAddons_okMinimal(t *testing.T) {
 	dir := t.TempDir()
+	harness.WriteMinimalBaseAddon(t, dir)
 	addon := filepath.Join(dir, "demo_x")
 	if err := os.MkdirAll(filepath.Join(addon, "views"), 0o755); err != nil {
 		t.Fatal(err)
@@ -30,12 +32,15 @@ func TestValidateDiscoveredAddons_okMinimal(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(addon, "views", "menus.xml"), []byte(xml), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(addon, "init.go"), []byte("package demo_x\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(addon, "init.go"), []byte(`package demo_x
+
+import (
+	_ "sumeru/base"
+)
+`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module sumeru\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	harness.WriteTempGoMod(t, dir)
 
 	discovered, err := module.DiscoverAddonRoots([]string{dir})
 	if err != nil {
@@ -77,9 +82,7 @@ func TestValidateDiscoveredAddons_modelsImportRequired(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(addon, "models", "x.go"), []byte("package models\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module sumeru\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	harness.WriteTempGoMod(t, dir)
 
 	discovered, err := module.DiscoverAddonRoots([]string{dir})
 	if err != nil {

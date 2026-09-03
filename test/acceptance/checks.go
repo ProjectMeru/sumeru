@@ -46,11 +46,12 @@ func fieldAccessModelRegistered() bool {
 }
 
 func graphViewUsesReadGroup() bool {
-	return orm.ModelRegistered("core.partner") || true
+	return orm.ModelRegistered("core.partner")
 }
 
 func mapViewHasEmbeddedMap() bool {
-	return true
+	_, err := parser.ParseViewFromArch(`<map lat_field="partner_latitude" lon_field="partner_longitude"><field name="name"/></map>`)
+	return err == nil
 }
 
 func xpathInheritApplies() bool {
@@ -86,7 +87,7 @@ func savedSearchModelExists() bool {
 }
 
 func readGroupAggregates() bool {
-	return true
+	return orm.ModelRegistered("core.partner")
 }
 
 func modelInheritTagSupported() bool {

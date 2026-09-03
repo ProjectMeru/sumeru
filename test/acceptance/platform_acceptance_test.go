@@ -61,7 +61,7 @@ func TestWorkstreamF_Filters(t *testing.T) {
 		t.Fatal("domain should support in, not in, ilike")
 	}
 	if !savedSearchModelExists() {
-		t.Fatal("sys.saved.search model should exist")
+		t.Fatal("swc.saved.search model should exist")
 	}
 }
 

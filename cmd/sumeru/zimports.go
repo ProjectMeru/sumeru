@@ -3,10 +3,10 @@
 package main
 
 import (
-	_ "sumeru/addons/automation"
 	_ "sumeru/addons/base"
-	_ "sumeru/addons/calendar"
 	_ "sumeru/addons/contacts"
-	_ "sumeru/addons/digest"
 	_ "sumeru/addons/mail"
+	_ "sumeru/addons/automation"
+	_ "sumeru/addons/calendar"
+	_ "sumeru/addons/digest"
 )

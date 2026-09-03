@@ -13,7 +13,7 @@ import (
 
 func baseAddonDir(t *testing.T) string {
 	t.Helper()
-	dir := filepath.Join("..", "..", "addons", "base")
+	dir := filepath.Join("..", "..", "..", "addons", "base")
 	if _, err := os.Stat(dir); err != nil {
 		t.Skip("base addon not found at ", dir)
 	}
