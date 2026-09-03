@@ -1,6 +1,7 @@
 package importgen_test
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -8,19 +9,31 @@ import (
 	"sumeru/core/module"
 )
 
+func writeGoMod(t *testing.T, dir, modulePath string) {
+	t.Helper()
+	writeFile(t, filepath.Join(dir, "go.mod"), "module "+modulePath+"\n\ngo 1.22\n")
+}
+
 func TestRenderAddonInitIncludesDepends(t *testing.T) {
+	addonsRoot := filepath.Join(t.TempDir(), "sumeru_addons")
+	writeGoMod(t, addonsRoot, "sumeru_addons")
+	crmPath := filepath.Join(addonsRoot, "crm")
+	salePath := filepath.Join(addonsRoot, "sale")
+	saleCrmPath := filepath.Join(addonsRoot, "sale_crm")
+	writeFile(t, filepath.Join(saleCrmPath, "models", "models.go"), "package models\n")
+
 	discovered := map[string]*module.Addon{
 		"crm": {
 			Manifest: module.Manifest{Name: "crm", Depends: []string{"base"}},
-			Path:     testRepoRoot(t) + "/../sumeru_addons/crm",
+			Path:     crmPath,
 		},
 		"sale": {
 			Manifest: module.Manifest{Name: "sale", Depends: []string{"base"}},
-			Path:     testRepoRoot(t) + "/../sumeru_addons/sale",
+			Path:     salePath,
 		},
 		"sale_crm": {
 			Manifest: module.Manifest{Name: "sale_crm", Depends: []string{"crm", "sale"}},
-			Path:     testRepoRoot(t) + "/../sumeru_addons/sale_crm",
+			Path:     saleCrmPath,
 		},
 	}
 	imports, err := importgen.CollectInitImportsForTest(discovered, discovered["sale_crm"])
@@ -47,29 +60,37 @@ func TestRenderAddonInitIncludesDepends(t *testing.T) {
 
 func TestExpectedInitDependsImportPathsWorkspace(t *testing.T) {
 	root := testRepoRoot(t)
+	workspace := t.TempDir()
+	addonsRoot := filepath.Join(workspace, "sumeru_addons")
+	customRoot := filepath.Join(workspace, "sumeru_custom_addons")
+	writeGoMod(t, addonsRoot, "sumeru_addons")
+	writeGoMod(t, customRoot, "sumeru_custom_addons")
+	hrPath := filepath.Join(addonsRoot, "hr")
+	cookbookPath := filepath.Join(customRoot, "addons", "engagement_cookbook")
+
 	discovered := map[string]*module.Addon{
 		"base": {
 			Manifest: module.Manifest{Name: "base", Depends: []string{}},
-			Path:     root + "/addons/base",
+			Path:     filepath.Join(root, "addons", "base"),
 		},
 		"contacts": {
 			Manifest: module.Manifest{Name: "contacts", Depends: []string{"base"}},
-			Path:     root + "/addons/contacts",
+			Path:     filepath.Join(root, "addons", "contacts"),
 		},
 		"mail": {
 			Manifest: module.Manifest{Name: "mail", Depends: []string{"base"}},
-			Path:     root + "/addons/mail",
+			Path:     filepath.Join(root, "addons", "mail"),
 		},
 		"hr": {
 			Manifest: module.Manifest{Name: "hr", Depends: []string{"base", "contacts"}},
-			Path:     root + "/../sumeru_addons/hr",
+			Path:     hrPath,
 		},
 		"engagement_cookbook": {
 			Manifest: module.Manifest{
 				Name:    "engagement_cookbook",
 				Depends: []string{"base", "contacts", "hr", "mail"},
 			},
-			Path: root + "/../sumeru_custom_addons/addons/engagement_cookbook",
+			Path: cookbookPath,
 		},
 	}
 	paths, err := module.ExpectedInitDependsImportPaths(discovered, discovered["engagement_cookbook"])
