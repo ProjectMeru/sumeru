@@ -778,12 +778,6 @@
   min-width: 0;
 }
 
-.sum-kanban-columns {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-}
-
 .sum-form-view {
   display: flex;
   flex-direction: column;
@@ -1171,11 +1165,17 @@
 }
 
 /* —— Premium kanban —— */
+/* Cards must grow with content; do not set aspect-ratio on .sum-kanban-card (causes row overlap). */
 .sum-kanban-columns {
   display: grid;
   grid-template-columns: repeat(var(--sum-kanban-columns, 4), minmax(0, 1fr));
-  gap: 1rem;
+  grid-auto-rows: auto;
+  align-items: start;
   align-content: flex-start;
+  gap: 1rem;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
   padding: 0.85rem 1rem 1.25rem;
   background: var(--sum-bg);
 }
@@ -1225,8 +1225,7 @@
   flex-direction: row;
   align-items: stretch;
   min-width: 0;
-  aspect-ratio: 1 / 1;
-  overflow: hidden;
+  height: auto;
   padding: 0;
   border-radius: var(--sum-radius-sm);
   background: var(--sum-surface);
@@ -1268,14 +1267,13 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 .sum-kanban-card-media {
   position: relative;
-  flex: 0 0 38%;
+  flex: 0 0 auto;
   width: 100%;
-  max-height: 38%;
+  aspect-ratio: 4 / 3;
   overflow: hidden;
   background: color-mix(in srgb, var(--sum-header) 8%, var(--sum-surface));
   display: flex;
@@ -1306,14 +1304,10 @@
   flex-direction: column;
   flex: 1;
   min-width: 0;
-  min-height: 0;
-  overflow: hidden;
 }
 
 .sum-kanban-card-body {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
+  flex: 0 1 auto;
   padding: 0.65rem 0.75rem 0.75rem;
 }
 
