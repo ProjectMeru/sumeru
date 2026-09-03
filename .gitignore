@@ -23,7 +23,7 @@ log/
 translations.csv
 
 # Test / coverage artifacts
-coverage/
+# coverage/
 *.coverprofile
 coverage.out
 
