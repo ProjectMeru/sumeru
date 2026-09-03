@@ -49,16 +49,29 @@ jobs:
           go-version: "1.26.2"
           cache: true
 
+      - name: Module static tests
+        env:
+          GOFLAGS: -mod=readonly
+        run: make test-modules-static
+
       - name: Run unit tests
         env:
           GOFLAGS: -mod=readonly
-        run: go test ./... -count=1 -timeout 15m
+        run: go test ./test/... -count=1 -timeout 15m
+
+      - name: Coverage gate
+        env:
+          GOFLAGS: -mod=readonly
+          GO_COVERAGE_MIN: "42"
+        run: |
+          go test ./test/... -coverpkg=./... -coverprofile=coverage.out -count=1 -timeout 15m
+          bash scripts/check_go_coverage.sh coverage.out
 
       - name: Job summary
         if: always()
         run: |
           echo "## Go test" >> "$GITHUB_STEP_SUMMARY"
-          echo "Command: \`go test ./... -count=1\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Commands: \`make test-modules-static\`, \`go test ./test/...\`, coverage gate 90%" >> "$GITHUB_STEP_SUMMARY"
 
   swc:
     name: SWC check and test
@@ -81,8 +94,8 @@ jobs:
       - name: Typecheck
         run: npm run check
 
-      - name: Vitest
-        run: npm run test
+      - name: Vitest with coverage
+        run: npm run test:coverage
 
       - name: Job summary
         if: always()
