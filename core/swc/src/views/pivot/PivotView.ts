@@ -20,43 +20,37 @@ export class PivotView extends CollectionView {
     const pivot = this.props.payload.arch.pivot;
     const exportLink = renderPivotExportLink(this.props.payload);
     if (!pivot) {
-      return html`<div class="sum-collection-view sum-pivot-view sum-pivot-view--empty">
-        ${this.collectionBar.renderOrPatch()}
-        No pivot data
-      </div>`;
+      return this.renderShell("No pivot data", { rootClass: "sum-pivot-view--empty" });
     }
-    return html`
-      <div class="sum-collection-view sum-pivot-view">
-        ${this.collectionBar.renderOrPatch()}
-        ${exportLink ?? ""}
-        <table class="sum-pivot-table">
-          <thead>
-            <tr>
-              <th></th>
-              ${pivot.colLabels.map((c) => html`<th>${c}</th>`)}
-            </tr>
-          </thead>
-          <tbody>
-            ${pivot.rowLabels.map(
-              (row) => html`<tr class=${this.collapsedRows.has(row) ? "is-collapsed" : ""}>
-                <th>
-                  <button type="button" class="sum-pivot-row-toggle" @click=${() => this.toggleRow(row)}>
-                    ${this.collapsedRows.has(row) ? "+" : "−"}
-                  </button>
-                  ${row}
-                </th>
-                ${this.collapsedRows.has(row)
-                  ? pivot.colLabels.map(() => html`<td>…</td>`)
-                  : pivot.colLabels.map((col) => {
-                      const fieldValue = pivot.values[row]?.[col] ?? 0;
-                      return html`<td>${String(fieldValue)}</td>`;
-                    })}
-              </tr>`,
-            )}
-          </tbody>
-        </table>
-        <p class="sum-pivot-measure">${pivot.measureLabel}</p>
-      </div>
-    `;
+    return this.renderShell(html`
+      ${exportLink ?? ""}
+      <table class="sum-pivot-table">
+        <thead>
+          <tr>
+            <th></th>
+            ${pivot.colLabels.map((c) => html`<th>${c}</th>`)}
+          </tr>
+        </thead>
+        <tbody>
+          ${pivot.rowLabels.map(
+            (row) => html`<tr class=${this.collapsedRows.has(row) ? "is-collapsed" : ""}>
+              <th>
+                <button type="button" class="sum-pivot-row-toggle" @click=${() => this.toggleRow(row)}>
+                  ${this.collapsedRows.has(row) ? "+" : "−"}
+                </button>
+                ${row}
+              </th>
+              ${this.collapsedRows.has(row)
+                ? pivot.colLabels.map(() => html`<td>…</td>`)
+                : pivot.colLabels.map((col) => {
+                    const fieldValue = pivot.values[row]?.[col] ?? 0;
+                    return html`<td>${String(fieldValue)}</td>`;
+                  })}
+            </tr>`,
+          )}
+        </tbody>
+      </table>
+      <p class="sum-pivot-measure">${pivot.measureLabel}</p>
+    `);
   }
 }

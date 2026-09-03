@@ -1,15 +1,15 @@
-import { html } from "../../template/html.js";
-import { VIEW_FORM, VIEW_HIERARCHY } from "../../constants/routes.js";
+import { VIEW_HIERARCHY } from "../../constants/routes.js";
 import { CollectionView } from "../shared/collection-view.js";
-import { formatFieldValue } from "../shared/field-display.js";
-import { forEach } from "../../template/helpers.js";
+import { listColumns } from "../shared/arch-fields.js";
+import { openWorkspaceRecord } from "../shared/collection-navigation.js";
+import { renderArchListTable } from "../shared/list-table.js";
 
 /** Hierarchy view — indented tree table using parent_field on arch. */
 export class HierarchyView extends CollectionView {
   protected readonly collectionViewType = VIEW_HIERARCHY;
 
   private columns() {
-    return this.props.payload.arch.fields.filter((f) => !f.invisible);
+    return listColumns(this.props.payload.arch);
   }
 
   private parentField(): string {
@@ -31,49 +31,22 @@ export class HierarchyView extends CollectionView {
     return d;
   }
 
-  private openRow(row: Record<string, unknown>): void {
-    const id = Number(row.id ?? 0);
-    if (id <= 0) return;
-    this.env.services.action.openRecord({
-      actionId: this.props.payload.actionId,
-      menuId: this.props.payload.menuId,
-      recordId: id,
-      viewType: VIEW_FORM,
-    });
-  }
-
   override template() {
     const payload = this.props.payload;
     const cols = this.columns();
     const rows = [...(payload.records ?? [])];
     const depthCache = new Map<number, number>();
 
-    return html`
-      <div class="sum-collection-view sum-hierarchy-view">
-        ${this.collectionBar.renderOrPatch()}
-        <div class="sum-list-table-wrap">
-          <table class="sum-list-table">
-            <thead>
-              <tr>
-                ${cols.map((c) => html`<th class="sum-list-th">${c.string ?? c.name}</th>`)}
-              </tr>
-            </thead>
-            <tbody>
-              ${forEach(rows, (row) => Number(row.id ?? 0), (row) => {
-                const depth = this.depth(row, rows, depthCache);
-                const pad = `${depth * 1.25}rem`;
-                return html`<tr class="sum-list-row sum-list-row--click" @click=${() => this.openRow(row)}>
-                  ${cols.map((c, i) =>
-                    html`<td class="sum-list-td" style=${i === 0 ? `padding-left: calc(0.75rem + ${pad})` : ""}>
-                      ${formatFieldValue(row, c)}
-                    </td>`,
-                  )}
-                </tr>`;
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    `;
+    return this.renderShell(
+      renderArchListTable({
+        columns: cols,
+        rows,
+        onRowClick: (row) => openWorkspaceRecord(this.env, payload, row),
+        firstCellStyle: (row) => {
+          const depth = this.depth(row, rows, depthCache);
+          return `padding-left: calc(0.75rem + ${depth * 1.25}rem)`;
+        },
+      }),
+    );
   }
 }

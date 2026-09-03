@@ -1,7 +1,8 @@
 import { SwcComponent } from "../../runtime/component.js";
-import type { TemplateValue } from "../../template/html.js";
+import type { TemplateResult, TemplateValue } from "../../template/html.js";
 import type { SwcWorkspacePayload } from "../../types/workspace.js";
 import { CollectionBarHost, mountCollectionBar } from "./collection-bar-host.js";
+import { renderCollectionShell, type CollectionShellOptions } from "./collection-layout.js";
 
 export type CollectionViewProps = { payload: SwcWorkspacePayload };
 
@@ -41,4 +42,8 @@ export abstract class CollectionView<P extends CollectionViewProps = CollectionV
   protected onCollectionSetup?(): void;
   protected onCollectionPropsChanged?(props: P): void;
   protected onCollectionTeardown?(): void;
+
+  protected renderShell(body: TemplateValue, options?: CollectionShellOptions): TemplateResult {
+    return renderCollectionShell(this.collectionViewType, this.collectionBar, body, options);
+  }
 }

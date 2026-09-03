@@ -4,6 +4,7 @@ import type { SwcArchField, SwcWorkspacePayload } from "../../types/workspace.js
 import { SAVED_SEARCHES_ROUTE } from "../../constants/routes.js";
 import { inputValueFromEvent } from "../../widgets/field-events.js";
 import { renderNewButton, buildReportActionEntries, exportFieldNamesCsv, createToolbarIcon } from "./view-toolbar.js";
+import { visibleArchFields } from "./arch-fields.js";
 import {
   activeFilterTags,
   appendDomainTriple,
@@ -297,7 +298,7 @@ export class CollectionBarHost extends SwcComponent<CollectionBarHostProps> {
         },
       );
     }
-    const fields = exportFieldNamesCsv((this.props.payload.arch.fields ?? []).filter((f) => !f.invisible));
+    const fields = exportFieldNamesCsv(visibleArchFields(this.props.payload.arch.fields ?? []));
     return renderActionsPopover(this.props.payload, fields);
   }
 
@@ -360,7 +361,7 @@ export class CollectionBarHost extends SwcComponent<CollectionBarHostProps> {
 
   override template(): TemplateResult {
     const payload = this.props.payload;
-    const fields = exportFieldNamesCsv((payload.arch.fields ?? []).filter((f) => !f.invisible));
+    const fields = exportFieldNamesCsv(visibleArchFields(payload.arch.fields ?? []));
     const actionEntries = buildReportActionEntries(payload, fields);
     const tags = activeFilterTags(this.query, this.searchMeta());
     const fCount = filterCount(this.query);

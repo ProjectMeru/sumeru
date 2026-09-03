@@ -23,6 +23,7 @@ import {
   isUploadedImageSrc,
   resolveImageDisplaySrc,
 } from "../shared/image-placeholder.js";
+import { visibleArchFields } from "../shared/arch-fields.js";
 
 export type RenderFieldFn = (
   field: SwcArchField,
@@ -36,7 +37,7 @@ function renderFields(
   record: SwcRecord,
   readonly: boolean,
 ): Array<TemplateResult | HTMLElement> {
-  return visibleFields(fields).map((f) =>
+  return visibleArchFields(fields).map((f) =>
     html`<div class="sum-studio-field-anchor" data-sum-studio-anchor=${`field:${f.name}`}>${rf(f, record, readonly)}</div>`,
   );
 }
@@ -51,7 +52,7 @@ function collectDivFields(div: SwcArchDiv): SwcArchField[] {
 
 export function collectFormFields(sheet?: SwcArchSheet, headerFields: SwcArchField[] = []): SwcArchField[] {
   const out = [...headerFields];
-  if (!sheet) return out.filter((f) => !f.invisible);
+  if (!sheet) return visibleArchFields(out);
 
   out.push(...(sheet.fields ?? []));
   for (const div of sheet.divs ?? []) {
@@ -68,7 +69,7 @@ export function collectFormFields(sheet?: SwcArchSheet, headerFields: SwcArchFie
       }
     }
   }
-  return out.filter((f) => !f.invisible);
+  return visibleArchFields(out);
 }
 
 function collectGroupFields(group: SwcArchGroup): SwcArchField[] {
@@ -77,10 +78,6 @@ function collectGroupFields(group: SwcArchGroup): SwcArchField[] {
     out.push(...collectGroupFields(nested));
   }
   return out;
-}
-
-function visibleFields(fields: SwcArchField[]): SwcArchField[] {
-  return fields.filter((f) => !f.invisible);
 }
 
 function renderSeparators(separators: SwcArchSeparator[] = []): TemplateResult {
@@ -212,9 +209,9 @@ function renderTitleBody(
   record: SwcRecord,
   readonly: boolean,
 ): TemplateResult {
-  const h1Fields = visibleFields(div.h1Fields ?? []);
+  const h1Fields = visibleArchFields(div.h1Fields ?? []);
   const contactDiv = (div.divs ?? []).find((d) => (d.class ?? "").includes("sum-title-contact-row"));
-  const contactFields = visibleFields(contactDiv?.fields ?? []);
+  const contactFields = visibleArchFields(contactDiv?.fields ?? []);
 
   return html`<div class="sum-form-title-body sum-form-title-body--main">
     ${h1Fields.length > 0 ? renderHeroField(h1Fields[0], record, readonly) : ""}
@@ -379,7 +376,7 @@ export function renderFormSheet(options: RenderFormSheetOptions): TemplateResult
     parts.push(renderTitleDiv(rf, div, record, readonly, hasImageField, onStatButton));
   }
 
-  const topFields = visibleFields(sheet.fields ?? []);
+  const topFields = visibleArchFields(sheet.fields ?? []);
   const groups = sheet.groups ?? [];
   if (topFields.length > 0 || groups.length > 0) {
     parts.push(

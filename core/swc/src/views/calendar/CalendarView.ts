@@ -1,7 +1,9 @@
 import { html } from "../../template/html.js";
-import { VIEW_CALENDAR, VIEW_FORM } from "../../constants/routes.js";
+import { VIEW_CALENDAR } from "../../constants/routes.js";
 import { CollectionView } from "../shared/collection-view.js";
 import { resolveArchDateField } from "../shared/arch-date.js";
+import { openWorkspaceRecord } from "../shared/collection-navigation.js";
+import { recordDisplayLabel } from "../shared/field-display.js";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -35,15 +37,7 @@ export class CalendarView extends CollectionView {
   }
 
   private openRecord(row: Record<string, unknown>): void {
-    const id = Number(row.id ?? 0);
-    if (id <= 0) return;
-    const payload = this.props.payload;
-    this.env.services.action.openRecord({
-      actionId: payload.actionId,
-      menuId: payload.menuId,
-      recordId: id,
-      viewType: VIEW_FORM,
-    });
+    openWorkspaceRecord(this.env, this.props.payload, row);
   }
 
   private shiftMonth(delta: number): void {
@@ -79,32 +73,29 @@ export class CalendarView extends CollectionView {
       month: "long",
       year: "numeric",
     });
-    return html`
-      <div class="sum-collection-view sum-calendar-view">
-        ${this.collectionBar.renderOrPatch()}
-        <div class="sum-calendar-toolbar">
-          <button type="button" class="sum-btn sum-btn--ghost" @click=${() => this.shiftMonth(-1)}>Prev</button>
-          <h2 class="sum-calendar-title">${this.props.payload.arch.title ?? title}</h2>
-          <button type="button" class="sum-btn sum-btn--ghost" @click=${() => this.shiftMonth(1)}>Next</button>
-        </div>
-        <div class="sum-calendar-grid">
-          ${WEEKDAYS.map((d) => html`<div class="sum-calendar-weekday">${d}</div>`)}
-          ${this.cells().map((cell) => {
-            const key = this.iso(cell.date);
-            const rows = events.get(key) ?? [];
-            return html`<section class=${cell.inMonth ? "sum-calendar-cell" : "sum-calendar-cell sum-calendar-cell--muted"}>
-              <h3 class="sum-calendar-day-title">${String(cell.date.getDate())}</h3>
-              <ul class="sum-calendar-events">
-                ${rows.map(
-                  (row) => html`<li class="sum-calendar-event" @click=${() => this.openRecord(row)}>
-                    ${String(row.name ?? row.display_name ?? `#${row.id}`)}
-                  </li>`,
-                )}
-              </ul>
-            </section>`;
-          })}
-        </div>
+    return this.renderShell(html`
+      <div class="sum-calendar-toolbar">
+        <button type="button" class="sum-btn sum-btn--ghost" @click=${() => this.shiftMonth(-1)}>Prev</button>
+        <h2 class="sum-calendar-title">${this.props.payload.arch.title ?? title}</h2>
+        <button type="button" class="sum-btn sum-btn--ghost" @click=${() => this.shiftMonth(1)}>Next</button>
       </div>
-    `;
+      <div class="sum-calendar-grid">
+        ${WEEKDAYS.map((d) => html`<div class="sum-calendar-weekday">${d}</div>`)}
+        ${this.cells().map((cell) => {
+          const key = this.iso(cell.date);
+          const rows = events.get(key) ?? [];
+          return html`<section class=${cell.inMonth ? "sum-calendar-cell" : "sum-calendar-cell sum-calendar-cell--muted"}>
+            <h3 class="sum-calendar-day-title">${String(cell.date.getDate())}</h3>
+            <ul class="sum-calendar-events">
+              ${rows.map(
+                (row) => html`<li class="sum-calendar-event" @click=${() => this.openRecord(row)}>
+                  ${recordDisplayLabel(row)}
+                </li>`,
+              )}
+            </ul>
+          </section>`;
+        })}
+      </div>
+    `);
   }
 }

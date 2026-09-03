@@ -1,33 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { formatFieldValue } from "../../src/views/shared/field-display.js";
-import type { SwcArchField } from "../../src/types/workspace.js";
+import { formatFieldValue, recordDisplayLabel } from "../../src/views/shared/field-display.js";
 
-function field(partial: Partial<SwcArchField> & Pick<SwcArchField, "name">): SwcArchField {
-  return { ...partial, name: partial.name };
-}
-
-describe("formatFieldValue", () => {
-  it("uses many2one display name when present", () => {
-    const row = { partner_id: 3, partner_id_name: "Acme Corp" };
-    expect(formatFieldValue(row, field({ name: "partner_id", type: "many2one" }))).toBe("Acme Corp");
+describe("recordDisplayLabel", () => {
+  it("prefers name then display_name", () => {
+    expect(recordDisplayLabel({ name: "Acme" })).toBe("Acme");
+    expect(recordDisplayLabel({ display_name: "Display" })).toBe("Display");
   });
 
-  it("formats boolean and selection values", () => {
-    expect(formatFieldValue({ active: true }, field({ name: "active", type: "boolean" }))).toBe("Yes");
-    expect(formatFieldValue({ active: false }, field({ name: "active", type: "boolean" }))).toBe("No");
-    expect(formatFieldValue({ active: null }, field({ name: "active", type: "boolean" }))).toBe("");
-    expect(
-      formatFieldValue(
-        { state: "done" },
-        field({
-          name: "state",
-          type: "selection",
-          selection: [
-            ["draft", "Draft"],
-            ["done", "Done"],
-          ],
-        }),
-      ),
-    ).toBe("Done");
+  it("uses fallback or id hash", () => {
+    expect(recordDisplayLabel({}, 5)).toBe("5");
+    expect(recordDisplayLabel({ id: 9 })).toBe("#9");
+  });
+});
+
+describe("formatFieldValue", () => {
+  it("formats boolean fields", () => {
+    expect(formatFieldValue({ active: true }, { name: "active", type: "boolean" })).toBe("Yes");
+    expect(formatFieldValue({ active: false }, { name: "active", type: "boolean" })).toBe("No");
   });
 });

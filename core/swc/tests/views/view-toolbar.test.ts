@@ -12,7 +12,6 @@ import {
   renderSearchField,
   exportFieldNamesCsv,
   renderNewButton,
-  renderCollectionToolbar,
 } from "../../src/views/shared/view-toolbar.js";
 import type { SwcWorkspacePayload } from "../../src/types/workspace.js";
 
@@ -108,17 +107,10 @@ describe("view-toolbar", () => {
     expect(onSearch).toHaveBeenCalledTimes(2);
   });
 
-  it("renderNewButton and collection toolbar render primary actions", () => {
+  it("renderNewButton renders New link", () => {
     const btn = renderNewButton(basePayload());
     expect(btn.textContent).toBe("New");
-    const toolbar = renderCollectionToolbar({
-      payload: basePayload(),
-      viewType: "list",
-      search: "",
-      onSearch: () => undefined,
-      onInput: () => undefined,
-    }).render();
-    expect(toolbar.querySelector(".sum-list-btn-new")).toBeTruthy();
+    expect(btn.className).toContain("sum-list-btn-new");
   });
 
   it("createToolbarIcon renders SVG paths for toolbar buttons", () => {

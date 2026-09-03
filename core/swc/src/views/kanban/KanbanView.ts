@@ -9,10 +9,12 @@ import {
   kanbanStripeClass,
   resolveCardColor,
 } from "./kanban-color.js";
-import { RECORD_UPDATED, VIEW_FORM, VIEW_KANBAN } from "../../constants/routes.js";
+import { RECORD_UPDATED, VIEW_KANBAN } from "../../constants/routes.js";
 import { SwcError } from "../../runtime/error.js";
 import { inputValueFromEvent } from "../../widgets/field-events.js";
 import { CollectionView } from "../shared/collection-view.js";
+import { kanbanCardFields } from "../shared/arch-fields.js";
+import { openWorkspaceRecord } from "../shared/collection-navigation.js";
 
 export class KanbanView extends CollectionView {
   protected readonly collectionViewType = VIEW_KANBAN;
@@ -21,27 +23,19 @@ export class KanbanView extends CollectionView {
   private draggingCardId: number | null = null;
 
   private cardFields(): SwcArchField[] {
-    return this.props.payload.arch.fields.filter((f) => !f.invisible);
+    return kanbanCardFields(this.props.payload.arch);
+  }
+
+  private allCardFields(): SwcArchField[] {
+    return kanbanCardFields(this.props.payload.arch, { includeInvisible: true });
   }
 
   private kanbanGridStyle(): string {
     return kanbanColumnsStyle(this.props.payload.arch.kanban?.columnsPerRow);
   }
 
-  private allCardFields(): SwcArchField[] {
-    return this.props.payload.arch.fields;
-  }
-
   private openCard(row: Record<string, unknown>): void {
-    const id = Number(row.id ?? 0);
-    if (id <= 0) return;
-    const payload = this.props.payload;
-    this.env.services.action.openRecord({
-      actionId: payload.actionId,
-      menuId: payload.menuId,
-      recordId: id,
-      viewType: VIEW_FORM,
-    });
+    openWorkspaceRecord(this.env, this.props.payload, row);
   }
 
   private async moveCard(recordId: number, columnValue: number): Promise<void> {
@@ -291,24 +285,18 @@ export class KanbanView extends CollectionView {
     const fields = this.cardFields();
     if (!kanban?.columns?.length) {
       const rows = payload.records ?? [];
-      return html`
-        <div class="sum-collection-view sum-kanban-view">
-          ${this.collectionBar.renderOrPatch()}
-          <div class="sum-kanban-columns" style=${this.kanbanGridStyle()}>
-            ${rows.length === 0
-              ? html`<div class="sum-kanban-empty">No records</div>`
-              : rows.map((row) => this.renderCard(row, fields))}
-          </div>
+      return this.renderShell(html`
+        <div class="sum-kanban-columns" style=${this.kanbanGridStyle()}>
+          ${rows.length === 0
+            ? html`<div class="sum-kanban-empty">No records</div>`
+            : rows.map((row) => this.renderCard(row, fields))}
         </div>
-      `;
+      `);
     }
-    return html`
-      <div class="sum-collection-view sum-kanban-view">
-        ${this.collectionBar.renderOrPatch()}
-        <div class="sum-kanban-board sum-kanban-board--grouped">
-          ${kanban.columns.map((col) => this.renderStageSection(col, fields, kanban))}
-        </div>
+    return this.renderShell(html`
+      <div class="sum-kanban-board sum-kanban-board--grouped">
+        ${kanban.columns.map((col) => this.renderStageSection(col, fields, kanban))}
       </div>
-    `;
+    `);
   }
 }

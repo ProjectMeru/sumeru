@@ -2,6 +2,7 @@ import { html } from "../../template/html.js";
 import { VIEW_COHORT } from "../../constants/routes.js";
 import { CollectionView } from "../shared/collection-view.js";
 import { parseArchDate, resolveArchDateField } from "../shared/arch-date.js";
+import { pivotFields } from "../shared/arch-fields.js";
 
 type CohortInterval = "week" | "month";
 
@@ -26,9 +27,10 @@ export class CohortView extends CollectionView {
   }
 
   private measureField(): string {
+    const arch = this.props.payload.arch;
     return (
-      this.props.payload.arch.cohort?.measure ||
-      this.props.payload.arch.fields.find((f) => f.pivotType === "measure")?.name ||
+      arch.cohort?.measure ||
+      pivotFields(arch).measureFields[0] ||
       ""
     );
   }
@@ -64,27 +66,24 @@ export class CohortView extends CollectionView {
 
   override template() {
     const { periods, rows } = this.table();
-    return html`
-      <div class="sum-collection-view sum-cohort-view">
-        ${this.collectionBar.renderOrPatch()}
-        <h2>${this.props.payload.arch.title ?? "Cohort"}</h2>
-        <table class="sum-cohort-table">
-          <thead>
-            <tr>
-              <th>Cohort</th>
-              ${periods.map((p) => html`<th>${p}</th>`)}
-            </tr>
-          </thead>
-          <tbody>
-            ${rows.map(
-              (row) => html`<tr>
-                <th>${row.cohort}</th>
-                ${row.values.map((value) => html`<td>${value === 0 ? "" : String(value)}</td>`)}
-              </tr>`,
-            )}
-          </tbody>
-        </table>
-      </div>
-    `;
+    return this.renderShell(html`
+      <h2>${this.props.payload.arch.title ?? "Cohort"}</h2>
+      <table class="sum-cohort-table">
+        <thead>
+          <tr>
+            <th>Cohort</th>
+            ${periods.map((p) => html`<th>${p}</th>`)}
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(
+            (row) => html`<tr>
+              <th>${row.cohort}</th>
+              ${row.values.map((value) => html`<td>${value === 0 ? "" : String(value)}</td>`)}
+            </tr>`,
+          )}
+        </tbody>
+      </table>
+    `);
   }
 }
