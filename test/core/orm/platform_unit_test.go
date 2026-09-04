@@ -59,13 +59,13 @@ func TestSubstituteDomainContext_ABAC(t *testing.T) {
 
 func TestRecordMatchesDomain(t *testing.T) {
 	rec := map[string]interface{}{"state": "draft", "user_id": int64(1)}
-	if !orm.RecordMatchesDomain(rec, [][]interface{}{{"state", "=", "draft"}}) {
+	if !orm.RecordMatchesDomain("", rec, [][]interface{}{{"state", "=", "draft"}}) {
 		t.Fatal("expected match")
 	}
-	if orm.RecordMatchesDomain(rec, [][]interface{}{{"state", "=", "done"}}) {
+	if orm.RecordMatchesDomain("", rec, [][]interface{}{{"state", "=", "done"}}) {
 		t.Fatal("expected no match")
 	}
-	if !orm.RecordMatchesDomain(rec, [][]interface{}{{"user_id", "in", []interface{}{int64(1), int64(2)}}}) {
+	if !orm.RecordMatchesDomain("", rec, [][]interface{}{{"user_id", "in", []interface{}{int64(1), int64(2)}}}) {
 		t.Fatal("expected in match")
 	}
 }

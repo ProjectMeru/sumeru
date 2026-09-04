@@ -239,7 +239,7 @@ func CheckRecordRules(ctx context.Context, uid int, model string, op string, rec
 		return err
 	}
 	for _, dom := range parts.globals {
-		if !RecordMatchesDomain(rec, dom) {
+		if !RecordMatchesDomain(model, rec, dom) {
 			return &RecordRuleError{Model: model}
 		}
 	}
@@ -250,7 +250,7 @@ func CheckRecordRules(ctx context.Context, uid int, model string, op string, rec
 		return nil
 	}
 	for _, dom := range parts.groups {
-		if RecordMatchesDomain(rec, dom) {
+		if RecordMatchesDomain(model, rec, dom) {
 			return nil
 		}
 	}

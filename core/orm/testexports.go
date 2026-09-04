@@ -1,6 +1,9 @@
 package orm
 
-import "testing"
+import (
+	"context"
+	"testing"
+)
 
 type StubModelForTest struct {
 	name   string
@@ -39,8 +42,12 @@ func BuildAndWhereClausesForTest(modelName string, groups [][][]interface{}) (st
 	return buildAndWhereClauses(modelName, groups)
 }
 
-func RecordMatchesDomainForTest(rec map[string]interface{}, domain [][]interface{}) bool {
-	return RecordMatchesDomain(rec, domain)
+func RecordMatchesDomainForTest(modelName string, rec map[string]interface{}, domain [][]interface{}) bool {
+	return RecordMatchesDomain(modelName, rec, domain)
+}
+
+func ResolveActionRecordForTest(ctx context.Context, actionID int, actionQuery string) (modelName string, coreID int, err error) {
+	return ResolveActionRecord(ctx, actionID, actionQuery)
 }
 
 // SetDBForTest replaces the global DB handle for external tests. Call ResetDBForTest in t.Cleanup.

@@ -21,6 +21,7 @@ func syncMenusFromItems(ctx context.Context, moduleName string, menus []parser.M
 			"access_groups": strings.TrimSpace(menu.AccessGroups),
 		}
 		if menu.Action != "" {
+			menuValues["action"] = menu.Action
 			actionID, err := resolveXMLIDInModule(ctx, moduleName, menu.Action)
 			if err == nil && actionID != 0 {
 				menuValues["action_id"] = actionID

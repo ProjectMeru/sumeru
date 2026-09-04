@@ -11,6 +11,7 @@ func init() {
 	modelreg.MustRegister("base",
 		&orm.AppLog{},
 		&orm.SysAccess{},
+		&orm.SysActionURL{},
 		&orm.SysActionWindow{},
 		&orm.SysApprovalRule{},
 		&orm.SysField{},

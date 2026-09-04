@@ -19,6 +19,9 @@ func processXMLRecords(ctx context.Context, moduleName string, records []parser.
 		if xmlRecord.Model == "sys.action.window" {
 			upsertSysActionWindowFromRecord(ctx, moduleName, xmlRecord)
 		}
+		if xmlRecord.Model == "sys.action.url" {
+			upsertSysActionURLFromRecord(ctx, moduleName, xmlRecord)
+		}
 		if xmlRecord.Model == "sys.view" {
 			if strings.TrimSpace(parser.RecordFieldMap(xmlRecord)["inherit_id"]) != "" {
 				*inheritQueue = append(*inheritQueue, xmlRecord)

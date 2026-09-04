@@ -2,10 +2,42 @@ import { describe, expect, it, vi } from "vitest";
 import { ActivityView } from "../../src/views/activity/ActivityView.js";
 import { CalendarView } from "../../src/views/calendar/CalendarView.js";
 import { HierarchyView } from "../../src/views/hierarchy/HierarchyView.js";
+import { IframeView } from "../../src/views/iframe/IframeView.js";
 import { PivotView } from "../../src/views/pivot/PivotView.js";
 import { collectionEnv, viewPayload } from "../harness/view.js";
 
 describe("view shells", () => {
+  it("IframeView embeds src from payload", () => {
+    const payload = viewPayload({ type: "iframe" }, []);
+    payload.viewType = "iframe";
+    payload.iframeUrl = "/account/reports/view?type=profit_loss";
+    const view = new IframeView({ payload }, collectionEnv());
+    view.callSetup();
+    const frame = view.render().querySelector("iframe") as HTMLIFrameElement;
+    expect(frame?.getAttribute("src")).toBe("/account/reports/view?type=profit_loss");
+    view.destroy();
+  });
+
+  it("IframeView shows error when iframeUrl missing", () => {
+    const view = new IframeView({ payload: viewPayload({ type: "iframe" }, []) }, collectionEnv());
+    view.callSetup();
+    expect(view.render().textContent).toContain("Missing iframe URL");
+    view.destroy();
+  });
+
+  it("IframeView updates src when payload changes", () => {
+    const payload = viewPayload({ type: "iframe" }, []);
+    payload.iframeUrl = "/a";
+    const view = new IframeView({ payload }, collectionEnv());
+    view.callSetup();
+    expect(view.render().querySelector("iframe")?.getAttribute("src")).toBe("/a");
+    const next = viewPayload({ type: "iframe" }, []);
+    next.iframeUrl = "/b";
+    view.updateProps({ payload: next });
+    expect(view.render().querySelector("iframe")?.getAttribute("src")).toBe("/b");
+    view.destroy();
+  });
+
   it("ActivityView renders list table rows", () => {
     const view = new ActivityView(
       {

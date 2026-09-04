@@ -30,12 +30,17 @@ func WebHandler(w http.ResponseWriter, r *http.Request) {
 	var actionData map[string]interface{}
 	var resolved *resolvedWorkspaceView
 	var err error
-	if actionID != 0 {
-		actionData, err = loadWindowAction(ctx, actionID)
-		if err != nil {
+	if actionID != 0 || strings.TrimSpace(actionQuery) != "" {
+		nav, navErr := resolveNavigationAction(ctx, actionID, actionQuery)
+		if navErr != nil {
 			respondActionNotFound(w, actionID)
 			return
 		}
+		if nav.kind == navActionURL {
+			renderURLActionWorkspace(w, r, actionID, menuQuery, nav.url)
+			return
+		}
+		actionData = nav.windowData
 		resolved, err = resolveWorkspaceView(ctx, r, actionData)
 	} else if modelQuery != "" {
 		actionData = map[string]interface{}{}

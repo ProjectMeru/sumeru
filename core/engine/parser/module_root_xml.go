@@ -34,11 +34,23 @@ type Action struct {
 	SearchViewID string `xml:"search_view_id,attr"`
 	Context      string `xml:"context,attr"`
 	Domain   string     `xml:"domain,attr"`
+	URL      string     `xml:"url,attr"`
 	Help     actionHelp `xml:"help"`
 }
 
 // ToRecord converts an Action to a Record for backward compatibility.
 func (a Action) ToRecord() Record {
+	if strings.EqualFold(strings.TrimSpace(a.Type), "url") {
+		fields := []RecordField{
+			{Name: "name", Body: a.Name},
+			{Name: "url", Body: a.URL},
+		}
+		return Record{
+			ID:    a.ID,
+			Model: "sys.action.url",
+			Field: fields,
+		}
+	}
 	fields := []RecordField{
 		{Name: "name", Body: a.Name},
 		{Name: "core_model", Body: a.Model},

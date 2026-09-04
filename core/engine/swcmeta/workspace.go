@@ -43,6 +43,7 @@ type ViewRecordInput struct {
 	ViewTabs         []ViewTab
 	Breadcrumbs      []Breadcrumb
 	Defaults         map[string]interface{}
+	IframeURL        string
 }
 
 // BuildWorkspacePayload serializes loaded workspace data for SWC.
@@ -102,6 +103,7 @@ func BuildWorkspacePayload(
 		ViewTabs:      rec.ViewTabs,
 		Breadcrumbs:   rec.Breadcrumbs,
 		Defaults:      rec.Defaults,
+		IframeURL:     rec.IframeURL,
 	}
 
 	if selectedMode == listMode || selectedMode == kanbanMode || selectedMode == graphMode || selectedMode == calendarMode || selectedMode == pivotMode || selectedMode == ganttMode || selectedMode == mapMode || selectedMode == cohortMode {
@@ -126,6 +128,26 @@ func BuildWorkspacePayload(
 		payload.ListSections = rec.ListSections
 	}
 	return payload
+}
+
+// BuildIframeWorkspacePayload serializes a URL action for SWC iframe view.
+func BuildIframeWorkspacePayload(actionID int, menuID, iframeURL, title string) WorkspacePayload {
+	iframeURL = strings.TrimSpace(iframeURL)
+	if title == "" {
+		title = "Report"
+	}
+	return WorkspacePayload{
+		ActionID: actionID,
+		MenuID:   menuID,
+		ViewType: "iframe",
+		Model:    "sys.action.url",
+		Arch: ViewArch{
+			Type:  "iframe",
+			Model: "sys.action.url",
+			Title: title,
+		},
+		IframeURL: iframeURL,
+	}
 }
 
 func redactCopy(ctx context.Context, model string, rec map[string]interface{}) map[string]interface{} {

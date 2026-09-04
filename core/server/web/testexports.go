@@ -421,3 +421,34 @@ func (h *BusHubForTest) Register(c *SwcBusClientForTest) { h.hub.register(c.clie
 func (h *BusHubForTest) Broadcast(actor int, msg []byte) { h.hub.broadcast(actor, msg) }
 
 func (c *SwcBusClientForTest) Recv() <-chan []byte { return c.client.send }
+
+func BuildIframeSwcPayloadForTest(ctx context.Context, actionID int, menuID, iframeURL string) map[string]interface{} {
+	p := buildIframeSwcPayload(ctx, actionID, menuID, iframeURL)
+	return map[string]interface{}{
+		"viewType":  p.ViewType,
+		"model":     p.Model,
+		"iframeUrl": p.IframeURL,
+		"actionId":  p.ActionID,
+		"menuId":    p.MenuID,
+	}
+}
+
+const (
+	NavActionURLForTest    = navActionURL
+	NavActionWindowForTest = navActionWindow
+)
+
+func ResolveNavigationActionForTest(ctx context.Context, actionID int, actionQuery string) (kind int, url string, err error) {
+	nav, err := resolveNavigationAction(ctx, actionID, actionQuery)
+	if err != nil {
+		return 0, "", err
+	}
+	switch nav.kind {
+	case navActionURL:
+		return int(navActionURL), nav.url, nil
+	case navActionWindow:
+		return int(navActionWindow), "", nil
+	default:
+		return 0, "", err
+	}
+}

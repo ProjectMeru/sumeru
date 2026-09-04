@@ -221,6 +221,7 @@ const (
 	workspaceViewModeCohort   = render.ViewModeCohort
 	workspaceViewModeHierarchy = render.ViewModeHierarchy
 	workspaceViewModeActivity  = render.ViewModeActivity
+	workspaceViewModeIframe    = render.ViewModeIframe
 	maxWorkspaceListRows      = 500
 	maxWorkspaceKanbanRows    = 200
 	workspaceListPageSize     = 40
@@ -229,6 +230,7 @@ const (
 // ORM models used by workspace handlers.
 const (
 	sysActionWindowModel = "sys.action.window"
+	sysActionURLModel      = "sys.action.url"
 	workspaceViewOpenOp  = "view_open"
 )
 

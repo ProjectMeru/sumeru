@@ -26,6 +26,7 @@ import { MapView } from "./views/map/MapView.js";
 import { CohortView } from "./views/cohort/CohortView.js";
 import { HierarchyView } from "./views/hierarchy/HierarchyView.js";
 import { ActivityView } from "./views/activity/ActivityView.js";
+import { IframeView } from "./views/iframe/IframeView.js";
 import { loadTranslations } from "./i18n/translate.js";
 import { mountDebugPanel } from "./devtools/debug.js";
 import { initDevtoolsBridge } from "./devtools/bridge.js";
@@ -42,6 +43,7 @@ const VIEW_CONSTRUCTORS = {
   cohort: CohortView,
   hierarchy: HierarchyView,
   activity: ActivityView,
+  iframe: IframeView,
 } satisfies Record<string, ViewConstructor>;
 
 function registerCore(): void {

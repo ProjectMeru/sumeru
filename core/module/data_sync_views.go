@@ -41,6 +41,23 @@ func upsertSysActionWindowFromRecord(ctx context.Context, moduleName string, xml
 	_ = linkXMLRecord(ctx, moduleName, xmlRecord.ID, "sys.action.window", id)
 }
 
+func upsertSysActionURLFromRecord(ctx context.Context, moduleName string, xmlRecord parser.Record) {
+	recordValues := recordValuesFromXML(xmlRecord)
+	if u := strings.TrimSpace(orm.AsString(recordValues["url"])); u == "" {
+		syncWarn(ctx, "Warning: sys.action.url record %s (module %s): url is required", xmlRecord.ID, moduleName)
+		return
+	}
+	if _, ok := recordValues["name"]; !ok || recordValues["name"] == "" {
+		recordValues["name"] = xmlRecord.ID
+	}
+	id, err := orm.Upsert(ctx, orm.RegistryModel("sys.action.url"), recordValues, "name")
+	if err != nil {
+		syncWarn(ctx, platformmsg.FmtGenericUpsertWarn, "sys.action.url", xmlRecord.ID, err)
+		return
+	}
+	_ = linkXMLRecord(ctx, moduleName, xmlRecord.ID, "sys.action.url", id)
+}
+
 // upsertSysViewFromRecord persists <record model="sys.view">…</record> data (non-inherit rows).
 // Inline <view> elements use upsertInlineViewDef instead; inherit-only records are handled elsewhere.
 func upsertSysViewFromRecord(ctx context.Context, moduleName string, xmlRecord parser.Record) {

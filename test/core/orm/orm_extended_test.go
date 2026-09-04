@@ -171,7 +171,7 @@ func TestRecordMatchesDomainExtended(t *testing.T) {
 		{"state", "!=", "done"},
 		{"state", "in", []interface{}{"draft", "open"}},
 	}
-	if !orm.RecordMatchesDomainForTest(rec, domain) {
+	if !orm.RecordMatchesDomainForTest("", rec, domain) {
 		t.Fatal("expected match")
 	}
 	orDomain := [][]interface{}{
@@ -179,7 +179,7 @@ func TestRecordMatchesDomainExtended(t *testing.T) {
 		{"state", "=", "done"},
 		{"state", "=", "draft"},
 	}
-	if !orm.RecordMatchesDomainForTest(rec, orDomain) {
+	if !orm.RecordMatchesDomainForTest("", rec, orDomain) {
 		t.Fatal("OR domain")
 	}
 }

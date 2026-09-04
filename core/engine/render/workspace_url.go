@@ -37,6 +37,7 @@ const (
 	ViewModeHierarchy = "hierarchy"
 	ViewModeActivity  = "activity"
 	ViewModeSearch   = "search"
+	ViewModeIframe   = "iframe"
 )
 
 // WorkspaceQuery is the /web workspace query (empty fields are omitted).

@@ -119,14 +119,15 @@ func SubstituteDomainContext(domain [][]interface{}, dc DomainContext) [][]inter
 
 // RecordMatchesDomain evaluates AND of triples for =, !=, in (value list).
 // Prefix Polish "|" markers OR the following leaf triples (same shape as BuildWhereWithRecordRules group OR).
-func RecordMatchesDomain(recordMap map[string]interface{}, domain [][]interface{}) bool {
+// modelName enables field-type-aware falsy domain handling (= false / != false); pass "" to use generic rules.
+func RecordMatchesDomain(modelName string, recordMap map[string]interface{}, domain [][]interface{}) bool {
 	orLeaves, leaves, ok := splitDomainORPrefix(domain)
 	if orLeaves > 0 {
 		if !ok {
 			return false
 		}
 		for _, leaf := range leaves {
-			if RecordMatchesDomain(recordMap, [][]interface{}{leaf}) {
+			if RecordMatchesDomain(modelName, recordMap, [][]interface{}{leaf}) {
 				return true
 			}
 		}
@@ -141,6 +142,14 @@ func RecordMatchesDomain(recordMap map[string]interface{}, domain [][]interface{
 		cellValue, ok := recordMap[fieldName]
 		if !ok {
 			cellValue = nil
+		}
+		if wantBool, isBool := clause[2].(bool); isBool {
+			if matched, handled := cellMatchesFalsy(modelName, fieldName, operator, cellValue, wantBool); handled {
+				if !matched {
+					return false
+				}
+				continue
+			}
 		}
 		switch operator {
 		case "=":

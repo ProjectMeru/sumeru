@@ -38,7 +38,7 @@ func templatePDFGenerates() bool {
 }
 
 func recordRuleDomainCompiles() bool {
-	return orm.RecordMatchesDomain(map[string]interface{}{"active": true}, [][]interface{}{{"active", "=", true}})
+	return orm.RecordMatchesDomain("", map[string]interface{}{"active": true}, [][]interface{}{{"active", "=", true}})
 }
 
 func fieldAccessModelRegistered() bool {
@@ -79,7 +79,7 @@ func xpathHasClassSupported() bool {
 
 func domainOperatorsSupported() bool {
 	domain := [][]interface{}{{"id", "in", []interface{}{1, 2, 3}}}
-	return orm.RecordMatchesDomain(map[string]interface{}{"id": 2}, domain)
+	return orm.RecordMatchesDomain("", map[string]interface{}{"id": 2}, domain)
 }
 
 func savedSearchModelExists() bool {

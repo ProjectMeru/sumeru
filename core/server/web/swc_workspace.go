@@ -28,6 +28,21 @@ func SwcWorkspaceHandler(w http.ResponseWriter, r *http.Request) {
 	actionID := ResolveWindowActionID(ctx, actionQuery, menuQuery)
 	modelQuery := strings.TrimSpace(r.URL.Query().Get(workspaceModelParam))
 
+	if actionID != 0 || strings.TrimSpace(actionQuery) != "" {
+		nav, navErr := resolveNavigationAction(ctx, actionID, actionQuery)
+		if navErr != nil {
+			respondActionNotFound(w, actionID)
+			return
+		}
+		if nav.kind == navActionURL {
+			req := parseWorkspaceRequest(r, actionID)
+			req.menuID = CanonicalMenuID(ctx, req.menuID, actionID)
+			payload := buildIframeSwcPayload(ctx, actionID, req.menuID, nav.url)
+			writeJSONResponse(w, payload)
+			return
+		}
+	}
+
 	var actionData map[string]interface{}
 	var resolved *resolvedWorkspaceView
 	var err error
