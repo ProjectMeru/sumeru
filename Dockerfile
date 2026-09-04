@@ -1,5 +1,5 @@
 # Multi-stage production image for the Sumeru engine (single-node pilot).
-FROM golang:1.26.2-bookworm AS build
+FROM golang:1.26.6-bookworm AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download

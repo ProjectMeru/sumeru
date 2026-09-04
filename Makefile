@@ -135,4 +135,4 @@ help:
 	@echo ""
 	@echo "Other: db-check | i18n-export | i18n-import | test-integration | check-sql | check-logs"
 	@echo "Vars: EXTRA_RUN_FLAGS='-p 9090 -d mydb'"
-	@echo "Prerequisites: Go 1.26.2+, Node.js (npm), PostgreSQL — see README.md"
+	@echo "Prerequisites: Go 1.26.6+, Node.js (npm), PostgreSQL — see README.md"

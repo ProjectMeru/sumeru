@@ -3,7 +3,7 @@
 **Modular open-source ERP — Go backend, PostgreSQL, and a modern web workspace.**
 
 [![CI](https://github.com/ProjectMeru/sumeru/actions/workflows/ci.yml/badge.svg)](https://github.com/ProjectMeru/sumeru/actions/workflows/ci.yml)
-[![Go](https://img.shields.io/badge/Go-1.26.2+-00ADD8?logo=go&logoColor=white)](https://go.dev/dl/)
+[![Go](https://img.shields.io/badge/Go-1.26.6+-00ADD8?logo=go&logoColor=white)](https://go.dev/dl/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Pre-Alpha](https://img.shields.io/badge/Status-Pre--Alpha-critical)](https://github.com/ProjectMeru/sumeru)
 [![Docs](https://img.shields.io/badge/Docs-projectmeru.github.io-informational)](https://projectmeru.github.io/sumeru/docs/)
@@ -38,7 +38,7 @@ This repository is the **core engine** (`module sumeru`). Most teams keep it pul
 
 ## Quick start
 
-**Prerequisites:** [Go 1.26.2+](https://go.dev/dl/), [Node.js](https://nodejs.org/) (npm — builds the SWC UI), [PostgreSQL](https://www.postgresql.org/)
+**Prerequisites:** [Go 1.26.6+](https://go.dev/dl/), [Node.js](https://nodejs.org/) (npm — builds the SWC UI), [PostgreSQL](https://www.postgresql.org/)
 
 Clone the three sibling repositories, configure the workspace, and run:
 
@@ -152,7 +152,7 @@ sumeru_custom_addons
 
 | Layer | Technology |
 | ----- | ---------- |
-| Server | Go 1.26.2+, structured logging (`log/slog`) |
+| Server | Go 1.26.6+, structured logging (`log/slog`) |
 | Database | PostgreSQL |
 | Modules | Go addons + XML views/menus + manifest sync |
 | Workspace UI | SWC (TypeScript) — sources in `core/swc/` |
