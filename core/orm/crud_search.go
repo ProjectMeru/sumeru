@@ -54,10 +54,13 @@ func execSearchQuery(ctx context.Context, modelName string, domain [][]interface
 		if err != nil {
 			return nil, err
 		}
-		enrichRecordForRead(ctx, uid, modelName, recordMap)
 		results = append(results, recordMap)
 	}
-	return results, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	enrichRecordsForRead(ctx, uid, modelName, results)
+	return results, nil
 }
 
 func prepareSearchRead(ctx context.Context, modelName string, domain [][]interface{}) (uid int, whereClause string, args []interface{}, domainOut [][]interface{}, err error) {
