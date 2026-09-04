@@ -44,7 +44,7 @@ func APIReadyHandler(w http.ResponseWriter, r *http.Request) {
 func RPCJSONHandler(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	metrics.Inc(rpcMetricRequests)
-	defer metrics.ObserveDuration(rpcMetricDuration, time.Since(start))
+	defer func() { metrics.ObserveDuration(rpcMetricDuration, time.Since(start)) }()
 
 	if r.Method != http.MethodPost {
 		api.WriteResponse(w, http.StatusMethodNotAllowed, api.Fail(api.CodeMethodNotAllowed, "Method not allowed", nil))
