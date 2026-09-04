@@ -24,8 +24,8 @@ func TestResolveExportRequestMissingModel(t *testing.T) {
 	if ok {
 		t.Fatal("expected resolve export request to fail without model")
 	}
-	if rr.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
+	if rr.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want %d (CSRF required before model validation)", rr.Code, http.StatusForbidden)
 	}
 }
 

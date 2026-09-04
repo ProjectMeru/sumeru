@@ -14,10 +14,27 @@ import (
 	"sumeru/core/server/api"
 )
 
-// APIHealthHandler returns {"ok":true} for probes (no auth).
+// APIHealthHandler is liveness: process is up (no dependency checks).
 func APIHealthHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	writeJSONOK(w)
+}
+
+// APIReadyHandler is readiness: PostgreSQL is reachable.
+func APIReadyHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if orm.DB == nil {
+		api.WriteResponse(w, http.StatusServiceUnavailable, api.Fail(api.CodeInternalError, "database not initialized", nil))
+		return
+	}
+	if err := orm.DB.Ping(); err != nil {
+		api.WriteResponse(w, http.StatusServiceUnavailable, api.Fail(api.CodeInternalError, "database unavailable", nil))
 		return
 	}
 	writeJSONOK(w)
@@ -37,6 +54,12 @@ func RPCJSONHandler(w http.ResponseWriter, r *http.Request) {
 	userID := AuthenticatedUserID(r)
 	if userID <= 0 {
 		api.WriteResponse(w, http.StatusUnauthorized, api.Fail(api.CodeUnauthorized, "Unauthorized", nil))
+		return
+	}
+	// Cookie sessions require CSRF; API keys are not browser cookie auth.
+	if SessionUserID(r) > 0 && !ValidateCSRF(r) {
+		metrics.Inc("sumeru_csrf_rejected_total")
+		api.WriteResponse(w, http.StatusForbidden, api.Fail(api.CodeAccessDenied, "Invalid CSRF token", nil))
 		return
 	}
 

@@ -11,6 +11,9 @@ import (
 )
 
 func resolveExportRequest(w http.ResponseWriter, r *http.Request) (report.ExportCSVInput, bool) {
+	if !validateSessionCSRF(w, r) {
+		return report.ExportCSVInput{}, false
+	}
 	modelName := strings.TrimSpace(r.URL.Query().Get(importModelField))
 	if modelName == "" {
 		http.Error(w, "model required", http.StatusBadRequest)

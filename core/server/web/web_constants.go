@@ -17,6 +17,7 @@ const (
 	settingsRoute      = "/web/settings"
 	appLogsRoute       = "/web/settings/app-logs"
 	apiHealthRoute     = "/api/health"
+	apiReadyRoute      = "/api/ready"
 	apiRPCRoute        = "/api/rpc"
 	metricsRoute       = "/metrics"
 	setupRoute         = "/setup"

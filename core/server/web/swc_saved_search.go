@@ -30,7 +30,7 @@ func SwcSavedSearchesListHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func SwcSavedSearchSaveHandler(w http.ResponseWriter, r *http.Request) {
-	if !requireLogin(w, r) {
+	if !requireLoginJSONPost(w, r) {
 		return
 	}
 	var body struct {
@@ -68,6 +68,13 @@ func SwcSavedSearchSaveHandler(w http.ResponseWriter, r *http.Request) {
 
 func SwcSavedSearchDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	if !requireLogin(w, r) {
+		return
+	}
+	if r.Method != http.MethodDelete {
+		http.Error(w, methodNotAllowedMessage, http.StatusMethodNotAllowed)
+		return
+	}
+	if !validateSessionCSRF(w, r) {
 		return
 	}
 	id, err := strconv.Atoi(strings.TrimSpace(r.URL.Query().Get("id")))
