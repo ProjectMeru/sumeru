@@ -71,7 +71,30 @@ jobs:
         if: always()
         run: |
           echo "## Go test" >> "$GITHUB_STEP_SUMMARY"
-          echo "Commands: \`make test-modules-static\`, \`go test ./test/...\`, coverage gate 90%" >> "$GITHUB_STEP_SUMMARY"
+          echo "Commands: \`make test-modules-static\`, \`go test ./test/...\`, coverage gate ${GO_COVERAGE_MIN:-42}%" >> "$GITHUB_STEP_SUMMARY"
+
+  go-lint:
+    name: Go lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.26.2"
+          cache: true
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+      - name: Job summary
+        if: always()
+        run: |
+          echo "## Go lint" >> "$GITHUB_STEP_SUMMARY"
+          echo "Commands: \`go vet ./...\`, \`govulncheck ./...\`" >> "$GITHUB_STEP_SUMMARY"
 
   swc:
     name: SWC check and test
@@ -126,47 +149,47 @@ jobs:
           echo "## Generate" >> "$GITHUB_STEP_SUMMARY"
           echo "Command: \`make generate\` — \`cmd/sumeru/zimports.go\` must match committed output." >> "$GITHUB_STEP_SUMMARY"
 
-  # integration:
-  #   name: Integration (PostgreSQL)
-  #   if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
-  #   needs:
-  #     - go-test
-  #     - swc
-  #   runs-on: ubuntu-latest
-  #   services:
-  #     postgres:
-  #       image: postgres:16-alpine
-  #       env:
-  #         POSTGRES_USER: postgres
-  #         POSTGRES_PASSWORD: postgres
-  #         POSTGRES_DB: sumeru_test
-  #       ports:
-  #         - 5432:5432
-  #       options: >-
-  #         --health-cmd "pg_isready -U postgres -d sumeru_test"
-  #         --health-interval 5s
-  #         --health-timeout 5s
-  #         --health-retries 10
-  #   steps:
-  #     - uses: actions/checkout@v7
+  integration:
+    name: Integration (PostgreSQL)
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+    needs:
+      - go-test
+      - swc
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: sumeru_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d sumeru_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
 
-  #     - uses: actions/setup-go@v7
-  #       with:
-  #         go-version: "1.26.2"
-  #         cache: true
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.26.2"
+          cache: true
 
-  #     - name: Bootstrap kernel schema
-  #       run: |
-  #         make generate
-  #         go run ./cmd/sumeru -- -c sumeru.conf.ci -i base --stop-after-init
+      - name: Bootstrap kernel schema
+        run: |
+          make generate
+          go run ./cmd/sumeru -- -c sumeru.conf.ci -i base --stop-after-init
 
-  #     - name: Run integration tests
-  #       env:
-  #         SUMERU_TEST_DSN: host=localhost port=5432 user=postgres password=postgres dbname=sumeru_test sslmode=disable
-  #       run: go test -tags=integration ./test/integration/... -count=1 -v
+      - name: Run integration tests
+        env:
+          SUMERU_TEST_DSN: host=localhost port=5432 user=postgres password=postgres dbname=sumeru_test sslmode=disable
+        run: go test -tags=integration ./test/integration/... -count=1 -v
 
-  #     - name: Job summary
-  #       if: always()
-  #       run: |
-  #         echo "## Integration" >> "$GITHUB_STEP_SUMMARY"
-  #         echo "PostgreSQL 16 — install \`base\`, then \`go test -tags=integration ./test/integration/...\`." >> "$GITHUB_STEP_SUMMARY"
+      - name: Job summary
+        if: always()
+        run: |
+          echo "## Integration" >> "$GITHUB_STEP_SUMMARY"
+          echo "PostgreSQL 16 — install \`base\`, then \`go test -tags=integration ./test/integration/...\`." >> "$GITHUB_STEP_SUMMARY"
