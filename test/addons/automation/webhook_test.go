@@ -19,6 +19,7 @@ func TestValidateWebhookURL(t *testing.T) {
 		{"http://169.254.169.254/latest/meta-data", true},
 		{"https://192.168.1.1/hook", true},
 		{"https://10.0.0.5/hook", true},
+		{"http://100.64.0.1/hook", true},
 		{"https://8.8.8.8/hook", false},
 	}
 	for _, tc := range cases {

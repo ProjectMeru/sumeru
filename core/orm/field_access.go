@@ -79,6 +79,9 @@ func fieldAccessDenied(ctx context.Context, uid int, model, op string) (map[stri
 		}
 	}
 	out, err = applyGroupsFieldDenial(ctx, uid, model, op, out)
+	if err != nil {
+		return out, err
+	}
 	return out, rows.Err()
 }
 

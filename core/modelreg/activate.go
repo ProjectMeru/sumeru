@@ -1,7 +1,6 @@
 package modelreg
 
 import (
-	"fmt"
 	"sort"
 	"sync"
 
@@ -93,10 +92,4 @@ func moduleOrderForActivation(moduleOrder []string) []string {
 	}
 	sort.Strings(extras)
 	return append(order, extras...)
-}
-
-func mustActivateForTest() {
-	if err := ActivateAll(nil); err != nil {
-		panic(fmt.Sprintf("modelreg.ActivateAll: %v", err))
-	}
 }

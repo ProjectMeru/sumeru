@@ -34,8 +34,8 @@ func TestRequestIDAndLoggerHelpers(t *testing.T) {
 	if got := applog.RequestIDFromContext(ctx); got != id {
 		t.Fatalf("got %q", got)
 	}
-	if got := applog.RequestIDFromContext(nil); got != "" {
-		t.Fatal("nil ctx")
+	if got := applog.RequestIDFromContext(context.TODO()); got != "" {
+		t.Fatal("empty ctx")
 	}
 }
 

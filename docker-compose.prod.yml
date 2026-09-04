@@ -1,0 +1,36 @@
+# Single-node production-shaped stack for local/ops validation.
+# Does not replace HA; see docs/ha-ops.md.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: sumeru
+      POSTGRES_PASSWORD: ${SUMERU_DB_PASSWORD:-sumeru}
+      POSTGRES_DB: sumeru
+    volumes:
+      - sumeru_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sumeru -d sumeru"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      SUMERU_DB_HOST: db
+      SUMERU_DB_USER: sumeru
+      SUMERU_DB_PASSWORD: ${SUMERU_DB_PASSWORD:-sumeru}
+      SUMERU_DB_NAME: sumeru
+      SUMERU_CSRF_SECRET: ${SUMERU_CSRF_SECRET:-change-me-in-prod}
+      SUMERU_METRICS_SCRAPE_TOKEN: ${SUMERU_METRICS_SCRAPE_TOKEN:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    # Mount a real conf or edit the image default; db_host must be "db".
+
+volumes:
+  sumeru_pg:

@@ -57,9 +57,8 @@ func TestWebHelperExportsCoverage(t *testing.T) {
 		t.Fatalf("setup params: %+v", params)
 	}
 	page := web.BuildSetupPageData()
-	if page.DbName == "" && !page.SetupTokenRequired {
-		// defaults are fine
-	}
+	_ = page.DbName
+	_ = page.SetupTokenRequired
 	if !web.AcceptsJSONContentType("application/json") {
 		t.Fatal("json content type")
 	}

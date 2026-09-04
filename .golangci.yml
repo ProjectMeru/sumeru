@@ -1,0 +1,30 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+  settings:
+    errcheck:
+      # Deferred Close errors are rarely actionable; keep errcheck for real ignored returns.
+      exclude-functions:
+        - (io.Closer).Close
+        - (*database/sql.Rows).Close
+        - (*database/sql.DB).Close
+        - (*os.File).Close
+        - (*compress/gzip.Reader).Close
+        - (*mime/multipart.FileHeader).Open
+        - (net/smtp.Client).Close
+        - (*net/smtp.Client).Close
+        - (*github.com/gorilla/websocket.Conn).Close
+
+run:
+  timeout: 10m
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

@@ -19,14 +19,6 @@ func runMutationTx(ctx context.Context, fn func(tx TxWrapper) error) error {
 	return tx.Commit()
 }
 
-type mutationKind string
-
-const (
-	mutationCreate mutationKind = "create"
-	mutationUpdate mutationKind = "update"
-	mutationDelete mutationKind = "delete"
-)
-
 type mutationResult struct {
 	ID              int
 	RowsAffected    int64
@@ -84,7 +76,10 @@ func executeUpdateMutation(ctx context.Context, modelName string, domain [][]int
 	if err != nil {
 		return result, err
 	}
-	prepared, err := PrepareValues(inst, values, WriteOpWrite, PrepareOptions{StrictUnknown: false})
+	prepared, err := PrepareValues(inst, values, WriteOpWrite, PrepareOptions{
+		StrictUnknown:     false,
+		AllowPasswordHash: passwordHashWriteAllowed(ctx),
+	})
 	if err != nil {
 		return result, err
 	}

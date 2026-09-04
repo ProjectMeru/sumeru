@@ -42,6 +42,9 @@ func ExportPivotHandler(w http.ResponseWriter, r *http.Request) {
 	if !requireLogin(w, r) {
 		return
 	}
+	if !validateSessionCSRF(w, r) {
+		return
+	}
 	modelName := strings.TrimSpace(r.URL.Query().Get(importModelField))
 	if modelName == "" {
 		http.Error(w, "model required", http.StatusBadRequest)
@@ -75,6 +78,9 @@ func ExportPivotHandler(w http.ResponseWriter, r *http.Request) {
 // ExportGraphHandler GET /web/export/graph
 func ExportGraphHandler(w http.ResponseWriter, r *http.Request) {
 	if !requireLogin(w, r) {
+		return
+	}
+	if !validateSessionCSRF(w, r) {
 		return
 	}
 	modelName := strings.TrimSpace(r.URL.Query().Get(importModelField))

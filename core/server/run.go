@@ -57,6 +57,9 @@ func Run() {
 	applog.RegisterUIDResolver(orm.UIDFromContext)
 	applog.RegisterCompanyIDResolver(orm.CompanyIDFromContext)
 	ctx := context.Background()
+	for _, w := range config.ApplyProductionSecurityDefaults(&config.AppConfig) {
+		applog.WarnMsg(ctx, "server", "config", w, nil, nil)
+	}
 
 	if s := strings.TrimSpace(*dbNameLong); s != "" {
 		config.AppConfig.DbName = s
@@ -133,6 +136,8 @@ func Run() {
 
 		registerBrandingAndStatic()
 		registerSetupRoutes()
+		web.InitRateLimit()
+		web.InitCSRFSecret()
 
 		listenHost := setupListenAddr(config.AppConfig)
 		applog.InfoMsg(ctx, "server", "listen", "Server starting in setup mode",
@@ -168,6 +173,7 @@ func Run() {
 	registerBrandingAndStatic()
 	registerAppRoutes()
 	web.InitRateLimit()
+	web.InitCSRFSecret()
 	if err := sdk.RunStartups(ctx); err != nil {
 		applog.Fatal(ctx, "Startup hooks failed", "err", err)
 	}

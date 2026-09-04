@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"sumeru/core/engine/parser"
 	"sumeru/core/engine/render"
 )
 
@@ -31,14 +30,6 @@ type workspaceLoadInput struct {
 	ActionData map[string]interface{}
 	Req        workspaceRequest
 }
-
-type searchWorkspaceRowsInput struct {
-	workspaceLoadInput
-	View        *parser.View
-	SearchQuery string
-	RowLimit    int
-}
-
 
 func buildViewRecordData(ctx context.Context, w http.ResponseWriter, r *http.Request, req workspaceRequest, resolved *resolvedWorkspaceView, actionData map[string]interface{}) (*render.ViewRecordData, error) {
 	viewRecord := &render.ViewRecordData{

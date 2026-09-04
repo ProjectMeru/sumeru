@@ -57,5 +57,17 @@ func RedactSearchResults(ctx context.Context, uid int, model string, rows []map[
 func enrichRecordForRead(ctx context.Context, uid int, modelName string, record map[string]interface{}) {
 	RedactRecordForRead(ctx, uid, modelName, record)
 	_ = ApplyComputes(ctx, modelName, record)
-	_ = ApplyRelatedFields(ctx, modelName, record)
+	if !skipRelatedEnrichment(ctx) {
+		_ = ApplyRelatedFields(ctx, modelName, record)
+	}
+}
+
+func enrichRecordsForRead(ctx context.Context, uid int, modelName string, records []map[string]interface{}) {
+	for _, record := range records {
+		RedactRecordForRead(ctx, uid, modelName, record)
+		_ = ApplyComputes(ctx, modelName, record)
+	}
+	if !skipRelatedEnrichment(ctx) {
+		_ = ApplyRelatedFieldsBatch(ctx, modelName, records)
+	}
 }

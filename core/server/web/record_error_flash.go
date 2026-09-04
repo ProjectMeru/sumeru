@@ -1,7 +1,6 @@
 package web
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -164,14 +163,6 @@ func appendFieldErrorsToURL(rawURL string, fieldErrors []string) string {
 	return parsed.String()
 }
 
-func redirectRecordSuccess(w http.ResponseWriter, r *http.Request, nextURL, msg string) {
-	redirectURL, err := urlWithQueryParam(SafeWebNext(nextURL, homeRoute), flashMessageParam, msg)
-	if err != nil {
-		redirectURL = SafeWebNext(nextURL, homeRoute) + "?" + flashMessageParam + "=" + url.QueryEscape(msg)
-	}
-	http.Redirect(w, r, redirectURL, http.StatusSeeOther)
-}
-
 func operationRoute(operation string) string {
 	switch operation {
 	case "record_save", "record_delete":
@@ -198,26 +189,4 @@ func ensureFormEditRedirectURL(rawNext string, clearRecordID bool) string {
 	}
 	parsed.RawQuery = query.Encode()
 	return parsed.String()
-}
-
-func applyCreateOwnershipDefaults(ctx context.Context, modelInst orm.Model, values map[string]interface{}) {
-	if values == nil || modelInst == nil {
-		return
-	}
-	uid := orm.SecurityUID(ctx)
-	if uid <= 0 {
-		return
-	}
-	for _, field := range modelInst.Fields() {
-		if field.Name != "user_id" || field.Type != orm.Many2One {
-			continue
-		}
-		if existing, ok := values["user_id"]; ok && existing != nil {
-			if id, ok := orm.CoerceInt64(existing); ok && id > 0 {
-				continue
-			}
-		}
-		values["user_id"] = uid
-		return
-	}
 }

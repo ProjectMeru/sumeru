@@ -2,7 +2,7 @@ package web
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -106,7 +106,7 @@ func runModuleLifecycleAction(ctx context.Context, action, moduleName string) (f
 		}
 		outcomeVerb = "activated"
 	default:
-		return "", fmt.Errorf(moduleMsgUnknownAction)
+		return "", errors.New(moduleMsgUnknownAction)
 	}
 
 	if err = run(ctx, moduleName); err != nil {
@@ -118,17 +118,17 @@ func runModuleLifecycleAction(ctx context.Context, action, moduleName string) (f
 func saveModuleFromForm(r *http.Request, moduleName string) error {
 	recordID, err := strconv.Atoi(strings.TrimSpace(r.FormValue(moduleRowIDField)))
 	if err != nil || recordID <= 0 {
-		return fmt.Errorf(moduleMsgInvalidModuleRow)
+		return errors.New(moduleMsgInvalidModuleRow)
 	}
 
 	row, err := orm.SearchOne(r.Context(), appsModuleModel, map[string]interface{}{"id": recordID})
 	if err != nil {
-		return fmt.Errorf(moduleMsgModuleNotFound)
+		return errors.New(moduleMsgModuleNotFound)
 	}
 
 	parsed, ok := parseModuleRow(row)
 	if !ok || parsed.Name != moduleName {
-		return fmt.Errorf(moduleMsgModuleMismatch)
+		return errors.New(moduleMsgModuleMismatch)
 	}
 
 	return orm.UpdateRecordByID(r.Context(), appsModuleModel, recordID, map[string]interface{}{

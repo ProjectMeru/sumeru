@@ -93,8 +93,8 @@ func TestIsEmbeddedModelMeta(t *testing.T) {
 	if !modelmeta.IsEmbeddedModelMeta(st.Field(0)) {
 		t.Fatal("expected embedded ModelMeta")
 	}
-	if modelmeta.IsEmbeddedModelMeta(st.Field(0)) && st.NumField() == 1 {
-		// only one field
+	if st.NumField() != 1 {
+		t.Fatalf("expected single embedded field, got %d", st.NumField())
 	}
 	type withName struct {
 		Name string

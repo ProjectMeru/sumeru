@@ -84,6 +84,7 @@ func registerSettingsRoutes() {
 
 func registerAPIRoutes() {
 	registerPublic(http.MethodGet, apiHealthRoute, APIHealthHandler)
+	registerPublic(http.MethodGet, apiReadyRoute, APIReadyHandler)
 	registerPublic(http.MethodPost, apiRPCRoute, RPCJSONHandler)
 }
 

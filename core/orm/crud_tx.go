@@ -26,20 +26,15 @@ func insertPreparedOnTx(ctx context.Context, tx TxWrapper, model Model, prepared
 
 // insertRawOnTx inserts side-effect rows without ACL checks (caller must pass bypass ctx).
 func insertRawOnTx(ctx context.Context, tx TxWrapper, model Model, values map[string]interface{}) (int, error) {
-	prepared, err := PrepareValues(model, values, WriteOpCreate, PrepareOptions{StrictUnknown: false})
+	prepared, err := PrepareValues(model, values, WriteOpCreate, PrepareOptions{
+		StrictUnknown:     false,
+		AllowPasswordHash: passwordHashWriteAllowed(ctx),
+	})
 	if err != nil {
 		return 0, err
 	}
 	if len(prepared) == 0 {
 		return 0, fmt.Errorf("insert requires at least one column")
-	}
-	return insertPreparedOnTx(ctx, tx, model, prepared)
-}
-
-func createOnTx(ctx context.Context, tx TxWrapper, model Model, values map[string]interface{}) (id int, err error) {
-	prepared, _, err := prepareCreateWrite(ctx, model, values, PrepareOptions{StrictUnknown: true})
-	if err != nil {
-		return 0, err
 	}
 	return insertPreparedOnTx(ctx, tx, model, prepared)
 }

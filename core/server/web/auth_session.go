@@ -13,6 +13,7 @@ import (
 
 const sessionCookieName = "sumeru_session"
 const sessionDuration = 7 * 24 * time.Hour
+const sessionSlidingTTL = 24 * time.Hour
 
 var testSessionUserIDOverride int
 
@@ -80,6 +81,12 @@ func SessionUserID(r *http.Request) int {
 	if err != nil {
 		return 0
 	}
+	// Sliding idle expiry (DB-backed; works across instances).
+	_, _ = orm.DB.Exec(
+		`UPDATE `+sessionTable+` SET expires_at = $1 WHERE sid = $2 AND expires_at > NOW()`,
+		time.Now().UTC().Add(sessionSlidingTTL),
+		cookie.Value,
+	)
 	return userID
 }
 

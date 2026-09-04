@@ -214,24 +214,6 @@ func loadWorkspacePivotData(ctx context.Context, in workspaceLoadInput) error {
 	return nil
 }
 
-func searchWorkspaceRowsWithSearch(ctx context.Context, in searchWorkspaceRowsInput) ([]map[string]interface{}, error) {
-	domain := workspaceListDomain(ctx, listDomainInput{
-		ActionData:  in.ActionData,
-		View:        in.View,
-		SearchView:  nil,
-		SearchQuery: in.SearchQuery,
-	})
-	return orm.SearchLimit(ctx, in.Resolved.targetModel, domain, in.RowLimit)
-}
-
-func searchWorkspaceRows(ctx context.Context, in workspaceLoadInput, rowLimit int) ([]map[string]interface{}, error) {
-	return searchWorkspaceRowsWithSearch(ctx, searchWorkspaceRowsInput{
-		workspaceLoadInput: in,
-		SearchQuery:        "",
-		RowLimit:           rowLimit,
-	})
-}
-
 func loadSearchViewForAction(ctx context.Context, model string, actionData map[string]interface{}) *parser.View {
 	if searchViewID := actionSearchViewIDFromContext(actionData); searchViewID != "" {
 		if view := loadSearchViewByName(ctx, model, searchViewID); view != nil {

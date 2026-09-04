@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 
@@ -36,16 +35,32 @@ func rpcRead(ctx context.Context, model string, args json.RawMessage) (interface
 			return nil, err
 		}
 	}
-	var out []map[string]interface{}
+	if len(ids) == 0 {
+		return []map[string]interface{}{}, nil
+	}
+	idValues := make([]interface{}, len(ids))
+	for i, id := range ids {
+		idValues[i] = id
+	}
+	rows, err := orm.Search(ctx, model, [][]interface{}{{"id", "in", idValues}})
+	if err != nil {
+		return nil, err
+	}
+	byID := make(map[int]map[string]interface{}, len(rows))
+	for _, row := range rows {
+		id, ok := orm.CoerceInt64(row["id"])
+		if !ok {
+			continue
+		}
+		byID[int(id)] = row
+	}
 	var missing []int
+	out := make([]map[string]interface{}, 0, len(ids))
 	for _, id := range ids {
-		rec, err := orm.SearchOne(ctx, model, map[string]interface{}{"id": id})
-		if err != nil {
-			if err == sql.ErrNoRows {
-				missing = append(missing, id)
-				continue
-			}
-			return nil, err
+		rec, ok := byID[id]
+		if !ok {
+			missing = append(missing, id)
+			continue
 		}
 		if len(fields) > 0 {
 			out = append(out, projectFields([]map[string]interface{}{rec}, fields)[0])

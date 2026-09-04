@@ -45,7 +45,7 @@ func TestListComments_nilDB(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if rows != nil && len(rows) != 0 {
+	if len(rows) != 0 {
 		t.Fatalf("expected empty, got %v", rows)
 	}
 }

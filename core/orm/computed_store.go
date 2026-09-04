@@ -95,16 +95,6 @@ func topoSort(fields []string, deps map[string][]string) []string {
 	return out
 }
 
-func storedComputeFields(model Model) []string {
-	var names []string
-	for _, f := range model.Fields() {
-		if f.Compute != "" && f.ComputeStore {
-			names = append(names, f.Name)
-		}
-	}
-	return names
-}
-
 // RejectVirtualWrites returns an error if values touch virtual or readonly-compute fields.
 func RejectVirtualWrites(model Model, values map[string]interface{}) error {
 	if model == nil || len(values) == 0 {

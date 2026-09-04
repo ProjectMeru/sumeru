@@ -85,7 +85,7 @@ func scanUsedRelationTypes(modelsDir string) (map[string]struct{}, error) {
 	}
 
 	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, modelsDir, isSourceGo, 0)
+	pkgs, err := parser.ParseDir(fset, modelsDir, isSourceGo, 0) //nolint:staticcheck // SA1019: ParseDir adequate for model tag scan; go/packages migration is separate
 	if err != nil {
 		return nil, err
 	}

@@ -50,6 +50,7 @@ export function exportQuery(
   if (payload.listFilter) params.set("filter", payload.listFilter);
   if (payload.listDomain) params.set("domain", payload.listDomain);
   if (payload.listSearch) params.set("q", payload.listSearch);
+  if (payload.csrfToken) params.set("csrf_token", payload.csrfToken);
   return params;
 }
 

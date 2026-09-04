@@ -125,12 +125,6 @@ func openingTagRe(target xpathTarget) *regexp.Regexp {
 	})
 }
 
-func attrValuePattern(attrName, attrVal string) string {
-	q := regexp.QuoteMeta(attrVal)
-	a := regexp.QuoteMeta(attrName)
-	return `\b` + a + `=(?:"` + q + `"|'` + q + `')`
-}
-
 func findElementSpan(arch string, target xpathTarget) (start, end int, ok bool) {
 	index := target.matchIndex()
 	openRe := openingTagRe(target)

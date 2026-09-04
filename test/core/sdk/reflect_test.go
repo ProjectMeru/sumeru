@@ -8,12 +8,6 @@ import (
 	"sumeru/core/orm"
 )
 
-type testPriority string
-
-const (
-	testPriorityLow testPriority = "low"
-)
-
 type testLine struct {
 	modelmeta.ModelMeta `sumeru:"model=test.line"`
 	Name                modelmeta.String
@@ -34,11 +28,6 @@ type testOrder struct {
 }
 
 type cookbookPriority string
-
-const (
-	cookbookPriorityLow  cookbookPriority = "low"
-	cookbookPriorityHigh cookbookPriority = "high"
-)
 
 type cookbookLine struct {
 	modelmeta.ModelMeta `sumeru:"model=test.cookbook.line"`

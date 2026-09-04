@@ -45,6 +45,8 @@ type Config struct {
 	DbReadReplicaDSN   string   // optional libpq DSN for read replica (search/read_group RPC)
 	RateLimitRPM       int      // rate_limit_rpm per client IP on /api/rpc and login; 0 = disabled
 	TrustedProxies     string   // trusted_proxies: comma-separated CIDRs/IPs allowed to set X-Forwarded-For; empty = never trust XFF
+	CSRFSecret         string   // csrf_secret: shared HMAC key for multi-instance; empty = ephemeral per process
+	MetricsScrapeToken string   // metrics_scrape_token: Bearer token for unauthenticated /metrics scrape; empty = admin session only
 	SMTPHost           string
 	SMTPPort           int
 	SMTPUser           string
@@ -177,6 +179,10 @@ func LoadConfig(path string) error {
 			}
 		case keyTrustedProxies:
 			AppConfig.TrustedProxies = val
+		case keyCSRFSecret:
+			AppConfig.CSRFSecret = val
+		case keyMetricsScrapeToken:
+			AppConfig.MetricsScrapeToken = val
 		case keySMTPHost:
 			AppConfig.SMTPHost = val
 		case keySMTPPort:
@@ -196,15 +202,77 @@ func LoadConfig(path string) error {
 		return err
 	}
 
+	ApplyEnvOverrides(&AppConfig)
+
 	if err := validateRequired(&AppConfig, absPath); err != nil {
 		return err
 	}
+
+	ApplyProductionSecurityDefaults(&AppConfig)
 
 	// Default assets/templates paths are applied in AbsPaths() so sumeru_home can anchor
 	// them under the standard tree; do not set repo-relative defaults here (would resolve
 	// from the INI directory and break workspace configs next to ../sumeru).
 
 	return nil
+}
+
+// ApplyEnvOverrides applies SUMERU_* environment variables over INI values (container secrets).
+func ApplyEnvOverrides(c *Config) {
+	if c == nil {
+		return
+	}
+	if v := strings.TrimSpace(os.Getenv("SUMERU_DB_PASSWORD")); v != "" {
+		c.DbPass = v
+	}
+	if v := strings.TrimSpace(os.Getenv("SUMERU_DB_USER")); v != "" {
+		c.DbUser = v
+	}
+	if v := strings.TrimSpace(os.Getenv("SUMERU_DB_HOST")); v != "" {
+		c.DbHost = v
+	}
+	if v := strings.TrimSpace(os.Getenv("SUMERU_DB_NAME")); v != "" {
+		c.DbName = v
+	}
+	if v := strings.TrimSpace(os.Getenv("SUMERU_SETUP_TOKEN")); v != "" {
+		c.SetupToken = v
+	}
+	if v := strings.TrimSpace(os.Getenv("SUMERU_CSRF_SECRET")); v != "" {
+		c.CSRFSecret = v
+	}
+	if v := strings.TrimSpace(os.Getenv("SUMERU_METRICS_SCRAPE_TOKEN")); v != "" {
+		c.MetricsScrapeToken = v
+	}
+	if v := strings.TrimSpace(os.Getenv("SUMERU_SMTP_PASSWORD")); v != "" {
+		c.SMTPPassword = v
+	}
+	if v := strings.TrimSpace(os.Getenv("SUMERU_SMTP_HOST")); v != "" {
+		c.SMTPHost = v
+	}
+	if v := strings.TrimSpace(os.Getenv("SUMERU_SMTP_FROM")); v != "" {
+		c.SMTPFrom = v
+	}
+}
+
+const defaultProdRateLimitRPM = 120
+
+// ApplyProductionSecurityDefaults sets safe defaults when not in dev_mode and returns operator warnings.
+func ApplyProductionSecurityDefaults(c *Config) []string {
+	if c == nil {
+		return nil
+	}
+	var warns []string
+	if !c.DevMode && c.RateLimitRPM == 0 {
+		c.RateLimitRPM = defaultProdRateLimitRPM
+		warns = append(warns, "rate_limit_rpm defaulted to 120 because dev_mode is false")
+	}
+	if c.DevMode {
+		warns = append(warns, "dev_mode=true: session cookies are not Secure; do not use in production")
+		if c.RateLimitRPM == 0 {
+			warns = append(warns, "rate_limit_rpm=0: login/RPC rate limiting disabled")
+		}
+	}
+	return warns
 }
 
 // parseBoolKey parses INI booleans; empty string returns defaultVal.

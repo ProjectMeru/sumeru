@@ -17,6 +17,7 @@ const (
 	settingsRoute      = "/web/settings"
 	appLogsRoute       = "/web/settings/app-logs"
 	apiHealthRoute     = "/api/health"
+	apiReadyRoute      = "/api/ready"
 	apiRPCRoute        = "/api/rpc"
 	metricsRoute       = "/metrics"
 	setupRoute         = "/setup"
@@ -180,12 +181,6 @@ const (
 	moduleMsgInvalidModuleRow = "invalid_module_row"
 	moduleMsgModuleNotFound   = "module_not_found"
 	moduleMsgModuleMismatch   = "module_mismatch"
-)
-
-// Kanban move field names.
-const (
-	stageIDField             = "stage_id"
-	dateLastStageUpdateField = "date_last_stage_update"
 )
 
 // Company switch form field.

@@ -1,7 +1,6 @@
 package render
 
 import (
-	"html/template"
 	"strings"
 	"unicode"
 
@@ -61,10 +60,4 @@ func FieldDisplayLabel(field parser.Field) string {
 		words[i] = string(runes)
 	}
 	return strings.Join(words, " ")
-}
-
-// writeSaveCancelButtons renders form Save/Cancel controls for workspace record toolbar.
-func writeSaveCancelButtons(sb *strings.Builder, cancelURL string) {
-	sb.WriteString(`<button type="submit" form="sum-workspace-record-form" class="sum-list-btn-new">Save</button>`)
-	sb.WriteString(`<a href="` + template.HTMLEscapeString(cancelURL) + `" class="sum-list-btn-ghost">Cancel</a>`)
 }

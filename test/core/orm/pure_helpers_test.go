@@ -35,8 +35,8 @@ func TestAccessErrors(t *testing.T) {
 
 func TestSecurityContext(t *testing.T) {
 	ctx := context.Background()
-	if orm.UIDFromContext(nil) != 0 || orm.BypassFromContext(nil) {
-		t.Fatal("nil context")
+	if orm.UIDFromContext(context.TODO()) != 0 || orm.BypassFromContext(context.TODO()) {
+		t.Fatal("empty context")
 	}
 	ctx = orm.ContextWithUID(ctx, 7)
 	if orm.UIDFromContext(ctx) != 7 || orm.SecurityUID(ctx) != 7 {

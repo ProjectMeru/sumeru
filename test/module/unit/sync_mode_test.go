@@ -18,7 +18,7 @@ func TestDataFileOptsSkipExistingOnUpdate(t *testing.T) {
 		t.Fatal("install mode should not skip")
 	}
 	if opts.SkipExistingOnUpdateForTest(ctx, "base", "company_main") {
-		// without DB/xml id resolution this returns false — no skip when id unknown
+		t.Fatal("without DB/xml id resolution should not skip when id unknown")
 	}
 	opts2 := module.NewDataFileOptsForTest(false)
 	if opts2.SkipExistingOnUpdateForTest(ctx, "base", "company_main") {

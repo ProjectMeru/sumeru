@@ -14,7 +14,9 @@ db_sslmode = disable
 # HTTP (required)
 http_port = 8080
 # http_interface = 127.0.0.1
-dev_mode = true
+# Production: leave false (Secure cookies, rate limit defaults). Local UI: set true.
+dev_mode = false
+# dev_mode = true
 
 # Setup wizard — first run only.
 # When setup_localhost_only = false, setup_token must be non-empty.
@@ -52,16 +54,29 @@ log_rolling = false
 # db_conn_max_lifetime_minutes = 30
 # db_read_replica_dsn = host=replica dbname=sumeru user=postgres password=postgres sslmode=disable
 
-# Rate limiting (optional; requests per minute per client IP on /api/rpc and /web/login)
-# rate_limit_rpm = 120
+# Rate limiting (requests per minute per client IP on /api/rpc and /web/login).
+# When dev_mode=false and this is unset/0, the server defaults to 120.
+rate_limit_rpm = 120
 
 # Comma-separated CIDRs/IPs of reverse proxies allowed to set X-Forwarded-For.
 # Empty (default) = never trust XFF; client IP is always RemoteAddr.
 # trusted_proxies = 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.1
 
-# SMTP (optional — password reset and notifications)
+# Shared CSRF HMAC secret (required for multi-instance). Env: SUMERU_CSRF_SECRET
+# csrf_secret =
+
+# Bearer token for Prometheus scrape of /metrics (optional). Env: SUMERU_METRICS_SCRAPE_TOKEN
+# Without this, /metrics requires a system-admin session.
+# metrics_scrape_token =
+
+# SMTP (optional — login-link notify and notifications)
 # smtp_host = localhost
 # smtp_port = 587
 # smtp_user =
 # smtp_password =
 # smtp_from = noreply@example.com
+
+# Secrets may also be supplied via environment (override INI):
+#   SUMERU_DB_PASSWORD, SUMERU_DB_USER, SUMERU_DB_HOST, SUMERU_DB_NAME
+#   SUMERU_SETUP_TOKEN, SUMERU_CSRF_SECRET, SUMERU_METRICS_SCRAPE_TOKEN
+#   SUMERU_SMTP_PASSWORD, SUMERU_SMTP_HOST, SUMERU_SMTP_FROM

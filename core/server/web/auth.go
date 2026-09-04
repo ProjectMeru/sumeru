@@ -83,6 +83,7 @@ func SecurityMiddleware(next http.Handler) http.Handler {
 		start := time.Now()
 		requestID := requestIDFromHeader(r)
 		w.Header().Set(requestIDHeader, requestID)
+		setSecurityHeaders(w, r)
 
 		ctx := enrichRequestContext(r, requestID)
 		r = r.WithContext(ctx)
@@ -94,6 +95,17 @@ func SecurityMiddleware(next http.Handler) http.Handler {
 
 		logHTTPRequestEnd(ctx, r, recorder.status, time.Since(start))
 	})
+}
+
+func setSecurityHeaders(w http.ResponseWriter, _ *http.Request) {
+	h := w.Header()
+	h.Set("X-Content-Type-Options", "nosniff")
+	h.Set("Referrer-Policy", "strict-origin-when-cross-origin")
+	h.Set("X-Frame-Options", "SAMEORIGIN")
+	h.Set("Content-Security-Policy", "frame-ancestors 'self'; base-uri 'self'; object-src 'none'")
+	if !config.AppConfig.DevMode {
+		h.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+	}
 }
 
 type statusRecorder struct {
@@ -180,7 +192,8 @@ func LogoutGet(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, loginRoute, http.StatusFound)
 }
 
-// ActionResetPassword accepts a reset request from a system administrator (email delivery not yet wired).
+// ActionNotifyLoginLink emails a login URL to the user (not a password-reset token flow).
+// Prefer IdP / SSO or SetUserPassword for credential changes.
 func ActionResetPassword(w http.ResponseWriter, r *http.Request) {
 	if !requireLoginAndPOST(w, r) {
 		return
@@ -198,13 +211,13 @@ func ActionResetPassword(w http.ResponseWriter, r *http.Request) {
 	loginURL := loginRoute
 	if mail.Configured() && to != "" {
 		if err := mail.SendPasswordResetEmail(r.Context(), to, loginName, loginURL); err != nil {
-			WebLogf(r.Context(), resetPasswordRoute, "email failed for user id=%s: %v", userID, err)
+			WebLogf(r.Context(), resetPasswordRoute, "login-link email failed for user id=%s: %v", userID, err)
 		} else {
-			WebLogf(r.Context(), resetPasswordRoute, "reset email sent for user id=%s login=%q", userID, loginName)
+			WebLogf(r.Context(), resetPasswordRoute, "login-link email sent for user id=%s login=%q", userID, loginName)
 		}
 	} else {
 		WebLogf(r.Context(), resetPasswordRoute,
-			"requested for user id=%s login=%q (configure smtp_host/smtp_from to send email)", userID, loginName)
+			"login-link notify for user id=%s login=%q (configure smtp_host/smtp_from to send email; this does not reset passwords)", userID, loginName)
 	}
 	redirectWithWebMessage(w, r, r.PostFormValue(nextField), resetPasswordMsg)
 }

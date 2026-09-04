@@ -26,7 +26,7 @@ jobs:
 
       - uses: actions/setup-go@v7
         with:
-          go-version: "1.26.2"
+          go-version: "1.26.6"
           cache: true
 
       - name: Build all packages
@@ -46,7 +46,7 @@ jobs:
 
       - uses: actions/setup-go@v7
         with:
-          go-version: "1.26.2"
+          go-version: "1.26.6"
           cache: true
 
       - name: Module static tests
@@ -71,7 +71,58 @@ jobs:
         if: always()
         run: |
           echo "## Go test" >> "$GITHUB_STEP_SUMMARY"
-          echo "Commands: \`make test-modules-static\`, \`go test ./test/...\`, coverage gate 90%" >> "$GITHUB_STEP_SUMMARY"
+          echo "Commands: \`make test-modules-static\`, \`go test ./test/...\`, coverage gate ${GO_COVERAGE_MIN:-42}%" >> "$GITHUB_STEP_SUMMARY"
+
+  go-lint:
+    name: Go lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Needed for golangci-lint only-new-issues on pull_request.
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.26.6"
+          cache: true
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          # Need a v2.x build that supports analyzing Go 1.26 modules.
+          version: latest
+          args: --timeout=10m
+          only-new-issues: ${{ github.event_name == 'pull_request' }}
+
+      - name: Job summary
+        if: always()
+        run: |
+          echo "## Go lint" >> "$GITHUB_STEP_SUMMARY"
+          echo "Commands: \`go vet ./...\`, \`golangci-lint run\`" >> "$GITHUB_STEP_SUMMARY"
+
+  go-vuln:
+    name: Go vulnerabilities
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.26.6"
+          cache: true
+
+      - name: govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+      - name: Job summary
+        if: always()
+        run: |
+          echo "## Go vulnerabilities" >> "$GITHUB_STEP_SUMMARY"
+          echo "Command: \`govulncheck ./...\`" >> "$GITHUB_STEP_SUMMARY"
 
   swc:
     name: SWC check and test
@@ -84,7 +135,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: "22"
+          node-version: "24"
           cache: npm
           cache-dependency-path: core/swc/package-lock.json
 
@@ -111,7 +162,7 @@ jobs:
 
       - uses: actions/setup-go@v7
         with:
-          go-version: "1.26.2"
+          go-version: "1.26.6"
           cache: true
 
       - name: Regenerate zimports.go
@@ -135,7 +186,7 @@ jobs:
   #   runs-on: ubuntu-latest
   #   services:
   #     postgres:
-  #       image: postgres:16-alpine
+  #       image: postgres:18-alpine
   #       env:
   #         POSTGRES_USER: postgres
   #         POSTGRES_PASSWORD: postgres
@@ -152,7 +203,7 @@ jobs:
 
   #     - uses: actions/setup-go@v7
   #       with:
-  #         go-version: "1.26.2"
+  #         go-version: "1.26.6"
   #         cache: true
 
   #     - name: Bootstrap kernel schema

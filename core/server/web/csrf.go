@@ -6,7 +6,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"net/http"
+	"strings"
 	"sync"
+
+	"sumeru/core/server/config"
 )
 
 const (
@@ -30,13 +33,26 @@ func csrfKey() []byte {
 	csrfSecretMu.Lock()
 	defer csrfSecretMu.Unlock()
 	if len(csrfSecret) == 0 {
-		b := make([]byte, 32)
-		if _, err := rand.Read(b); err != nil {
-			panic("csrf: crypto/rand failed: " + err.Error())
+		if configured := strings.TrimSpace(config.AppConfig.CSRFSecret); configured != "" {
+			csrfSecret = []byte(configured)
+		} else {
+			b := make([]byte, 32)
+			if _, err := rand.Read(b); err != nil {
+				panic("csrf: crypto/rand failed: " + err.Error())
+			}
+			csrfSecret = b
 		}
-		csrfSecret = b
 	}
 	return csrfSecret
+}
+
+// InitCSRFSecret loads csrf_secret from config (call after LoadConfig). Empty keeps ephemeral key.
+func InitCSRFSecret() {
+	csrfSecretMu.Lock()
+	defer csrfSecretMu.Unlock()
+	if configured := strings.TrimSpace(config.AppConfig.CSRFSecret); configured != "" {
+		csrfSecret = []byte(configured)
+	}
 }
 
 func sessionIDFromRequest(r *http.Request) string {
@@ -58,7 +74,7 @@ func CSRFTokenForRequest(r *http.Request) string {
 	return hex.EncodeToString(mac.Sum(nil)[:16])
 }
 
-// ValidateCSRF checks the csrf_token form field or X-CSRF-Token header against the session-bound token.
+// ValidateCSRF checks the csrf_token form field, query param, or X-CSRF-Token header against the session-bound token.
 func ValidateCSRF(r *http.Request) bool {
 	expected := CSRFTokenForRequest(r)
 	if expected == "" {
@@ -67,6 +83,9 @@ func ValidateCSRF(r *http.Request) bool {
 	got := r.PostFormValue(csrfFormField)
 	if got == "" {
 		got = r.Header.Get(csrfHeaderName)
+	}
+	if got == "" {
+		got = strings.TrimSpace(r.URL.Query().Get(csrfFormField))
 	}
 	return got != "" && hmac.Equal([]byte(got), []byte(expected))
 }

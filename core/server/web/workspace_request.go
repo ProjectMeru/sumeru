@@ -204,7 +204,7 @@ func workspaceViewNotFoundError(targetModel string, modes []string, lastErr erro
 }
 
 func actionViewModesForTabs(actionData map[string]interface{}) []string {
-	if actionData == nil || len(actionData) == 0 {
+	if len(actionData) == 0 {
 		return nil
 	}
 	modes := splitViewModes(strings.TrimSpace(orm.AsString(actionData["view_mode"])))
