@@ -119,6 +119,8 @@ func RequirePOST(w http.ResponseWriter, r *http.Request) bool {
 }
 
 func ParsePostForm(w http.ResponseWriter, r *http.Request) bool {
+	const maxFormBytes = 1 << 20 // 1 MiB
+	r.Body = http.MaxBytesReader(w, r.Body, maxFormBytes)
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, invalidFormMessage, http.StatusBadRequest)
 		return false

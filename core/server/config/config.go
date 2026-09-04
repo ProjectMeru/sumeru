@@ -44,6 +44,7 @@ type Config struct {
 	DbConnMaxLifetimeMin int    // db_conn_max_lifetime_minutes; 0 = no limit
 	DbReadReplicaDSN   string   // optional libpq DSN for read replica (search/read_group RPC)
 	RateLimitRPM       int      // rate_limit_rpm per client IP on /api/rpc and login; 0 = disabled
+	TrustedProxies     string   // trusted_proxies: comma-separated CIDRs/IPs allowed to set X-Forwarded-For; empty = never trust XFF
 	SMTPHost           string
 	SMTPPort           int
 	SMTPUser           string
@@ -174,6 +175,8 @@ func LoadConfig(path string) error {
 			if n, err := strconv.Atoi(strings.TrimSpace(val)); err == nil {
 				AppConfig.RateLimitRPM = n
 			}
+		case keyTrustedProxies:
+			AppConfig.TrustedProxies = val
 		case keySMTPHost:
 			AppConfig.SMTPHost = val
 		case keySMTPPort:

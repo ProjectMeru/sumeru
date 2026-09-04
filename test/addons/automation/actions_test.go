@@ -2,10 +2,8 @@ package automation_test
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"sumeru/addons/automation"
@@ -58,10 +56,7 @@ func TestExecuteServerActionModelFilter(t *testing.T) {
 }
 
 func TestExecuteServerActionWebhook(t *testing.T) {
-	var gotBody string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ := io.ReadAll(r.Body)
-		gotBody = string(body)
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer srv.Close()
@@ -71,10 +66,8 @@ func TestExecuteServerActionWebhook(t *testing.T) {
 		"code": "webhook:" + srv.URL,
 	}
 	ev := event.Event{Name: "record.created", Payload: map[string]interface{}{"model": "crm.lead", "id": 1}}
-	if err := automation.ExecuteServerActionForTest(context.Background(), row, ev); err != nil {
-		t.Fatal(err)
-	}
-	if gotBody == "" || !strings.Contains(gotBody, "record.created") {
-		t.Fatalf("expected webhook body with event, got %q", gotBody)
+	err := automation.ExecuteServerActionForTest(context.Background(), row, ev)
+	if err == nil {
+		t.Fatal("expected loopback webhook URL to be rejected")
 	}
 }

@@ -32,10 +32,9 @@ func csrfKey() []byte {
 	if len(csrfSecret) == 0 {
 		b := make([]byte, 32)
 		if _, err := rand.Read(b); err != nil {
-			csrfSecret = []byte("sumeru-dev-csrf-fallback")
-		} else {
-			csrfSecret = b
+			panic("csrf: crypto/rand failed: " + err.Error())
 		}
+		csrfSecret = b
 	}
 	return csrfSecret
 }

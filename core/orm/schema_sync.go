@@ -64,12 +64,12 @@ func syncModelSchema(ctx context.Context, model Model) error {
 	if err != nil {
 		return err
 	}
-	exists, err := tableExists(tableName)
+	exists, err := tableExists(ctx, tableName)
 	if err != nil {
 		return err
 	}
 	if !exists {
-		return createTable(model)
+		return createTable(ctx, model)
 	}
 	existing, err := loadTableColumns(tableName)
 	if err != nil {
@@ -92,7 +92,7 @@ func syncModelSchema(ctx context.Context, model Model) error {
 			return err
 		}
 		q := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", quotedTable, colQuoted, colDef)
-		if _, err := DB.Exec(q); err != nil {
+		if _, err := DB.ExecContext(ctx, q); err != nil {
 			return fmt.Errorf("%s: %w", q, err)
 		}
 		applog.L(ctx).Info("schema_sync", "table", tableName, "field", field.Name)
@@ -296,12 +296,12 @@ func EnsureModelColumns(ctx context.Context, model Model, extra []FieldDefinitio
 	if err != nil {
 		return err
 	}
-	exists, err := tableExists(tableName)
+	exists, err := tableExists(ctx, tableName)
 	if err != nil {
 		return err
 	}
 	if !exists {
-		return createTable(model)
+		return createTable(ctx, model)
 	}
 	existing, err := loadTableColumns(tableName)
 	if err != nil {
@@ -324,7 +324,7 @@ func EnsureModelColumns(ctx context.Context, model Model, extra []FieldDefinitio
 			return err
 		}
 		q := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", quotedTable, colQuoted, colDef)
-		if _, err := DB.Exec(q); err != nil {
+		if _, err := DB.ExecContext(ctx, q); err != nil {
 			return fmt.Errorf("%s: %w", q, err)
 		}
 		applog.L(ctx).Info("schema_sync_extra", "table", tableName, "field", field.Name)

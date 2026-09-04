@@ -180,9 +180,12 @@ func LogoutGet(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, loginRoute, http.StatusFound)
 }
 
-// ActionResetPassword accepts a reset request from an authenticated user (email delivery not yet wired).
+// ActionResetPassword accepts a reset request from a system administrator (email delivery not yet wired).
 func ActionResetPassword(w http.ResponseWriter, r *http.Request) {
 	if !requireLoginAndPOST(w, r) {
+		return
+	}
+	if !requireSystemAdmin(w, r, false) {
 		return
 	}
 

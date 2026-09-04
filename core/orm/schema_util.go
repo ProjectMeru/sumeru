@@ -1,17 +1,18 @@
 package orm
 
 import (
+	"context"
 	"fmt"
 	"strings"
 )
 
 // tableExists reports whether a physical table exists in the public schema.
-func tableExists(tableName string) (bool, error) {
+func tableExists(ctx context.Context, tableName string) (bool, error) {
 	if DB == nil {
 		return false, nil
 	}
 	var count int
-	err := DB.QueryRow(`
+	err := DB.QueryRowContext(ctx, `
 		SELECT COUNT(*) FROM information_schema.tables
 		WHERE table_schema = 'public' AND table_name = $1
 	`, tableName).Scan(&count)

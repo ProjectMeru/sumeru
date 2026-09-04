@@ -54,6 +54,10 @@ log_rolling = false
 # Rate limiting (optional; requests per minute per client IP on /api/rpc and /web/login)
 # rate_limit_rpm = 120
 
+# Comma-separated CIDRs/IPs of reverse proxies allowed to set X-Forwarded-For.
+# Empty (default) = never trust XFF; client IP is always RemoteAddr.
+# trusted_proxies = 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.1
+
 # SMTP (optional — password reset and notifications)
 # smtp_host = localhost
 # smtp_port = 587

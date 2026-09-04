@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"sumeru/core/applog"
@@ -135,7 +137,10 @@ func Run() {
 		applog.InfoMsg(ctx, "server", "listen", "Server starting in setup mode",
 			map[string]interface{}{"port": config.AppConfig.HttpPort, "bind": listenHost})
 		setupHandler := router.ApplyMiddleware(web.SecurityMiddleware(nil))
-		if err := http.ListenAndServe(listenHost, setupHandler); err != nil {
+		srv := newHTTPServer(listenHost, setupHandler)
+		setupCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
+		if err := serveUntilSignal(setupCtx, srv); err != nil {
 			applog.Fatal(ctx, "Server failed in setup mode", "err", err)
 		}
 		return
@@ -165,22 +170,55 @@ func Run() {
 	if err := sdk.RunStartups(ctx); err != nil {
 		applog.Fatal(ctx, "Startup hooks failed", "err", err)
 	}
-	scheduler.Start(context.Background(), time.Minute)
-	orm.StartOutboxDrain(context.Background(), 5*time.Second)
+	rootCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	scheduler.Start(rootCtx, time.Minute)
+	orm.StartOutboxDrain(rootCtx, 5*time.Second)
 
 	listenHost := listenAddr(config.AppConfig.HttpInterface, config.AppConfig.HttpPort)
 	applog.InfoMsg(ctx, "server", "listen", "Server starting",
 		map[string]interface{}{"port": config.AppConfig.HttpPort, "bind": listenHost})
 	runtime.SyncFromGlobals()
 	appHandler := router.ApplyMiddleware(web.SecurityMiddleware(nil))
-	srv := &http.Server{
-		Addr:         listenHost,
-		Handler:      appHandler,
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 60 * time.Second,
-	}
-	if err := srv.ListenAndServe(); err != nil {
+	srv := newHTTPServer(listenHost, appHandler)
+	if err := serveUntilSignal(rootCtx, srv); err != nil {
 		applog.Fatal(ctx, "Server failed", "err", err)
+	}
+	scheduler.Stop()
+	orm.StopOutboxDrain()
+}
+
+func newHTTPServer(addr string, handler http.Handler) *http.Server {
+	return &http.Server{
+		Addr:              addr,
+		Handler:           handler,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      60 * time.Second,
+		IdleTimeout:       120 * time.Second,
+	}
+}
+
+func serveUntilSignal(ctx context.Context, srv *http.Server) error {
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- srv.ListenAndServe()
+	}()
+	select {
+	case <-ctx.Done():
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+		_ = srv.Shutdown(shutdownCtx)
+		err := <-errCh
+		if err == nil || err == http.ErrServerClosed {
+			return nil
+		}
+		return err
+	case err := <-errCh:
+		if err == http.ErrServerClosed {
+			return nil
+		}
+		return err
 	}
 }
 

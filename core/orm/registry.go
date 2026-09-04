@@ -57,7 +57,7 @@ func SyncModels() error {
 		} else if !ShouldMaterializeModel(name, installed) {
 			continue
 		}
-		if err := createTable(model); err != nil {
+		if err := createTable(ctx, model); err != nil {
 			return err
 		}
 	}
@@ -108,7 +108,7 @@ func ColumnTypeSQL(f FieldDefinition) (string, bool) {
 	}
 }
 
-func createTable(model Model) error {
+func createTable(ctx context.Context, model Model) error {
 	physical, err := ModelToTableName(model.ModelName())
 	if err != nil {
 		return err
@@ -117,7 +117,7 @@ func createTable(model Model) error {
 	if err != nil {
 		return err
 	}
-	exists, err := tableExists(physical)
+	exists, err := tableExists(ctx, physical)
 	if err != nil {
 		return err
 	}
@@ -156,7 +156,7 @@ func createTable(model Model) error {
 	}
 
 	query := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (%s);", tableName, strings.Join(columns, ", "))
-	if _, err := DB.Exec(query); err != nil {
+	if _, err := DB.ExecContext(ctx, query); err != nil {
 		return err
 	}
 	return ensureModelIndexes(schemaTable{ModelName: model.ModelName(), TableName: physical, QuotedTable: tableName, Model: model})

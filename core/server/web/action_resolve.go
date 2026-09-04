@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	"sumeru/core/engine/render"
 	"sumeru/core/orm"
+	"sumeru/core/server/config"
 )
 
 type navActionKind int
@@ -36,6 +38,13 @@ func resolveNavigationAction(ctx context.Context, actionID int, actionQuery stri
 		url := strings.TrimSpace(orm.AsString(row["url"]))
 		if url == "" {
 			return navigationAction{}, fmt.Errorf("action %d has empty url", coreID)
+		}
+		safe := render.SafeIframeURL(url)
+		if config.AppConfig.DevMode {
+			safe = render.SafeIframeURLAllowHTTP(url)
+		}
+		if !safe {
+			return navigationAction{}, fmt.Errorf("action %d has unsafe url", coreID)
 		}
 		return navigationAction{kind: navActionURL, url: url}, nil
 	case sysActionWindowModel:

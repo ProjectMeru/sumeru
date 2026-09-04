@@ -62,6 +62,30 @@ func TestSafeImageSrc_table(t *testing.T) {
 	}
 }
 
+func TestSafeIframeURL_table(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		src  string
+		want bool
+	}{
+		{"https://reports.example/x", true},
+		{"/web/report/1", true},
+		{"http://reports.example/x", false},
+		{"javascript:alert(1)", false},
+		{"data:text/html,hi", false},
+		{"//evil.example", false},
+		{"", false},
+	}
+	for _, tc := range tests {
+		if got := render.SafeIframeURL(tc.src); got != tc.want {
+			t.Errorf("SafeIframeURL(%q) = %v want %v", tc.src, got, tc.want)
+		}
+	}
+	if !render.SafeIframeURLAllowHTTP("http://reports.example/x") {
+		t.Fatal("SafeIframeURLAllowHTTP should allow http")
+	}
+}
+
 func TestFieldDisplayLabel_table(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -105,6 +129,12 @@ func TestModuleIconServePath_emptyWithoutAddon(t *testing.T) {
 	t.Parallel()
 	if got := render.ModuleIconServePath("nonexistent_module_xyz", "static/icon.png"); got != "" {
 		t.Fatalf("missing addon should return empty: %q", got)
+	}
+	if got := render.ModuleIconServePath("nonexistent_module_xyz", "/etc/passwd"); got != "" {
+		t.Fatalf("absolute path must be rejected, got %q", got)
+	}
+	if got := render.ModuleIconServePath("nonexistent_module_xyz", "../../../etc/passwd"); got != "" {
+		t.Fatalf("traversal path must be rejected, got %q", got)
 	}
 }
 

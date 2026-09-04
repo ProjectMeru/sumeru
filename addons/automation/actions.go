@@ -81,8 +81,7 @@ func executeServerAction(ctx context.Context, row map[string]interface{}, ev eve
 		if modelName == "" || !ok || resID <= 0 {
 			return nil
 		}
-		bypass := orm.ContextWithBypass(ctx, true)
-		return orm.UpdateRecordByID(bypass, modelName, int(resID), vals)
+		return orm.UpdateRecordByID(ctx, modelName, int(resID), vals)
 
 	case strings.HasPrefix(code, "webhook:"):
 		url := strings.TrimSpace(strings.TrimPrefix(code, "webhook:"))

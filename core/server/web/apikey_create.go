@@ -39,10 +39,15 @@ func ActionCreateAPIKey(w http.ResponseWriter, r *http.Request) {
 }
 
 // apiKeyTargetUserID resolves which user receives the new key; falls back to the session user.
+// Targeting another user requires base.group_system.
 func apiKeyTargetUserID(r *http.Request) int {
+	sessionUID := SessionUserID(r)
 	userID, _ := strconv.Atoi(strings.TrimSpace(r.PostFormValue("user_id")))
-	if userID <= 0 {
-		return SessionUserID(r)
+	if userID <= 0 || userID == sessionUID {
+		return sessionUID
 	}
-	return userID
+	if orm.UserHasGroupXML(r.Context(), sessionUID, groupSystemXML) {
+		return userID
+	}
+	return sessionUID
 }

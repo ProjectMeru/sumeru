@@ -53,17 +53,29 @@ func ModuleIconServePath(moduleName, iconRel string) string {
 	if a == nil || a.Path == "" {
 		return ""
 	}
+	root := filepath.Clean(a.Path)
 	candidates := []string{}
 	if iconRel = strings.TrimSpace(iconRel); iconRel != "" {
 		candidates = append(candidates, iconRel)
 	}
 	candidates = append(candidates, "static/icon.png")
 	for _, rel := range candidates {
+		rel = strings.TrimSpace(rel)
+		if rel == "" || strings.Contains(rel, `\`) || strings.Contains(rel, "..") || strings.HasPrefix(rel, "/") {
+			continue
+		}
+		if filepath.IsAbs(rel) || (len(rel) >= 2 && rel[1] == ':') {
+			continue
+		}
 		rel = filepath.Clean(rel)
 		if rel == "." || strings.HasPrefix(rel, "..") {
 			continue
 		}
-		full := filepath.Join(a.Path, rel)
+		full := filepath.Join(root, rel)
+		relToRoot, err := filepath.Rel(root, full)
+		if err != nil || relToRoot == ".." || strings.HasPrefix(relToRoot, ".."+string(filepath.Separator)) {
+			continue
+		}
 		if fi, err := os.Stat(full); err == nil && !fi.IsDir() {
 			return full
 		}

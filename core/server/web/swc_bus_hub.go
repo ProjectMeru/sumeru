@@ -3,7 +3,10 @@ package web
 import (
 	"context"
 	"encoding/json"
+	"net"
 	"net/http"
+	"net/url"
+	"strings"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -13,11 +16,28 @@ import (
 
 var (
 	swcBusUpgrader = websocket.Upgrader{
-		CheckOrigin: func(r *http.Request) bool { return true },
+		CheckOrigin: checkSwcBusOrigin,
 	}
 	globalBusHub     *busHub
 	globalBusHubOnce sync.Once
 )
+
+func checkSwcBusOrigin(r *http.Request) bool {
+	origin := strings.TrimSpace(r.Header.Get("Origin"))
+	if origin == "" {
+		return true
+	}
+	u, err := url.Parse(origin)
+	if err != nil {
+		return false
+	}
+	reqHost := r.Host
+	if h, _, err := net.SplitHostPort(reqHost); err == nil {
+		reqHost = h
+	}
+	originHost := u.Hostname()
+	return strings.EqualFold(originHost, reqHost)
+}
 
 type swcBusClient struct {
 	uid  int

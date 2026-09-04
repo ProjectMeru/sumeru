@@ -62,30 +62,15 @@ func menuRecordActionID(menuRecord map[string]interface{}) (actionID int, ok boo
 // firstDescendantWindowActionID returns the first non-zero action_id in a depth-first walk
 // of children ordered by sequence, then id.
 func firstDescendantWindowActionID(ctx context.Context, parentMenuID int) int {
-	menuTable := orm.MustQuotedTableName(sysMenuModel)
-	rows, err := orm.DB.QueryContext(ctx,
-		`SELECT id, action_id FROM `+menuTable+` WHERE parent_id = $1 ORDER BY sequence ASC, id ASC`,
-		parentMenuID,
-	)
-	if err != nil {
-		return 0
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var childMenuID int
-		var childActionID sql.NullInt64
-		if err := rows.Scan(&childMenuID, &childActionID); err != nil {
-			continue
-		}
-		if childActionID.Valid && childActionID.Int64 != 0 {
-			return int(childActionID.Int64)
+	return walkMenuChildren(ctx, parentMenuID, func(childMenuID int, childActionID int) (int, bool) {
+		if childActionID != 0 {
+			return childActionID, true
 		}
 		if descendantActionID := firstDescendantWindowActionID(ctx, childMenuID); descendantActionID != 0 {
-			return descendantActionID
+			return descendantActionID, true
 		}
-	}
-	return 0
+		return 0, false
+	})
 }
 
 func menuIDPointsToAppLogs(ctx context.Context, menuQuery string) bool {
@@ -169,6 +154,19 @@ func menuIDForWindowAction(ctx context.Context, parentMenuID, actionID int) int 
 	if parentMenuID <= 0 || actionID == 0 {
 		return 0
 	}
+	return walkMenuChildren(ctx, parentMenuID, func(childMenuID int, childActionID int) (int, bool) {
+		if childActionID == actionID {
+			return childMenuID, true
+		}
+		if found := menuIDForWindowAction(ctx, childMenuID, actionID); found > 0 {
+			return found, true
+		}
+		return 0, false
+	})
+}
+
+// walkMenuChildren DFS-walks sys.menu children (sequence, id) and returns the first match from visit.
+func walkMenuChildren(ctx context.Context, parentMenuID int, visit func(childMenuID, childActionID int) (int, bool)) int {
 	menuTable := orm.MustQuotedTableName(sysMenuModel)
 	rows, err := orm.DB.QueryContext(ctx,
 		`SELECT id, action_id FROM `+menuTable+` WHERE parent_id = $1 ORDER BY sequence ASC, id ASC`,
@@ -185,11 +183,12 @@ func menuIDForWindowAction(ctx context.Context, parentMenuID, actionID int) int 
 		if err := rows.Scan(&childMenuID, &childActionID); err != nil {
 			continue
 		}
-		if childActionID.Valid && int(childActionID.Int64) == actionID {
-			return childMenuID
+		aid := 0
+		if childActionID.Valid {
+			aid = int(childActionID.Int64)
 		}
-		if found := menuIDForWindowAction(ctx, childMenuID, actionID); found > 0 {
-			return found
+		if result, ok := visit(childMenuID, aid); ok {
+			return result
 		}
 	}
 	return 0

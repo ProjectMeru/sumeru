@@ -1,6 +1,9 @@
 package orm
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 // ensureExtraIndexes creates composite indexes not expressible via single-field Index flags.
 func ensureExtraIndexes() error {
@@ -14,11 +17,12 @@ func ensureExtraIndexes() error {
 }
 
 func ensureMailMessageListIndex() error {
+	ctx := context.Background()
 	tablePhysical := MustModelToTableName("mail.message")
 	if tablePhysical == "" {
 		return nil
 	}
-	ok, err := tableExists(tablePhysical)
+	ok, err := tableExists(ctx, tablePhysical)
 	if err != nil || !ok {
 		return err
 	}
@@ -38,16 +42,17 @@ func ensureMailMessageListIndex() error {
 	idxName := "idx_" + tablePhysical + "_model_core_created"
 	q := fmt.Sprintf("CREATE INDEX IF NOT EXISTS %s ON %s (%s, %s, %s DESC)",
 		quoteIdent(idxName), tableQuoted, modelCol, coreCol, dateCol)
-	_, err = DB.Exec(q)
+	_, err = DB.ExecContext(ctx, q)
 	return err
 }
 
 func ensureSysTranslationUniqueIndex() error {
+	ctx := context.Background()
 	tablePhysical := MustModelToTableName("sys.translation")
 	if tablePhysical == "" {
 		return nil
 	}
-	ok, err := tableExists(tablePhysical)
+	ok, err := tableExists(ctx, tablePhysical)
 	if err != nil || !ok {
 		return err
 	}
@@ -67,6 +72,6 @@ func ensureSysTranslationUniqueIndex() error {
 	idxName := "sys_translation_lang_src_module_uidx"
 	q := fmt.Sprintf("CREATE UNIQUE INDEX IF NOT EXISTS %s ON %s (%s, %s, %s)",
 		quoteIdent(idxName), tableQuoted, langCol, srcCol, moduleCol)
-	_, err = DB.Exec(q)
+	_, err = DB.ExecContext(ctx, q)
 	return err
 }

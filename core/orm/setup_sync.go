@@ -40,12 +40,13 @@ var InitialSetupModelNames = []string{
 
 // SyncModelsInitialSetup creates tables only for InitialSetupModelNames (first-run /setup).
 func SyncModelsInitialSetup() error {
+	ctx := ContextWithBypass(context.Background(), true)
 	for _, name := range InitialSetupModelNames {
 		m, ok := Registry[name]
 		if !ok {
 			return fmt.Errorf("initial setup: model %q is not registered (build must include sumeru/addons/base)", name)
 		}
-		if err := createTable(m); err != nil {
+		if err := createTable(ctx, m); err != nil {
 			return fmt.Errorf("create table %s: %w", name, err)
 		}
 	}

@@ -17,6 +17,35 @@ func SafeImageSrc(src string) bool {
 		strings.HasPrefix(src, "/"))
 }
 
+// SafeIframeURL reports whether src is safe for an iframe (https or site-relative path).
+// Rejects javascript:, data:, file:, and protocol-relative URLs.
+func SafeIframeURL(src string) bool {
+	src = strings.TrimSpace(src)
+	if src == "" {
+		return false
+	}
+	lower := strings.ToLower(src)
+	if strings.HasPrefix(lower, "javascript:") ||
+		strings.HasPrefix(lower, "data:") ||
+		strings.HasPrefix(lower, "file:") ||
+		strings.HasPrefix(lower, "vbscript:") ||
+		strings.HasPrefix(src, "//") {
+		return false
+	}
+	if strings.HasPrefix(src, "/") {
+		return true
+	}
+	return strings.HasPrefix(lower, "https://")
+}
+
+// SafeIframeURLAllowHTTP is SafeIframeURL plus http:// absolute URLs (dev-only callers).
+func SafeIframeURLAllowHTTP(src string) bool {
+	if SafeIframeURL(src) {
+		return true
+	}
+	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(src)), "http://")
+}
+
 // FieldDisplayLabel returns the column/field label from XML string attr or a humanized field name.
 func FieldDisplayLabel(field parser.Field) string {
 	if label := strings.TrimSpace(field.Label); label != "" {
