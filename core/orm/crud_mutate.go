@@ -84,7 +84,10 @@ func executeUpdateMutation(ctx context.Context, modelName string, domain [][]int
 	if err != nil {
 		return result, err
 	}
-	prepared, err := PrepareValues(inst, values, WriteOpWrite, PrepareOptions{StrictUnknown: false})
+	prepared, err := PrepareValues(inst, values, WriteOpWrite, PrepareOptions{
+		StrictUnknown:     false,
+		AllowPasswordHash: passwordHashWriteAllowed(ctx),
+	})
 	if err != nil {
 		return result, err
 	}

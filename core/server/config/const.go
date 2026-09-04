@@ -43,6 +43,8 @@ const (
 	keyDbReadReplicaDSN   = "db_read_replica_dsn"
 	keyRateLimitRPM       = "rate_limit_rpm"
 	keyTrustedProxies     = "trusted_proxies"
+	keyCSRFSecret         = "csrf_secret"
+	keyMetricsScrapeToken = "metrics_scrape_token"
 	keySMTPHost           = "smtp_host"
 	keySMTPPort           = "smtp_port"
 	keySMTPUser           = "smtp_user"

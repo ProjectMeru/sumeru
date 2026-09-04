@@ -13,6 +13,7 @@ func prepareCreateWrite(ctx context.Context, model Model, values map[string]inte
 	if err := RejectVirtualWrites(model, values); err != nil {
 		return nil, 0, err
 	}
+	opts.AllowPasswordHash = opts.AllowPasswordHash || passwordHashWriteAllowed(ctx)
 	prepared, err = PrepareValues(model, values, WriteOpCreate, opts)
 	if err != nil {
 		return nil, 0, err

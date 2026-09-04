@@ -20,6 +20,8 @@ type PrepareOptions struct {
 	// StrictUnknown rejects undeclared field keys. When false, unknown keys are dropped silently
 	// (historical Update behavior). Create uses StrictUnknown=true.
 	StrictUnknown bool
+	// AllowPasswordHash permits writing core.user.password (bcrypt hash). Only SetUserPassword* sets this via context.
+	AllowPasswordHash bool
 }
 
 // PrepareValues whitelists model fields, coerces types, and validates required fields on create.
@@ -37,6 +39,9 @@ func PrepareValues(model Model, values map[string]interface{}, op WriteOp, opts 
 	for k, v := range values {
 		if k == "id" {
 			continue
+		}
+		if model.ModelName() == "core.user" && k == "password" && !opts.AllowPasswordHash {
+			return nil, fmt.Errorf("password cannot be set directly; use the password change API")
 		}
 		fieldDef, ok := fieldDefs[k]
 		if !ok {

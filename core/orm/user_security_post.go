@@ -7,8 +7,6 @@ import (
 	"strings"
 
 	"sumeru/core/applog"
-
-	"golang.org/x/crypto/bcrypt"
 )
 
 // ApplyUserSecurityPost applies core.user security side effects from a form POST
@@ -62,11 +60,6 @@ func ApplyUserSecurityPost(ctx context.Context, actor, userID int, form url.Valu
 		}
 	}
 	if _, ok := form["password_plain"]; ok {
-		if !UserHasGroupXML(ctx, actor, "base.group_system") {
-			applog.WarnMsg(ctx, "orm", "user_security", "deny password change: actor not system admin", nil,
-				map[string]interface{}{"user_id": userID, "actor": actor})
-			return
-		}
 		if pw := strings.TrimSpace(form.Get("password_plain")); pw != "" {
 			confirm := strings.TrimSpace(form.Get("password_plain_confirm"))
 			if pw != confirm {
@@ -74,16 +67,7 @@ func ApplyUserSecurityPost(ctx context.Context, actor, userID int, form url.Valu
 					map[string]interface{}{"user_id": userID})
 				return
 			}
-			if err := ValidatePasswordPolicy(pw); err != nil {
-				applog.WarnMsg(ctx, "orm", "user_security", "password policy rejected", err, nil)
-				return
-			}
-			hash, err := bcrypt.GenerateFromPassword([]byte(pw), bcrypt.DefaultCost)
-			if err != nil {
-				applog.WarnMsg(ctx, "orm", "user_security", "bcrypt failed", err, nil)
-				return
-			}
-			if err := UpdateRecordByID(ctx, "core.user", userID, map[string]interface{}{"password": string(hash)}); err != nil {
+			if err := SetUserPassword(ctx, actor, userID, pw); err != nil {
 				applog.WarnMsg(ctx, "orm", "user_security", "password update failed", err,
 					map[string]interface{}{"user_id": userID})
 			}

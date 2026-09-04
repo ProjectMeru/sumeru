@@ -34,7 +34,10 @@ func Upsert(ctx context.Context, model Model, values map[string]interface{}, con
 	if err := CheckModelAccess(ctx, uid, model.ModelName(), "create"); err != nil {
 		return 0, err
 	}
-	prepared, err := PrepareValues(model, values, WriteOpCreate, PrepareOptions{StrictUnknown: !SecurityBypass(ctx)})
+	prepared, err := PrepareValues(model, values, WriteOpCreate, PrepareOptions{
+		StrictUnknown:     !SecurityBypass(ctx),
+		AllowPasswordHash: passwordHashWriteAllowed(ctx),
+	})
 	if err != nil {
 		return 0, err
 	}
