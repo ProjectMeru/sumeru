@@ -75,7 +75,7 @@ func SyncRegistrySchemaForNames(modelNames []string) error {
 			return fmt.Errorf("schema sync %s: %w", name, err)
 		}
 	}
-	return ensureExtraIndexes()
+	return ensureExtraIndexes(ctx)
 }
 
 // ModelsForModuleSchemaSync returns (names, true) when install should only touch those models;

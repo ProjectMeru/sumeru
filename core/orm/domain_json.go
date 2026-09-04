@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 )
 
@@ -233,21 +232,5 @@ func AsBool(v interface{}) bool {
 }
 
 func toFloat64(v interface{}) (float64, bool) {
-	switch t := v.(type) {
-	case float64:
-		return t, true
-	case float32:
-		return float64(t), true
-	case int:
-		return float64(t), true
-	case int64:
-		return float64(t), true
-	default:
-		s := strings.TrimSpace(AsString(v))
-		if s == "" {
-			return 0, false
-		}
-		f, err := strconv.ParseFloat(s, 64)
-		return f, err == nil
-	}
+	return CoerceFloat64(v)
 }

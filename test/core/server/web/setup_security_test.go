@@ -1,6 +1,7 @@
 package web_test
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"sumeru/core/server/config"
 	"sumeru/core/server/web"
@@ -82,5 +83,63 @@ func TestAllowSetupRateLimit(t *testing.T) {
 	}
 	if web.AllowSetupRateLimit(recorder, requestIP) {
 		t.Fatal("attempt over limit should be rejected")
+	}
+}
+
+func TestValidateSetupTokenRequiresWhenNotLocalhostOnly(t *testing.T) {
+	prevToken := config.AppConfig.SetupToken
+	prevLocal := config.AppConfig.SetupLocalhostOnly
+	config.AppConfig.SetupToken = ""
+	config.AppConfig.SetupLocalhostOnly = false
+	t.Cleanup(func() {
+		config.AppConfig.SetupToken = prevToken
+		config.AppConfig.SetupLocalhostOnly = prevLocal
+	})
+
+	req := httptest.NewRequest("POST", web.TestSetupInitRoute, nil)
+	rec := httptest.NewRecorder()
+	if web.ValidateSetupToken(rec, req, "") {
+		t.Fatal("empty setup_token must be rejected when setup_localhost_only is false")
+	}
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status %d want %d", rec.Code, http.StatusForbidden)
+	}
+}
+
+func TestValidateSetupTokenAllowsEmptyWhenLocalhostOnly(t *testing.T) {
+	prevToken := config.AppConfig.SetupToken
+	prevLocal := config.AppConfig.SetupLocalhostOnly
+	config.AppConfig.SetupToken = ""
+	config.AppConfig.SetupLocalhostOnly = true
+	t.Cleanup(func() {
+		config.AppConfig.SetupToken = prevToken
+		config.AppConfig.SetupLocalhostOnly = prevLocal
+	})
+
+	req := httptest.NewRequest("POST", web.TestSetupInitRoute, nil)
+	rec := httptest.NewRecorder()
+	if !web.ValidateSetupToken(rec, req, "") {
+		t.Fatal("empty setup_token should be allowed when setup_localhost_only is true")
+	}
+}
+
+func TestValidateSetupTokenMatchesConfigured(t *testing.T) {
+	prevToken := config.AppConfig.SetupToken
+	prevLocal := config.AppConfig.SetupLocalhostOnly
+	config.AppConfig.SetupToken = "secret"
+	config.AppConfig.SetupLocalhostOnly = false
+	t.Cleanup(func() {
+		config.AppConfig.SetupToken = prevToken
+		config.AppConfig.SetupLocalhostOnly = prevLocal
+	})
+
+	req := httptest.NewRequest("POST", web.TestSetupInitRoute, nil)
+	rec := httptest.NewRecorder()
+	if web.ValidateSetupToken(rec, req, "wrong") {
+		t.Fatal("wrong token should be rejected")
+	}
+	rec = httptest.NewRecorder()
+	if !web.ValidateSetupToken(rec, req, "secret") {
+		t.Fatal("matching body token should be accepted")
 	}
 }

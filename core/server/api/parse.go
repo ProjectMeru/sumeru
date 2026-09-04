@@ -47,19 +47,7 @@ func parseLimitOffset(kwargs json.RawMessage) (limit int, offset int) {
 }
 
 func toFloat(v interface{}) (float64, bool) {
-	switch t := v.(type) {
-	case float64:
-		return t, true
-	case int:
-		return float64(t), true
-	case int64:
-		return float64(t), true
-	case json.Number:
-		f, err := t.Float64()
-		return f, err == nil
-	default:
-		return 0, false
-	}
+	return orm.CoerceFloat64(v)
 }
 
 func parseArgsArray(args json.RawMessage) ([]json.RawMessage, error) {

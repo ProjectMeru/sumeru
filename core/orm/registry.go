@@ -159,5 +159,5 @@ func createTable(ctx context.Context, model Model) error {
 	if _, err := DB.ExecContext(ctx, query); err != nil {
 		return err
 	}
-	return ensureModelIndexes(schemaTable{ModelName: model.ModelName(), TableName: physical, QuotedTable: tableName, Model: model})
+	return ensureModelIndexes(ctx, schemaTable{ModelName: model.ModelName(), TableName: physical, QuotedTable: tableName, Model: model})
 }

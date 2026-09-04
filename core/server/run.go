@@ -13,6 +13,7 @@ import (
 
 	"sumeru/core/applog"
 	_ "sumeru/core/ormmodels"
+	"sumeru/core/metrics"
 	"sumeru/core/modelreg"
 	"sumeru/core/module"
 	"sumeru/core/orm"
@@ -206,6 +207,7 @@ func serveUntilSignal(ctx context.Context, srv *http.Server) error {
 	}()
 	select {
 	case <-ctx.Done():
+		metrics.Inc("sumeru_shutdown_started_total")
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
 		_ = srv.Shutdown(shutdownCtx)

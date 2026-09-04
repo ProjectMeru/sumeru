@@ -47,6 +47,11 @@ func requireSetupEnvironment(w http.ResponseWriter, r *http.Request) bool {
 func validateSetupToken(w http.ResponseWriter, r *http.Request, tokenFromBody string) bool {
 	expectedToken := strings.TrimSpace(config.AppConfig.SetupToken)
 	if expectedToken == "" {
+		// When setup is reachable beyond loopback, a shared secret is mandatory.
+		if !config.AppConfig.SetupLocalhostOnly {
+			http.Error(w, "Setup token required when setup is not localhost-only", http.StatusForbidden)
+			return false
+		}
 		return true
 	}
 	providedToken := setupTokenFromRequest(r, tokenFromBody)

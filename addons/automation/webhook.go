@@ -13,10 +13,12 @@ import (
 
 	"sumeru/core/applog"
 	"sumeru/core/event"
+	"sumeru/core/metrics"
 )
 
 func dispatchWebhook(ctx context.Context, rawURL string, ev event.Event) error {
 	if err := validateWebhookURL(rawURL); err != nil {
+		metrics.Inc("sumeru_webhook_blocked_total")
 		applog.Warn(ctx, applog.Event{
 			Message:   "webhook URL rejected",
 			Component: "automation",

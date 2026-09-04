@@ -17,10 +17,14 @@ import (
 
 // SyncRegistrySchema adds missing columns and indexes for every model in Registry.
 func SyncRegistrySchema() error {
+	return SyncRegistrySchemaContext(ContextWithBypass(context.Background(), true))
+}
+
+// SyncRegistrySchemaContext is SyncRegistrySchema using the caller's context (typically with bypass).
+func SyncRegistrySchemaContext(ctx context.Context) error {
 	if DB == nil {
 		return nil
 	}
-	ctx := ContextWithBypass(context.Background(), true)
 	installed, err := InstalledModuleNames(ctx)
 	if err != nil {
 		return err
@@ -43,7 +47,7 @@ func SyncRegistrySchema() error {
 			return fmt.Errorf("schema sync %s: %w", name, err)
 		}
 	}
-	return ensureExtraIndexes()
+	return ensureExtraIndexes(ctx)
 }
 
 // schemaTable identifies a registered model's physical PostgreSQL table for DDL helpers.
@@ -71,7 +75,7 @@ func syncModelSchema(ctx context.Context, model Model) error {
 	if !exists {
 		return createTable(ctx, model)
 	}
-	existing, err := loadTableColumns(tableName)
+	existing, err := loadTableColumns(ctx, tableName)
 	if err != nil {
 		return err
 	}
@@ -98,16 +102,16 @@ func syncModelSchema(ctx context.Context, model Model) error {
 		applog.L(ctx).Info("schema_sync", "table", tableName, "field", field.Name)
 	}
 	tbl := schemaTable{ModelName: modelName, TableName: tableName, QuotedTable: quotedTable, Model: model}
-	if err := dropStaleColumnUniques(tbl); err != nil {
+	if err := dropStaleColumnUniques(ctx, tbl); err != nil {
 		return err
 	}
-	if err := dropRuntimeSQLDefaults(modelName, quotedTable, model); err != nil {
+	if err := dropRuntimeSQLDefaults(ctx, modelName, quotedTable, model); err != nil {
 		return err
 	}
-	if err := ensureColumnUniques(tbl); err != nil {
+	if err := ensureColumnUniques(ctx, tbl); err != nil {
 		return err
 	}
-	if err := ensureModelIndexes(tbl); err != nil {
+	if err := ensureModelIndexes(ctx, tbl); err != nil {
 		return err
 	}
 	return ensureForeignKeys(ctx, tbl)
@@ -115,7 +119,7 @@ func syncModelSchema(ctx context.Context, model Model) error {
 
 // dropStaleColumnUniques removes single-column UNIQUE constraints when the field
 // definition no longer sets Unique (e.g. sys.menu.name after menu label collisions).
-func dropStaleColumnUniques(tbl schemaTable) error {
+func dropStaleColumnUniques(ctx context.Context, tbl schemaTable) error {
 	for _, field := range tbl.Model.Fields() {
 		if field.Unique || field.Name == "id" {
 			continue
@@ -124,7 +128,7 @@ func dropStaleColumnUniques(tbl schemaTable) error {
 		if !ok || baseType == "" {
 			continue
 		}
-		rows, err := DB.Query(`
+		rows, err := DB.QueryContext(ctx, `
 			SELECT c.conname
 			FROM pg_constraint c
 			JOIN pg_class t ON c.conrelid = t.oid
@@ -163,10 +167,10 @@ func dropStaleColumnUniques(tbl schemaTable) error {
 				return fmt.Errorf("unsafe constraint name %q on %s", con, tbl.TableName)
 			}
 			q := fmt.Sprintf(`ALTER TABLE %s DROP CONSTRAINT IF EXISTS %s`, tbl.QuotedTable, quoteIdent(con))
-			if _, err := DB.Exec(q); err != nil {
+			if _, err := DB.ExecContext(ctx, q); err != nil {
 				return fmt.Errorf("drop unique %s.%s: %w", tbl.TableName, con, err)
 			}
-			applog.L(context.Background()).Info("schema_sync_drop_unique", "table", tbl.TableName, "constraint", con)
+			applog.L(ctx).Info("schema_sync_drop_unique", "table", tbl.TableName, "constraint", con)
 		}
 	}
 	return nil
@@ -174,7 +178,7 @@ func dropStaleColumnUniques(tbl schemaTable) error {
 
 // dropRuntimeSQLDefaults removes SQL DEFAULT literals for tokens applied in Go at insert time
 // (uuid, current_user, current_company). Older schema sync stored those tokens as string defaults.
-func dropRuntimeSQLDefaults(modelName, quotedTable string, model Model) error {
+func dropRuntimeSQLDefaults(ctx context.Context, modelName, quotedTable string, model Model) error {
 	for _, field := range model.Fields() {
 		if !isRuntimeDefaultToken(field.DefaultVal) || field.Name == "id" || IsVirtualField(field) {
 			continue
@@ -184,7 +188,7 @@ func dropRuntimeSQLDefaults(modelName, quotedTable string, model Model) error {
 			return err
 		}
 		q := fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP DEFAULT", quotedTable, colQuoted)
-		if _, err := DB.Exec(q); err != nil {
+		if _, err := DB.ExecContext(ctx, q); err != nil {
 			return fmt.Errorf("drop default %s.%s: %w", modelName, field.Name, err)
 		}
 	}
@@ -194,7 +198,7 @@ func dropRuntimeSQLDefaults(modelName, quotedTable string, model Model) error {
 // ensureColumnUniques adds a unique index for each Unique field on an existing table.
 // createTable applies UNIQUE only at CREATE time; later tag changes would otherwise
 // leave XML upsert (ON CONFLICT) without a matching constraint.
-func ensureColumnUniques(tbl schemaTable) error {
+func ensureColumnUniques(ctx context.Context, tbl schemaTable) error {
 	for _, field := range tbl.Model.Fields() {
 		if !field.Unique || field.Name == "id" || IsVirtualField(field) {
 			continue
@@ -212,14 +216,14 @@ func ensureColumnUniques(tbl schemaTable) error {
 			return fmt.Errorf("unsafe unique index name %q on %s", idxName, tbl.TableName)
 		}
 		q := fmt.Sprintf("CREATE UNIQUE INDEX IF NOT EXISTS %s ON %s (%s)", quoteIdent(idxName), tbl.QuotedTable, colQuoted)
-		if _, err := DB.Exec(q + ";"); err != nil {
+		if _, err := DB.ExecContext(ctx, q+";"); err != nil {
 			return fmt.Errorf("unique index %s: %w", idxName, err)
 		}
 	}
 	return nil
 }
 
-func ensureModelIndexes(tbl schemaTable) error {
+func ensureModelIndexes(ctx context.Context, tbl schemaTable) error {
 	for _, field := range tbl.Model.Fields() {
 		if IsVirtualField(field) {
 			continue
@@ -233,7 +237,7 @@ func ensureModelIndexes(tbl schemaTable) error {
 		}
 		idxName := fmt.Sprintf("idx_%s_%s", tbl.TableName, field.Name)
 		idxQuery := fmt.Sprintf("CREATE INDEX IF NOT EXISTS %s ON %s (%s)", quoteIdent(idxName), tbl.QuotedTable, colQuoted)
-		if _, err := DB.Exec(idxQuery + ";"); err != nil {
+		if _, err := DB.ExecContext(ctx, idxQuery+";"); err != nil {
 			return fmt.Errorf("index %s: %w", idxName, err)
 		}
 	}
@@ -257,8 +261,8 @@ func pgIdentOK(name string) bool {
 	return true
 }
 
-func loadTableColumns(tableName string) (map[string]struct{}, error) {
-	rows, err := DB.Query(`
+func loadTableColumns(ctx context.Context, tableName string) (map[string]struct{}, error) {
+	rows, err := DB.QueryContext(ctx, `
 		SELECT column_name FROM information_schema.columns
 		WHERE table_schema = 'public' AND table_name = $1
 	`, tableName)
@@ -303,7 +307,7 @@ func EnsureModelColumns(ctx context.Context, model Model, extra []FieldDefinitio
 	if !exists {
 		return createTable(ctx, model)
 	}
-	existing, err := loadTableColumns(tableName)
+	existing, err := loadTableColumns(ctx, tableName)
 	if err != nil {
 		return err
 	}

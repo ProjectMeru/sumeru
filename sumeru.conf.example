@@ -16,7 +16,8 @@ http_port = 8080
 # http_interface = 127.0.0.1
 dev_mode = true
 
-# Setup wizard — first run only; leave setup_token empty to skip
+# Setup wizard — first run only.
+# When setup_localhost_only = false, setup_token must be non-empty.
 setup_localhost_only = true
 setup_token =
 

@@ -6,18 +6,17 @@ import (
 )
 
 // ensureExtraIndexes creates composite indexes not expressible via single-field Index flags.
-func ensureExtraIndexes() error {
+func ensureExtraIndexes(ctx context.Context) error {
 	if DB == nil {
 		return nil
 	}
-	if err := ensureMailMessageListIndex(); err != nil {
+	if err := ensureMailMessageListIndex(ctx); err != nil {
 		return err
 	}
-	return ensureSysTranslationUniqueIndex()
+	return ensureSysTranslationUniqueIndex(ctx)
 }
 
-func ensureMailMessageListIndex() error {
-	ctx := context.Background()
+func ensureMailMessageListIndex(ctx context.Context) error {
 	tablePhysical := MustModelToTableName("mail.message")
 	if tablePhysical == "" {
 		return nil
@@ -46,8 +45,7 @@ func ensureMailMessageListIndex() error {
 	return err
 }
 
-func ensureSysTranslationUniqueIndex() error {
-	ctx := context.Background()
+func ensureSysTranslationUniqueIndex(ctx context.Context) error {
 	tablePhysical := MustModelToTableName("sys.translation")
 	if tablePhysical == "" {
 		return nil

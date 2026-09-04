@@ -162,6 +162,12 @@ func AllowSetupRateLimit(w http.ResponseWriter, requestIP string) bool {
 	return allowSetupRateLimit(w, requestIP)
 }
 
+func ValidateSetupToken(w http.ResponseWriter, r *http.Request, tokenFromBody string) bool {
+	return validateSetupToken(w, r, tokenFromBody)
+}
+
+func CheckSwcBusOrigin(r *http.Request) bool { return checkSwcBusOrigin(r) }
+
 func ResetSetupRateLimiterForTest() { setupRateLimiter.attemptsByIP = make(map[string][]time.Time) }
 
 func ParseSetupInitRequest(w http.ResponseWriter, body []byte) (SetupInitRequest, bool) {

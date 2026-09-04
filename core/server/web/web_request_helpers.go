@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"sumeru/core/applog"
+	"sumeru/core/metrics"
 	"sumeru/core/orm"
 )
 
@@ -164,6 +165,7 @@ func validateSessionCSRF(w http.ResponseWriter, r *http.Request) bool {
 	if ValidateCSRF(r) {
 		return true
 	}
+	metrics.Inc("sumeru_csrf_rejected_total")
 	http.Error(w, invalidCSRFMessage, http.StatusForbidden)
 	return false
 }
