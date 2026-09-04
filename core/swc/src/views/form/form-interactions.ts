@@ -17,30 +17,6 @@ function onNotebookKeydown(ev: Event): void {
   buttons[next]?.click();
 }
 
-function bindMany2OneDismiss(root: HTMLElement): () => void {
-  const onDocClick = (ev: MouseEvent): void => {
-    const target = ev.target;
-    if (!(target instanceof Node)) return;
-    for (const widget of root.querySelectorAll(".sum-field-widget--many2one")) {
-      if (widget.contains(target)) continue;
-      const list = widget.querySelector(".sum-m2o-suggest");
-      list?.remove();
-    }
-  };
-  const onKey = (ev: KeyboardEvent): void => {
-    if (ev.key !== "Escape") return;
-    for (const list of root.querySelectorAll(".sum-m2o-suggest")) {
-      list.remove();
-    }
-  };
-  document.addEventListener("click", onDocClick, true);
-  document.addEventListener("keydown", onKey);
-  return () => {
-    document.removeEventListener("click", onDocClick, true);
-    document.removeEventListener("keydown", onKey);
-  };
-}
-
 interface CropState {
   x: number;
   y: number;
@@ -304,7 +280,6 @@ export function initFormInteractions(root: HTMLElement): () => void {
     tabs.addEventListener("keydown", onNotebookKeydown);
     cleanups.push(() => tabs.removeEventListener("keydown", onNotebookKeydown));
   }
-  cleanups.push(bindMany2OneDismiss(root));
   cleanups.push(bindAvatarUpload(root));
   cleanups.push(bindImageBoxClick(root));
   cleanups.push(bindDateDismiss(root));

@@ -1528,6 +1528,100 @@ label.sum-form-label--hint {
   position: relative;
 }
 
+.sum-m2o-wrap {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0;
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 2.35rem;
+  border: 1px solid var(--sum-line-strong);
+  border-radius: var(--sum-radius-sm);
+  background: var(--sum-surface);
+  transition:
+    border-color var(--sum-dur) var(--sum-ease),
+    box-shadow var(--sum-dur) var(--sum-ease);
+}
+
+.sum-m2o-wrap:hover {
+  border-color: color-mix(in srgb, var(--sum-header) 28%, var(--sum-line-strong));
+}
+
+.sum-m2o-wrap:focus-within,
+.sum-m2o-wrap--open {
+  border-color: color-mix(in srgb, var(--sum-header) 45%, var(--sum-line-strong));
+  box-shadow: var(--sum-focus-ring);
+}
+
+.sum-m2o-wrap > .sum-field-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding-right: 0.25rem;
+}
+
+.sum-m2o-wrap > .sum-field-input:hover,
+.sum-m2o-wrap > .sum-field-input:focus {
+  border: none;
+  box-shadow: none;
+  outline: none;
+}
+
+.sum-m2o-actions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: stretch;
+  align-self: stretch;
+}
+
+.sum-m2o-dropdown-btn,
+.sum-m2o-open-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.85rem;
+  padding: 0 0.35rem;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--sum-muted-ink, var(--sum-ink-muted, #64748b));
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.sum-m2o-dropdown-btn {
+  border-left: 1px solid transparent;
+  padding-right: 0.5rem;
+}
+
+.sum-m2o-open-btn:hover,
+.sum-m2o-dropdown-btn:hover {
+  color: var(--sum-ink);
+  background: color-mix(in srgb, var(--sum-header) 8%, transparent);
+}
+
+.sum-m2o-caret {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 0.28rem solid transparent;
+  border-right: 0.28rem solid transparent;
+  border-top: 0.34rem solid currentColor;
+  transition: transform var(--sum-dur) var(--sum-ease);
+}
+
+.sum-m2o-wrap--open .sum-m2o-caret {
+  transform: rotate(180deg);
+}
+
 .sum-field-value {
   width: 100%;
   box-sizing: border-box;
@@ -1545,7 +1639,7 @@ label.sum-form-label--hint {
   z-index: 30;
   left: 0;
   right: 0;
-  top: calc(100% - 0.15rem);
+  top: calc(100% + 0.15rem);
   margin: 0;
   padding: 0.25rem 0;
   list-style: none;
@@ -1572,6 +1666,85 @@ label.sum-form-label--hint {
 .sum-m2o-suggest .sum-m2o-option:hover,
 .sum-m2o-suggest .sum-m2o-option--active {
   background: color-mix(in srgb, var(--sum-header) 12%, var(--sum-surface));
+}
+
+.sum-m2o-suggest-more,
+.sum-m2o-suggest-create {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  border-top: 1px solid var(--sum-line);
+  background: transparent;
+  padding: 0.5rem 0.75rem;
+  margin-top: 0.15rem;
+  font: inherit;
+  font-weight: var(--sum-font-weight-semibold);
+  color: var(--sum-header);
+  cursor: pointer;
+}
+
+.sum-m2o-suggest-more:hover,
+.sum-m2o-suggest-create:hover,
+.sum-m2o-suggest-create.sum-m2o-option--active {
+  background: color-mix(in srgb, var(--sum-header) 8%, var(--sum-surface));
+}
+
+.sum-m2m-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+  position: relative;
+}
+
+.sum-m2m-input-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0;
+  min-height: 2.35rem;
+  border: 1px solid var(--sum-line-strong);
+  border-radius: var(--sum-radius-sm);
+  background: var(--sum-surface);
+  box-sizing: border-box;
+  transition:
+    border-color var(--sum-dur) var(--sum-ease),
+    box-shadow var(--sum-dur) var(--sum-ease);
+}
+
+.sum-m2m-input-row:hover {
+  border-color: color-mix(in srgb, var(--sum-header) 28%, var(--sum-line-strong));
+}
+
+.sum-m2m-input-row:focus-within {
+  border-color: color-mix(in srgb, var(--sum-header) 45%, var(--sum-line-strong));
+  box-shadow: var(--sum-focus-ring);
+}
+
+.sum-m2m-input-row > .sum-field-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.sum-m2m-input-row > .sum-field-input:hover,
+.sum-m2m-input-row > .sum-field-input:focus {
+  border: none;
+  box-shadow: none;
+  outline: none;
+}
+
+.sum-m2m-input-row .sum-m2o-dropdown-btn {
+  flex: 0 0 auto;
+  border: none;
+  background: transparent;
+  min-width: 1.85rem;
+  padding: 0 0.5rem;
 }
 
 .sum-field-widget {
@@ -1650,7 +1823,9 @@ label.sum-form-label--hint {
 
 .sum-field-widget--error .sum-field-input,
 .sum-field-widget--error .sum-field-textarea,
-.sum-field-widget--error .sum-field-select {
+.sum-field-widget--error .sum-field-select,
+.sum-field-widget--error .sum-m2o-wrap,
+.sum-field-widget--error .sum-m2m-input-row {
   border-color: rgba(239, 68, 68, 0.75);
   box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.12);
 }
@@ -2128,6 +2303,134 @@ label.sum-form-label--hint {
 .sum-dialog-body--host {
   margin: 0;
   color: var(--sum-ink);
+}
+
+/* SelectCreate / Search more modal (Many2One picker) */
+.sum-modal-host {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  pointer-events: none;
+}
+
+.sum-modal-host > * {
+  pointer-events: auto;
+}
+
+.sum-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.45);
+  padding: 1rem;
+}
+
+.sum-modal {
+  min-width: min(420px, 100%);
+  max-width: 560px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--sum-surface);
+  border: 1px solid var(--sum-line);
+  border-radius: var(--sum-radius-md);
+  box-shadow: var(--sum-shadow-lg, 0 12px 40px rgba(0, 0, 0, 0.18));
+  overflow: hidden;
+}
+
+.sum-modal.sum-select-create {
+  min-width: min(520px, 96vw);
+  max-width: 640px;
+}
+
+.sum-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem 0.75rem;
+  border-bottom: 1px solid var(--sum-line);
+}
+
+.sum-modal-header h3 {
+  margin: 0;
+  font-size: var(--sum-font-size-lg);
+  font-weight: var(--sum-font-weight-semibold);
+  color: var(--sum-ink);
+}
+
+.sum-modal-close {
+  border: none;
+  background: transparent;
+  color: var(--sum-ink-muted);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.15rem 0.35rem;
+  border-radius: var(--sum-radius-sm);
+}
+
+.sum-modal-close:hover {
+  background: var(--sum-surface-alt);
+  color: var(--sum-ink);
+}
+
+.sum-modal-body {
+  padding: 1rem 1.25rem;
+  overflow: auto;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sum-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem 1.1rem;
+  border-top: 1px solid var(--sum-line);
+}
+
+.sum-select-create-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 16rem;
+  overflow: auto;
+  border: 1px solid var(--sum-line);
+  border-radius: var(--sum-radius-sm);
+}
+
+.sum-select-create-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  border-bottom: 1px solid var(--sum-line);
+  background: transparent;
+  padding: 0.55rem 0.75rem;
+  font: inherit;
+  color: var(--sum-ink);
+  cursor: pointer;
+}
+
+.sum-select-create-list li:last-child .sum-select-create-item {
+  border-bottom: none;
+}
+
+.sum-select-create-item:hover {
+  background: color-mix(in srgb, var(--sum-header) 12%, var(--sum-surface));
+}
+
+.sum-select-create-empty {
+  margin: 0;
+  padding: 0.75rem 0.25rem;
+  color: var(--sum-ink-muted);
+  font-size: var(--sum-font-size-sm);
 }
 
 .sum-search-filters {
