@@ -257,4 +257,5 @@ export interface SwcWorkspacePayload {
   favorites?: SwcSavedSearch[];
   formBaseQuery?: string;
   defaults?: Record<string, unknown>;
+  iframeUrl?: string;
 }

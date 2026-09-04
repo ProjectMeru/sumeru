@@ -80,7 +80,7 @@ func naturalKeyMoveLine(fieldValues map[string]interface{}) map[string]interface
 }
 
 func syncGenericRegistryRecord(ctx context.Context, moduleName string, xmlRecord parser.Record) {
-	if xmlRecord.Model == "sys.action.window" || xmlRecord.Model == "sys.view" {
+	if xmlRecord.Model == "sys.action.window" || xmlRecord.Model == "sys.action.url" || xmlRecord.Model == "sys.view" {
 		return
 	}
 	modelInstance, ok := orm.Registry[xmlRecord.Model]

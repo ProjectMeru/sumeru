@@ -26,6 +26,7 @@ var InitialSetupModelNames = []string{
 	"mail.message",
 	"sys.access",
 	"sys.action.window",
+	"sys.action.url",
 	"sys.approval.rule",
 	"sys.field",
 	"sys.menu",

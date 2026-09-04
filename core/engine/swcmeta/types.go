@@ -26,6 +26,7 @@ type WorkspacePayload struct {
 	Favorites     []SavedSearchMeta        `json:"favorites,omitempty"`
 	FormBaseQuery string                   `json:"formBaseQuery,omitempty"`
 	Defaults      map[string]interface{}   `json:"defaults,omitempty"`
+	IframeURL     string                   `json:"iframeUrl,omitempty"`
 }
 
 type ViewTab struct {

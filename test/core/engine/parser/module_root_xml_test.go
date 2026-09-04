@@ -96,3 +96,40 @@ func TestActionSearchViewIDInContext(t *testing.T) {
 		t.Fatalf("context missing search_view_id or default_type: %q", ctx)
 	}
 }
+
+func TestActionURLTypeToRecord(t *testing.T) {
+	in := []byte(`<sumeru><data>
+		<action id="action_report_pl" type="url" name="Profit &amp; Loss"
+			url="/account/reports/view?type=profit_loss"/>
+	</data></sumeru>`)
+	var vl parser.ViewList
+	if err := xml.Unmarshal(in, &vl); err != nil {
+		t.Fatal(err)
+	}
+	vl.MergeViewListData()
+	if len(vl.Actions) != 1 {
+		t.Fatalf("actions=%d", len(vl.Actions))
+	}
+	rec := vl.Actions[0].ToRecord()
+	if rec.Model != "sys.action.url" || rec.ID != "action_report_pl" {
+		t.Fatalf("record: %+v", rec)
+	}
+	var name, url string
+	for _, f := range rec.Field {
+		switch f.Name {
+		case "name":
+			name = f.Body
+		case "url":
+			url = f.Body
+		}
+	}
+	if name != "Profit & Loss" {
+		t.Fatalf("name=%q", name)
+	}
+	if url != "/account/reports/view?type=profit_loss" {
+		t.Fatalf("url=%q", url)
+	}
+	if len(vl.Records) != 1 || vl.Records[0].Model != "sys.action.url" {
+		t.Fatalf("merged records: %+v", vl.Records)
+	}
+}

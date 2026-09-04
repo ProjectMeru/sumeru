@@ -215,7 +215,7 @@ func deleteModuleMetadata(ctx context.Context, moduleName string) error {
 		return fmt.Errorf("delete sys.view: %w", err)
 	}
 
-	modelNames := []string{"sys.menu", "sys.action.window", "sys.access", "sys.rule", "sys.approval.rule"}
+	modelNames := []string{"sys.menu", "sys.action.window", "sys.action.url", "sys.access", "sys.rule", "sys.approval.rule"}
 	for _, modelName := range modelNames {
 		tableName, err := orm.QuotedTableName(modelName)
 		if err != nil {
