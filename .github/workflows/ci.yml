@@ -91,7 +91,7 @@ jobs:
         run: go vet ./...
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v8
+        uses: golangci/golangci-lint-action@v9
         with:
           # Need a v2.x build that supports analyzing Go 1.26 modules.
           version: latest
@@ -135,7 +135,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: "22"
+          node-version: "24"
           cache: npm
           cache-dependency-path: core/swc/package-lock.json
 
