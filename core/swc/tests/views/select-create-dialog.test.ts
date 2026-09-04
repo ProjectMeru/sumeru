@@ -57,4 +57,53 @@ describe("SelectCreateDialog", () => {
     expect(onCancel).toHaveBeenCalled();
     expect(document.querySelector(".sum-modal-host")).toBeNull();
   });
+
+  it("closes on Escape", async () => {
+    const onCancel = vi.fn();
+    SelectCreateDialog.open(collectionEnv(), { comodel: "core.partner", onSelect: vi.fn(), onCancel });
+    await vi.waitFor(() => expect(document.querySelector(".sum-modal-backdrop")).toBeTruthy());
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(onCancel).toHaveBeenCalled();
+    expect(document.querySelector(".sum-modal-host")).toBeNull();
+  });
+
+  it("seeds search from initialQuery", async () => {
+    const searchRead = vi.fn().mockResolvedValue([{ id: 1, name: "Acme Corp" }]);
+    SelectCreateDialog.open(
+      collectionEnv({
+        rpc: {
+          searchRead,
+          write: vi.fn(),
+          create: vi.fn(),
+          unlink: vi.fn(),
+          read: vi.fn(),
+          call: vi.fn(),
+        },
+      }),
+      { comodel: "core.partner", onSelect: vi.fn(), initialQuery: "Acme" },
+    );
+    await vi.waitFor(() => expect(searchRead).toHaveBeenCalled());
+    expect(searchRead.mock.calls[0][1]).toEqual([["name", "ilike", "Acme"]]);
+    const input = document.querySelector(".sum-select-create .sum-field-input") as HTMLInputElement;
+    expect(input.value).toBe("Acme");
+  });
+
+  it("shows empty state when no rows", async () => {
+    SelectCreateDialog.open(
+      collectionEnv({
+        rpc: {
+          searchRead: vi.fn().mockResolvedValue([]),
+          write: vi.fn(),
+          create: vi.fn(),
+          unlink: vi.fn(),
+          read: vi.fn(),
+          call: vi.fn(),
+        },
+      }),
+      { comodel: "core.partner", onSelect: vi.fn() },
+    );
+    await vi.waitFor(() => {
+      expect(document.querySelector(".sum-select-create-empty")?.textContent).toContain("No records found");
+    });
+  });
 });

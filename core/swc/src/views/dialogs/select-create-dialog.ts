@@ -6,6 +6,7 @@ export interface SelectCreateOptions {
   comodel: string;
   title?: string;
   domain?: unknown[];
+  initialQuery?: string;
   onSelect: (row: Record<string, unknown>) => void;
   onCancel?: () => void;
 }
@@ -15,22 +16,40 @@ export class SelectCreateDialog extends SwcComponent<SelectCreateOptions> {
   private query = "";
   private rows: Record<string, unknown>[] = [];
   private loading = false;
+  private onKeydownBound = (event: KeyboardEvent): void => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      this.close();
+    }
+  };
 
   static open(env: SwcEnv, opts: SelectCreateOptions): void {
     const host = document.createElement("div");
     host.className = "sum-modal-host";
     document.body.appendChild(host);
     const dialog = new SelectCreateDialog(opts, env);
+    dialog.query = opts.initialQuery?.trim() ?? "";
+    dialog.callSetup();
     host.appendChild(dialog.render());
   }
 
   override onMount(): void {
-    void this.search("");
+    document.addEventListener("keydown", this.onKeydownBound);
+    void this.search(this.query).then(() => {
+      const input = this.rootElement?.querySelector<HTMLInputElement>(".sum-field-input");
+      input?.focus();
+    });
+  }
+
+  override onWillUnmount(): void {
+    document.removeEventListener("keydown", this.onKeydownBound);
   }
 
   private close(): void {
     this.props.onCancel?.();
-    this.rootElement?.closest(".sum-modal-host")?.remove();
+    const host = this.rootElement?.closest(".sum-modal-host");
+    this.destroy();
+    host?.remove();
   }
 
   private async search(q: string): Promise<void> {
@@ -49,13 +68,17 @@ export class SelectCreateDialog extends SwcComponent<SelectCreateOptions> {
     const id = await this.env.services.rpc.create(this.props.comodel, { name });
     if (typeof id === "number" && id > 0) {
       this.props.onSelect({ id, name });
-      this.rootElement?.closest(".sum-modal-host")?.remove();
+      const host = this.rootElement?.closest(".sum-modal-host");
+      this.destroy();
+      host?.remove();
     }
   }
 
   private pick(row: Record<string, unknown>): void {
     this.props.onSelect(row);
-    this.rootElement?.closest(".sum-modal-host")?.remove();
+    const host = this.rootElement?.closest(".sum-modal-host");
+    this.destroy();
+    host?.remove();
   }
 
   override template() {
@@ -70,7 +93,7 @@ export class SelectCreateDialog extends SwcComponent<SelectCreateOptions> {
           <input
             class="sum-field-input"
             placeholder="Search..."
-            .value=${this.query}
+            value=${this.query}
             @input=${(e: Event) => {
               this.query = (e.target as HTMLInputElement).value;
               void this.search(this.query);
@@ -78,15 +101,17 @@ export class SelectCreateDialog extends SwcComponent<SelectCreateOptions> {
           />
           ${this.loading
             ? html`<p class="sum-muted">Loading…</p>`
-            : html`<ul class="sum-select-create-list">
-                ${this.rows.map(
-                  (row) => html`<li>
-                    <button type="button" class="sum-select-create-item" @click=${() => this.pick(row)}>
-                      ${String(row.name ?? row.id)}
-                    </button>
-                  </li>`,
-                )}
-              </ul>`}
+            : this.rows.length === 0
+              ? html`<p class="sum-select-create-empty">No records found.</p>`
+              : html`<ul class="sum-select-create-list">
+                  ${this.rows.map(
+                    (row) => html`<li>
+                      <button type="button" class="sum-select-create-item" @click=${() => this.pick(row)}>
+                        ${String(row.name ?? row.id)}
+                      </button>
+                    </li>`,
+                  )}
+                </ul>`}
         </div>
         <footer class="sum-modal-footer">
           <button type="button" class="sum-btn" @click=${() => void this.createNew()}>Create</button>

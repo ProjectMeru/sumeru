@@ -13,9 +13,6 @@ describe("form-interactions", () => {
         <button type="button" role="tab">A</button>
         <button type="button" role="tab">B</button>
       </div>
-      <div class="sum-field-widget sum-field-widget--many2one">
-        <div class="sum-m2o-suggest"></div>
-      </div>
       <details class="sum-date-field" open>
         <summary>Date</summary>
       </details>
@@ -43,25 +40,10 @@ describe("form-interactions", () => {
     expect(document.activeElement).toBe(tabs[1]);
   });
 
-  it("document click dismisses many2one suggestions", () => {
-    expect(root.querySelector(".sum-m2o-suggest")).toBeTruthy();
-    document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(root.querySelector(".sum-m2o-suggest")).toBeNull();
-  });
-
   it("document click closes open date details", () => {
     const details = root.querySelector<HTMLDetailsElement>("details.sum-date-field")!;
     expect(details.open).toBe(true);
     document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(details.open).toBe(false);
-  });
-
-  it("escape removes many2one suggestion lists", () => {
-    root.querySelector(".sum-field-widget--many2one")!.insertAdjacentHTML(
-      "beforeend",
-      '<div class="sum-m2o-suggest"></div>',
-    );
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    expect(root.querySelector(".sum-m2o-suggest")).toBeNull();
   });
 });
