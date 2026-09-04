@@ -183,12 +183,6 @@ const (
 	moduleMsgModuleMismatch   = "module_mismatch"
 )
 
-// Kanban move field names.
-const (
-	stageIDField             = "stage_id"
-	dateLastStageUpdateField = "date_last_stage_update"
-)
-
 // Company switch form field.
 const companyIDFormField = "company_id"
 

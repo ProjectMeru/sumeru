@@ -19,14 +19,6 @@ func runMutationTx(ctx context.Context, fn func(tx TxWrapper) error) error {
 	return tx.Commit()
 }
 
-type mutationKind string
-
-const (
-	mutationCreate mutationKind = "create"
-	mutationUpdate mutationKind = "update"
-	mutationDelete mutationKind = "delete"
-)
-
 type mutationResult struct {
 	ID              int
 	RowsAffected    int64

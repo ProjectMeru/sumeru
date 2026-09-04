@@ -228,7 +228,7 @@ func ensureModelIndexes(ctx context.Context, tbl schemaTable) error {
 		if IsVirtualField(field) {
 			continue
 		}
-		if !(field.Index || field.Type == Many2One) {
+		if !field.Index && field.Type != Many2One {
 			continue
 		}
 		colQuoted, err := QuotedColumnForModel(tbl.ModelName, field.Name)

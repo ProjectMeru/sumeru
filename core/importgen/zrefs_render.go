@@ -61,7 +61,7 @@ func renderZRefs(refs []exportedRef) string {
 		b.WriteString("\t\"sumeru/core/sdk\"\n")
 	}
 	for _, p := range paths {
-		b.WriteString(fmt.Sprintf("\t%s %q\n", imports[p], p))
+		fmt.Fprintf(&b, "\t%s %q\n", imports[p], p)
 	}
 	b.WriteString(")\n\n")
 
@@ -69,12 +69,12 @@ func renderZRefs(refs []exportedRef) string {
 	for _, ref := range refs {
 		switch ref.Kind {
 		case "alias":
-			b.WriteString(fmt.Sprintf("// %s → %s\n", ref.Name, ref.TechnicalModel))
-			b.WriteString(fmt.Sprintf("type %s = %s.%s\n\n", ref.Name, ref.ImportAlias, ref.SourceGoName))
+			fmt.Fprintf(&b, "// %s → %s\n", ref.Name, ref.TechnicalModel)
+			fmt.Fprintf(&b, "type %s = %s.%s\n\n", ref.Name, ref.ImportAlias, ref.SourceGoName)
 		case "phantom":
-			b.WriteString(fmt.Sprintf("// %s → %s\n", ref.Name, ref.TechnicalModel))
-			b.WriteString(fmt.Sprintf("type %s struct {\n\tsdk.Model `sumeru:\"model=%s\"`\n}\n\n",
-				ref.Name, ref.TechnicalModel))
+			fmt.Fprintf(&b, "// %s → %s\n", ref.Name, ref.TechnicalModel)
+			fmt.Fprintf(&b, "type %s struct {\n\tsdk.Model `sumeru:\"model=%s\"`\n}\n\n",
+				ref.Name, ref.TechnicalModel)
 		}
 	}
 	return b.String()

@@ -59,15 +59,6 @@ func firstCompanyMailSettings(ctx context.Context) (companyMailSettings, bool) {
 	return out, id.Valid
 }
 
-// firstCompanyID returns the primary company row id, or 0 if none.
-func firstCompanyID(ctx context.Context) int64 {
-	settings, ok := firstCompanyMailSettings(ctx)
-	if !ok {
-		return 0
-	}
-	return settings.id
-}
-
 // CompanyChatterEnabled reads mail_chatter_enabled from the first core.company row (default true).
 func CompanyChatterEnabled(ctx context.Context) bool {
 	settings, _ := firstCompanyMailSettings(ctx)

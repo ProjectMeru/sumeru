@@ -124,13 +124,13 @@ func BuildSWCBootstrapJSON(ctx context.Context, page PageData, ws *SWCBootstrapW
 		b.SidebarMenus = append(b.SidebarMenus, sg)
 	}
 	for _, c := range page.ShellCompanyOptions {
-		b.Companies = append(b.Companies, swcBootstrapCompany{ID: c.ID, Name: c.Name})
+		b.Companies = append(b.Companies, swcBootstrapCompany(c))
 	}
 	b.Company = swcBootstrapCompany{Name: page.ShellCompany}
 	if page.ShellActiveCompanyID > 0 {
 		for _, c := range page.ShellCompanyOptions {
 			if c.ID == page.ShellActiveCompanyID {
-				b.Company = swcBootstrapCompany{ID: c.ID, Name: c.Name}
+				b.Company = swcBootstrapCompany(c)
 				break
 			}
 		}

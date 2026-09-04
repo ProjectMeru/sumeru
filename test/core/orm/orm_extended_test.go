@@ -110,8 +110,8 @@ func TestAccessErrorHelpersExtended(t *testing.T) {
 	if denied2.Error() != "access denied" {
 		t.Fatal(denied2.Error())
 	}
-	if !orm.IsAccessDenied(errors.New("wrap: " + denied.Error())) {
-		// errors.As needs typed error
+	if orm.IsAccessDenied(errors.New("wrap: " + denied.Error())) {
+		t.Fatal("string-wrapped error should not match via errors.As")
 	}
 	if !orm.IsAccessDenied(denied) {
 		t.Fatal("access denied")
@@ -153,10 +153,9 @@ func TestRegistryModel(t *testing.T) {
 
 func TestInitDevFeaturesAccessInDevMode(t *testing.T) {
 	orm.InitDevFeatures("")
-	// cleared map path
-	if orm.DevFeatureEnabled("access") && !orm.DevFeatureEnabled("sql") {
-		// depends on config.AppConfig.DevMode
-	}
+	// After clear, features are off unless AppConfig.DevMode injects defaults.
+	_ = orm.DevFeatureEnabled("access")
+	_ = orm.DevFeatureEnabled("sql")
 }
 
 func TestParseDomainJSONInvalid(t *testing.T) {

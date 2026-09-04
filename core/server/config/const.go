@@ -58,8 +58,6 @@ const (
 )
 
 const (
-	fileGoMod = "go.mod"
-
 	segCore      = "core"
 	segEngine    = "engine"
 	segAssets    = "assets"

@@ -39,14 +39,6 @@ func insertRawOnTx(ctx context.Context, tx TxWrapper, model Model, values map[st
 	return insertPreparedOnTx(ctx, tx, model, prepared)
 }
 
-func createOnTx(ctx context.Context, tx TxWrapper, model Model, values map[string]interface{}) (id int, err error) {
-	prepared, _, err := prepareCreateWrite(ctx, model, values, PrepareOptions{StrictUnknown: true})
-	if err != nil {
-		return 0, err
-	}
-	return insertPreparedOnTx(ctx, tx, model, prepared)
-}
-
 // execSideEffectOnTx runs fn on tx without aborting the parent transaction on failure.
 func execSideEffectOnTx(ctx context.Context, tx TxWrapper, modelName, operation string, fn func() error) {
 	if tx == nil {

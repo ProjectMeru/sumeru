@@ -6,11 +6,11 @@ import (
 
 // PageFlash is a one-time user-visible banner after redirect.
 type PageFlash struct {
-	Kind        string // success, info, warning, error
-	Title       string
-	Body        string
-	Details     string // optional technical details for error flashes
-	FieldErrors []string
+	Kind        string   `json:"kind"` // success, info, warning, error
+	Title       string   `json:"title"`
+	Body        string   `json:"body"`
+	Details     string   `json:"details,omitempty"` // optional technical details for error flashes
+	FieldErrors []string `json:"field_errors,omitempty"`
 }
 
 // ConsumePageFlashes reads and clears one-time flash data (cookies).

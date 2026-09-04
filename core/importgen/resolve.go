@@ -74,15 +74,3 @@ func dirsForModule(workspace, sumeruRoot, addonsRoot, moduleName string) []strin
 	addDir(filepath.Join(workspace, "addons", moduleName, "wizard"))
 	return dirs
 }
-
-func workspaceAddonNames(workspaceRoot string) ([]string, error) {
-	discovered, err := module.DiscoverAddonRoots([]string{filepath.Join(workspaceRoot, "addons")})
-	if err != nil {
-		return nil, err
-	}
-	names := make([]string, 0, len(discovered))
-	for name := range discovered {
-		names = append(names, name)
-	}
-	return names, nil
-}

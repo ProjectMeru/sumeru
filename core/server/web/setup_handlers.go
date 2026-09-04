@@ -67,7 +67,7 @@ func SetupInitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	scheduleSetupRestart()
-	fmt.Fprintln(w, setupCompleteMessage)
+	_, _ = fmt.Fprintln(w, setupCompleteMessage)
 }
 
 // SetupPageHandler renders the setup page from templates/setup.html.

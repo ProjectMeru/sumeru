@@ -31,13 +31,7 @@ func recordErrorFlashCookieAttrs() http.Cookie {
 
 // SetRecordErrorFlash stores a one-time error banner in an HttpOnly cookie.
 func SetRecordErrorFlash(w http.ResponseWriter, flash PageFlash) {
-	payload, err := json.Marshal(recordErrorFlashPayload{
-		Kind:        flash.Kind,
-		Title:       flash.Title,
-		Body:        flash.Body,
-		Details:     flash.Details,
-		FieldErrors: flash.FieldErrors,
-	})
+	payload, err := json.Marshal(recordErrorFlashPayload(flash))
 	if err != nil {
 		return
 	}
@@ -68,11 +62,5 @@ func ConsumeRecordErrorFlash(r *http.Request, w http.ResponseWriter) (PageFlash,
 	if payload.Kind == "" && payload.Body == "" && payload.Title == "" {
 		return PageFlash{}, false
 	}
-	return PageFlash{
-		Kind:        payload.Kind,
-		Title:       payload.Title,
-		Body:        payload.Body,
-		Details:     payload.Details,
-		FieldErrors: payload.FieldErrors,
-	}, true
+	return PageFlash(payload), true
 }

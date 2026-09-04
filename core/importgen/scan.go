@@ -82,15 +82,7 @@ func modelSpecFromStruct(st *ast.StructType, goName string) (modelmeta.ModelSpec
 	return modelmeta.ModelSpecFromTags(tags, goName)
 }
 
-func modelTagFromStruct(st *ast.StructType, goName string) string {
-	spec, err := modelSpecFromStruct(st, goName)
-	if err != nil {
-		return ""
-	}
-	return spec.Name
-}
-
-func scanPackageModels(pkgs map[string]*ast.Package) []scannedModel {
+func scanPackageModels(pkgs map[string]*ast.Package) []scannedModel { //nolint:staticcheck // SA1019: ParseDir/ast.Package adequate for model tag scan; go/packages migration is separate
 	var out []scannedModel
 	for _, pkg := range pkgs {
 		for _, f := range pkg.Files {
@@ -126,7 +118,7 @@ func scanPackageModels(pkgs map[string]*ast.Package) []scannedModel {
 
 func parseDirModels(dir string) ([]scannedModel, error) {
 	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, dir, isSourceGo, 0)
+	pkgs, err := parser.ParseDir(fset, dir, isSourceGo, 0) //nolint:staticcheck // SA1019: see scanPackageModels
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +143,7 @@ func scanPackageForModels(dir string) ([]string, error) {
 
 func packageNameForDir(dir string) string {
 	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, dir, isSourceGo, parser.PackageClauseOnly)
+	pkgs, err := parser.ParseDir(fset, dir, isSourceGo, parser.PackageClauseOnly) //nolint:staticcheck // SA1019: see scanPackageModels
 	if err != nil || len(pkgs) == 0 {
 		return "models"
 	}

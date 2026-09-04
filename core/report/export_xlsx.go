@@ -92,11 +92,11 @@ func sheetXML(header []string, rows [][]string) string {
 }
 
 func writeSheetRow(b *strings.Builder, rowNum int, cells []string) {
-	b.WriteString(fmt.Sprintf(`<row r="%d">`, rowNum))
+	fmt.Fprintf(b, `<row r="%d">`, rowNum)
 	for col, val := range cells {
 		cellRef := cellRef(col, rowNum)
 		esc := escapeOOXMLCell(sanitizeSpreadsheetCell(val))
-		b.WriteString(fmt.Sprintf(`<c r="%s" t="inlineStr"><is><t>%s</t></is></c>`, cellRef, esc))
+		fmt.Fprintf(b, `<c r="%s" t="inlineStr"><is><t>%s</t></is></c>`, cellRef, esc)
 	}
 	b.WriteString(`</row>`)
 }

@@ -1,15 +1,9 @@
 package web
 
 import (
-	"context"
-	"encoding/csv"
-	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 	"strings"
-
-	"sumeru/core/orm"
 )
 
 // ImportCSVHandler imports CSV rows — redirects to bulk upload staging flow.
@@ -17,94 +11,8 @@ func ImportCSVHandler(w http.ResponseWriter, r *http.Request) {
 	BulkUploadHandler(w, r)
 }
 
-type importCSVRequest struct {
-	modelInst orm.Model
-	file      io.ReadCloser
-	next      string
-}
-
-func openImportCSVRequest(w http.ResponseWriter, r *http.Request) (importCSVRequest, bool) {
-	modelName := strings.TrimSpace(r.FormValue(importModelField))
-	if modelName == "" {
-		http.Error(w, "model required", http.StatusBadRequest)
-		return importCSVRequest{}, false
-	}
-
-	modelInst, ok := requireRegisteredModel(w, modelName)
-	if !ok {
-		return importCSVRequest{}, false
-	}
-	if !requireModelAccess(w, r, modelName, "create") {
-		return importCSVRequest{}, false
-	}
-
-	upload, _, err := r.FormFile(importFileField)
-	if err != nil {
-		http.Error(w, "file required", http.StatusBadRequest)
-		return importCSVRequest{}, false
-	}
-
-	return importCSVRequest{
-		modelInst: modelInst,
-		file:      upload,
-		next:      r.FormValue(nextField),
-	}, true
-}
-
 func importCSVFlashMessage(createdCount int) string {
 	return "imported_" + strconv.Itoa(createdCount)
-}
-
-func importCSVRows(ctx context.Context, modelInst orm.Model, file io.Reader) (int, error) {
-	reader := csv.NewReader(file)
-	reader.TrimLeadingSpace = true
-
-	header, err := reader.Read()
-	if err != nil {
-		return 0, fmt.Errorf("empty csv")
-	}
-	normalizeCSVHeader(header)
-
-	allowedFields := allowedImportFieldNames(modelInst)
-	createdCount := 0
-
-	for {
-		record, err := reader.Read()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return createdCount, fmt.Errorf("csv error after %d rows: %v", createdCount, err)
-		}
-
-		values := importableRowValues(header, record, allowedFields)
-		if len(values) == 0 {
-			continue
-		}
-		if _, err := orm.Create(ctx, modelInst, values); err != nil {
-			return createdCount, fmt.Errorf("row %d: %v", createdCount+1, err)
-		}
-		createdCount++
-	}
-
-	return createdCount, nil
-}
-
-func normalizeCSVHeader(header []string) {
-	for i := range header {
-		header[i] = strings.TrimSpace(header[i])
-	}
-}
-
-func allowedImportFieldNames(modelInst orm.Model) map[string]struct{} {
-	allowed := make(map[string]struct{})
-	for _, field := range modelInst.Fields() {
-		if field.Name == "" || field.Name == workspaceRecordIDParam {
-			continue
-		}
-		allowed[field.Name] = struct{}{}
-	}
-	return allowed
 }
 
 func importableRowValues(header, record []string, allowedFields map[string]struct{}) map[string]interface{} {

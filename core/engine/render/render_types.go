@@ -39,8 +39,8 @@ func RegisterNotebookHook(model, pageTitle string, hook UIHook) {
 }
 
 type ShellCompanyOption struct {
-	ID   int
-	Name string
+	ID   int    `json:"id"`
+	Name string `json:"name"`
 }
 
 // PageData is the top-level template payload for base.html.
