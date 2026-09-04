@@ -1,7 +1,7 @@
 .PHONY: help setup dev build css run generate bp check-sql check-logs db-check \
 	i18n-export i18n-import module shell test-db test-integration test-coverage \
 	test-modules test-modules-static test-modules-unit test-modules-addon test-modules-integration \
-	swc swc-build assets swc-check swc-test check
+	swc swc-build assets swc-check swc-test check lint
 
 # Extra flags for `make run`, e.g. `make run EXTRA_RUN_FLAGS='-p 9090 -d sumeru_staging'`
 EXTRA_RUN_FLAGS ?=
@@ -18,6 +18,12 @@ check-sql:
 
 check-logs:
 	@bash scripts/check_no_stdlog.sh
+
+# Match CI go-lint: go vet + golangci-lint v2 (see .golangci.yml).
+# Use go run so a stale v1 binary on PATH does not break the target.
+lint:
+	go vet ./...
+	go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest run --timeout=10m
 
 generate:
 	go generate ./cmd/sumeru
@@ -62,7 +68,7 @@ dev: run
 build: generate assets
 	go build -o sumeru ./cmd/sumeru
 
-check: swc-check test-modules-static
+check: swc-check lint test-modules-static
 	go test ./test/... -count=1
 
 test-modules-static:
@@ -127,7 +133,8 @@ help:
 	@echo "Go / addons:"
 	@echo "  make generate - refresh cmd/sumeru/zimports.go"
 	@echo "  make bp NAME=x - scaffold kernel addon (then make generate)"
-	@echo "  make check   - swc-check + test-modules-static + go test ./test/..."
+	@echo "  make lint    - go vet + golangci-lint (matches CI go-lint)"
+	@echo "  make check   - swc-check + lint + test-modules-static + go test ./test/..."
 	@echo "  make test-modules - static + unit + addon module suite tiers"
 	@echo "  make test-coverage - full repo coverage with 90% gate"
 	@echo "  make module  - module CLI (ARGS='list' | 'install sales' | ...)"
