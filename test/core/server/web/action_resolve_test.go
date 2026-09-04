@@ -63,6 +63,25 @@ func TestResolveNavigationActionURLRedirect(t *testing.T) {
 	}
 }
 
+func TestResolveNavigationActionURLRejectsUnsafe(t *testing.T) {
+	mock := setupURLActionWebTest(t)
+	metaRows := sqlmock.NewRows([]string{"id", "module", "name", "model", "core_id"}).
+		AddRow(1, "account", "x", "sys.action.url", 5)
+	mock.ExpectQuery(`SELECT \* FROM "sys_model_data" WHERE \("core_id" = \$1 AND "model" IN \(\$2,\$3\)\)`).
+		WithArgs(5, "sys.action.window", "sys.action.url").
+		WillReturnRows(metaRows)
+	urlRows := sqlmock.NewRows([]string{"id", "name", "url"}).
+		AddRow(5, "Bad", "javascript:alert(1)")
+	mock.ExpectQuery(`SELECT \* FROM "sys_action_url" WHERE \("id" = \$1\) LIMIT 1`).
+		WithArgs(5).
+		WillReturnRows(urlRows)
+
+	_, _, err := web.ResolveNavigationActionForTest(bypassCtx(), 5, "")
+	if err == nil {
+		t.Fatal("expected unsafe url error")
+	}
+}
+
 func TestResolveNavigationActionWindowUnchanged(t *testing.T) {
 	mock := setupURLActionWebTest(t)
 	orm.RegisterStubModelForTest(t, "sys.action.window", []orm.FieldDefinition{

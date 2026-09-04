@@ -35,7 +35,7 @@ func ensureForeignKeys(ctx context.Context, tbl schemaTable) error {
 			`ALTER TABLE %s ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s (id) ON DELETE %s NOT VALID`,
 			tbl.QuotedTable, quoteIdent(constraintName), colQuoted, targetQuoted, onDelete,
 		)
-		if _, err := DB.Exec(q); err != nil {
+		if _, err := DB.ExecContext(ctx, q); err != nil {
 			if strings.Contains(strings.ToLower(err.Error()), "already exists") {
 				continue
 			}

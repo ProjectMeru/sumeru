@@ -1,17 +1,37 @@
 package web_test
 
 import (
+	"net/http"
 	"net/http/httptest"
+	"sumeru/core/server/config"
 	"sumeru/core/server/web"
 	"testing"
 	"time"
 )
 
-func TestClientIPFromForwardedHeader(t *testing.T) {
+func TestClientIPIgnoresForwardedWithoutTrustedProxy(t *testing.T) {
+	prev := config.AppConfig.TrustedProxies
+	config.AppConfig.TrustedProxies = ""
+	t.Cleanup(func() { config.AppConfig.TrustedProxies = prev })
+
 	req := httptest.NewRequest("POST", web.TestSetupInitRoute, nil)
+	req.RemoteAddr = "198.51.100.10:443"
+	req.Header.Set(web.TestForwardedForHeader, "127.0.0.1")
+	if got := web.ClientIP(req); got != "198.51.100.10" {
+		t.Fatalf("got %q want RemoteAddr host when proxies untrusted", got)
+	}
+}
+
+func TestClientIPTrustsForwardedFromTrustedProxy(t *testing.T) {
+	prev := config.AppConfig.TrustedProxies
+	config.AppConfig.TrustedProxies = "127.0.0.1/32"
+	t.Cleanup(func() { config.AppConfig.TrustedProxies = prev })
+
+	req := httptest.NewRequest("POST", web.TestSetupInitRoute, nil)
+	req.RemoteAddr = "127.0.0.1:12345"
 	req.Header.Set(web.TestForwardedForHeader, "203.0.113.1, 198.51.100.2")
 	if got := web.ClientIP(req); got != "203.0.113.1" {
-		t.Fatalf("got %q want first forwarded IP", got)
+		t.Fatalf("got %q want first forwarded IP from trusted proxy", got)
 	}
 }
 
@@ -63,5 +83,63 @@ func TestAllowSetupRateLimit(t *testing.T) {
 	}
 	if web.AllowSetupRateLimit(recorder, requestIP) {
 		t.Fatal("attempt over limit should be rejected")
+	}
+}
+
+func TestValidateSetupTokenRequiresWhenNotLocalhostOnly(t *testing.T) {
+	prevToken := config.AppConfig.SetupToken
+	prevLocal := config.AppConfig.SetupLocalhostOnly
+	config.AppConfig.SetupToken = ""
+	config.AppConfig.SetupLocalhostOnly = false
+	t.Cleanup(func() {
+		config.AppConfig.SetupToken = prevToken
+		config.AppConfig.SetupLocalhostOnly = prevLocal
+	})
+
+	req := httptest.NewRequest("POST", web.TestSetupInitRoute, nil)
+	rec := httptest.NewRecorder()
+	if web.ValidateSetupToken(rec, req, "") {
+		t.Fatal("empty setup_token must be rejected when setup_localhost_only is false")
+	}
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status %d want %d", rec.Code, http.StatusForbidden)
+	}
+}
+
+func TestValidateSetupTokenAllowsEmptyWhenLocalhostOnly(t *testing.T) {
+	prevToken := config.AppConfig.SetupToken
+	prevLocal := config.AppConfig.SetupLocalhostOnly
+	config.AppConfig.SetupToken = ""
+	config.AppConfig.SetupLocalhostOnly = true
+	t.Cleanup(func() {
+		config.AppConfig.SetupToken = prevToken
+		config.AppConfig.SetupLocalhostOnly = prevLocal
+	})
+
+	req := httptest.NewRequest("POST", web.TestSetupInitRoute, nil)
+	rec := httptest.NewRecorder()
+	if !web.ValidateSetupToken(rec, req, "") {
+		t.Fatal("empty setup_token should be allowed when setup_localhost_only is true")
+	}
+}
+
+func TestValidateSetupTokenMatchesConfigured(t *testing.T) {
+	prevToken := config.AppConfig.SetupToken
+	prevLocal := config.AppConfig.SetupLocalhostOnly
+	config.AppConfig.SetupToken = "secret"
+	config.AppConfig.SetupLocalhostOnly = false
+	t.Cleanup(func() {
+		config.AppConfig.SetupToken = prevToken
+		config.AppConfig.SetupLocalhostOnly = prevLocal
+	})
+
+	req := httptest.NewRequest("POST", web.TestSetupInitRoute, nil)
+	rec := httptest.NewRecorder()
+	if web.ValidateSetupToken(rec, req, "wrong") {
+		t.Fatal("wrong token should be rejected")
+	}
+	rec = httptest.NewRecorder()
+	if !web.ValidateSetupToken(rec, req, "secret") {
+		t.Fatal("matching body token should be accepted")
 	}
 }

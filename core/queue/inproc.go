@@ -5,6 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"sync"
+
+	"sumeru/core/applog"
+	"sumeru/core/metrics"
 )
 
 // Message is a topic-tagged payload for async workers.
@@ -41,7 +44,17 @@ func Publish(ctx context.Context, topic string, payload interface{}) {
 	for _, fn := range subs {
 		fn := fn
 		go func() {
-			_ = fn(ctx, msg)
+			if err := fn(ctx, msg); err != nil {
+				metrics.Inc("sumeru_queue_handler_errors_total")
+				applog.Warn(ctx, applog.Event{
+					Message:   "queue handler failed",
+					Component: "queue",
+					Operation: "publish",
+					Status:    "failed",
+					Context:   map[string]interface{}{"topic": topic},
+					Err:       err,
+				})
+			}
 		}()
 	}
 	publishRedisMirror(ctx, topic, data)

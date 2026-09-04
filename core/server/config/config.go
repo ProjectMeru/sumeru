@@ -37,13 +37,14 @@ type Config struct {
 	LogTimezone        string   // log_timezone: UTC, Local (default), or IANA (e.g. Asia/Kolkata) for timestamps
 	DevMode            bool     // dev_mode INI key; parseBoolKey(..., false) — debug slog level and dev-only server paths
 	DevFeatures        string   // dev_features INI: comma-separated sql, access, xml
-	SetupToken         string   // optional secret required for POST /setup/init (header X-Setup-Token or JSON setup_token)
-	SetupLocalhostOnly bool     // when true (default), setup mode listens on 127.0.0.1 only
+	SetupToken         string   // secret for POST /setup/init; required when setup_localhost_only is false
+	SetupLocalhostOnly bool     // when true (default), setup mode listens on 127.0.0.1 only; false requires setup_token
 	DbMaxOpenConns     int      // db_max_open_conns; 0 = Go default
 	DbMaxIdleConns     int      // db_max_idle_conns; 0 = Go default
 	DbConnMaxLifetimeMin int    // db_conn_max_lifetime_minutes; 0 = no limit
 	DbReadReplicaDSN   string   // optional libpq DSN for read replica (search/read_group RPC)
 	RateLimitRPM       int      // rate_limit_rpm per client IP on /api/rpc and login; 0 = disabled
+	TrustedProxies     string   // trusted_proxies: comma-separated CIDRs/IPs allowed to set X-Forwarded-For; empty = never trust XFF
 	SMTPHost           string
 	SMTPPort           int
 	SMTPUser           string
@@ -174,6 +175,8 @@ func LoadConfig(path string) error {
 			if n, err := strconv.Atoi(strings.TrimSpace(val)); err == nil {
 				AppConfig.RateLimitRPM = n
 			}
+		case keyTrustedProxies:
+			AppConfig.TrustedProxies = val
 		case keySMTPHost:
 			AppConfig.SMTPHost = val
 		case keySMTPPort:

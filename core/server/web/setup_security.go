@@ -1,6 +1,7 @@
 package web
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -46,6 +47,11 @@ func requireSetupEnvironment(w http.ResponseWriter, r *http.Request) bool {
 func validateSetupToken(w http.ResponseWriter, r *http.Request, tokenFromBody string) bool {
 	expectedToken := strings.TrimSpace(config.AppConfig.SetupToken)
 	if expectedToken == "" {
+		// When setup is reachable beyond loopback, a shared secret is mandatory.
+		if !config.AppConfig.SetupLocalhostOnly {
+			http.Error(w, "Setup token required when setup is not localhost-only", http.StatusForbidden)
+			return false
+		}
 		return true
 	}
 	providedToken := setupTokenFromRequest(r, tokenFromBody)
@@ -90,18 +96,66 @@ func pruneSetupAttempts(attempts []time.Time, now time.Time) []time.Time {
 }
 
 func clientIP(r *http.Request) string {
-	if forwardedFor := strings.TrimSpace(r.Header.Get(forwardedForHeader)); forwardedFor != "" {
-		if commaIndex := strings.Index(forwardedFor, ","); commaIndex >= 0 {
-			return strings.TrimSpace(forwardedFor[:commaIndex])
+	remote := remoteAddrIP(r)
+	if remote != "" && trustedProxyContains(remote) {
+		if forwardedFor := strings.TrimSpace(r.Header.Get(forwardedForHeader)); forwardedFor != "" {
+			if commaIndex := strings.Index(forwardedFor, ","); commaIndex >= 0 {
+				return strings.TrimSpace(forwardedFor[:commaIndex])
+			}
+			return forwardedFor
 		}
-		return forwardedFor
 	}
+	return remote
+}
 
+func remoteAddrIP(r *http.Request) string {
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		return strings.TrimSpace(r.RemoteAddr)
 	}
 	return host
+}
+
+func trustedProxyContains(ipAddress string) bool {
+	parsedIP := net.ParseIP(strings.TrimSpace(ipAddress))
+	if parsedIP == nil {
+		return false
+	}
+	for _, network := range trustedProxyNetworks() {
+		if network.Contains(parsedIP) {
+			return true
+		}
+	}
+	return false
+}
+
+func trustedProxyNetworks() []*net.IPNet {
+	raw := strings.TrimSpace(config.AppConfig.TrustedProxies)
+	if raw == "" {
+		return nil
+	}
+	var networks []*net.IPNet
+	for _, part := range strings.Split(raw, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		if !strings.Contains(part, "/") {
+			if ip := net.ParseIP(part); ip != nil {
+				bits := 32
+				if ip.To4() == nil {
+					bits = 128
+				}
+				part = fmt.Sprintf("%s/%d", part, bits)
+			}
+		}
+		_, network, err := net.ParseCIDR(part)
+		if err != nil {
+			continue
+		}
+		networks = append(networks, network)
+	}
+	return networks
 }
 
 func isLoopbackIP(ipAddress string) bool {

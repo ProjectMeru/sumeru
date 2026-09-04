@@ -1,7 +1,6 @@
 package web
 
 import (
-	"encoding/json"
 	"net/http"
 	"strings"
 )
@@ -73,11 +72,4 @@ func SwcWorkspaceHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	payload := buildSwcWorkspacePayload(ctx, resolved, req, viewRecord, actionData)
 	writeJSONResponse(w, payload)
-}
-
-func writeJSONResponse(w http.ResponseWriter, v interface{}) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	enc := json.NewEncoder(w)
-	enc.SetEscapeHTML(false)
-	_ = enc.Encode(v)
 }

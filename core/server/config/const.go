@@ -42,6 +42,7 @@ const (
 	keyDbConnMaxLifetimeMin = "db_conn_max_lifetime_minutes"
 	keyDbReadReplicaDSN   = "db_read_replica_dsn"
 	keyRateLimitRPM       = "rate_limit_rpm"
+	keyTrustedProxies     = "trusted_proxies"
 	keySMTPHost           = "smtp_host"
 	keySMTPPort           = "smtp_port"
 	keySMTPUser           = "smtp_user"

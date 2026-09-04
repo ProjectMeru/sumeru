@@ -1,24 +1,27 @@
 package orm
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 // ensureExtraIndexes creates composite indexes not expressible via single-field Index flags.
-func ensureExtraIndexes() error {
+func ensureExtraIndexes(ctx context.Context) error {
 	if DB == nil {
 		return nil
 	}
-	if err := ensureMailMessageListIndex(); err != nil {
+	if err := ensureMailMessageListIndex(ctx); err != nil {
 		return err
 	}
-	return ensureSysTranslationUniqueIndex()
+	return ensureSysTranslationUniqueIndex(ctx)
 }
 
-func ensureMailMessageListIndex() error {
+func ensureMailMessageListIndex(ctx context.Context) error {
 	tablePhysical := MustModelToTableName("mail.message")
 	if tablePhysical == "" {
 		return nil
 	}
-	ok, err := tableExists(tablePhysical)
+	ok, err := tableExists(ctx, tablePhysical)
 	if err != nil || !ok {
 		return err
 	}
@@ -38,16 +41,16 @@ func ensureMailMessageListIndex() error {
 	idxName := "idx_" + tablePhysical + "_model_core_created"
 	q := fmt.Sprintf("CREATE INDEX IF NOT EXISTS %s ON %s (%s, %s, %s DESC)",
 		quoteIdent(idxName), tableQuoted, modelCol, coreCol, dateCol)
-	_, err = DB.Exec(q)
+	_, err = DB.ExecContext(ctx, q)
 	return err
 }
 
-func ensureSysTranslationUniqueIndex() error {
+func ensureSysTranslationUniqueIndex(ctx context.Context) error {
 	tablePhysical := MustModelToTableName("sys.translation")
 	if tablePhysical == "" {
 		return nil
 	}
-	ok, err := tableExists(tablePhysical)
+	ok, err := tableExists(ctx, tablePhysical)
 	if err != nil || !ok {
 		return err
 	}
@@ -67,6 +70,6 @@ func ensureSysTranslationUniqueIndex() error {
 	idxName := "sys_translation_lang_src_module_uidx"
 	q := fmt.Sprintf("CREATE UNIQUE INDEX IF NOT EXISTS %s ON %s (%s, %s, %s)",
 		quoteIdent(idxName), tableQuoted, langCol, srcCol, moduleCol)
-	_, err = DB.Exec(q)
+	_, err = DB.ExecContext(ctx, q)
 	return err
 }

@@ -9,8 +9,10 @@ import (
 )
 
 func writeJSON(w http.ResponseWriter, ctx context.Context, route string, v interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(v); err != nil {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	enc := json.NewEncoder(w)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(v); err != nil && ctx != nil && route != "" {
 		WebLogEvent(ctx, WebLogInput{
 			Route: route, Message: "Failed to encode JSON response",
 			Operation: "write", Status: "partial", Err: err,
@@ -19,8 +21,12 @@ func writeJSON(w http.ResponseWriter, ctx context.Context, route string, v inter
 }
 
 func writeJSONOK(w http.ResponseWriter) {
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_, _ = w.Write([]byte(`{"ok":true}`))
+}
+
+func writeJSONResponse(w http.ResponseWriter, v interface{}) {
+	writeJSON(w, nil, "", v)
 }
 
 // resolveRequestUID returns SecurityUID from context, falling back to the session cookie.
