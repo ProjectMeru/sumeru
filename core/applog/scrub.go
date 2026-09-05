@@ -2,10 +2,8 @@ package applog
 
 import "strings"
 
-// RedactedPlaceholder replaces secret values in logs and dumps.
 const RedactedPlaceholder = "***"
 
-// ScrubMap returns a copy of fields with secret field values redacted.
 func ScrubMap(fields map[string]interface{}) map[string]interface{} {
 	if fields == nil {
 		return nil
@@ -17,7 +15,6 @@ func ScrubMap(fields map[string]interface{}) map[string]interface{} {
 	return scrubbed
 }
 
-// ScrubValue redacts value when fieldName is secret; walks nested maps and slices.
 func ScrubValue(fieldName string, value any) any {
 	if IsSecretKey(fieldName) {
 		return RedactedPlaceholder
@@ -48,14 +45,12 @@ func ScrubValue(fieldName string, value any) any {
 	}
 }
 
-// IsSecretKey reports whether a field name must never be logged in cleartext.
-// "sid" matches the full field name only (avoids false positives like "inside").
+// IsSecretKey: "sid" is exact-match only (avoids "inside").
 func IsSecretKey(fieldName string) bool {
 	normalized := strings.ToLower(strings.TrimSpace(fieldName))
 	return normalized == "sid" || (normalized != "" && containsSecretKeyword(normalized))
 }
 
-// TextContainsSecretKeyword reports whether free text (e.g. SQL) mentions a secret term.
 func TextContainsSecretKeyword(text string) bool {
 	lowered := strings.ToLower(text)
 	return strings.Contains(lowered, "sid") || containsSecretKeyword(lowered)
@@ -70,7 +65,6 @@ func containsSecretKeyword(haystack string) bool {
 	return false
 }
 
-// secretKeywords match as substrings of field names and of free text (including totp*).
 var secretKeywords = []string{
 	"password", "token", "secret", "authorization", "cookie",
 	"session", "api_key", "apikey", "key_hash", "csrf", "totp",

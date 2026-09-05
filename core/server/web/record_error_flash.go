@@ -7,8 +7,6 @@ import (
 	"net/url"
 	"strings"
 
-	"sumeru/core/applog"
-	"sumeru/core/errcode"
 	"sumeru/core/orm"
 )
 
@@ -132,13 +130,9 @@ func redirectRecordError(w http.ResponseWriter, r *http.Request, nextURL, operat
 	title, body, details, fieldErrors := userFacingRecordError(operation, model, err)
 	WebLogEvent(ctx, WebLogInput{
 		Route: operationRoute(operation), Message: body,
-		Code:      classifyRecordErrorCode(err),
+		Code:      orm.ClassifyLogCode(err),
 		Operation: operation, Status: logStatusFailure, Err: err,
 		ContextFields: map[string]interface{}{"model": model},
-	})
-	applog.DebugMsg(ctx, webLogComponent, operation, "record POST failed", map[string]interface{}{
-		"model": model,
-		"error": err.Error(),
 	})
 	SetRecordErrorFlash(w, PageFlash{
 		Kind:        "error",
@@ -175,28 +169,6 @@ func operationRoute(operation string) string {
 		return apiRPCRoute
 	default:
 		return webLogUnknownRoute
-	}
-}
-
-func classifyRecordErrorCode(err error) string {
-	if err == nil {
-		return errcode.InternalError
-	}
-	if orm.IsAccessDenied(err) || orm.IsRecordRuleFailed(err) {
-		return errcode.AccessDenied
-	}
-	var fve *orm.FieldValidationError
-	if errors.As(err, &fve) {
-		return errcode.ValidationError
-	}
-	msg := strings.ToLower(err.Error())
-	switch {
-	case strings.Contains(msg, "not found"):
-		return errcode.RecordNotFound
-	case strings.Contains(msg, "validation"), strings.Contains(msg, "invalid"), strings.Contains(msg, "required"):
-		return errcode.ValidationError
-	default:
-		return errcode.InternalError
 	}
 }
 

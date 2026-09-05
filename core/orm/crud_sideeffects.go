@@ -32,15 +32,7 @@ func emitSideEffectsOnTx(ctx context.Context, tx TxWrapper, modelName string, ui
 			"model": modelName,
 			"id":    int(row.ResID),
 		}); err != nil {
-			applog.WarnCode(ctx, errcode.InternalError, "outbox enqueue after mutation failed", applog.Event{
-				Component: "orm",
-				Operation: "side_effects",
-				Status:    "partial",
-				Context: map[string]interface{}{
-					"model": modelName, "event": row.EventName,
-				},
-				Err: err,
-			})
+			logSideEffectWarn(ctx, "outbox_enqueue", modelName, err, "event", row.EventName)
 		}
 	}
 }

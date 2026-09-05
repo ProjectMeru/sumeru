@@ -31,7 +31,7 @@ func CriteriaToDomain(criteria map[string]interface{}) [][]interface{} {
 func SearchOne(ctx context.Context, modelName string, criteria map[string]interface{}) (result map[string]interface{}, err error) {
 	start := time.Now()
 	defer func() {
-		logORMOperationKV(ctx, start, "search_one", modelName, err, "has_row", result != nil)
+		logORMOperation(ctx, start, "search_one", modelName, err, map[string]interface{}{"has_row": result != nil})
 	}()
 	if _, ok := Registry[modelName]; !ok {
 		return nil, fmt.Errorf("model %s not registered", modelName)
