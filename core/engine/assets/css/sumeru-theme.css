@@ -9,6 +9,20 @@
   --sum-gold: #f0ad4e;
   --sum-gold-soft: rgba(240, 173, 78, 0.22);
 
+  /* —— Stage / kanban palette (shared) —— */
+  --sum-stage-0: #875a7b;
+  --sum-stage-1: #9c9c9c;
+  --sum-stage-2: #67917a;
+  --sum-stage-3: #a06666;
+  --sum-stage-4: #8899aa;
+  --sum-stage-5: #d4a017;
+  --sum-stage-6: #6a5acd;
+  --sum-stage-7: #4682b4;
+  --sum-stage-8: #c0392b;
+  --sum-stage-9: #e67e22;
+  --sum-stage-10: #27ae60;
+  --sum-stage-11: #3498db;
+
   /* —— Semantic —— */
   --sum-primary: var(--sum-header);
   --sum-primary-hover: var(--sum-header-dark);

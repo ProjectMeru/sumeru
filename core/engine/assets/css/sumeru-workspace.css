@@ -1248,18 +1248,18 @@
   background: transparent;
 }
 
-.sum-kanban-card-stripe--color-0 { background: #875a7b; }
-.sum-kanban-card-stripe--color-1 { background: #9c9c9c; }
-.sum-kanban-card-stripe--color-2 { background: #67917a; }
-.sum-kanban-card-stripe--color-3 { background: #a06666; }
-.sum-kanban-card-stripe--color-4 { background: #8899aa; }
-.sum-kanban-card-stripe--color-5 { background: #d4a017; }
-.sum-kanban-card-stripe--color-6 { background: #6a5acd; }
-.sum-kanban-card-stripe--color-7 { background: #4682b4; }
-.sum-kanban-card-stripe--color-8 { background: #c0392b; }
-.sum-kanban-card-stripe--color-9 { background: #e67e22; }
-.sum-kanban-card-stripe--color-10 { background: #27ae60; }
-.sum-kanban-card-stripe--color-11 { background: #3498db; }
+.sum-kanban-card-stripe--color-0 { background: var(--sum-stage-0); }
+.sum-kanban-card-stripe--color-1 { background: var(--sum-stage-1); }
+.sum-kanban-card-stripe--color-2 { background: var(--sum-stage-2); }
+.sum-kanban-card-stripe--color-3 { background: var(--sum-stage-3); }
+.sum-kanban-card-stripe--color-4 { background: var(--sum-stage-4); }
+.sum-kanban-card-stripe--color-5 { background: var(--sum-stage-5); }
+.sum-kanban-card-stripe--color-6 { background: var(--sum-stage-6); }
+.sum-kanban-card-stripe--color-7 { background: var(--sum-stage-7); }
+.sum-kanban-card-stripe--color-8 { background: var(--sum-stage-8); }
+.sum-kanban-card-stripe--color-9 { background: var(--sum-stage-9); }
+.sum-kanban-card-stripe--color-10 { background: var(--sum-stage-10); }
+.sum-kanban-card-stripe--color-11 { background: var(--sum-stage-11); }
 
 .sum-kanban-card-content {
   position: relative;
@@ -1403,18 +1403,18 @@
   border-top: 3px solid var(--sum-line-strong);
 }
 
-.sum-kanban-stage-header--color-0 { border-top-color: #875a7b; }
-.sum-kanban-stage-header--color-1 { border-top-color: #9c9c9c; }
-.sum-kanban-stage-header--color-2 { border-top-color: #67917a; }
-.sum-kanban-stage-header--color-3 { border-top-color: #a06666; }
-.sum-kanban-stage-header--color-4 { border-top-color: #8899aa; }
-.sum-kanban-stage-header--color-5 { border-top-color: #d4a017; }
-.sum-kanban-stage-header--color-6 { border-top-color: #6a5acd; }
-.sum-kanban-stage-header--color-7 { border-top-color: #4682b4; }
-.sum-kanban-stage-header--color-8 { border-top-color: #c0392b; }
-.sum-kanban-stage-header--color-9 { border-top-color: #e67e22; }
-.sum-kanban-stage-header--color-10 { border-top-color: #27ae60; }
-.sum-kanban-stage-header--color-11 { border-top-color: #3498db; }
+.sum-kanban-stage-header--color-0 { border-top-color: var(--sum-stage-0); }
+.sum-kanban-stage-header--color-1 { border-top-color: var(--sum-stage-1); }
+.sum-kanban-stage-header--color-2 { border-top-color: var(--sum-stage-2); }
+.sum-kanban-stage-header--color-3 { border-top-color: var(--sum-stage-3); }
+.sum-kanban-stage-header--color-4 { border-top-color: var(--sum-stage-4); }
+.sum-kanban-stage-header--color-5 { border-top-color: var(--sum-stage-5); }
+.sum-kanban-stage-header--color-6 { border-top-color: var(--sum-stage-6); }
+.sum-kanban-stage-header--color-7 { border-top-color: var(--sum-stage-7); }
+.sum-kanban-stage-header--color-8 { border-top-color: var(--sum-stage-8); }
+.sum-kanban-stage-header--color-9 { border-top-color: var(--sum-stage-9); }
+.sum-kanban-stage-header--color-10 { border-top-color: var(--sum-stage-10); }
+.sum-kanban-stage-header--color-11 { border-top-color: var(--sum-stage-11); }
 
 .sum-kanban-card-activity {
   margin-top: 0.35rem;
@@ -1496,18 +1496,18 @@
   cursor: pointer;
 }
 
-.sum-kanban-color-swatch--0 { background: #875a7b; }
-.sum-kanban-color-swatch--1 { background: #9c9c9c; }
-.sum-kanban-color-swatch--2 { background: #67917a; }
-.sum-kanban-color-swatch--3 { background: #a06666; }
-.sum-kanban-color-swatch--4 { background: #8899aa; }
-.sum-kanban-color-swatch--5 { background: #d4a017; }
-.sum-kanban-color-swatch--6 { background: #6a5acd; }
-.sum-kanban-color-swatch--7 { background: #4682b4; }
-.sum-kanban-color-swatch--8 { background: #c0392b; }
-.sum-kanban-color-swatch--9 { background: #e67e22; }
-.sum-kanban-color-swatch--10 { background: #27ae60; }
-.sum-kanban-color-swatch--11 { background: #3498db; }
+.sum-kanban-color-swatch--0 { background: var(--sum-stage-0); }
+.sum-kanban-color-swatch--1 { background: var(--sum-stage-1); }
+.sum-kanban-color-swatch--2 { background: var(--sum-stage-2); }
+.sum-kanban-color-swatch--3 { background: var(--sum-stage-3); }
+.sum-kanban-color-swatch--4 { background: var(--sum-stage-4); }
+.sum-kanban-color-swatch--5 { background: var(--sum-stage-5); }
+.sum-kanban-color-swatch--6 { background: var(--sum-stage-6); }
+.sum-kanban-color-swatch--7 { background: var(--sum-stage-7); }
+.sum-kanban-color-swatch--8 { background: var(--sum-stage-8); }
+.sum-kanban-color-swatch--9 { background: var(--sum-stage-9); }
+.sum-kanban-color-swatch--10 { background: var(--sum-stage-10); }
+.sum-kanban-color-swatch--11 { background: var(--sum-stage-11); }
 
 .sum-kanban-color-clear {
   grid-column: 1 / -1;
