@@ -56,10 +56,12 @@ export function fieldDomain(field: SwcArchField, record?: SwcRecord): unknown[] 
   const raw = field.options?.domain;
   if (!raw) return undefined;
   try {
-    const parsed = JSON.parse(raw) as unknown[];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return undefined;
     if (!record) return parsed;
     return evalDomainPlaceholders(parsed, record);
-  } catch {
+  } catch (err) {
+    console.warn("fieldDomain: invalid domain JSON", field.name, err);
     return undefined;
   }
 }
