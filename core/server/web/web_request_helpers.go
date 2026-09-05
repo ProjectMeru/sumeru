@@ -16,6 +16,7 @@ import (
 type WebLogInput struct {
 	Route         string
 	Message       string
+	Code          string
 	Operation     string
 	Status        string
 	Err           error
@@ -32,6 +33,7 @@ func WebLogEvent(ctx context.Context, in WebLogInput) {
 
 	event := applog.Event{
 		Message:   in.Message,
+		Code:      in.Code,
 		Component: webLogComponent,
 		Operation: in.Operation,
 		Status:    in.Status,
@@ -47,8 +49,16 @@ func emitWebLogEvent(ctx context.Context, event applog.Event) {
 		if event.Status == "" {
 			event.Status = logStatusFailure
 		}
+		if event.Code != "" {
+			applog.ErrorCode(ctx, event.Code, event.Message, event)
+			return
+		}
 		applog.Error(ctx, event)
 	case event.Status == logStatusPartial:
+		if event.Code != "" {
+			applog.WarnCode(ctx, event.Code, event.Message, event)
+			return
+		}
 		applog.Warn(ctx, event)
 	default:
 		applog.Info(ctx, event)

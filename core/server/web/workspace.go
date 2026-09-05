@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"sumeru/core/engine/render"
+	"sumeru/core/errcode"
 	"sumeru/core/orm"
 	"sumeru/core/server/config"
 )
@@ -85,7 +86,16 @@ func redirectIfMenuAccessDenied(w http.ResponseWriter, r *http.Request, menuQuer
 		return false
 	}
 
-	WebLogf(r.Context(), workspaceRoute, "menu_id=%s denied by access_groups", menuID)
+	WebLogEvent(r.Context(), WebLogInput{
+		Route:     workspaceRoute,
+		Message:   "menu access denied",
+		Code:      errcode.AccessDenied,
+		Operation: "menu_access",
+		Status:    logStatusFailure,
+		ContextFields: map[string]interface{}{
+			"menu_id": menuID,
+		},
+	})
 	http.Redirect(w, r, homeRoute, http.StatusFound)
 	return true
 }
@@ -112,7 +122,24 @@ func respondActionNotFound(w http.ResponseWriter, actionID int) {
 }
 
 func respondWorkspaceLoadError(w http.ResponseWriter, ctx context.Context, err error) {
-	WebLogf(ctx, workspaceRoute, "load view data: %v", err)
+	code := errcode.InternalError
+	msg := err.Error()
+	switch {
+	case strings.Contains(msg, "access denied"):
+		code = errcode.AccessDenied
+	case strings.Contains(msg, workspaceErrInvalidID):
+		code = errcode.ValidationError
+	case strings.Contains(msg, workspaceErrNoView), strings.Contains(msg, workspaceErrNotFound):
+		code = errcode.NotFound
+	}
+	WebLogEvent(ctx, WebLogInput{
+		Route:     workspaceRoute,
+		Message:   "load view data failed",
+		Code:      code,
+		Operation: "load_view",
+		Status:    logStatusFailure,
+		Err:       err,
+	})
 	http.Error(w, err.Error(), httpStatusFromWorkspaceError(err))
 }
 

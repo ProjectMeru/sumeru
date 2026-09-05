@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"sumeru/core/errcode"
 	"sumeru/core/orm"
 )
 
@@ -29,7 +30,17 @@ func ActionCreateAPIKey(w http.ResponseWriter, r *http.Request) {
 
 	rawKey, err := orm.CreateAPIKeyForUser(ctx, targetUserID, keyName)
 	if err != nil {
-		WebLogf(ctx, "/web/action/create_api_key", "create API key for user %d: %v", targetUserID, err)
+		WebLogEvent(ctx, WebLogInput{
+			Route:     "/web/action/create_api_key",
+			Message:   "Could not create API key",
+			Code:      errcode.InternalError,
+			Operation: "create_api_key",
+			Status:    logStatusFailure,
+			Err:       err,
+			ContextFields: map[string]interface{}{
+				"user_id": targetUserID,
+			},
+		})
 		http.Error(w, "Could not create API key", http.StatusInternalServerError)
 		return
 	}

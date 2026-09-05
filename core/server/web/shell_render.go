@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"sumeru/core/engine/render"
+	"sumeru/core/errcode"
 	"sumeru/core/server/config"
 )
 
@@ -36,7 +37,7 @@ func renderShellPage(w http.ResponseWriter, r *http.Request, opts shellPageOpts)
 	if err != nil {
 		WebLogEvent(ctx, WebLogInput{
 			Route: route, Message: "Failed to render page layout",
-			Operation: "render", Status: "failure", Err: err,
+			Code: errcode.InternalError, Operation: "render", Status: "failure", Err: err,
 		})
 		http.Error(w, "Layout render error", http.StatusInternalServerError)
 		return
@@ -60,7 +61,7 @@ func executeInnerTemplate(ctx context.Context, w http.ResponseWriter, route stri
 	if err != nil {
 		WebLogEvent(ctx, WebLogInput{
 			Route: route, Message: "Failed to parse inner template",
-			Operation: "render", Status: "failure", Err: err,
+			Code: errcode.InternalError, Operation: "render", Status: "failure", Err: err,
 			ContextFields: map[string]interface{}{"template": opts.InnerTemplate},
 		})
 		http.Error(w, "Template error", http.StatusInternalServerError)
@@ -71,7 +72,7 @@ func executeInnerTemplate(ctx context.Context, w http.ResponseWriter, route stri
 	if err := templateFile.Execute(&innerBuffer, opts.InnerData); err != nil {
 		WebLogEvent(ctx, WebLogInput{
 			Route: route, Message: "Failed to execute inner template",
-			Operation: "render", Status: "failure", Err: err,
+			Code: errcode.InternalError, Operation: "render", Status: "failure", Err: err,
 		})
 		http.Error(w, "Template error", http.StatusInternalServerError)
 		return "", false
@@ -148,7 +149,7 @@ func writeHTML(w http.ResponseWriter, ctx context.Context, route, html string) {
 	if _, err := w.Write([]byte(html)); err != nil {
 		WebLogEvent(ctx, WebLogInput{
 			Route: route, Message: "Failed to write HTML response",
-			Operation: "write", Status: "partial", Err: err,
+			Code: errcode.InternalError, Operation: "write", Status: "partial", Err: err,
 		})
 	}
 }
