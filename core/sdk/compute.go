@@ -1,14 +1,13 @@
 package sdk
 
-import "context"
-
-// ComputeContext is passed to compute handlers registered via orm.RegisterCompute.
+// ComputeContext carries the record id for compute helpers that need it.
+// Request-scoped context is passed separately to compute handlers (orm.ComputeFunc);
+// this struct intentionally does not store context.Context.
 type ComputeContext struct {
-	Ctx context.Context
-	ID  int
+	ID int
 }
 
 // NewComputeContext builds a compute context for a record.
-func NewComputeContext(ctx context.Context, id int) ComputeContext {
-	return ComputeContext{Ctx: ctx, ID: id}
+func NewComputeContext(id int) ComputeContext {
+	return ComputeContext{ID: id}
 }
