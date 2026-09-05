@@ -99,7 +99,9 @@ func upsertMenuRow(ctx context.Context, moduleName, xmlID string, menuValues map
 		}
 		rowID = id
 	}
-	_ = linkXMLRecord(ctx, moduleName, xmlID, "sys.menu", rowID)
+	if err := linkXMLRecord(ctx, moduleName, xmlID, "sys.menu", rowID); err != nil {
+		return 0, err
+	}
 	return rowID, nil
 }
 

@@ -80,7 +80,9 @@ func (addon *Addon) syncCSVModelAccess(ctx context.Context) error {
 			syncWarn(ctx, platformmsg.FmtGenericUpsertWarn, "sys.access", recordXmlId, err)
 			continue
 		}
-		_ = linkXMLRecord(ctx, moduleName, recordXmlId, "sys.access", id)
+		if err := linkXMLRecord(ctx, moduleName, recordXmlId, "sys.access", id); err != nil {
+			continue
+		}
 	}
 	return nil
 }

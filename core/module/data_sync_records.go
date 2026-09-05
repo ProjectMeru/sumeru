@@ -119,7 +119,9 @@ func syncRegistryRecordByModel(ctx context.Context, moduleName string, xmlRecord
 					syncWarn(ctx, platformmsg.FmtGenericUpsertWarn, xmlRecord.Model, xmlRecord.ID, err)
 					return
 				}
-				_ = linkXMLRecord(ctx, moduleName, xmlRecord.ID, xmlRecord.Model, int(eid))
+				if err := linkXMLRecord(ctx, moduleName, xmlRecord.ID, xmlRecord.Model, int(eid)); err != nil {
+					return
+				}
 				return
 			}
 		}
@@ -157,7 +159,9 @@ func syncRegistryRecordByModel(ctx context.Context, moduleName string, xmlRecord
 			}
 		}
 	}
-	_ = linkXMLRecord(ctx, moduleName, xmlRecord.ID, xmlRecord.Model, id)
+	if err := linkXMLRecord(ctx, moduleName, xmlRecord.ID, xmlRecord.Model, id); err != nil {
+		return
+	}
 }
 
 // ConvertRecordScalar coerces XML/form string values into types used for registry upserts.

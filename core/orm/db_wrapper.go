@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"strings"
+
+	"sumeru/core/applog"
 )
 
 func quoteIdent(s string) string {
@@ -92,27 +94,47 @@ func (w *sqlDBWrapper) Ping() error {
 }
 
 // TableExists checks if a table exists in the current database.
+// On query failure it logs and returns false only after distinguishing Scan errors
+// via tableExistsErr; prefer IsInitialized for bootstrap gates.
 func (w *sqlDBWrapper) TableExists(tableName string) bool {
+	exists, err := w.tableExistsErr(tableName)
+	if err != nil {
+		applog.WarnMsg(context.Background(), "orm", "table_exists", "information_schema lookup failed", err, map[string]interface{}{"table": tableName})
+		return false
+	}
+	return exists
+}
+
+func (w *sqlDBWrapper) tableExistsErr(tableName string) (bool, error) {
 	var exists bool
 	query := `SELECT EXISTS (
 		SELECT FROM information_schema.tables 
 		WHERE  table_schema = 'public'
 		AND    table_name   = $1
 	)`
-	_ = w.db.QueryRow(query, tableName).Scan(&exists)
-	return exists
+	err := w.db.QueryRow(query, tableName).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
 }
 
 // IsInitialized checks if the core Sumeru tables are present.
+// DB errors are not treated as "uninitialized" (avoids accidental setup re-entry).
 func IsInitialized() bool {
 	if DB == nil {
 		return false
 	}
-	// Check if sys_module exists as a proxy for initialization.
-	if wrapper, ok := DB.(*sqlDBWrapper); ok {
-		return wrapper.TableExists("sys_module")
+	wrapper, ok := DB.(*sqlDBWrapper)
+	if !ok {
+		return false
 	}
-	return false
+	exists, err := wrapper.tableExistsErr("sys_module")
+	if err != nil {
+		applog.WarnMsg(context.Background(), "orm", "is_initialized", "sys_module existence check failed; assuming initialized", err, nil)
+		return true
+	}
+	return exists
 }
 
 // sqlTxWrapper implements TxWrapper using a standard *sql.Tx.
