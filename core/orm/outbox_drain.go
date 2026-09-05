@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"sumeru/core/applog"
+	"sumeru/core/errcode"
 	"sumeru/core/event"
 	"sumeru/core/queue"
 )
@@ -30,6 +31,12 @@ func DrainOutboxOnce(ctx context.Context) int {
 		`SELECT id, name, COALESCE(payload_json,''), COALESCE(actor,0) FROM `+tbl+
 			` WHERE published_at IS NULL ORDER BY id LIMIT 100`)
 	if err != nil {
+		applog.WarnCode(bypass, errcode.InternalError, "outbox drain query failed", applog.Event{
+			Component: "orm",
+			Operation: "outbox_drain",
+			Status:    "partial",
+			Err:       err,
+		})
 		return 0
 	}
 	defer rows.Close()
@@ -41,18 +48,31 @@ func DrainOutboxOnce(ctx context.Context) int {
 		var name, payloadJSON string
 		var actor int
 		if err := rows.Scan(&id, &name, &payloadJSON, &actor); err != nil {
+			applog.WarnCode(bypass, errcode.InternalError, "outbox drain scan failed", applog.Event{
+				Component: "orm",
+				Operation: "outbox_drain",
+				Status:    "partial",
+				Err:       err,
+			})
 			continue
 		}
 		payload := map[string]interface{}{}
 		if payloadJSON != "" {
-			_ = json.Unmarshal([]byte(payloadJSON), &payload)
+			if err := json.Unmarshal([]byte(payloadJSON), &payload); err != nil {
+				applog.WarnCode(bypass, errcode.InternalError, "outbox payload unmarshal failed", applog.Event{
+					Component: "orm",
+					Operation: "outbox_drain",
+					Status:    "partial",
+					Context:   map[string]interface{}{"outbox_id": id, "event": name},
+					Err:       err,
+				})
+			}
 		}
 		if errs := event.Publish(bypass, event.Event{Name: name, Actor: actor, Payload: payload}); len(errs) > 0 {
-			applog.Warn(bypass, applog.Event{
-				Message:   "outbox publish failed",
+			applog.WarnCode(bypass, errcode.InternalError, "outbox publish failed", applog.Event{
 				Component: "orm",
 				Operation: "outbox_drain",
-				Status:    "failed",
+				Status:    "failure",
 				Context:   map[string]interface{}{"outbox_id": id, "event": name},
 				Err:       errs[0],
 			})
@@ -63,6 +83,13 @@ func DrainOutboxOnce(ctx context.Context) int {
 		})
 		if _, err := DB.ExecContext(bypass,
 			`UPDATE `+tbl+` SET published_at = $1 WHERE id = $2`, now, id); err != nil {
+			applog.WarnCode(bypass, errcode.InternalError, "outbox mark published failed", applog.Event{
+				Component: "orm",
+				Operation: "outbox_drain",
+				Status:    "partial",
+				Context:   map[string]interface{}{"outbox_id": id, "event": name},
+				Err:       err,
+			})
 			continue
 		}
 		published++

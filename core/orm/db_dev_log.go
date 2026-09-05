@@ -36,14 +36,40 @@ func logSQL(ctx context.Context, in sqlLogEntry) {
 	if len(q) > 500 {
 		q = q[:500] + "…"
 	}
-	fields := []interface{}{"op", in.Op, "sql", q, "ms", in.Dur.Milliseconds()}
+	ctxMap := map[string]interface{}{
+		"op":  in.Op,
+		"sql": q,
+		"ms":  in.Dur.Milliseconds(),
+	}
 	if len(in.Args) > 0 {
-		fields = append(fields, "args", in.Args)
+		ctxMap["args"] = scrubSQLArgs(in.Query, in.Args)
 	}
+	status := "success"
 	if in.Err != nil {
-		fields = append(fields, "err", in.Err.Error())
+		status = "failure"
 	}
-	applog.L(ctx).Debug("dev_sql", fields...)
+	applog.Debug(ctx, applog.Event{
+		Message:   "SQL",
+		Component: "orm",
+		Operation: "sql",
+		Status:    status,
+		Context:   ctxMap,
+		Err:       in.Err,
+	})
+}
+
+func scrubSQLArgs(query string, args []interface{}) interface{} {
+	if len(args) == 0 {
+		return nil
+	}
+	if applog.TextContainsSecretKeyword(query) {
+		return applog.RedactedPlaceholder
+	}
+	out := make([]interface{}, len(args))
+	for i, a := range args {
+		out[i] = applog.ScrubValue("", a)
+	}
+	return out
 }
 
 func (w *loggingDBWrapper) Exec(query string, args ...interface{}) (sql.Result, error) {
@@ -101,7 +127,7 @@ func (w *loggingDBWrapper) BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx
 	if err != nil {
 		return nil, err
 	}
-	return &loggingTxWrapper{inner: tx, ctx: ctx}, nil
+	return &loggingTxWrapper{inner: tx}, nil
 }
 
 func (w *loggingDBWrapper) Close() error { return w.inner.Close() }
@@ -109,20 +135,12 @@ func (w *loggingDBWrapper) Ping() error  { return w.inner.Ping() }
 
 type loggingTxWrapper struct {
 	inner TxWrapper
-	ctx   context.Context
-}
-
-func (w *loggingTxWrapper) txCtx() context.Context {
-	if w.ctx != nil {
-		return w.ctx
-	}
-	return context.Background()
 }
 
 func (w *loggingTxWrapper) Exec(query string, args ...interface{}) (sql.Result, error) {
 	start := time.Now()
 	res, err := w.inner.Exec(query, args...)
-	logSQL(w.txCtx(), sqlLogEntry{Op: "tx_exec", Query: query, Args: args, Err: err, Dur: time.Since(start)})
+	logSQL(context.Background(), sqlLogEntry{Op: "tx_exec", Query: query, Args: args, Err: err, Dur: time.Since(start)})
 	return res, err
 }
 
@@ -136,7 +154,7 @@ func (w *loggingTxWrapper) ExecContext(ctx context.Context, query string, args .
 func (w *loggingTxWrapper) Query(query string, args ...interface{}) (*sql.Rows, error) {
 	start := time.Now()
 	rows, err := w.inner.Query(query, args...)
-	logSQL(w.txCtx(), sqlLogEntry{Op: "tx_query", Query: query, Args: args, Err: err, Dur: time.Since(start)})
+	logSQL(context.Background(), sqlLogEntry{Op: "tx_query", Query: query, Args: args, Err: err, Dur: time.Since(start)})
 	return rows, err
 }
 
@@ -150,7 +168,7 @@ func (w *loggingTxWrapper) QueryContext(ctx context.Context, query string, args 
 func (w *loggingTxWrapper) QueryRow(query string, args ...interface{}) *sql.Row {
 	start := time.Now()
 	row := w.inner.QueryRow(query, args...)
-	logSQL(w.txCtx(), sqlLogEntry{Op: "tx_query_row", Query: query, Args: args, Dur: time.Since(start)})
+	logSQL(context.Background(), sqlLogEntry{Op: "tx_query_row", Query: query, Args: args, Dur: time.Since(start)})
 	return row
 }
 

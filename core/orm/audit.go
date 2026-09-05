@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"sumeru/core/applog"
+	"sumeru/core/errcode"
 )
 
 func skipAuditModel(model string) bool {
@@ -25,8 +26,7 @@ func auditValues(ctx context.Context, action, model string, resID int64, before,
 		if b, err := json.Marshal(scrubAuditMap(before)); err == nil {
 			beforeJSON = string(b)
 		} else {
-			applog.Warn(ctx, applog.Event{
-				Message:   "Audit before_json marshal failed",
+			applog.WarnCode(ctx, errcode.InternalError, "Audit before_json marshal failed", applog.Event{
 				Component: "orm",
 				Operation: "audit",
 				Status:    "partial",
@@ -39,8 +39,7 @@ func auditValues(ctx context.Context, action, model string, resID int64, before,
 		if b, err := json.Marshal(scrubAuditMap(after)); err == nil {
 			afterJSON = string(b)
 		} else {
-			applog.Warn(ctx, applog.Event{
-				Message:   "Audit after_json marshal failed",
+			applog.WarnCode(ctx, errcode.InternalError, "Audit after_json marshal failed", applog.Event{
 				Component: "orm",
 				Operation: "audit",
 				Status:    "partial",
@@ -79,16 +78,7 @@ func AppendAuditTx(ctx context.Context, tx TxWrapper, action, model string, resI
 }
 
 func scrubAuditMap(m map[string]interface{}) map[string]interface{} {
-	out := make(map[string]interface{}, len(m))
-	for k, v := range m {
-		lk := strings.ToLower(k)
-		if lk == "password" || lk == "key_hash" || strings.Contains(lk, "password") {
-			out[k] = "***"
-			continue
-		}
-		out[k] = v
-	}
-	return out
+	return applog.ScrubMap(m)
 }
 
 // LogAccessDeny records a permission denial in sys.audit.

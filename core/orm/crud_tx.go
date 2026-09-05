@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"sumeru/core/applog"
+	"sumeru/core/errcode"
 )
 
 func insertPreparedOnTx(ctx context.Context, tx TxWrapper, model Model, prepared map[string]interface{}) (int, error) {
@@ -105,8 +106,7 @@ func insertSideEffectRow(ctx context.Context, tx TxWrapper, registryKey string, 
 	}
 	_, err := Create(bypass, inst, vals)
 	if err != nil {
-		applog.Warn(ctx, applog.Event{
-			Message:   "Side effect insert failed",
+		applog.WarnCode(ctx, errcode.InternalError, "Side effect insert failed", applog.Event{
 			Component: "orm",
 			Operation: "insert_side_effect",
 			Status:    "partial",
