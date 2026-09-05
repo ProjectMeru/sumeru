@@ -122,16 +122,7 @@ func respondActionNotFound(w http.ResponseWriter, actionID int) {
 }
 
 func respondWorkspaceLoadError(w http.ResponseWriter, ctx context.Context, err error) {
-	code := errcode.InternalError
-	msg := err.Error()
-	switch {
-	case strings.Contains(msg, "access denied"):
-		code = errcode.AccessDenied
-	case strings.Contains(msg, workspaceErrInvalidID):
-		code = errcode.ValidationError
-	case strings.Contains(msg, workspaceErrNoView), strings.Contains(msg, workspaceErrNotFound):
-		code = errcode.NotFound
-	}
+	code, status := classifyWorkspaceLoadError(err)
 	WebLogEvent(ctx, WebLogInput{
 		Route:     workspaceRoute,
 		Message:   "load view data failed",
@@ -140,21 +131,33 @@ func respondWorkspaceLoadError(w http.ResponseWriter, ctx context.Context, err e
 		Status:    logStatusFailure,
 		Err:       err,
 	})
-	http.Error(w, err.Error(), httpStatusFromWorkspaceError(err))
+	http.Error(w, err.Error(), status)
+}
+
+func classifyWorkspaceLoadError(err error) (code string, status int) {
+	code = orm.ClassifyLogCode(err)
+	msg := err.Error()
+	switch {
+	case strings.Contains(msg, workspaceErrInvalidID):
+		return errcode.ValidationError, http.StatusBadRequest
+	case strings.Contains(msg, workspaceErrNoView), strings.Contains(msg, workspaceErrNotFound):
+		return errcode.NotFound, http.StatusNotFound
+	}
+	switch code {
+	case errcode.AccessDenied:
+		return code, http.StatusForbidden
+	case errcode.RecordNotFound, errcode.NotFound:
+		return code, http.StatusNotFound
+	case errcode.ValidationError:
+		return code, http.StatusBadRequest
+	default:
+		return code, http.StatusInternalServerError
+	}
 }
 
 func httpStatusFromWorkspaceError(err error) int {
-	message := err.Error()
-	switch {
-	case strings.Contains(message, workspaceErrInvalidID):
-		return http.StatusBadRequest
-	case strings.Contains(message, workspaceErrNoView), strings.Contains(message, workspaceErrNotFound):
-		return http.StatusNotFound
-	case strings.Contains(message, "access denied"):
-		return http.StatusForbidden
-	default:
-		return http.StatusInternalServerError
-	}
+	_, status := classifyWorkspaceLoadError(err)
+	return status
 }
 
 func logWorkspaceViewOpened(ctx context.Context, route string, req workspaceRequest, actionID int, resolved *resolvedWorkspaceView) {

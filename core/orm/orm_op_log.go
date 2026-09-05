@@ -3,11 +3,9 @@ package orm
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"sumeru/core/applog"
-	"sumeru/core/errcode"
 	"sumeru/core/metrics"
 )
 
@@ -32,7 +30,7 @@ func logORMOperation(ctx context.Context, start time.Time, operation, modelName 
 	if err != nil {
 		ev.Message = humanORMMessage(operation, modelName, false)
 		ev.Status = "failure"
-		ev.Code = classifyORMError(err)
+		ev.Code = ClassifyLogCode(err)
 		applog.ErrorCode(ctx, ev.Code, ev.Message, ev)
 		return
 	}
@@ -43,23 +41,6 @@ func logORMOperation(ctx context.Context, start time.Time, operation, modelName 
 		return
 	}
 	applog.Info(ctx, ev)
-}
-
-func classifyORMError(err error) string {
-	if err == nil {
-		return errcode.InternalError
-	}
-	if IsAccessDenied(err) || IsRecordRuleFailed(err) {
-		return errcode.AccessDenied
-	}
-	msg := strings.ToLower(err.Error())
-	if strings.Contains(msg, "record(s) not found") || strings.Contains(msg, "not found") {
-		return errcode.RecordNotFound
-	}
-	if strings.Contains(msg, "validation") || strings.Contains(msg, "invalid") {
-		return errcode.ValidationError
-	}
-	return errcode.InternalError
 }
 
 func humanORMMessage(operation, modelName string, success bool) string {
@@ -95,15 +76,4 @@ func humanORMMessage(operation, modelName string, success bool) string {
 		}
 		return fmt.Sprintf("%s on %s failed", operation, modelName)
 	}
-}
-
-// logORMOperationKV adapts legacy key-value call sites during migration.
-func logORMOperationKV(ctx context.Context, start time.Time, operation, modelName string, err error, keysAndValues ...interface{}) {
-	ctxMap := map[string]interface{}{}
-	for i := 0; i+1 < len(keysAndValues); i += 2 {
-		if k, ok := keysAndValues[i].(string); ok {
-			ctxMap[k] = keysAndValues[i+1]
-		}
-	}
-	logORMOperation(ctx, start, operation, modelName, err, ctxMap)
 }

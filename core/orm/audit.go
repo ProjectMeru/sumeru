@@ -23,30 +23,10 @@ func auditValues(ctx context.Context, action, model string, resID int64, before,
 	uid := SecurityUID(ctx)
 	var beforeJSON, afterJSON string
 	if before != nil {
-		if b, err := json.Marshal(scrubAuditMap(before)); err == nil {
-			beforeJSON = string(b)
-		} else {
-			applog.WarnCode(ctx, errcode.InternalError, "Audit before_json marshal failed", applog.Event{
-				Component: "orm",
-				Operation: "audit",
-				Status:    "partial",
-				Context:   map[string]interface{}{"resource": model, "resource_id": resID},
-				Err:       err,
-			})
-		}
+		beforeJSON = marshalAuditJSON(ctx, "before_json", model, resID, before)
 	}
 	if after != nil {
-		if b, err := json.Marshal(scrubAuditMap(after)); err == nil {
-			afterJSON = string(b)
-		} else {
-			applog.WarnCode(ctx, errcode.InternalError, "Audit after_json marshal failed", applog.Event{
-				Component: "orm",
-				Operation: "audit",
-				Status:    "partial",
-				Context:   map[string]interface{}{"resource": model, "resource_id": resID},
-				Err:       err,
-			})
-		}
+		afterJSON = marshalAuditJSON(ctx, "after_json", model, resID, after)
 	}
 	vals := map[string]interface{}{
 		"action":      action,
@@ -61,6 +41,21 @@ func auditValues(ctx context.Context, action, model string, resID int64, before,
 		vals["user_id"] = uid
 	}
 	return vals
+}
+
+func marshalAuditJSON(ctx context.Context, field, model string, resID int64, values map[string]interface{}) string {
+	b, err := json.Marshal(scrubAuditMap(values))
+	if err != nil {
+		applog.WarnCode(ctx, errcode.InternalError, "Audit "+field+" marshal failed", applog.Event{
+			Component: "orm",
+			Operation: "audit",
+			Status:    "partial",
+			Context:   map[string]interface{}{"resource": model, "resource_id": resID},
+			Err:       err,
+		})
+		return ""
+	}
+	return string(b)
 }
 
 // AppendAudit writes an immutable audit row (best-effort; never fails the caller).

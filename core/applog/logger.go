@@ -58,17 +58,16 @@ func L(ctx context.Context) *slog.Logger {
 
 // Fatal logs at error level and exits the process.
 func Fatal(ctx context.Context, msg string, keysAndValues ...interface{}) {
-	attrs := keysAndValues
 	ev := Event{
 		Message:   msg,
 		Code:      errcode.InternalError,
 		Component: "server",
 		Status:    "failure",
 	}
-	if len(attrs) > 0 {
-		ev.Context = kvPairsToMap(attrs)
+	if len(keysAndValues) > 0 {
+		ev.Context = kvPairsToMap(keysAndValues)
 	}
-	ErrorCode(ctx, errcode.InternalError, msg, ev)
+	Error(ctx, ev)
 	os.Exit(1)
 }
 

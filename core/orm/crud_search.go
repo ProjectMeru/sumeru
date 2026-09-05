@@ -92,7 +92,7 @@ func Search(ctx context.Context, modelName string, domain [][]interface{}) (resu
 		if results != nil {
 			n = len(results)
 		}
-		logORMOperationKV(ctx, start, "search", modelName, err, "rows", n)
+		logORMOperation(ctx, start, "search", modelName, err, map[string]interface{}{"rows": n})
 	}()
 	results, err = execSearchQuery(ctx, modelName, domain, nil)
 	if err != nil {
@@ -124,7 +124,7 @@ func SearchPage(ctx context.Context, modelName string, domain [][]interface{}, l
 		if results != nil {
 			n = len(results)
 		}
-		logORMOperationKV(ctx, start, "search_page", modelName, err, "rows", n, "limit", limit, "offset", offset)
+		logORMOperation(ctx, start, "search_page", modelName, err, map[string]interface{}{"rows": n, "limit": limit, "offset": offset})
 	}()
 	if limit <= 0 || limit > maxSearchLimit {
 		limit = maxSearchLimit
@@ -150,7 +150,7 @@ func SearchPage(ctx context.Context, modelName string, domain [][]interface{}, l
 func SearchCount(ctx context.Context, modelName string, domain [][]interface{}) (n int, err error) {
 	start := time.Now()
 	defer func() {
-		logORMOperationKV(ctx, start, "search_count", modelName, err, "count", n)
+		logORMOperation(ctx, start, "search_count", modelName, err, map[string]interface{}{"count": n})
 	}()
 	ctx = ContextWithReadReplica(ctx, true)
 	_, whereClause, args, _, err := prepareSearchRead(ctx, modelName, domain)

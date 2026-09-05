@@ -158,8 +158,8 @@ type CronRunInput struct {
 }
 
 func executeCron(ctx context.Context, in CronRunInput) {
-	applog.Info(ctx, applog.Event{
-		Message:   "cron job started",
+	applog.Debug(ctx, applog.Event{
+		Message:   "cron job starting",
 		Component: "scheduler",
 		Operation: "cron_run",
 		Status:    "success",

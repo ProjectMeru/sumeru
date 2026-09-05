@@ -21,7 +21,9 @@ func uiViewLookupLogErr(err error) error {
 func FindUIDefaultView(ctx context.Context, modelName, viewType string) (result map[string]interface{}, err error) {
 	start := time.Now()
 	defer func() {
-		logORMOperationKV(ctx, start, "find_ui_view", "sys.view", uiViewLookupLogErr(err), "target_model", modelName, "view_type", viewType, "found", result != nil)
+		logORMOperation(ctx, start, "find_ui_view", "sys.view", uiViewLookupLogErr(err), map[string]interface{}{
+			"target_model": modelName, "view_type": viewType, "found": result != nil,
+		})
 	}()
 	if _, ok := Registry["sys.view"]; !ok {
 		return nil, fmt.Errorf("model sys.view not registered")
@@ -78,7 +80,9 @@ func findUIDefaultViewByType(ctx context.Context, uid int, modelName, vt string)
 func FindUIViewByName(ctx context.Context, modelName, viewType, viewName string) (result map[string]interface{}, err error) {
 	start := time.Now()
 	defer func() {
-		logORMOperationKV(ctx, start, "find_ui_view_by_name", "sys.view", uiViewLookupLogErr(err), "target_model", modelName, "view_type", viewType, "view_name", viewName, "found", result != nil)
+		logORMOperation(ctx, start, "find_ui_view_by_name", "sys.view", uiViewLookupLogErr(err), map[string]interface{}{
+			"target_model": modelName, "view_type": viewType, "view_name": viewName, "found": result != nil,
+		})
 	}()
 	viewName = strings.TrimSpace(viewName)
 	if viewName == "" {
