@@ -10,6 +10,7 @@ import (
 // Top-level fields are universal; module-specific data belongs in Context.
 type Event struct {
 	Message   string
+	Code      string // stable machine id (SCREAMING_SNAKE); emitted as error_code
 	Component string
 	Module    string
 	Operation string
@@ -51,7 +52,12 @@ func mergeEventContext(ctx context.Context, ev Event) map[string]interface{} {
 	if ev.Err != nil {
 		out["error"] = ev.Err.Error()
 	}
-	return out
+	if ev.Code != "" {
+		if _, ok := out["error_code"]; !ok {
+			out["error_code"] = ev.Code
+		}
+	}
+	return ScrubMap(out)
 }
 
 func emit(ctx context.Context, level slog.Level, ev Event) {
@@ -66,6 +72,9 @@ func emit(ctx context.Context, level slog.Level, ev Event) {
 		slog.String("component", ev.Component),
 		slog.String("operation", ev.Operation),
 		slog.String("status", ev.Status),
+	}
+	if ev.Code != "" {
+		attrs = append(attrs, slog.String("error_code", ev.Code))
 	}
 	if ev.Module != "" {
 		attrs = append(attrs, slog.String("module", ev.Module))

@@ -6,6 +6,8 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	"sumeru/core/errcode"
 )
 
 var (
@@ -57,11 +59,16 @@ func L(ctx context.Context) *slog.Logger {
 // Fatal logs at error level and exits the process.
 func Fatal(ctx context.Context, msg string, keysAndValues ...interface{}) {
 	attrs := keysAndValues
-	if len(attrs) == 0 {
-		Error(ctx, Event{Message: msg, Component: "server", Status: "failure"})
-	} else {
-		Error(ctx, Event{Message: msg, Component: "server", Status: "failure", Context: kvPairsToMap(attrs)})
+	ev := Event{
+		Message:   msg,
+		Code:      errcode.InternalError,
+		Component: "server",
+		Status:    "failure",
 	}
+	if len(attrs) > 0 {
+		ev.Context = kvPairsToMap(attrs)
+	}
+	ErrorCode(ctx, errcode.InternalError, msg, ev)
 	os.Exit(1)
 }
 

@@ -35,3 +35,27 @@ func DebugMsg(ctx context.Context, component, operation, message string, ctxFiel
 		Context:   ctxFields,
 	})
 }
+
+// ErrorCode logs a failure with a stable machine code and human message.
+func ErrorCode(ctx context.Context, code, message string, ev Event) {
+	ev.Code = code
+	if message != "" {
+		ev.Message = message
+	}
+	if ev.Status == "" {
+		ev.Status = "failure"
+	}
+	Error(ctx, ev)
+}
+
+// WarnCode logs a warning with a stable machine code and human message.
+func WarnCode(ctx context.Context, code, message string, ev Event) {
+	ev.Code = code
+	if message != "" {
+		ev.Message = message
+	}
+	if ev.Status == "" {
+		ev.Status = "partial"
+	}
+	Warn(ctx, ev)
+}
