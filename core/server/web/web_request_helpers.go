@@ -12,17 +12,16 @@ import (
 	"sumeru/core/orm"
 )
 
-// WebLogInput holds structured web log event fields.
 type WebLogInput struct {
 	Route         string
 	Message       string
+	Code          string
 	Operation     string
 	Status        string
 	Err           error
 	ContextFields map[string]interface{}
 }
 
-// WebLogEvent logs a structured web event using the applog contract.
 func WebLogEvent(ctx context.Context, in WebLogInput) {
 	contextFields := in.ContextFields
 	if contextFields == nil {
@@ -32,23 +31,28 @@ func WebLogEvent(ctx context.Context, in WebLogInput) {
 
 	event := applog.Event{
 		Message:   in.Message,
+		Code:      in.Code,
 		Component: webLogComponent,
 		Operation: in.Operation,
 		Status:    in.Status,
 		Context:   contextFields,
 		Err:       in.Err,
 	}
-	emitWebLogEvent(ctx, event)
-}
-
-func emitWebLogEvent(ctx context.Context, event applog.Event) {
 	switch {
 	case event.Err != nil || event.Status == logStatusFailure:
 		if event.Status == "" {
 			event.Status = logStatusFailure
 		}
+		if event.Code != "" {
+			applog.ErrorCode(ctx, event.Code, event.Message, event)
+			return
+		}
 		applog.Error(ctx, event)
 	case event.Status == logStatusPartial:
+		if event.Code != "" {
+			applog.WarnCode(ctx, event.Code, event.Message, event)
+			return
+		}
 		applog.Warn(ctx, event)
 	default:
 		applog.Info(ctx, event)
@@ -65,7 +69,7 @@ func WebLogf(ctx context.Context, route, format string, args ...interface{}) {
 	})
 }
 
-// WebLogNavigation emits an INFO-level audit event for successful navigation (menu, view, module, company).
+// WebLogNavigation emits INFO for successful UI navigation.
 func WebLogNavigation(ctx context.Context, route, operation, message string, fields map[string]interface{}) {
 	WebLogEvent(ctx, WebLogInput{
 		Route: route, Message: message, Operation: operation, Status: logStatusSuccess, ContextFields: fields,

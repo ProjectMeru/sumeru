@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"sumeru/core/applog"
 	"sumeru/core/orm"
 	"sumeru/core/server/cliboot"
 )
@@ -56,11 +57,16 @@ func main() {
 			}
 			limit := 10
 			if len(parts) >= 3 {
-				limit, _ = strconv.Atoi(parts[2])
+				parsed, err := strconv.Atoi(parts[2])
+				if err != nil || parsed <= 0 {
+					fmt.Fprintln(os.Stderr, "error: invalid limit")
+					continue
+				}
+				limit = parsed
 			}
 			rows, err := orm.SearchLimit(ctx, parts[1], nil, limit)
 			if err != nil {
-				fmt.Println("error:", err)
+				fmt.Fprintln(os.Stderr, "error:", err)
 				continue
 			}
 			printJSON(rows)
@@ -69,10 +75,14 @@ func main() {
 				fmt.Println("usage: read MODEL ID")
 				continue
 			}
-			id, _ := strconv.Atoi(parts[2])
+			id, err := strconv.Atoi(parts[2])
+			if err != nil || id <= 0 {
+				fmt.Fprintln(os.Stderr, "error: invalid id")
+				continue
+			}
 			row, err := orm.SearchOne(ctx, parts[1], map[string]interface{}{"id": id})
 			if err != nil {
-				fmt.Println("error:", err)
+				fmt.Fprintln(os.Stderr, "error:", err)
 				continue
 			}
 			printJSON(row)
@@ -83,17 +93,17 @@ func main() {
 			}
 			var vals map[string]interface{}
 			if err := json.Unmarshal([]byte(strings.Join(parts[2:], " ")), &vals); err != nil {
-				fmt.Println("error:", err)
+				fmt.Fprintln(os.Stderr, "error:", err)
 				continue
 			}
 			inst, ok := orm.Registry[parts[1]]
 			if !ok || inst == nil {
-				fmt.Println("error: unknown model")
+				fmt.Fprintln(os.Stderr, "error: unknown model")
 				continue
 			}
 			id, err := orm.Create(ctx, inst, vals)
 			if err != nil {
-				fmt.Println("error:", err)
+				fmt.Fprintln(os.Stderr, "error:", err)
 				continue
 			}
 			fmt.Println("id:", id)
@@ -102,14 +112,18 @@ func main() {
 				fmt.Println(`usage: write MODEL ID {"field":"value"}`)
 				continue
 			}
-			id, _ := strconv.Atoi(parts[2])
+			id, err := strconv.Atoi(parts[2])
+			if err != nil || id <= 0 {
+				fmt.Fprintln(os.Stderr, "error: invalid id")
+				continue
+			}
 			var vals map[string]interface{}
 			if err := json.Unmarshal([]byte(strings.Join(parts[3:], " ")), &vals); err != nil {
-				fmt.Println("error:", err)
+				fmt.Fprintln(os.Stderr, "error:", err)
 				continue
 			}
 			if err := orm.UpdateRecordByID(ctx, parts[1], id, vals); err != nil {
-				fmt.Println("error:", err)
+				fmt.Fprintln(os.Stderr, "error:", err)
 				continue
 			}
 			fmt.Println("ok")
@@ -121,19 +135,22 @@ func main() {
 			raw := strings.Join(parts[2:], " ")
 			dom, err := orm.ParseDomainJSON(raw)
 			if err != nil {
-				fmt.Println("error:", err)
+				fmt.Fprintln(os.Stderr, "error:", err)
 				continue
 			}
 			where, args, err := orm.BuildWhereWithRecordRules(ctx, orm.SecurityUID(ctx), parts[1], "read", dom)
 			if err != nil {
-				fmt.Println("error:", err)
+				fmt.Fprintln(os.Stderr, "error:", err)
 				continue
 			}
 			fmt.Println("WHERE:", where)
-			fmt.Println("ARGS:", args)
+			printJSON(map[string]interface{}{"args": args})
 		default:
 			fmt.Println("unknown command; type help")
 		}
+	}
+	if err := sc.Err(); err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
 	}
 }
 
@@ -173,6 +190,10 @@ func splitFields(s string) []string {
 }
 
 func printJSON(v interface{}) {
-	b, _ := json.MarshalIndent(v, "", "  ")
+	b, err := json.MarshalIndent(applog.ScrubValue("", v), "", "  ")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		return
+	}
 	fmt.Println(string(b))
 }

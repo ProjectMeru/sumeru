@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"sumeru/core/applog"
+	"sumeru/core/errcode"
 	"sumeru/core/event"
 )
 
@@ -27,10 +28,12 @@ func emitSideEffectsOnTx(ctx context.Context, tx TxWrapper, modelName string, ui
 	}
 	for _, row := range rows {
 		AppendAuditTx(ctx, tx, row.Action, modelName, row.ResID, row.Before, row.After, row.Detail)
-		EnqueueOutboxTx(ctx, tx, row.EventName, uid, map[string]interface{}{
+		if err := EnqueueOutboxTx(ctx, tx, row.EventName, uid, map[string]interface{}{
 			"model": modelName,
 			"id":    int(row.ResID),
-		})
+		}); err != nil {
+			logSideEffectWarn(ctx, "outbox_enqueue", modelName, err, "event", row.EventName)
+		}
 	}
 }
 
@@ -56,8 +59,7 @@ func logSideEffectWarn(ctx context.Context, operation, modelName string, err err
 			ctxMap[k] = extra[i+1]
 		}
 	}
-	applog.Warn(ctx, applog.Event{
-		Message:   operation + " side effect failed for " + modelName,
+	applog.WarnCode(ctx, errcode.InternalError, operation+" side effect failed for "+modelName, applog.Event{
 		Component: "orm",
 		Module:    DeclaringModule(modelName),
 		Operation: operation,

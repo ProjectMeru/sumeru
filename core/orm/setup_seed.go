@@ -10,13 +10,19 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func seedXmlID(ctx context.Context, module, xmlName, model string, coreID int) {
-	_, _ = Upsert(ctx, RegistryModel("sys.model.data"), map[string]interface{}{
+func seedXmlID(ctx context.Context, module, xmlName, model string, coreID int) error {
+	_, err := Upsert(ctx, RegistryModel("sys.model.data"), map[string]interface{}{
 		"module":  module,
 		"name":    xmlName,
 		"model":   model,
 		"core_id": coreID,
 	}, "name")
+	if err != nil {
+		applog.WarnMsg(ctx, "orm", "seed_xml", "sys.model.data upsert failed", err, map[string]interface{}{
+			"module": module, "name": xmlName, "model": model,
+		})
+	}
+	return err
 }
 
 func ensureDefaultKernelGroups(ctx context.Context) (adminGID int, userGID int, err error) {
@@ -43,7 +49,9 @@ func ensureDefaultKernelGroups(ctx context.Context) (adminGID int, userGID int, 
 	if err != nil {
 		return 0, 0, fmt.Errorf("bootstrap sys.module.category Administration: %w", err)
 	}
-	seedXmlID(ctx, "base", "module_category_administration", "sys.module.category", catAdminID)
+	if err := seedXmlID(ctx, "base", "module_category_administration", "sys.module.category", catAdminID); err != nil {
+		return 0, 0, err
+	}
 	catUserTypesID, err := Upsert(ctx, catModel, map[string]interface{}{
 		"name":     "User types",
 		"sequence": 2,
@@ -51,7 +59,9 @@ func ensureDefaultKernelGroups(ctx context.Context) (adminGID int, userGID int, 
 	if err != nil {
 		return 0, 0, fmt.Errorf("bootstrap sys.module.category User types: %w", err)
 	}
-	seedXmlID(ctx, "base", "module_category_user_types", "sys.module.category", catUserTypesID)
+	if err := seedXmlID(ctx, "base", "module_category_user_types", "sys.module.category", catUserTypesID); err != nil {
+		return 0, 0, err
+	}
 
 	adminGID, err = Upsert(ctx, groupModel, map[string]interface{}{
 		"name":        "Administration / Settings",
@@ -61,7 +71,9 @@ func ensureDefaultKernelGroups(ctx context.Context) (adminGID int, userGID int, 
 	if err != nil {
 		return 0, 0, fmt.Errorf("bootstrap core.group admin: %w", err)
 	}
-	seedXmlID(ctx, "base", "group_system", "core.group", adminGID)
+	if err := seedXmlID(ctx, "base", "group_system", "core.group", adminGID); err != nil {
+		return 0, 0, err
+	}
 
 	userGID, err = Upsert(ctx, groupModel, map[string]interface{}{
 		"name":        "User types / Internal User",
@@ -71,7 +83,9 @@ func ensureDefaultKernelGroups(ctx context.Context) (adminGID int, userGID int, 
 	if err != nil {
 		return 0, 0, fmt.Errorf("bootstrap core.group user: %w", err)
 	}
-	seedXmlID(ctx, "base", "group_user", "core.group", userGID)
+	if err := seedXmlID(ctx, "base", "group_user", "core.group", userGID); err != nil {
+		return 0, 0, err
+	}
 
 	portalGID, err := Upsert(ctx, groupModel, map[string]interface{}{
 		"name":        "User types / Portal",
@@ -81,7 +95,9 @@ func ensureDefaultKernelGroups(ctx context.Context) (adminGID int, userGID int, 
 	if err != nil {
 		return 0, 0, fmt.Errorf("bootstrap core.group portal: %w", err)
 	}
-	seedXmlID(ctx, "base", "group_portal", "core.group", portalGID)
+	if err := seedXmlID(ctx, "base", "group_portal", "core.group", portalGID); err != nil {
+		return 0, 0, err
+	}
 
 	publicGID, err := Upsert(ctx, groupModel, map[string]interface{}{
 		"name":        "User types / Public",
@@ -91,9 +107,13 @@ func ensureDefaultKernelGroups(ctx context.Context) (adminGID int, userGID int, 
 	if err != nil {
 		return 0, 0, fmt.Errorf("bootstrap core.group public: %w", err)
 	}
-	seedXmlID(ctx, "base", "group_public", "core.group", publicGID)
+	if err := seedXmlID(ctx, "base", "group_public", "core.group", publicGID); err != nil {
+		return 0, 0, err
+	}
 
-	_, _ = DB.ExecContext(ctx, `INSERT INTO `+MustQuotedTableName(tableGroupImplied)+` (group_id, implied_group_id) VALUES ($1, $2) ON CONFLICT (group_id, implied_group_id) DO NOTHING`, adminGID, userGID)
+	if _, err := DB.ExecContext(ctx, `INSERT INTO `+MustQuotedTableName(tableGroupImplied)+` (group_id, implied_group_id) VALUES ($1, $2) ON CONFLICT (group_id, implied_group_id) DO NOTHING`, adminGID, userGID); err != nil {
+		return 0, 0, fmt.Errorf("bootstrap group imply: %w", err)
+	}
 	return adminGID, userGID, nil
 }
 
@@ -138,7 +158,9 @@ func ensureBootstrapSecurity(ctx context.Context, first *SetupAdminParams) error
 	if err != nil {
 		return fmt.Errorf("bootstrap company: %w", err)
 	}
-	seedXmlID(ctx, "base", "main_company", "core.company", compID)
+	if err := seedXmlID(ctx, "base", "main_company", "core.company", compID); err != nil {
+		return err
+	}
 
 	login := strings.ToLower(first.Email)
 	adminUID, err := Upsert(ctx, userModel, map[string]interface{}{
@@ -164,7 +186,9 @@ func ensureBootstrapSecurity(ctx context.Context, first *SetupAdminParams) error
 		return fmt.Errorf("set administrator password: %w", err)
 	}
 
-	seedXmlID(ctx, "base", "user_admin", "core.user", adminUID)
+	if err := seedXmlID(ctx, "base", "user_admin", "core.user", adminUID); err != nil {
+		return err
+	}
 
 	if _, err := DB.ExecContext(ctx, `INSERT INTO `+MustQuotedTableName(tableGroupUserRel)+` (user_id, group_id) VALUES ($1, $2) ON CONFLICT (user_id, group_id) DO NOTHING`, adminUID, adminGID); err != nil {
 		return err
@@ -188,14 +212,16 @@ func ensurePlatformDefaults(ctx context.Context) {
 		return
 	}
 	inst := Registry["sys.sequence"]
-	_, _ = Create(ctx, inst, map[string]interface{}{
+	if _, err := Create(ctx, inst, map[string]interface{}{
 		"name":        "API Key",
 		"code":        "core.user.apikey",
 		"prefix":      "KEY/",
 		"padding":     4,
 		"number_next": 1,
 		"active":      true,
-	})
+	}); err != nil {
+		applog.WarnMsg(ctx, "orm", "bootstrap", "API key sequence create failed", err, nil)
+	}
 }
 
 func ensureBootstrapACLs(ctx context.Context, adminGID, userGID int) {

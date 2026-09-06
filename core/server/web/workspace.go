@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"sumeru/core/engine/render"
+	"sumeru/core/errcode"
 	"sumeru/core/orm"
 	"sumeru/core/server/config"
 )
@@ -85,7 +86,16 @@ func redirectIfMenuAccessDenied(w http.ResponseWriter, r *http.Request, menuQuer
 		return false
 	}
 
-	WebLogf(r.Context(), workspaceRoute, "menu_id=%s denied by access_groups", menuID)
+	WebLogEvent(r.Context(), WebLogInput{
+		Route:     workspaceRoute,
+		Message:   "menu access denied",
+		Code:      errcode.AccessDenied,
+		Operation: "menu_access",
+		Status:    logStatusFailure,
+		ContextFields: map[string]interface{}{
+			"menu_id": menuID,
+		},
+	})
 	http.Redirect(w, r, homeRoute, http.StatusFound)
 	return true
 }
@@ -112,22 +122,42 @@ func respondActionNotFound(w http.ResponseWriter, actionID int) {
 }
 
 func respondWorkspaceLoadError(w http.ResponseWriter, ctx context.Context, err error) {
-	WebLogf(ctx, workspaceRoute, "load view data: %v", err)
-	http.Error(w, err.Error(), httpStatusFromWorkspaceError(err))
+	code, status := classifyWorkspaceLoadError(err)
+	WebLogEvent(ctx, WebLogInput{
+		Route:     workspaceRoute,
+		Message:   "load view data failed",
+		Code:      code,
+		Operation: "load_view",
+		Status:    logStatusFailure,
+		Err:       err,
+	})
+	http.Error(w, err.Error(), status)
+}
+
+func classifyWorkspaceLoadError(err error) (code string, status int) {
+	code = orm.ClassifyLogCode(err)
+	msg := err.Error()
+	switch {
+	case strings.Contains(msg, workspaceErrInvalidID):
+		return errcode.ValidationError, http.StatusBadRequest
+	case strings.Contains(msg, workspaceErrNoView), strings.Contains(msg, workspaceErrNotFound):
+		return errcode.NotFound, http.StatusNotFound
+	}
+	switch code {
+	case errcode.AccessDenied:
+		return code, http.StatusForbidden
+	case errcode.RecordNotFound, errcode.NotFound:
+		return code, http.StatusNotFound
+	case errcode.ValidationError:
+		return code, http.StatusBadRequest
+	default:
+		return code, http.StatusInternalServerError
+	}
 }
 
 func httpStatusFromWorkspaceError(err error) int {
-	message := err.Error()
-	switch {
-	case strings.Contains(message, workspaceErrInvalidID):
-		return http.StatusBadRequest
-	case strings.Contains(message, workspaceErrNoView), strings.Contains(message, workspaceErrNotFound):
-		return http.StatusNotFound
-	case strings.Contains(message, "access denied"):
-		return http.StatusForbidden
-	default:
-		return http.StatusInternalServerError
-	}
+	_, status := classifyWorkspaceLoadError(err)
+	return status
 }
 
 func logWorkspaceViewOpened(ctx context.Context, route string, req workspaceRequest, actionID int, resolved *resolvedWorkspaceView) {

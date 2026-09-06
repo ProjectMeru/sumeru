@@ -118,11 +118,14 @@ func logRPCDispatch(ctx context.Context, requestBody []byte, response api.RPCRes
 		},
 	}
 	if !response.OK && response.Error != nil {
-		event.Message = "RPC call failed"
+		event.Message = response.Error.Message
+		if event.Message == "" {
+			event.Message = "RPC call failed"
+		}
 		event.Status = "failure"
-		event.Context["error_code"] = response.Error.Code
+		event.Code = response.Error.Code
 		event.Context["error"] = response.Error.Message
-		applog.Error(ctx, event)
+		applog.ErrorCode(ctx, event.Code, event.Message, event)
 		return
 	}
 	event.Message = "RPC call completed"

@@ -19,9 +19,9 @@ check-sql:
 check-logs:
 	@bash scripts/check_no_stdlog.sh
 
-# Match CI go-lint: go vet + golangci-lint v2 (see .golangci.yml).
+# Match CI: Go vet + golangci-lint v2 + SWC typecheck (see .golangci.yml).
 # Use go run so a stale v1 binary on PATH does not break the target.
-lint:
+lint: swc-check
 	go vet ./...
 	go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest run --timeout=10m
 
@@ -68,7 +68,7 @@ dev: run
 build: generate assets
 	go build -o sumeru ./cmd/sumeru
 
-check: swc-check lint test-modules-static
+check: lint test-modules-static
 	go test ./test/... -count=1
 
 test-modules-static:
@@ -133,7 +133,7 @@ help:
 	@echo "Go / addons:"
 	@echo "  make generate - refresh cmd/sumeru/zimports.go"
 	@echo "  make bp NAME=x - scaffold kernel addon (then make generate)"
-	@echo "  make lint    - go vet + golangci-lint (matches CI go-lint)"
+	@echo "  make lint    - swc-check + go vet + golangci-lint (matches CI lint gates)"
 	@echo "  make check   - swc-check + lint + test-modules-static + go test ./test/..."
 	@echo "  make test-modules - static + unit + addon module suite tiers"
 	@echo "  make test-coverage - full repo coverage with 90% gate"

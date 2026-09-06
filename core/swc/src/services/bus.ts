@@ -2,6 +2,13 @@ import { SWC_API_BASE } from "../constants/routes.js";
 
 type BusHandler = (payload: unknown) => void;
 
+function parseBusMessage(raw: unknown): { channel: string; payload: unknown } | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const channel = (raw as { channel?: unknown }).channel;
+  if (typeof channel !== "string" || channel === "") return null;
+  return { channel, payload: (raw as { payload?: unknown }).payload };
+}
+
 /** Client event bus with optional WebSocket live updates from /web/swc/bus. */
 export class BusService {
   private readonly handlers = new Map<string, Set<BusHandler>>();
@@ -29,17 +36,18 @@ export class BusService {
       this.ws = new WebSocket(`${proto}//${window.location.host}${url}`);
       this.ws.addEventListener("message", (ev) => {
         try {
-          const msg = JSON.parse(String(ev.data)) as { channel: string; payload: unknown };
-          if (msg.channel) this.emit(msg.channel, msg.payload);
-        } catch {
-          /* ignore malformed */
+          const parsed: unknown = JSON.parse(String(ev.data));
+          const msg = parseBusMessage(parsed);
+          if (msg) this.emit(msg.channel, msg.payload);
+        } catch (err) {
+          console.warn("swc bus: malformed message", err);
         }
       });
       this.ws.addEventListener("close", () => {
         this.ws = null;
       });
-    } catch {
-      /* WebSocket unavailable — local-only bus */
+    } catch (err) {
+      console.warn("swc bus: WebSocket unavailable; local-only bus", err);
     }
   }
 

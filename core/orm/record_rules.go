@@ -181,11 +181,20 @@ func BuildWhereWithRecordRules(ctx context.Context, uid int, model, op string, b
 		return "", nil, err
 	}
 	if DevFeatureEnabled("access") {
-		applog.L(ctx).Debug("dev_access_rules",
-			"model", model, "op", op, "uid", uid,
-			"global_rules", len(parts.globals), "group_rules", len(parts.groups),
-			"allow_all_groups", parts.allowAllGroups,
-		)
+		applog.Debug(ctx, applog.Event{
+			Message:   "access rules resolved",
+			Component: "orm",
+			Operation: "dev_access_rules",
+			Status:    "success",
+			Context: map[string]interface{}{
+				"resource":        model,
+				"op":              op,
+				"uid":             uid,
+				"global_rules":    len(parts.globals),
+				"group_rules":     len(parts.groups),
+				"allow_all_groups": parts.allowAllGroups,
+			},
+		})
 	}
 	var clauses [][][]interface{}
 	if len(base) > 0 {

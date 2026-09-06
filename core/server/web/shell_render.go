@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"sumeru/core/engine/render"
+	"sumeru/core/errcode"
 	"sumeru/core/server/config"
 )
 
@@ -34,10 +35,7 @@ func renderShellPage(w http.ResponseWriter, r *http.Request, opts shellPageOpts)
 	page := finalizeShellPage(ctx, r, opts, innerHTML, route)
 	layoutHTML, err := render.RenderPage(ctx, config.AppConfig.TemplatesPath, page)
 	if err != nil {
-		WebLogEvent(ctx, WebLogInput{
-			Route: route, Message: "Failed to render page layout",
-			Operation: "render", Status: "failure", Err: err,
-		})
+		webLogFail(ctx, route, "render", "Failed to render page layout", err, logStatusFailure, nil)
 		http.Error(w, "Layout render error", http.StatusInternalServerError)
 		return
 	}
@@ -58,21 +56,14 @@ func executeInnerTemplate(ctx context.Context, w http.ResponseWriter, route stri
 	}
 	templateFile, err := template.ParseFiles(templatePaths...)
 	if err != nil {
-		WebLogEvent(ctx, WebLogInput{
-			Route: route, Message: "Failed to parse inner template",
-			Operation: "render", Status: "failure", Err: err,
-			ContextFields: map[string]interface{}{"template": opts.InnerTemplate},
-		})
+		webLogFail(ctx, route, "render", "Failed to parse inner template", err, logStatusFailure, map[string]interface{}{"template": opts.InnerTemplate})
 		http.Error(w, "Template error", http.StatusInternalServerError)
 		return "", false
 	}
 
 	var innerBuffer bytes.Buffer
 	if err := templateFile.Execute(&innerBuffer, opts.InnerData); err != nil {
-		WebLogEvent(ctx, WebLogInput{
-			Route: route, Message: "Failed to execute inner template",
-			Operation: "render", Status: "failure", Err: err,
-		})
+		webLogFail(ctx, route, "render", "Failed to execute inner template", err, logStatusFailure, nil)
 		http.Error(w, "Template error", http.StatusInternalServerError)
 		return "", false
 	}
@@ -146,9 +137,18 @@ func resolveExtraScripts(pageScripts, optScripts []string) []string {
 func writeHTML(w http.ResponseWriter, ctx context.Context, route, html string) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if _, err := w.Write([]byte(html)); err != nil {
-		WebLogEvent(ctx, WebLogInput{
-			Route: route, Message: "Failed to write HTML response",
-			Operation: "write", Status: "partial", Err: err,
-		})
+		webLogFail(ctx, route, "write", "Failed to write HTML response", err, logStatusPartial, nil)
 	}
+}
+
+func webLogFail(ctx context.Context, route, operation, message string, err error, status string, fields map[string]interface{}) {
+	WebLogEvent(ctx, WebLogInput{
+		Route:         route,
+		Message:       message,
+		Code:          errcode.InternalError,
+		Operation:     operation,
+		Status:        status,
+		Err:           err,
+		ContextFields: fields,
+	})
 }

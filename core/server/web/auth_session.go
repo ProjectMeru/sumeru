@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"sumeru/core/applog"
+	"sumeru/core/errcode"
 	"sumeru/core/orm"
 	"sumeru/core/server/config"
 )
@@ -82,11 +84,18 @@ func SessionUserID(r *http.Request) int {
 		return 0
 	}
 	// Sliding idle expiry (DB-backed; works across instances).
-	_, _ = orm.DB.Exec(
+	if _, err := orm.DB.Exec(
 		`UPDATE `+sessionTable+` SET expires_at = $1 WHERE sid = $2 AND expires_at > NOW()`,
 		time.Now().UTC().Add(sessionSlidingTTL),
 		cookie.Value,
-	)
+	); err != nil {
+		applog.WarnCode(r.Context(), errcode.InternalError, "sliding session expiry update failed", applog.Event{
+			Component: "web",
+			Operation: "session_slide",
+			Status:    "partial",
+			Err:       err,
+		})
+	}
 	return userID
 }
 
@@ -95,7 +104,14 @@ func DestroySession(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie(sessionCookieName)
 	if err == nil && cookie.Value != "" {
 		sessionTable := orm.MustQuotedTableName("sys.session")
-		_, _ = orm.DB.Exec(`DELETE FROM `+sessionTable+` WHERE sid = $1`, cookie.Value)
+		if _, err := orm.DB.Exec(`DELETE FROM `+sessionTable+` WHERE sid = $1`, cookie.Value); err != nil {
+			applog.WarnCode(r.Context(), errcode.InternalError, "session delete failed", applog.Event{
+				Component: "web",
+				Operation: "session_destroy",
+				Status:    "partial",
+				Err:       err,
+			})
+		}
 	}
 	ClearSessionCookie(w)
 }

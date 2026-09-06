@@ -108,7 +108,14 @@ func BulkCancelHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "id required", http.StatusBadRequest)
 		return
 	}
-	_ = report.CancelBatch(r.Context(), batchID)
-	batch, _ := orm.SearchOne(r.Context(), report.BulkModelName, map[string]interface{}{"id": batchID})
-	http.Redirect(w, r, SafeWebNext(orm.AsString(batch["next_url"]), homeRoute), http.StatusSeeOther)
+	if err := report.CancelBatch(r.Context(), batchID); err != nil {
+		http.Error(w, "cancel failed: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	batch, err := orm.SearchOne(r.Context(), report.BulkModelName, map[string]interface{}{"id": batchID})
+	next := homeRoute
+	if err == nil {
+		next = SafeWebNext(orm.AsString(batch["next_url"]), homeRoute)
+	}
+	http.Redirect(w, r, next, http.StatusSeeOther)
 }

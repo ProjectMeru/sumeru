@@ -10,15 +10,15 @@ const (
 	CodeInvalidJSON          = "INVALID_JSON"
 	CodeInvalidArgs          = "INVALID_ARGS"
 	CodeInvalidBody          = "INVALID_BODY"
-	CodeValidationError      = "VALIDATION_ERROR"
+	CodeValidationError      = "VALIDATION_ERROR" // errcode.ValidationError
 	CodeModelNotFound        = "MODEL_NOT_FOUND"
-	CodeNotFound             = "NOT_FOUND"
+	CodeNotFound             = "NOT_FOUND" // errcode.NotFound
 	CodeMethodNotAllowed     = "METHOD_NOT_ALLOWED"
-	CodeUnauthorized         = "UNAUTHORIZED"
-	CodeAccessDenied         = "ACCESS_DENIED"
+	CodeUnauthorized         = "UNAUTHORIZED" // errcode.Unauthorized
+	CodeAccessDenied         = "ACCESS_DENIED" // errcode.AccessDenied
 	CodePayloadTooLarge      = "PAYLOAD_TOO_LARGE"
 	CodeUnsupportedMediaType = "UNSUPPORTED_MEDIA_TYPE"
-	CodeInternalError        = "INTERNAL_ERROR"
+	CodeInternalError        = "INTERNAL_ERROR" // errcode.InternalError
 )
 
 type codedError struct {

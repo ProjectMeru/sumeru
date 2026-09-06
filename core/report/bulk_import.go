@@ -86,7 +86,9 @@ func ExecuteBulkImport(ctx context.Context, in ExecuteBulkImportInput) (ImportRe
 		}
 		result.Created++
 	}
-	_ = orm.UpdateRecordByID(ctx, BulkModelName, in.BatchID, map[string]interface{}{"state": "done"})
+	if err := orm.UpdateRecordByID(ctx, BulkModelName, in.BatchID, map[string]interface{}{"state": "done"}); err != nil {
+		return result, fmt.Errorf("mark batch done: %w", err)
+	}
 	return result, nil
 }
 

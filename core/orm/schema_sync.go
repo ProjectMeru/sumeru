@@ -99,7 +99,16 @@ func syncModelSchema(ctx context.Context, model Model) error {
 		if _, err := DB.ExecContext(ctx, q); err != nil {
 			return fmt.Errorf("%s: %w", q, err)
 		}
-		applog.L(ctx).Info("schema_sync", "table", tableName, "field", field.Name)
+		applog.Info(ctx, applog.Event{
+			Message:   "schema column synced",
+			Component: "orm",
+			Operation: "schema_sync",
+			Status:    "success",
+			Context: map[string]interface{}{
+				"table": tableName,
+				"field": field.Name,
+			},
+		})
 	}
 	tbl := schemaTable{ModelName: modelName, TableName: tableName, QuotedTable: quotedTable, Model: model}
 	if err := dropStaleColumnUniques(ctx, tbl); err != nil {
@@ -170,7 +179,16 @@ func dropStaleColumnUniques(ctx context.Context, tbl schemaTable) error {
 			if _, err := DB.ExecContext(ctx, q); err != nil {
 				return fmt.Errorf("drop unique %s.%s: %w", tbl.TableName, con, err)
 			}
-			applog.L(ctx).Info("schema_sync_drop_unique", "table", tbl.TableName, "constraint", con)
+			applog.Info(ctx, applog.Event{
+				Message:   "schema unique constraint dropped",
+				Component: "orm",
+				Operation: "schema_sync_drop_unique",
+				Status:    "success",
+				Context: map[string]interface{}{
+					"table":      tbl.TableName,
+					"constraint": con,
+				},
+			})
 		}
 	}
 	return nil
@@ -331,7 +349,16 @@ func EnsureModelColumns(ctx context.Context, model Model, extra []FieldDefinitio
 		if _, err := DB.ExecContext(ctx, q); err != nil {
 			return fmt.Errorf("%s: %w", q, err)
 		}
-		applog.L(ctx).Info("schema_sync_extra", "table", tableName, "field", field.Name)
+		applog.Info(ctx, applog.Event{
+			Message:   "schema extra column synced",
+			Component: "orm",
+			Operation: "schema_sync_extra",
+			Status:    "success",
+			Context: map[string]interface{}{
+				"table": tableName,
+				"field": field.Name,
+			},
+		})
 	}
 	return nil
 }

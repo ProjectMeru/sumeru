@@ -34,8 +34,10 @@ input[type="number"] {
   background: rgba(0, 0, 0, 0.2);
 }
 
-/* Visually hidden labels (screen readers only). */
-.sr-only {
+/* Visually hidden (screen readers only). Prefer .sum-visually-hidden; aliases kept for existing markup. */
+.sr-only,
+.visually-hidden,
+.sum-visually-hidden {
   position: absolute;
   width: 1px;
   height: 1px;

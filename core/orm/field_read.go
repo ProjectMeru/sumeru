@@ -3,6 +3,8 @@ package orm
 import (
 	"context"
 	"fmt"
+
+	"sumeru/core/applog"
 )
 
 var sensitiveReadFields = map[string]map[string]bool{
@@ -56,18 +58,26 @@ func RedactSearchResults(ctx context.Context, uid int, model string, rows []map[
 
 func enrichRecordForRead(ctx context.Context, uid int, modelName string, record map[string]interface{}) {
 	RedactRecordForRead(ctx, uid, modelName, record)
-	_ = ApplyComputes(ctx, modelName, record)
+	if err := ApplyComputes(ctx, modelName, record); err != nil {
+		applog.WarnMsg(ctx, "orm", "enrich_read", "ApplyComputes failed", err, map[string]interface{}{"model": modelName})
+	}
 	if !skipRelatedEnrichment(ctx) {
-		_ = ApplyRelatedFields(ctx, modelName, record)
+		if err := ApplyRelatedFields(ctx, modelName, record); err != nil {
+			applog.WarnMsg(ctx, "orm", "enrich_read", "ApplyRelatedFields failed", err, map[string]interface{}{"model": modelName})
+		}
 	}
 }
 
 func enrichRecordsForRead(ctx context.Context, uid int, modelName string, records []map[string]interface{}) {
 	for _, record := range records {
 		RedactRecordForRead(ctx, uid, modelName, record)
-		_ = ApplyComputes(ctx, modelName, record)
+		if err := ApplyComputes(ctx, modelName, record); err != nil {
+			applog.WarnMsg(ctx, "orm", "enrich_read", "ApplyComputes failed", err, map[string]interface{}{"model": modelName})
+		}
 	}
 	if !skipRelatedEnrichment(ctx) {
-		_ = ApplyRelatedFieldsBatch(ctx, modelName, records)
+		if err := ApplyRelatedFieldsBatch(ctx, modelName, records); err != nil {
+			applog.WarnMsg(ctx, "orm", "enrich_read", "ApplyRelatedFieldsBatch failed", err, map[string]interface{}{"model": modelName})
+		}
 	}
 }

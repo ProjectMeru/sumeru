@@ -125,21 +125,21 @@
   background: var(--sum-topbar-hover-bg);
 }
 
-/* Sidebar toggle (hamburger): stroke follows currentColor; pin white for contrast */
+/* Sidebar toggle (hamburger): stroke follows currentColor via topbar fg */
 .sum-topbar-sidebar-toggle {
-  color: #ffffff !important;
+  color: var(--sum-topbar-fg);
 }
 
 .sum-topbar-sidebar-toggle svg,
 .sum-topbar-sidebar-toggle svg path {
-  stroke: #ffffff !important;
+  stroke: currentColor;
 }
 
 .sum-topbar-sidebar-toggle:hover svg,
 .sum-topbar-sidebar-toggle:hover svg path,
 .sum-topbar-sidebar-toggle:focus-visible svg,
 .sum-topbar-sidebar-toggle:focus-visible svg path {
-  stroke: #ffffff !important;
+  stroke: currentColor;
 }
 
 .sum-topbar-right {

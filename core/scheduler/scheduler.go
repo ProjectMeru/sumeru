@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"sumeru/core/applog"
+	"sumeru/core/errcode"
 	"sumeru/core/event"
 	"sumeru/core/orm"
 )
@@ -104,19 +105,44 @@ func runDue(ctx context.Context) {
 		executeCron(bypass, CronRunInput{ID: row.id, Name: row.name, EventName: row.eventName, Code: row.code})
 		interval := cronIntervalTx(bypass, tx, row.id)
 		next := now.Add(interval)
-		_, _ = tx.ExecContext(bypass,
+		if _, err := tx.ExecContext(bypass,
 			`UPDATE `+tbl+` SET next_call = $1, last_call = $2 WHERE id = $3`,
 			next, now, row.id,
-		)
+		); err != nil {
+			applog.WarnCode(bypass, errcode.CronUpdateFailed, "cron next_call update failed", applog.Event{
+				Component: "scheduler",
+				Operation: "run_due",
+				Status:    "failure",
+				Context:   map[string]interface{}{"cron_id": row.id},
+				Err:       err,
+			})
+			return
+		}
 	}
-	_ = tx.Commit()
+	if err := tx.Commit(); err != nil {
+		applog.WarnCode(bypass, errcode.CronCommitFailed, "cron transaction commit failed", applog.Event{
+			Component: "scheduler",
+			Operation: "run_due",
+			Status:    "failure",
+			Err:       err,
+		})
+	}
 }
 
 func cronIntervalTx(ctx context.Context, tx orm.TxWrapper, id int64) time.Duration {
 	var mins sql.NullInt64
-	_ = tx.QueryRowContext(ctx,
+	if err := tx.QueryRowContext(ctx,
 		`SELECT interval_number FROM `+orm.MustQuotedTableName("sys.cron")+` WHERE id = $1`, id,
-	).Scan(&mins)
+	).Scan(&mins); err != nil {
+		applog.WarnCode(ctx, errcode.InternalError, "cron interval read failed; using default 60m", applog.Event{
+			Component: "scheduler",
+			Operation: "cron_interval",
+			Status:    "partial",
+			Context:   map[string]interface{}{"cron_id": id},
+			Err:       err,
+		})
+		return time.Hour
+	}
 	n := int(mins.Int64)
 	if n <= 0 {
 		n = 60
@@ -132,7 +158,17 @@ type CronRunInput struct {
 }
 
 func executeCron(ctx context.Context, in CronRunInput) {
-	applog.L(ctx).Info("scheduler.cron", "id", in.ID, "name", in.Name, "code", in.Code)
+	applog.Debug(ctx, applog.Event{
+		Message:   "cron job starting",
+		Component: "scheduler",
+		Operation: "cron_run",
+		Status:    "success",
+		Context: map[string]interface{}{
+			"cron_id":   in.ID,
+			"cron_name": in.Name,
+			"cron_code": in.Code,
+		},
+	})
 	payload := map[string]interface{}{"cron_id": in.ID, "cron_name": in.Name, "code": in.Code}
 	_ = event.Publish(ctx, event.Event{Name: "cron.tick", Payload: payload})
 	if eventName := strings.TrimSpace(in.EventName); eventName != "" {
@@ -140,12 +176,11 @@ func executeCron(ctx context.Context, in CronRunInput) {
 	}
 	if fn := lookupCronHandler(in.Code); fn != nil {
 		if err := fn(ctx, payload); err != nil {
-			applog.Warn(ctx, applog.Event{
-				Message:   "cron handler failed",
+			applog.WarnCode(ctx, errcode.CronHandlerFailed, "cron handler failed", applog.Event{
 				Component: "scheduler",
 				Operation: "cron_handler",
-				Status:    "failed",
-				Context:   map[string]interface{}{"cron_id": in.ID, "code": in.Code},
+				Status:    "failure",
+				Context:   map[string]interface{}{"cron_id": in.ID, "cron_code": in.Code},
 				Err:       err,
 			})
 		}

@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"sumeru/core/errcode"
 	"sumeru/core/orm"
 )
 
@@ -47,7 +48,18 @@ func switchActiveCompany(ctx context.Context, userID, companyID int) {
 		return
 	}
 	if err := updateUserActiveCompany(ctx, userID, companyID); err != nil {
-		WebLogf(ctx, companySwitchRoute, "update company_id: %v", err)
+		WebLogEvent(ctx, WebLogInput{
+			Route:     companySwitchRoute,
+			Message:   "Could not update active company",
+			Code:      errcode.InternalError,
+			Operation: "company_switch",
+			Status:    logStatusFailure,
+			Err:       err,
+			ContextFields: map[string]interface{}{
+				"company_id": companyID,
+				"user_id":    userID,
+			},
+		})
 		return
 	}
 	WebLogNavigation(ctx, companySwitchRoute, "company_switch", "Active company switched", map[string]interface{}{

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"sumeru/core/errcode"
 	"sumeru/core/orm"
 )
 
@@ -15,7 +16,7 @@ func writeJSON(w http.ResponseWriter, ctx context.Context, route string, v inter
 	if err := enc.Encode(v); err != nil && ctx != nil && route != "" {
 		WebLogEvent(ctx, WebLogInput{
 			Route: route, Message: "Failed to encode JSON response",
-			Operation: "write", Status: "partial", Err: err,
+			Code: errcode.InternalError, Operation: "write", Status: "partial", Err: err,
 		})
 	}
 }
@@ -56,7 +57,7 @@ func requireModelAccess(w http.ResponseWriter, r *http.Request, model, perm stri
 	if err := orm.CheckModelAccess(r.Context(), orm.SecurityUID(r.Context()), model, perm); err != nil {
 		WebLogEvent(r.Context(), WebLogInput{
 			Route: r.URL.Path, Message: "Model access denied",
-			Operation: "access", Status: "failure", Err: err,
+			Code: errcode.AccessDenied, Operation: "access", Status: "failure", Err: err,
 			ContextFields: map[string]interface{}{"resource": model, "permission": perm},
 		})
 		http.Error(w, forbiddenMessage, http.StatusForbidden)

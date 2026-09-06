@@ -6,6 +6,10 @@ interface RpcEnvelope<T = unknown> {
   error?: { code?: string; message: string; details?: unknown };
 }
 
+function isRpcEnvelope(data: unknown): data is RpcEnvelope {
+  return typeof data === "object" && data !== null;
+}
+
 export class RpcService {
   private readonly url: string;
   private readonly csrfToken: string;
@@ -47,7 +51,11 @@ export class RpcService {
     if (!res.ok) {
       throw new SwcError(`RPC HTTP ${res.status}`, "rpc_http");
     }
-    const data = (await res.json()) as RpcEnvelope<T>;
+    const raw: unknown = await res.json();
+    if (!isRpcEnvelope(raw)) {
+      throw new SwcError("RPC response is not an object", "rpc_error");
+    }
+    const data = raw as RpcEnvelope<T>;
     if (data.ok === false || data.error) {
       throw new SwcError(data.error?.message ?? "RPC failed", "rpc_error", data.error);
     }

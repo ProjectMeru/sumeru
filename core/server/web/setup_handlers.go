@@ -14,6 +14,7 @@ import (
 
 	"sumeru/core/applog"
 	"sumeru/core/engine/assets"
+	"sumeru/core/errcode"
 	"sumeru/core/module"
 	"sumeru/core/orm"
 	"sumeru/core/server/config"
@@ -115,14 +116,17 @@ func runFirstTimeSetup(ctx context.Context, adminParams orm.SetupAdminParams) er
 	return nil
 }
 
-func logSetupFailure(ctx context.Context, message string, err error) {
-	applog.Error(ctx, applog.Event{
-		Message:   message,
+func logSetupFailure(ctx context.Context, message string, err error, fields ...map[string]interface{}) {
+	ev := applog.Event{
 		Component: "web",
 		Operation: setupOperation,
 		Status:    "failure",
 		Err:       err,
-	})
+	}
+	if len(fields) > 0 {
+		ev.Context = fields[0]
+	}
+	applog.ErrorCode(ctx, errcode.InternalError, message, ev)
 }
 
 func scheduleSetupRestart() {
@@ -147,19 +151,13 @@ func writeSetupPage(w http.ResponseWriter, ctx context.Context, pageData setupPa
 	templatePath := filepath.Join(config.AppConfig.TemplatesPath, setupTemplateFile)
 	templateFile, err := template.ParseFiles(templatePath)
 	if err != nil {
-		applog.Error(ctx, applog.Event{
-			Message: "Failed to parse setup template", Component: "web", Operation: setupOperation,
-			Status: "failure", Err: err, Context: map[string]interface{}{"template": templatePath},
-		})
+		logSetupFailure(ctx, "Failed to parse setup template", err, map[string]interface{}{"template": templatePath})
 		http.Error(w, "Setup template missing", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := templateFile.Execute(w, pageData); err != nil {
-		applog.Error(ctx, applog.Event{
-			Message: "Failed to execute setup template", Component: "web", Operation: setupOperation,
-			Status: "failure", Err: err,
-		})
+		logSetupFailure(ctx, "Failed to execute setup template", err)
 	}
 }

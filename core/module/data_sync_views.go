@@ -38,7 +38,9 @@ func upsertSysActionWindowFromRecord(ctx context.Context, moduleName string, xml
 		syncWarn(ctx, platformmsg.FmtGenericUpsertWarn, "sys.action.window", xmlRecord.ID, err)
 		return
 	}
-	_ = linkXMLRecord(ctx, moduleName, xmlRecord.ID, "sys.action.window", id)
+	if err := linkXMLRecord(ctx, moduleName, xmlRecord.ID, "sys.action.window", id); err != nil {
+		return
+	}
 }
 
 func upsertSysActionURLFromRecord(ctx context.Context, moduleName string, xmlRecord parser.Record) {
@@ -55,7 +57,9 @@ func upsertSysActionURLFromRecord(ctx context.Context, moduleName string, xmlRec
 		syncWarn(ctx, platformmsg.FmtGenericUpsertWarn, "sys.action.url", xmlRecord.ID, err)
 		return
 	}
-	_ = linkXMLRecord(ctx, moduleName, xmlRecord.ID, "sys.action.url", id)
+	if err := linkXMLRecord(ctx, moduleName, xmlRecord.ID, "sys.action.url", id); err != nil {
+		return
+	}
 }
 
 // upsertSysViewFromRecord persists <record model="sys.view">…</record> data (non-inherit rows).
@@ -92,7 +96,9 @@ func upsertSysViewFromRecord(ctx context.Context, moduleName string, xmlRecord p
 		syncWarn(ctx, platformmsg.FmtGenericUpsertWarn, "sys.view", xmlRecord.ID, err)
 		return
 	}
-	_ = linkXMLRecord(ctx, moduleName, xmlRecord.ID, "sys.view", id)
+	if err := linkXMLRecord(ctx, moduleName, xmlRecord.ID, "sys.view", id); err != nil {
+		return
+	}
 }
 
 func InferSysViewTypeFromArch(arch string) string {
@@ -148,7 +154,9 @@ func upsertInlineViewDef(ctx context.Context, moduleName string, viewDef *parser
 		syncWarn(ctx, platformmsg.FmtGenericUpsertWarn, "sys.view", viewDef.ID, err)
 		return
 	}
-	_ = linkXMLRecord(ctx, moduleName, viewDef.ID, "sys.view", id)
+	if err := linkXMLRecord(ctx, moduleName, viewDef.ID, "sys.view", id); err != nil {
+		return
+	}
 }
 
 // applySysUIViewInherit merges an sys.view inherit <record> into the parent view row (same DB id).

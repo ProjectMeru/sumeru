@@ -90,13 +90,13 @@ export function initPinnedApps(http: HttpService, initial: string[]): void {
         setPinnedCache(saved);
         try {
           localStorage.removeItem(KEY_PINNED_LEGACY);
-        } catch {
-          /* ignore */
+        } catch (err) {
+          console.warn("pinned-apps: legacy key cleanup failed", err);
         }
         applyTopNavFilter();
       })
-      .catch(() => {
-        /* ignore migration failure */
+      .catch((err) => {
+        console.warn("pinned-apps: migration failed", err);
       });
   }
 

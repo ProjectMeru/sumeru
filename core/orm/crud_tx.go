@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-
-	"sumeru/core/applog"
 )
 
 func insertPreparedOnTx(ctx context.Context, tx TxWrapper, model Model, prepared map[string]interface{}) (int, error) {
@@ -105,14 +103,7 @@ func insertSideEffectRow(ctx context.Context, tx TxWrapper, registryKey string, 
 	}
 	_, err := Create(bypass, inst, vals)
 	if err != nil {
-		applog.Warn(ctx, applog.Event{
-			Message:   "Side effect insert failed",
-			Component: "orm",
-			Operation: "insert_side_effect",
-			Status:    "partial",
-			Context:   map[string]interface{}{"resource": registryKey},
-			Err:       err,
-		})
+		logSideEffectWarn(ctx, "insert_side_effect", registryKey, err)
 	}
 	return err
 }

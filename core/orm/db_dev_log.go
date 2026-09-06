@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	applog "sumeru/core/applog"
+	"sumeru/core/applog"
 )
 
 type loggingDBWrapper struct {
@@ -20,71 +20,68 @@ func wrapDevLogging(db DBWrapper) DBWrapper {
 	return &loggingDBWrapper{inner: db}
 }
 
-type sqlLogEntry struct {
-	Op    string
-	Query string
-	Args  []interface{}
-	Err   error
-	Dur   time.Duration
-}
-
-func logSQL(ctx context.Context, in sqlLogEntry) {
-	if !DevFeatureEnabled("sql") {
-		return
-	}
-	q := strings.Join(strings.Fields(in.Query), " ")
+func logSQL(ctx context.Context, op, query string, args []interface{}, err error, dur time.Duration) {
+	q := strings.Join(strings.Fields(query), " ")
 	if len(q) > 500 {
 		q = q[:500] + "…"
 	}
-	fields := []interface{}{"op", in.Op, "sql", q, "ms", in.Dur.Milliseconds()}
-	if len(in.Args) > 0 {
-		fields = append(fields, "args", in.Args)
+	ctxMap := map[string]interface{}{"op": op, "sql": q, "ms": dur.Milliseconds()}
+	if len(args) > 0 {
+		ctxMap["args"] = scrubSQLArgs(query, args)
 	}
-	if in.Err != nil {
-		fields = append(fields, "err", in.Err.Error())
+	status := "success"
+	if err != nil {
+		status = "failure"
 	}
-	applog.L(ctx).Debug("dev_sql", fields...)
+	applog.Debug(ctx, applog.Event{
+		Message: "SQL", Component: "orm", Operation: "sql", Status: status, Context: ctxMap, Err: err,
+	})
+}
+
+func scrubSQLArgs(query string, args []interface{}) interface{} {
+	if len(args) == 0 {
+		return nil
+	}
+	if applog.TextContainsSecretKeyword(query) {
+		return applog.RedactedPlaceholder
+	}
+	out := make([]interface{}, len(args))
+	for i, a := range args {
+		out[i] = applog.ScrubValue("", a)
+	}
+	return out
 }
 
 func (w *loggingDBWrapper) Exec(query string, args ...interface{}) (sql.Result, error) {
-	start := time.Now()
-	res, err := w.inner.Exec(query, args...)
-	logSQL(context.Background(), sqlLogEntry{Op: "exec", Query: query, Args: args, Err: err, Dur: time.Since(start)})
-	return res, err
+	return w.ExecContext(context.Background(), query, args...)
 }
 
 func (w *loggingDBWrapper) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	start := time.Now()
 	res, err := w.inner.ExecContext(ctx, query, args...)
-	logSQL(ctx, sqlLogEntry{Op: "exec", Query: query, Args: args, Err: err, Dur: time.Since(start)})
+	logSQL(ctx, "exec", query, args, err, time.Since(start))
 	return res, err
 }
 
 func (w *loggingDBWrapper) Query(query string, args ...interface{}) (*sql.Rows, error) {
-	start := time.Now()
-	rows, err := w.inner.Query(query, args...)
-	logSQL(context.Background(), sqlLogEntry{Op: "query", Query: query, Args: args, Err: err, Dur: time.Since(start)})
-	return rows, err
+	return w.QueryContext(context.Background(), query, args...)
 }
 
 func (w *loggingDBWrapper) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
 	start := time.Now()
 	rows, err := w.inner.QueryContext(ctx, query, args...)
-	logSQL(ctx, sqlLogEntry{Op: "query", Query: query, Args: args, Err: err, Dur: time.Since(start)})
+	logSQL(ctx, "query", query, args, err, time.Since(start))
 	return rows, err
 }
 
 func (w *loggingDBWrapper) QueryRow(query string, args ...interface{}) *sql.Row {
-	start := time.Now()
-	row := w.inner.QueryRow(query, args...)
-	logSQL(context.Background(), sqlLogEntry{Op: "query_row", Query: query, Args: args, Dur: time.Since(start)})
-	return row
+	return w.QueryRowContext(context.Background(), query, args...)
 }
 
 func (w *loggingDBWrapper) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
 	start := time.Now()
 	row := w.inner.QueryRowContext(ctx, query, args...)
-	logSQL(ctx, sqlLogEntry{Op: "query_row", Query: query, Args: args, Dur: time.Since(start)})
+	logSQL(ctx, "query_row", query, args, nil, time.Since(start))
 	return row
 }
 
@@ -101,7 +98,7 @@ func (w *loggingDBWrapper) BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx
 	if err != nil {
 		return nil, err
 	}
-	return &loggingTxWrapper{inner: tx, ctx: ctx}, nil
+	return &loggingTxWrapper{inner: tx}, nil
 }
 
 func (w *loggingDBWrapper) Close() error { return w.inner.Close() }
@@ -109,55 +106,38 @@ func (w *loggingDBWrapper) Ping() error  { return w.inner.Ping() }
 
 type loggingTxWrapper struct {
 	inner TxWrapper
-	ctx   context.Context
-}
-
-func (w *loggingTxWrapper) txCtx() context.Context {
-	if w.ctx != nil {
-		return w.ctx
-	}
-	return context.Background()
 }
 
 func (w *loggingTxWrapper) Exec(query string, args ...interface{}) (sql.Result, error) {
-	start := time.Now()
-	res, err := w.inner.Exec(query, args...)
-	logSQL(w.txCtx(), sqlLogEntry{Op: "tx_exec", Query: query, Args: args, Err: err, Dur: time.Since(start)})
-	return res, err
+	return w.ExecContext(context.Background(), query, args...)
 }
 
 func (w *loggingTxWrapper) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	start := time.Now()
 	res, err := w.inner.ExecContext(ctx, query, args...)
-	logSQL(ctx, sqlLogEntry{Op: "tx_exec", Query: query, Args: args, Err: err, Dur: time.Since(start)})
+	logSQL(ctx, "tx_exec", query, args, err, time.Since(start))
 	return res, err
 }
 
 func (w *loggingTxWrapper) Query(query string, args ...interface{}) (*sql.Rows, error) {
-	start := time.Now()
-	rows, err := w.inner.Query(query, args...)
-	logSQL(w.txCtx(), sqlLogEntry{Op: "tx_query", Query: query, Args: args, Err: err, Dur: time.Since(start)})
-	return rows, err
+	return w.QueryContext(context.Background(), query, args...)
 }
 
 func (w *loggingTxWrapper) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
 	start := time.Now()
 	rows, err := w.inner.QueryContext(ctx, query, args...)
-	logSQL(ctx, sqlLogEntry{Op: "tx_query", Query: query, Args: args, Err: err, Dur: time.Since(start)})
+	logSQL(ctx, "tx_query", query, args, err, time.Since(start))
 	return rows, err
 }
 
 func (w *loggingTxWrapper) QueryRow(query string, args ...interface{}) *sql.Row {
-	start := time.Now()
-	row := w.inner.QueryRow(query, args...)
-	logSQL(w.txCtx(), sqlLogEntry{Op: "tx_query_row", Query: query, Args: args, Dur: time.Since(start)})
-	return row
+	return w.QueryRowContext(context.Background(), query, args...)
 }
 
 func (w *loggingTxWrapper) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
 	start := time.Now()
 	row := w.inner.QueryRowContext(ctx, query, args...)
-	logSQL(ctx, sqlLogEntry{Op: "tx_query_row", Query: query, Args: args, Dur: time.Since(start)})
+	logSQL(ctx, "tx_query_row", query, args, nil, time.Since(start))
 	return row
 }
 

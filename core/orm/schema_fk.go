@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	applog "sumeru/core/applog"
+	"sumeru/core/applog"
+	"sumeru/core/errcode"
 )
 
 // ensureForeignKeys adds missing FK constraints for many2one columns (best-effort on existing DBs).
@@ -39,10 +40,29 @@ func ensureForeignKeys(ctx context.Context, tbl schemaTable) error {
 			if strings.Contains(strings.ToLower(err.Error()), "already exists") {
 				continue
 			}
-			applog.L(ctx).Warn("schema_sync_fk_skip", "table", tbl.TableName, "field", field.Name, "error", err.Error())
+			applog.WarnCode(ctx, errcode.InternalError, "schema foreign key skipped", applog.Event{
+				Component: "orm",
+				Operation: "schema_sync_fk",
+				Status:    "partial",
+				Context: map[string]interface{}{
+					"table": tbl.TableName,
+					"field": field.Name,
+				},
+				Err: err,
+			})
 			continue
 		}
-		applog.L(ctx).Info("schema_sync_fk", "table", tbl.TableName, "field", field.Name, "target", targetTable)
+		applog.Info(ctx, applog.Event{
+			Message:   "schema foreign key added",
+			Component: "orm",
+			Operation: "schema_sync_fk",
+			Status:    "success",
+			Context: map[string]interface{}{
+				"table":  tbl.TableName,
+				"field":  field.Name,
+				"target": targetTable,
+			},
+		})
 	}
 	return nil
 }

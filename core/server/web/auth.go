@@ -16,9 +16,9 @@ import (
 	"sumeru/core/applog"
 	"sumeru/core/engine/assets"
 	"sumeru/core/engine/render"
+	"sumeru/core/errcode"
 	"sumeru/core/mail"
 	"sumeru/core/orm"
-	"sumeru/core/sdk/platformmsg"
 	"sumeru/core/server/config"
 
 	"golang.org/x/crypto/bcrypt"
@@ -173,11 +173,27 @@ func LoginPost(w http.ResponseWriter, r *http.Request) {
 
 	user, authenticated := verifyLoginCredentials(r.Context(), credentials, clientIP)
 	if !authenticated {
+		applog.WarnCode(r.Context(), errcode.InvalidCredentials, "Invalid login or password", applog.Event{
+			Component: "web",
+			Operation: "login",
+			Status:    "failure",
+			Context: map[string]interface{}{
+				"route": loginRoute,
+				"ip":    clientIP,
+			},
+		})
 		writeLoginPage(w, r, http.StatusUnauthorized, credentials.Next, invalidLoginMessage)
 		return
 	}
 	if err := CreateSession(w, user.ID); err != nil {
-		WebLogf(r.Context(), loginRoute, "session: %v", err)
+		WebLogEvent(r.Context(), WebLogInput{
+			Route:     loginRoute,
+			Message:   "Could not start session",
+			Code:      errcode.InternalError,
+			Operation: "session_create",
+			Status:    logStatusFailure,
+			Err:       err,
+		})
 		http.Error(w, "Could not start session", http.StatusInternalServerError)
 		return
 	}
@@ -211,7 +227,17 @@ func ActionResetPassword(w http.ResponseWriter, r *http.Request) {
 	loginURL := loginRoute
 	if mail.Configured() && to != "" {
 		if err := mail.SendPasswordResetEmail(r.Context(), to, loginName, loginURL); err != nil {
-			WebLogf(r.Context(), resetPasswordRoute, "login-link email failed for user id=%s: %v", userID, err)
+			WebLogEvent(r.Context(), WebLogInput{
+				Route:     resetPasswordRoute,
+				Message:   "login-link email failed",
+				Code:      errcode.InternalError,
+				Operation: "login_link_email",
+				Status:    logStatusFailure,
+				Err:       err,
+				ContextFields: map[string]interface{}{
+					"user_id": userID,
+				},
+			})
 		} else {
 			WebLogf(r.Context(), resetPasswordRoute, "login-link email sent for user id=%s login=%q", userID, loginName)
 		}
@@ -306,7 +332,8 @@ func logHTTPRequestEnd(ctx context.Context, r *http.Request, statusCode int, dur
 	if statusCode >= 500 {
 		event.Message = "HTTP request failed"
 		event.Status = "failure"
-		applog.Error(ctx, event)
+		event.Code = errcode.InternalError
+		applog.ErrorCode(ctx, event.Code, event.Message, event)
 		return
 	}
 	event.Message = "HTTP request completed"
@@ -335,7 +362,14 @@ func writeLoginPage(w http.ResponseWriter, r *http.Request, statusCode int, next
 	tmpl, err := getLoginTemplate()
 	if err != nil {
 		if statusCode == http.StatusOK {
-			WebLogf(r.Context(), loginRoute, "%s: login template: %v", platformmsg.MsgHTTPTemplateError, err)
+			WebLogEvent(r.Context(), WebLogInput{
+				Route:     loginRoute,
+				Message:   "login template unavailable",
+				Code:      errcode.InternalError,
+				Operation: "login_template",
+				Status:    logStatusFailure,
+				Err:       err,
+			})
 			http.Error(w, "Login page unavailable", http.StatusInternalServerError)
 			return
 		}

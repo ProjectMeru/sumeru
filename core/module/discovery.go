@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"sumeru/core/applog"
+	"sumeru/core/errcode"
 	"sumeru/core/orm"
 )
 
@@ -64,13 +65,23 @@ func LoadAddonPaths(rootPaths []string) error {
 			syncErr := addon.SyncToDB(contextWithBypass)
 			if fatal := recordSyncToDBResult(contextWithBypass, addon.Manifest.Name, syncErr); fatal != nil {
 				syncErrs = append(syncErrs, fatal)
-				applog.WarnMsg(contextWithBypass, "module", "sync",
-					fmt.Sprintf("Error syncing addon %s", addon.Manifest.Name), fatal, nil)
+				applog.WarnCode(contextWithBypass, errcode.SyncPartial, fmt.Sprintf("Error syncing addon %s", addon.Manifest.Name), applog.Event{
+					Component: "module",
+					Operation: "sync",
+					Status:    "partial",
+					Context:   map[string]interface{}{"addon": addon.Manifest.Name},
+					Err:       fatal,
+				})
 				continue
 			}
 			if syncErr != nil {
-				applog.WarnMsg(contextWithBypass, "module", "sync",
-					fmt.Sprintf("Error syncing addon %s", addon.Manifest.Name), syncErr, nil)
+				applog.WarnCode(contextWithBypass, errcode.SyncPartial, fmt.Sprintf("Error syncing addon %s", addon.Manifest.Name), applog.Event{
+					Component: "module",
+					Operation: "sync",
+					Status:    "partial",
+					Context:   map[string]interface{}{"addon": addon.Manifest.Name},
+					Err:       syncErr,
+				})
 			} else {
 				applog.InfoMsg(contextWithBypass, "module", "sync",
 					fmt.Sprintf("Loaded addon data: %s (v%s)", addon.Manifest.Name, addon.Manifest.Version), nil)

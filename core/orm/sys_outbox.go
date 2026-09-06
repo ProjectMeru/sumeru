@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"sumeru/core/applog"
+	"sumeru/core/errcode"
 	"sumeru/core/modelmeta"
 )
 
@@ -25,8 +26,7 @@ func outboxValues(name string, actor int, payload map[string]interface{}) map[st
 		if b, err := json.Marshal(payload); err == nil {
 			pj = string(b)
 		} else {
-			applog.Warn(context.Background(), applog.Event{
-				Message:   "Outbox payload marshal failed",
+			applog.WarnCode(context.Background(), errcode.InternalError, "Outbox payload marshal failed", applog.Event{
 				Component: "orm",
 				Operation: "outbox",
 				Status:    "partial",
@@ -44,10 +44,10 @@ func outboxValues(name string, actor int, payload map[string]interface{}) map[st
 }
 
 // EnqueueOutboxTx inserts on tx when non-nil.
-func EnqueueOutboxTx(ctx context.Context, tx TxWrapper, name string, actor int, payload map[string]interface{}) {
+func EnqueueOutboxTx(ctx context.Context, tx TxWrapper, name string, actor int, payload map[string]interface{}) error {
 	if name == "" {
-		return
+		return nil
 	}
 	vals := outboxValues(name, actor, payload)
-	_ = insertSideEffectRow(ctx, tx, "sys.outbox.event", vals)
+	return insertSideEffectRow(ctx, tx, "sys.outbox.event", vals)
 }

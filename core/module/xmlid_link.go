@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"sumeru/core/applog"
+	"sumeru/core/errcode"
 	"sumeru/core/orm"
 )
 
@@ -43,21 +44,23 @@ func linkXMLRecord(ctx context.Context, moduleName, xmlID, model string, coreID 
 		"core_id": coreID,
 	}, "name")
 	if err != nil {
-		syncWarn(ctx, "Failed to link XML record %s.%s (%s id=%d): %v", moduleName, xmlID, model, coreID, err)
+		syncWarnCode(ctx, errcode.XMLLinkFailed, "Failed to link XML record %s.%s (%s id=%d): %v", moduleName, xmlID, model, coreID, err)
 	}
 	return err
 }
 
 func syncWarn(ctx context.Context, format string, args ...interface{}) {
+	syncWarnCode(ctx, errcode.SyncPartial, format, args...)
+}
+
+func syncWarnCode(ctx context.Context, code, format string, args ...interface{}) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	msg := fmt.Sprintf(format, args...)
-	applog.Warn(ctx, applog.Event{
-		Message:   msg,
+	applog.WarnCode(ctx, code, msg, applog.Event{
 		Component: "module",
 		Operation: "sync",
 		Status:    "partial",
-		Context:   map[string]interface{}{"detail": msg},
 	})
 }

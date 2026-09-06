@@ -30,7 +30,8 @@ func logORMOperation(ctx context.Context, start time.Time, operation, modelName 
 	if err != nil {
 		ev.Message = humanORMMessage(operation, modelName, false)
 		ev.Status = "failure"
-		applog.Error(ctx, ev)
+		ev.Code = ClassifyLogCode(err)
+		applog.ErrorCode(ctx, ev.Code, ev.Message, ev)
 		return
 	}
 	ev.Message = humanORMMessage(operation, modelName, true)
@@ -75,15 +76,4 @@ func humanORMMessage(operation, modelName string, success bool) string {
 		}
 		return fmt.Sprintf("%s on %s failed", operation, modelName)
 	}
-}
-
-// logORMOperationKV adapts legacy key-value call sites during migration.
-func logORMOperationKV(ctx context.Context, start time.Time, operation, modelName string, err error, keysAndValues ...interface{}) {
-	ctxMap := map[string]interface{}{}
-	for i := 0; i+1 < len(keysAndValues); i += 2 {
-		if k, ok := keysAndValues[i].(string); ok {
-			ctxMap[k] = keysAndValues[i+1]
-		}
-	}
-	logORMOperation(ctx, start, operation, modelName, err, ctxMap)
 }

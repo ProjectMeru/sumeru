@@ -69,14 +69,15 @@ Do not delete half-built features that still write data (e.g. outbox enqueue) un
 
 ## Logging
 
-Use **`sumeru/core/applog`** only: `Info` / `Warn` / `Debug` / `Error` with `Event`, or the thin helpers `InfoMsg`, `WarnMsg`, and `DebugMsg`. Before `SetupFromConfig` (config load, path resolve), use `BootstrapFatal` for fatal errors. See [docs/logging-contract.md](docs/logging-contract.md). Do not import stdlib `log` or call `fmt.Printf` for operational logging in `core/server` or `core/module`. Stdout is always on when logging is enabled; `log_file` is optional. Do not add Zap or other logging libraries.
+Use **`sumeru/core/applog`** only: `Info` / `Warn` / `Debug` / `Error` with `Event`, or the thin helpers `InfoMsg`, `WarnMsg`, `DebugMsg`, **`ErrorCode`**, and **`WarnCode`**. Failures should carry a stable `error_code` (see `sumeru/core/errcode`) plus a human `message`; never log passwords, tokens, sids, or API keys (context is auto-scrubbed). Before `SetupFromConfig` (config load, path resolve), use `BootstrapFatal` for fatal errors. See the logging guide in `sumeru_docs/core/guides/logging.md`. Do not import stdlib `log` or call `fmt.Printf` for operational logging in `core/server` or `core/module`. Stdout is always on when logging is enabled; `log_file` is optional. Do not add Zap or other logging libraries.
 
 ## Testing
 
-From the `sumeru` module root:
+From the `sumeru` module root, before opening a PR:
 
 ```bash
-go test ./...
+make lint          # swc-check + go vet + golangci-lint
+go test ./test/... -count=1
 go build ./...
 ```
 
@@ -86,12 +87,14 @@ Add or update tests under `test/` when you change ORM, server, or module behavio
 
 GitHub Actions runs on every pull request and push to `main` / `dev`:
 
-| Job | What it checks | Local equivalent |
-| --- | --- | --- |
-| **Go build** | `go build ./...` | `go build ./...` |
-| **Go test** | `go test ./... -count=1` | `go test ./...` or `make check` (with SWC) |
-| **SWC** | `npm run check` + `npm run test` in `core/swc` | `make swc-test` |
-| **Generate** | `make generate` — `cmd/sumeru/zimports.go` must not drift | `make generate` then review diff |
+| Job          | What it checks                                            | Local equivalent                                        |
+| ------------ | --------------------------------------------------------- | ------------------------------------------------------- |
+| **Go build** | `go build ./...`                                          | `go build ./...`                                        |
+| **Go test**  | `go test ./... -count=1`                                  | `go test ./test/...` or `make check`                    |
+| **Go lint**  | `go vet` + golangci-lint                                  | `make lint` (includes SWC typecheck)                    |
+| **Go vuln**  | `govulncheck ./...`                                       | `go run golang.org/x/vuln/cmd/govulncheck@latest ./...` |
+| **SWC**      | `npm run check` + coverage tests in `core/swc`            | `make swc-check` / `make swc-test`                      |
+| **Generate** | `make generate` — `cmd/sumeru/zimports.go` must not drift | `make generate` then review diff                        |
 
 On **push to `main` or `dev` only**, an **integration** job boots PostgreSQL, installs the `base` module with `sumeru.conf.ci`, and runs `go test -tags=integration ./test/integration/...`.
 

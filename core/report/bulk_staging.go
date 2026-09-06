@@ -68,7 +68,9 @@ func CreateBatch(ctx context.Context, in CreateBatchInput) (batchID int, err err
 	if err != nil {
 		return 0, err
 	}
-	_ = orm.UpdateRecordByID(ctx, "sys.attachment", attID, map[string]interface{}{"res_id": batchID})
+	if err := orm.UpdateRecordByID(ctx, "sys.attachment", attID, map[string]interface{}{"res_id": batchID}); err != nil {
+		return batchID, fmt.Errorf("link attachment to batch: %w", err)
+	}
 	return batchID, nil
 }
 
