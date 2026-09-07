@@ -343,6 +343,19 @@
     <div id="sum-toast-stack" class="sum-toast-stack" aria-live="polite"></div>
     <script>
     (function () {
+      var TAB_KEY = "sumeru_open_tabs";
+      var n = parseInt(localStorage.getItem(TAB_KEY) || "0", 10) + 1;
+      localStorage.setItem(TAB_KEY, String(n));
+
+      window.addEventListener("pagehide", function (ev) {
+        if (ev.persisted) return;
+        n = Math.max(0, parseInt(localStorage.getItem(TAB_KEY) || "1", 10) - 1);
+        localStorage.setItem(TAB_KEY, String(n));
+        if (n === 0 && navigator.sendBeacon) {
+          navigator.sendBeacon("/web/logout");
+        }
+      });
+
       document.addEventListener("click", function (event) {
         var button = event.target.closest(".sum-flash-dismiss");
         if (!button) return;
