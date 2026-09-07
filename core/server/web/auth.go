@@ -3,75 +3,36 @@ package web
 import (
 	"bufio"
 	"context"
+	"crypto/rand"
+	"database/sql"
+	"encoding/hex"
 	"errors"
-	"html/template"
+	"fmt"
 	"net"
 	"net/http"
-	"net/url"
-	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"sumeru/core/applog"
-	"sumeru/core/engine/assets"
-	"sumeru/core/engine/render"
 	"sumeru/core/errcode"
-	"sumeru/core/mail"
 	"sumeru/core/orm"
 	"sumeru/core/server/config"
-
-	"golang.org/x/crypto/bcrypt"
 )
 
-// loginPageData is the view model for templates/login.html.
-type loginPageData struct {
-	Next        string
-	Error       string
-	Stylesheets []string
-	LogoURL     string
+const sessionCookieName = "sumeru_session"
+const sessionDuration = 24 * time.Hour
+const sessionSlidingTTL = 8 * time.Hour
+
+var testSessionUserIDOverride int
+
+type ctxKeySessionState struct{}
+
+type sessionState struct {
+	userID      int
+	fromCookie  bool
+	clearCookie bool
 }
 
-// loginUser holds the fields needed to verify a password at sign-in.
-type loginUser struct {
-	ID           int
-	PasswordHash string
-	Active       bool
-}
-
-type loginCredentials struct {
-	Login    string
-	Password string
-	Next     string
-}
-
-var (
-	loginTemplateOnce sync.Once
-	cachedLoginTmpl   *template.Template
-	loginTemplateErr  error
-)
-
-// APIKeyUserID resolves X-API-Key or Authorization: Bearer credentials to a user id.
-func APIKeyUserID(r *http.Request) int {
-	if r == nil {
-		return 0
-	}
-	raw := apiKeyFromRequest(r)
-	if raw == "" {
-		return 0
-	}
-	return orm.UIDFromAPIKey(r.Context(), raw)
-}
-
-// AuthenticatedUserID returns the session user id, or the API key user id when no session exists.
-func AuthenticatedUserID(r *http.Request) int {
-	if uid := SessionUserID(r); uid > 0 {
-		return uid
-	}
-	return APIKeyUserID(r)
-}
-
-// SecurityMiddleware attaches request_id, authenticated uid, and active company to each request.
 func SecurityMiddleware(next http.Handler) http.Handler {
 	if next == nil {
 		next = http.DefaultServeMux
@@ -85,7 +46,11 @@ func SecurityMiddleware(next http.Handler) http.Handler {
 		w.Header().Set(requestIDHeader, requestID)
 		setSecurityHeaders(w, r)
 
-		ctx := enrichRequestContext(r, requestID)
+		session := resolveSession(r)
+		if session.clearCookie {
+			ClearSessionCookie(w)
+		}
+		ctx := enrichRequestContext(r, requestID, session)
 		r = r.WithContext(ctx)
 
 		logHTTPRequestStart(ctx, r)
@@ -132,177 +97,11 @@ func (recorder *statusRecorder) Flush() {
 	}
 }
 
-// requireLogin redirects anonymous browser requests to the login page with a safe return URL.
-func requireLogin(w http.ResponseWriter, r *http.Request) bool {
-	if SessionUserID(r) > 0 {
-		return true
-	}
-	returnTo := SafePathNext(r.URL.RequestURI(), homeRoute)
-	http.Redirect(w, r, loginURLWithReturn(returnTo), http.StatusFound)
-	return false
-}
-
-// LoginGet renders the login form for anonymous users.
-func LoginGet(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	next := strings.TrimSpace(r.URL.Query().Get(nextField))
-	if SessionUserID(r) > 0 {
-		http.Redirect(w, r, SafePathNext(next, homeRoute), http.StatusFound)
-		return
-	}
-
-	writeLoginPage(w, r, http.StatusOK, next, "")
-}
-
-// LoginPost validates credentials, opens a session, and redirects to the requested page.
-func LoginPost(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	if !ParsePostForm(w, r) {
-		return
-	}
-
-	credentials := parseLoginCredentials(r)
-	clientIP := clientIP(r)
-
-	user, authenticated := verifyLoginCredentials(r.Context(), credentials, clientIP)
-	if !authenticated {
-		applog.WarnCode(r.Context(), errcode.InvalidCredentials, "Invalid login or password", applog.Event{
-			Component: "web",
-			Operation: "login",
-			Status:    "failure",
-			Context: map[string]interface{}{
-				"route": loginRoute,
-				"ip":    clientIP,
-			},
-		})
-		writeLoginPage(w, r, http.StatusUnauthorized, credentials.Next, invalidLoginMessage)
-		return
-	}
-	if err := CreateSession(w, user.ID); err != nil {
-		WebLogEvent(r.Context(), WebLogInput{
-			Route:     loginRoute,
-			Message:   "Could not start session",
-			Code:      errcode.InternalError,
-			Operation: "session_create",
-			Status:    logStatusFailure,
-			Err:       err,
-		})
-		http.Error(w, "Could not start session", http.StatusInternalServerError)
-		return
-	}
-
-	orm.AppendUserLog(r.Context(), user.ID, clientIP, "success")
-	http.Redirect(w, r, credentials.Next, http.StatusSeeOther)
-}
-
-// LogoutGet destroys the session cookie and returns the browser to the login page.
-func LogoutGet(w http.ResponseWriter, r *http.Request) {
-	DestroySession(w, r)
-	http.Redirect(w, r, loginRoute, http.StatusFound)
-}
-
-// ActionNotifyLoginLink emails a login URL to the user (not a password-reset token flow).
-// Prefer IdP / SSO or SetUserPassword for credential changes.
-func ActionResetPassword(w http.ResponseWriter, r *http.Request) {
-	if !requireLoginAndPOST(w, r) {
-		return
-	}
-	if !requireSystemAdmin(w, r, false) {
-		return
-	}
-
-	userID := strings.TrimSpace(r.PostFormValue(resetUserIDField))
-	loginName := strings.TrimSpace(r.PostFormValue(loginField))
-	to := strings.TrimSpace(r.PostFormValue("email"))
-	if to == "" && strings.Contains(loginName, "@") {
-		to = loginName
-	}
-	loginURL := loginRoute
-	if mail.Configured() && to != "" {
-		if err := mail.SendPasswordResetEmail(r.Context(), to, loginName, loginURL); err != nil {
-			WebLogEvent(r.Context(), WebLogInput{
-				Route:     resetPasswordRoute,
-				Message:   "login-link email failed",
-				Code:      errcode.InternalError,
-				Operation: "login_link_email",
-				Status:    logStatusFailure,
-				Err:       err,
-				ContextFields: map[string]interface{}{
-					"user_id": userID,
-				},
-			})
-		} else {
-			WebLogf(r.Context(), resetPasswordRoute, "login-link email sent for user id=%s login=%q", userID, loginName)
-		}
-	} else {
-		WebLogf(r.Context(), resetPasswordRoute,
-			"login-link notify for user id=%s login=%q (configure smtp_host/smtp_from to send email; this does not reset passwords)", userID, loginName)
-	}
-	redirectWithWebMessage(w, r, r.PostFormValue(nextField), resetPasswordMsg)
-}
-
-func loginURLWithReturn(returnTo string) string {
-	return loginRoute + "?next=" + url.QueryEscape(returnTo)
-}
-
-func parseLoginCredentials(r *http.Request) loginCredentials {
-	return loginCredentials{
-		Login:    strings.TrimSpace(r.PostFormValue(loginField)),
-		Password: r.PostFormValue(passwordField),
-		Next:     SafePathNext(r.PostFormValue(nextField), homeRoute),
-	}
-}
-
-func verifyLoginCredentials(ctx context.Context, credentials loginCredentials, clientIP string) (loginUser, bool) {
-	user, err := lookupLoginUser(ctx, credentials.Login)
-	if err != nil || !userCanAuthenticate(user) {
-		recordFailedLogin(ctx, 0, clientIP, "login="+credentials.Login)
-		return loginUser{}, false
-	}
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(credentials.Password)); err != nil {
-		recordFailedLogin(ctx, user.ID, clientIP, "bad password")
-		return loginUser{}, false
-	}
-	return user, true
-}
-
-func apiKeyFromRequest(r *http.Request) string {
-	if key := strings.TrimSpace(r.Header.Get(apiKeyHeader)); key != "" {
-		return key
-	}
-	return bearerToken(r.Header.Get(authHeader))
-}
-
-func bearerToken(authHeaderValue string) string {
-	authValue := strings.TrimSpace(authHeaderValue)
-	if len(authValue) < len(authBearerPrefix) || !strings.EqualFold(authValue[:len(authBearerPrefix)], authBearerPrefix) {
-		return ""
-	}
-	return strings.TrimSpace(authValue[len(authBearerPrefix):])
-}
-
 func requestIDFromHeader(r *http.Request) string {
 	if requestID := strings.TrimSpace(r.Header.Get(requestIDHeader)); requestID != "" {
 		return requestID
 	}
 	return applog.NewRequestID()
-}
-
-func enrichRequestContext(r *http.Request, requestID string) context.Context {
-	ctx := applog.ContextWithRequestID(r.Context(), requestID)
-	userID := AuthenticatedUserID(r)
-	ctx = orm.ContextWithUID(ctx, userID)
-	if userID > 0 {
-		ctx = orm.ContextWithCompanyID(ctx, orm.ActiveCompanyIDForUser(ctx, userID))
-	}
-	return ctx
 }
 
 func logHTTPRequestStart(ctx context.Context, r *http.Request) {
@@ -341,64 +140,202 @@ func logHTTPRequestEnd(ctx context.Context, r *http.Request, statusCode int, dur
 	applog.Debug(ctx, event)
 }
 
-func getLoginTemplate() (*template.Template, error) {
-	loginTemplateOnce.Do(func() {
-		templatePath := filepath.Join(config.AppConfig.TemplatesPath, loginTemplateFile)
-		cachedLoginTmpl, loginTemplateErr = template.ParseFiles(templatePath)
-	})
-	return cachedLoginTmpl, loginTemplateErr
-}
-
-func newLoginPageData(next, errorMessage string) loginPageData {
-	return loginPageData{
-		Next:        next,
-		Error:       errorMessage,
-		Stylesheets: assets.LoginStylesheetURLs(),
-		LogoURL:     render.ShellLogoURL(),
+func buildSessionCookie(value string, deleteCookie bool) *http.Cookie {
+	cookie := &http.Cookie{
+		Name:     sessionCookieName,
+		Value:    value,
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   !config.AppConfig.DevMode,
 	}
+	if deleteCookie {
+		cookie.MaxAge = -1
+	}
+	return cookie
 }
 
-func writeLoginPage(w http.ResponseWriter, r *http.Request, statusCode int, next, errorMessage string) {
-	tmpl, err := getLoginTemplate()
+func withSessionState(ctx context.Context, state sessionState) context.Context {
+	return context.WithValue(ctx, ctxKeySessionState{}, state)
+}
+
+func sessionStateFrom(ctx context.Context) (sessionState, bool) {
+	state, ok := ctx.Value(ctxKeySessionState{}).(sessionState)
+	return state, ok
+}
+
+func resolveSession(r *http.Request) sessionState {
+	if orm.DB == nil {
+		return sessionState{}
+	}
+	cookie, err := r.Cookie(sessionCookieName)
+	if err != nil || cookie.Value == "" {
+		return sessionState{}
+	}
+	sid := cookie.Value
+	sessionTbl := orm.MustQuotedTableName("sys.session")
+	userTbl := orm.MustQuotedTableName("core.user")
+
+	var userID int
+	var active bool
+	err = orm.DB.QueryRowContext(r.Context(),
+		`SELECT s.user_id, u.active FROM `+sessionTbl+` s
+		 JOIN `+userTbl+` u ON u.id = s.user_id
+		 WHERE s.sid = $1 AND s.expires_at > NOW()`,
+		sid,
+	).Scan(&userID, &active)
 	if err != nil {
-		if statusCode == http.StatusOK {
-			WebLogEvent(r.Context(), WebLogInput{
-				Route:     loginRoute,
-				Message:   "login template unavailable",
-				Code:      errcode.InternalError,
-				Operation: "login_template",
-				Status:    logStatusFailure,
+		if err != sql.ErrNoRows {
+			applog.WarnCode(r.Context(), errcode.InternalError, "session lookup failed", applog.Event{
+				Component: "web",
+				Operation: "session_resolve",
+				Status:    "partial",
 				Err:       err,
 			})
-			http.Error(w, "Login page unavailable", http.StatusInternalServerError)
-			return
 		}
-		http.Error(w, errorMessage, http.StatusUnauthorized)
+		deleteSession(r.Context(), sid)
+		return sessionState{clearCookie: true}
+	}
+	if !active || userID <= 0 {
+		deleteSession(r.Context(), sid)
+		applog.WarnCode(r.Context(), errcode.AccessDenied, "session revoked for inactive user", applog.Event{
+			Component: "web",
+			Operation: "session_revoked_inactive",
+			Status:    "success",
+			Context: map[string]interface{}{
+				"user_id": userID,
+			},
+		})
+		orm.AppendAudit(r.Context(), "session_revoked_inactive", "sys.session", 0, nil, nil, fmt.Sprintf("user_id=%d", userID))
+		return sessionState{clearCookie: true}
+	}
+	if _, err := orm.DB.ExecContext(r.Context(),
+		`UPDATE `+sessionTbl+` SET expires_at = $1 WHERE sid = $2 AND expires_at > NOW()`,
+		time.Now().UTC().Add(sessionSlidingTTL),
+		sid,
+	); err != nil {
+		applog.WarnCode(r.Context(), errcode.InternalError, "sliding session expiry update failed", applog.Event{
+			Component: "web",
+			Operation: "session_slide",
+			Status:    "partial",
+			Err:       err,
+		})
+	}
+	return sessionState{userID: userID, fromCookie: true}
+}
+
+func deleteSession(ctx context.Context, sid string) {
+	if orm.DB == nil || sid == "" {
 		return
 	}
-
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if statusCode != http.StatusOK {
-		w.WriteHeader(statusCode)
+	sessionTbl := orm.MustQuotedTableName("sys.session")
+	if _, err := orm.DB.ExecContext(ctx, `DELETE FROM `+sessionTbl+` WHERE sid = $1`, sid); err != nil {
+		applog.WarnCode(ctx, errcode.InternalError, "session delete failed", applog.Event{
+			Component: "web",
+			Operation: "session_destroy",
+			Status:    "partial",
+			Err:       err,
+		})
 	}
-	_ = tmpl.Execute(w, newLoginPageData(next, errorMessage))
 }
 
-func lookupLoginUser(ctx context.Context, loginName string) (loginUser, error) {
-	userTable := orm.MustQuotedTableName(coreUserModel)
-	var user loginUser
-	err := orm.DB.QueryRowContext(ctx,
-		`SELECT id, COALESCE(password, ''), active FROM `+userTable+` WHERE LOWER(TRIM(login)) = LOWER(TRIM($1)) LIMIT 1`,
-		loginName,
-	).Scan(&user.ID, &user.PasswordHash, &user.Active)
-	return user, err
+func CreateSession(w http.ResponseWriter, userID int) error {
+	if orm.DB == nil {
+		return fmt.Errorf("no database")
+	}
+	sessionBytes := make([]byte, 24)
+	if _, err := rand.Read(sessionBytes); err != nil {
+		return err
+	}
+	sessionID := hex.EncodeToString(sessionBytes)
+	expiresAt := time.Now().UTC().Add(sessionDuration)
+	sessionTbl := orm.MustQuotedTableName("sys.session")
+	if _, err := orm.DB.Exec(`INSERT INTO `+sessionTbl+` (sid, user_id, expires_at) VALUES ($1, $2, $3)`, sessionID, userID, expiresAt); err != nil {
+		return err
+	}
+	http.SetCookie(w, buildSessionCookie(sessionID, false))
+	return nil
 }
 
-func userCanAuthenticate(user loginUser) bool {
-	return user.Active && strings.TrimSpace(user.PasswordHash) != ""
+func ClearSessionCookie(w http.ResponseWriter) {
+	http.SetCookie(w, buildSessionCookie("", true))
 }
 
-func recordFailedLogin(ctx context.Context, userID int, clientIP, auditNote string) {
-	orm.AppendUserLog(ctx, userID, clientIP, "failure")
-	orm.AppendAudit(ctx, "login_fail", coreUserModel, int64(userID), nil, nil, auditNote)
+func sessionForRequest(r *http.Request) sessionState {
+	if testSessionUserIDOverride > 0 {
+		return sessionState{userID: testSessionUserIDOverride, fromCookie: true}
+	}
+	if state, ok := sessionStateFrom(r.Context()); ok {
+		return state
+	}
+	return resolveSession(r)
+}
+
+func SessionUserID(r *http.Request) int {
+	return sessionForRequest(r).userID
+}
+
+func AuthViaSession(r *http.Request) bool {
+	return sessionForRequest(r).fromCookie
+}
+
+func DestroySession(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie(sessionCookieName)
+	if err == nil && cookie.Value != "" {
+		deleteSession(r.Context(), cookie.Value)
+	}
+	ClearSessionCookie(w)
+}
+
+func APIKeyUserID(r *http.Request) int {
+	raw := apiKeyFromRequest(r)
+	if raw == "" {
+		return 0
+	}
+	return orm.UIDFromAPIKey(r.Context(), raw)
+}
+
+func AuthenticatedUserID(r *http.Request) int {
+	if uid := SessionUserID(r); uid > 0 {
+		return uid
+	}
+	return APIKeyUserID(r)
+}
+
+func requireLogin(w http.ResponseWriter, r *http.Request) bool {
+	if SessionUserID(r) > 0 {
+		return true
+	}
+	returnTo := SafePathNext(r.URL.RequestURI(), homeRoute)
+	http.Redirect(w, r, loginURLWithReturn(returnTo), http.StatusFound)
+	return false
+}
+
+func apiKeyFromRequest(r *http.Request) string {
+	if key := strings.TrimSpace(r.Header.Get(apiKeyHeader)); key != "" {
+		return key
+	}
+	return bearerToken(r.Header.Get(authHeader))
+}
+
+func bearerToken(authHeaderValue string) string {
+	authValue := strings.TrimSpace(authHeaderValue)
+	if len(authValue) < len(authBearerPrefix) || !strings.EqualFold(authValue[:len(authBearerPrefix)], authBearerPrefix) {
+		return ""
+	}
+	return strings.TrimSpace(authValue[len(authBearerPrefix):])
+}
+
+func enrichRequestContext(r *http.Request, requestID string, session sessionState) context.Context {
+	ctx := applog.ContextWithRequestID(r.Context(), requestID)
+	ctx = withSessionState(ctx, session)
+	userID := session.userID
+	if userID <= 0 {
+		userID = APIKeyUserID(r)
+	}
+	ctx = orm.ContextWithUID(ctx, userID)
+	if userID > 0 {
+		ctx = orm.ContextWithCompanyID(ctx, orm.ActiveCompanyIDForUser(ctx, userID))
+	}
+	return ctx
 }

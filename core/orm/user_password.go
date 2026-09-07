@@ -60,5 +60,9 @@ func SetUserPasswordHash(ctx context.Context, userID int, hash string) error {
 		return fmt.Errorf("password hash required")
 	}
 	ctx = ContextAllowPasswordHashWrite(ctx)
-	return UpdateRecordByID(ctx, "core.user", userID, map[string]interface{}{"password": hash})
+	if err := UpdateRecordByID(ctx, "core.user", userID, map[string]interface{}{"password": hash}); err != nil {
+		return err
+	}
+	DestroySessionsForUser(ctx, userID)
+	return nil
 }

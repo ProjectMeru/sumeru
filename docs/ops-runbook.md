@@ -15,6 +15,7 @@
 ## Incident
 
 - Revoke sessions: delete rows from `sys.session` or destroy cookie via logout.
+- Browser sessions are non-persistent (session cookie) with ~8h idle / 24h DB ceiling; closing the last Sumeru tab triggers logout via beacon.
 - Rotate `csrf_secret` only with a full restart of all instances (invalidates CSRF tokens).
 - Check `/metrics` (Bearer scrape token) and JSON logs (`request_id`).
 

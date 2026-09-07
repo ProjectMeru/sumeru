@@ -1,6 +1,6 @@
 # High availability operations (Phase 6)
 
-Sumeru sessions are **DB-backed** (`sys.session`), so sticky sessions are not required for auth.
+Sumeru sessions are **DB-backed** (`sys.session`), so sticky sessions are not required for auth. Session cookies are browser-scoped (not multi-day persistent); idle timeout ~8h with a 24h DB ceiling.
 
 ## Requirements before multi-instance
 

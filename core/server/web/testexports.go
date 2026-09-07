@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -378,6 +379,63 @@ func SetTestSessionUserIDForTest(userID int) { testSessionUserIDOverride = userI
 
 // ResetTestSessionUserIDForTest clears the session override.
 func ResetTestSessionUserIDForTest() { testSessionUserIDOverride = 0 }
+
+// SessionUserIDForTest exposes SessionUserID for external tests.
+func SessionUserIDForTest(r *http.Request) int { return SessionUserID(r) }
+
+// AuthViaSessionForTest exposes AuthViaSession for external tests.
+func AuthViaSessionForTest(r *http.Request) bool { return AuthViaSession(r) }
+
+// RPCJSONHandlerForTest exposes the JSON RPC handler for external tests.
+func RPCJSONHandlerForTest(w http.ResponseWriter, r *http.Request) { RPCJSONHandler(w, r) }
+
+// BuildSessionCookieForTest exposes session cookie construction for tests.
+func BuildSessionCookieForTest(value string, deleteCookie bool) *http.Cookie {
+	return buildSessionCookie(value, deleteCookie)
+}
+
+// ResolveSessionFromCookieForTest exposes session resolution for integration tests.
+func ResolveSessionFromCookieForTest(r *http.Request) (userID int, clearCookie bool) {
+	state := resolveSession(r)
+	return state.userID, state.clearCookie
+}
+
+// TestSessionCookieName is the HttpOnly session cookie name.
+const TestSessionCookieName = sessionCookieName
+
+// InsertTestSessionForTest inserts a sys.session row for integration tests.
+func InsertTestSessionForTest(sid string, userID int, expiresAt time.Time) error {
+	if orm.DB == nil {
+		return fmt.Errorf("no database")
+	}
+	sessionTable := orm.MustQuotedTableName("sys.session")
+	_, err := orm.DB.Exec(
+		`INSERT INTO `+sessionTable+` (sid, user_id, expires_at) VALUES ($1, $2, $3)`,
+		sid, userID, expiresAt,
+	)
+	return err
+}
+
+// CountTestSessionsForUserForTest returns session row count for a user.
+func CountTestSessionsForUserForTest(userID int) (int, error) {
+	if orm.DB == nil {
+		return 0, fmt.Errorf("no database")
+	}
+	sessionTable := orm.MustQuotedTableName("sys.session")
+	var count int
+	err := orm.DB.QueryRow(`SELECT COUNT(*) FROM `+sessionTable+` WHERE user_id = $1`, userID).Scan(&count)
+	return count, err
+}
+
+// DeleteTestSessionForTest removes a session row by sid.
+func DeleteTestSessionForTest(sid string) error {
+	if orm.DB == nil {
+		return fmt.Errorf("no database")
+	}
+	sessionTable := orm.MustQuotedTableName("sys.session")
+	_, err := orm.DB.Exec(`DELETE FROM `+sessionTable+` WHERE sid = $1`, sid)
+	return err
+}
 
 func ResolveExtraScripts(pageScripts, optScripts []string) []string {
 	return resolveExtraScripts(pageScripts, optScripts)
