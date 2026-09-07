@@ -66,3 +66,11 @@ func SetUserPasswordHash(ctx context.Context, userID int, hash string) error {
 	DestroySessionsForUser(ctx, userID)
 	return nil
 }
+
+func DestroySessionsForUser(ctx context.Context, userID int) {
+	if DB == nil || userID <= 0 {
+		return
+	}
+	tbl := MustQuotedTableName("sys.session")
+	_, _ = DB.ExecContext(ctx, `DELETE FROM `+tbl+` WHERE user_id = $1`, userID)
+}

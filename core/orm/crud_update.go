@@ -16,6 +16,11 @@ func UpdateRecordByID(ctx context.Context, modelName string, id int, values map[
 		return fmt.Errorf("invalid id")
 	}
 	_, err = Update(ctx, modelName, [][]interface{}{{"id", "=", id}}, values)
+	if err == nil && modelName == "core.user" {
+		if v, ok := values["active"]; ok && !AsBool(v) {
+			DestroySessionsForUser(ctx, id)
+		}
+	}
 	return err
 }
 
