@@ -4,10 +4,13 @@ package orm_test
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"testing"
 	"time"
+
+	_ "github.com/lib/pq"
 
 	"sumeru/core/orm"
 )
@@ -25,9 +28,19 @@ func initIntegrationDB(t *testing.T) context.Context {
 	if dsn == "" {
 		t.Skip("SUMERU_TEST_DSN not set")
 	}
+	preflight, err := sql.Open("postgres", dsn)
+	if err != nil {
+		t.Fatalf("open db: %v", err)
+	}
+	if err := preflight.Ping(); err != nil {
+		_ = preflight.Close()
+		t.Fatalf("db ping: %v", err)
+	}
+	_ = preflight.Close()
+
 	orm.InitDBWithPool(dsn, orm.DBPoolSettings{MaxOpenConns: 5, MaxIdleConns: 2})
 	if !orm.IsInitialized() {
-		t.Skip("database not initialized")
+		t.Skip("database schema not bootstrapped (run sumeru -i base)")
 	}
 	return integrationCtx()
 }
