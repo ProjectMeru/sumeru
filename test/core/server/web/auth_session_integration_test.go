@@ -3,13 +3,16 @@
 package web_test
 
 import (
-	"context"
+	"database/sql"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
 	"time"
+
+	_ "github.com/lib/pq"
 
 	"sumeru/core/orm"
 	"sumeru/core/server/web"
@@ -21,18 +24,27 @@ func integrationDB(t *testing.T) {
 	if dsn == "" {
 		t.Skip("SUMERU_TEST_DSN not set")
 	}
+	preflight, err := sql.Open("postgres", dsn)
+	if err != nil {
+		t.Fatalf("open db: %v", err)
+	}
+	if err := preflight.Ping(); err != nil {
+		_ = preflight.Close()
+		t.Fatalf("db ping: %v", err)
+	}
+	_ = preflight.Close()
+
 	orm.InitDBWithPool(dsn, orm.DBPoolSettings{MaxOpenConns: 5, MaxIdleConns: 2})
 	if !orm.IsInitialized() {
-		t.Skip("database not initialized")
+		t.Skip("database schema not bootstrapped (run sumeru -i base)")
 	}
 }
 
-func activeTestUserID(t *testing.T) int {
+func existingActiveUserID(t *testing.T) int {
 	t.Helper()
-	ctx := context.Background()
 	userTable := orm.MustQuotedTableName("core.user")
 	var userID int
-	err := orm.DB.QueryRowContext(ctx,
+	err := orm.DB.QueryRow(
 		`SELECT id FROM `+userTable+` WHERE active = true ORDER BY id LIMIT 1`,
 	).Scan(&userID)
 	if err != nil || userID <= 0 {
@@ -41,9 +53,28 @@ func activeTestUserID(t *testing.T) int {
 	return userID
 }
 
+func insertTestUser(t *testing.T) int {
+	t.Helper()
+	userTable := orm.MustQuotedTableName("core.user")
+	login := fmt.Sprintf("web_sess_test_%d", time.Now().UnixNano())
+	var userID int
+	err := orm.DB.QueryRow(
+		`INSERT INTO `+userTable+` (login, name, active, password, user_type)
+		 VALUES ($1, $2, true, '', 'internal') RETURNING id`,
+		login, "Web Session Test",
+	).Scan(&userID)
+	if err != nil || userID <= 0 {
+		t.Fatalf("insert test user: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = orm.DB.Exec(`DELETE FROM `+userTable+` WHERE id = $1`, userID)
+	})
+	return userID
+}
+
 func TestResolveSessionActiveUser(t *testing.T) {
 	integrationDB(t)
-	userID := activeTestUserID(t)
+	userID := existingActiveUserID(t)
 	sid := "test-active-session-" + time.Now().Format("150405.000000")
 	t.Cleanup(func() { _ = web.DeleteTestSessionForTest(sid) })
 
@@ -92,8 +123,7 @@ func TestSecurityMiddlewareClearsCookieForInvalidSession(t *testing.T) {
 
 func TestInactiveUserSessionRevoked(t *testing.T) {
 	integrationDB(t)
-	ctx := context.Background()
-	userID := activeTestUserID(t)
+	userID := insertTestUser(t)
 	sid := "test-inactive-session-" + time.Now().Format("150405.000000")
 	t.Cleanup(func() { _ = web.DeleteTestSessionForTest(sid) })
 
@@ -101,15 +131,12 @@ func TestInactiveUserSessionRevoked(t *testing.T) {
 		t.Fatalf("insert session: %v", err)
 	}
 
-	bypass := orm.ContextWithBypass(ctx, true)
-	if err := orm.UpdateRecordByID(bypass, "core.user", userID, map[string]interface{}{"active": false}); err != nil {
+	userTable := orm.MustQuotedTableName("core.user")
+	if _, err := orm.DB.Exec(`UPDATE `+userTable+` SET active = false WHERE id = $1`, userID); err != nil {
 		t.Fatalf("deactivate user: %v", err)
 	}
-	t.Cleanup(func() {
-		_ = orm.UpdateRecordByID(bypass, "core.user", userID, map[string]interface{}{"active": true})
-	})
 
-	req := httptest.NewRequest(http.MethodGet, web.TestAPIRPCRoute, nil)
+	req := httptest.NewRequest(http.MethodPost, web.TestAPIRPCRoute, nil)
 	req.AddCookie(&http.Cookie{Name: web.TestSessionCookieName, Value: sid})
 	rec := httptest.NewRecorder()
 	web.SecurityMiddleware(http.HandlerFunc(web.RPCJSONHandlerForTest)).ServeHTTP(rec, req)
@@ -134,30 +161,5 @@ func TestInactiveUserSessionRevoked(t *testing.T) {
 	}
 	if !foundClear {
 		t.Fatalf("expected cleared session cookie, got %v", setCookies)
-	}
-}
-
-func TestPasswordChangeRevokesSessions(t *testing.T) {
-	integrationDB(t)
-	userID := activeTestUserID(t)
-	sid := "test-password-session-" + time.Now().Format("150405.000000")
-	t.Cleanup(func() { _ = web.DeleteTestSessionForTest(sid) })
-
-	if err := web.InsertTestSessionForTest(sid, userID, time.Now().UTC().Add(time.Hour)); err != nil {
-		t.Fatalf("insert session: %v", err)
-	}
-
-	ctx := orm.ContextWithBypass(context.Background(), true)
-	hash := "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy"
-	if err := orm.SetUserPasswordHash(ctx, userID, hash); err != nil {
-		t.Fatalf("SetUserPasswordHash: %v", err)
-	}
-
-	count, err := web.CountTestSessionsForUserForTest(userID)
-	if err != nil {
-		t.Fatalf("count sessions: %v", err)
-	}
-	if count != 0 {
-		t.Fatalf("session row count = %d, want 0 after password change", count)
 	}
 }

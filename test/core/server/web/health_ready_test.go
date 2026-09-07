@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"sumeru/core/orm"
 	"sumeru/core/server/web"
 )
 
@@ -23,6 +24,9 @@ func TestAPIHealthHandler(t *testing.T) {
 }
 
 func TestAPIReadyHandlerWithoutDB(t *testing.T) {
+	if orm.IsInitialized() {
+		t.Skip("requires orm.DB unset; integration tests initialize DB")
+	}
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/ready", nil)
 	web.APIReadyHandler(rec, req)
