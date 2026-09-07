@@ -60,5 +60,17 @@ func SetUserPasswordHash(ctx context.Context, userID int, hash string) error {
 		return fmt.Errorf("password hash required")
 	}
 	ctx = ContextAllowPasswordHashWrite(ctx)
-	return UpdateRecordByID(ctx, "core.user", userID, map[string]interface{}{"password": hash})
+	if err := UpdateRecordByID(ctx, "core.user", userID, map[string]interface{}{"password": hash}); err != nil {
+		return err
+	}
+	DestroySessionsForUser(ctx, userID)
+	return nil
+}
+
+func DestroySessionsForUser(ctx context.Context, userID int) {
+	if DB == nil || userID <= 0 {
+		return
+	}
+	tbl := MustQuotedTableName("sys.session")
+	_, _ = DB.ExecContext(ctx, `DELETE FROM `+tbl+` WHERE user_id = $1`, userID)
 }
