@@ -1,4 +1,5 @@
 import type { SwcArchField } from "../../types/workspace.js";
+import { formatNumericValue } from "../../i18n/number.js";
 
 /** Plain-text display name for a record row (name, display_name, or fallback). */
 export function recordDisplayLabel(
@@ -27,6 +28,11 @@ export function formatFieldValue(row: Record<string, unknown>, field: SwcArchFie
     const key = String(raw);
     const match = field.selection.find(([value]) => value === key);
     return match?.[1] ?? key;
+  }
+
+  if (field.type === "integer" || field.type === "float" || field.type === "float64" || field.type === "numeric") {
+    const raw = row[field.name];
+    return raw == null || raw === "" ? "" : formatNumericValue(raw);
   }
 
   const raw = row[`${field.name}_name`] ?? row[field.name];

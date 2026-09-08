@@ -21,29 +21,30 @@ type SWCBootstrapWorkspace struct {
 }
 
 type swcBootstrap struct {
-	CSRFToken           string                 `json:"csrfToken"`
-	RPCURL              string                 `json:"rpcUrl"`
-	SwcAPIBase          string                 `json:"swcApiBase"`
-	User                swcBootstrapUser       `json:"user"`
-	Company             swcBootstrapCompany    `json:"company"`
-	Companies           []swcBootstrapCompany  `json:"companies"`
-	ActiveCompanyID     int                    `json:"activeCompanyId"`
-	ShowCompanySwitcher bool                   `json:"showCompanySwitcher"`
-	TopMenus            []swcBootstrapMenu     `json:"topMenus"`
-	SidebarMenus        []swcBootstrapSidebar  `json:"sidebarMenus"`
-	ActiveModuleID      string                 `json:"activeModuleId"`
-	ActiveMenuID        string                 `json:"activeMenuId"`
-	Apps                []swcBootstrapApp      `json:"apps"`
-	PinnedApps          []string               `json:"pinnedApps"`
-	AppsNavAllowed      bool                   `json:"appsNavAllowed"`
-	SettingsNavAllowed  bool                   `json:"settingsNavAllowed"`
-	ActivityEnabled     bool                   `json:"activityEnabled"`
-	BusEnabled          bool                   `json:"busEnabled"`
-	DocsURL             string                 `json:"docsUrl"`
-	ProfileURL          string                 `json:"profileUrl"`
-	Features            map[string]bool        `json:"features,omitempty"`
-	Workspace           *SWCBootstrapWorkspace `json:"workspace,omitempty"`
-	Toasts              []swcBootstrapToast    `json:"toasts,omitempty"`
+	CSRFToken           string                   `json:"csrfToken"`
+	RPCURL              string                   `json:"rpcUrl"`
+	SwcAPIBase          string                   `json:"swcApiBase"`
+	User                swcBootstrapUser         `json:"user"`
+	NumberFormat        swcBootstrapNumberFormat `json:"numberFormat"`
+	Company             swcBootstrapCompany      `json:"company"`
+	Companies           []swcBootstrapCompany    `json:"companies"`
+	ActiveCompanyID     int                      `json:"activeCompanyId"`
+	ShowCompanySwitcher bool                     `json:"showCompanySwitcher"`
+	TopMenus            []swcBootstrapMenu       `json:"topMenus"`
+	SidebarMenus        []swcBootstrapSidebar    `json:"sidebarMenus"`
+	ActiveModuleID      string                   `json:"activeModuleId"`
+	ActiveMenuID        string                   `json:"activeMenuId"`
+	Apps                []swcBootstrapApp        `json:"apps"`
+	PinnedApps          []string                 `json:"pinnedApps"`
+	AppsNavAllowed      bool                     `json:"appsNavAllowed"`
+	SettingsNavAllowed  bool                     `json:"settingsNavAllowed"`
+	ActivityEnabled     bool                     `json:"activityEnabled"`
+	BusEnabled          bool                     `json:"busEnabled"`
+	DocsURL             string                   `json:"docsUrl"`
+	ProfileURL          string                   `json:"profileUrl"`
+	Features            map[string]bool          `json:"features,omitempty"`
+	Workspace           *SWCBootstrapWorkspace   `json:"workspace,omitempty"`
+	Toasts              []swcBootstrapToast      `json:"toasts,omitempty"`
 }
 
 type swcBootstrapUser struct {
@@ -52,6 +53,12 @@ type swcBootstrapUser struct {
 	Login    string `json:"login"`
 	Image    string `json:"image,omitempty"`
 	Initials string `json:"initials"`
+}
+
+type swcBootstrapNumberFormat struct {
+	DecimalPoint string `json:"decimalPoint"`
+	ThousandsSep string `json:"thousandsSep"`
+	Grouping     string `json:"grouping"`
 }
 
 type swcBootstrapCompany struct {
@@ -108,6 +115,7 @@ func BuildSWCBootstrapJSON(ctx context.Context, page PageData, ws *SWCBootstrapW
 		Workspace:           ws,
 		ShowCompanySwitcher: page.ShowCompanySwitcher,
 		ActiveCompanyID:     page.ShellActiveCompanyID,
+		NumberFormat:        swcBootstrapNumberFormat{DecimalPoint: ".", ThousandsSep: ",", Grouping: "[3,0]"},
 	}
 	for _, m := range topMenus {
 		b.TopMenus = append(b.TopMenus, swcBootstrapMenu{
@@ -144,6 +152,16 @@ func BuildSWCBootstrapJSON(ctx context.Context, page PageData, ws *SWCBootstrapW
 				Login:    strings.TrimSpace(orm.AsString(u["login"])),
 				Image:    strings.TrimSpace(orm.AsString(u["image"])),
 				Initials: UserInitialsFromName(strings.TrimSpace(orm.AsString(u["name"]))),
+			}
+			langCode := strings.TrimSpace(orm.AsString(u["lang"]))
+			if langCode != "" {
+				if lang, langErr := orm.SearchOne(ctx, "core.lang", map[string]interface{}{"code": langCode}); langErr == nil {
+					b.NumberFormat = swcBootstrapNumberFormat{
+						DecimalPoint: orm.AsString(lang["decimal_point"]),
+						ThousandsSep: orm.AsString(lang["thousands_sep"]),
+						Grouping:     orm.AsString(lang["grouping"]),
+					}
+				}
 			}
 		}
 	}

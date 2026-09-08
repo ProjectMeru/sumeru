@@ -8,6 +8,7 @@ import {
   serverLineValues,
 } from "../../src/widgets/one2many-line-utils.js";
 import type { SwcArchField } from "../../src/types/workspace.js";
+import { configureNumberFormat } from "../../src/i18n/number.js";
 
 describe("one2many-line-utils", () => {
   it("serverLineValues strips id, display names, and empty values", () => {
@@ -26,6 +27,14 @@ describe("one2many-line-utils", () => {
   it("formatNumericValue adds thousand separators", () => {
     expect(formatNumericValue(12000)).toBe("12,000");
     expect(formatNumericValue(12000.5)).toBe("12,000.5");
+  });
+
+  it("uses configured decimal and grouping separators", () => {
+    configureNumberFormat({ decimalPoint: ",", thousandsSep: ".", grouping: "[3,0]" });
+    expect(formatNumericValue(1850000.5)).toBe("1.850.000,5");
+
+    configureNumberFormat({ decimalPoint: ".", thousandsSep: ",", grouping: "[3,2,0]" });
+    expect(formatNumericValue(123456789)).toBe("12,34,56,789");
   });
 
   it("displayCellValue formats numbers and prefers _name for relations", () => {
