@@ -31,11 +31,20 @@ func SafeEval(raw string) (interface{}, error) {
 }
 
 func safeEvalLiteral(raw string) (interface{}, error) {
+	// Parse numbers before booleans so eval="1"/eval="0" yield integers,
+	// mirroring Odoo/Python integer literals. Boolean coercion elsewhere
+	// still accepts int64 for boolean fields.
+	if n, err := strconv.ParseInt(raw, 10, 64); err == nil {
+		return n, nil
+	}
+	if f, err := strconv.ParseFloat(raw, 64); err == nil {
+		return f, nil
+	}
 	lower := strings.ToLower(raw)
 	switch lower {
-	case "true", "1", "yes", "on":
+	case "true", "yes", "on":
 		return true, nil
-	case "false", "0", "no", "off":
+	case "false", "no", "off":
 		return false, nil
 	case "none", "null":
 		return nil, nil
@@ -45,12 +54,6 @@ func safeEvalLiteral(raw string) (interface{}, error) {
 	}
 	if strings.HasPrefix(raw, `'`) && strings.HasSuffix(raw, `'`) && len(raw) >= 2 {
 		return raw[1 : len(raw)-1], nil
-	}
-	if n, err := strconv.ParseInt(raw, 10, 64); err == nil {
-		return n, nil
-	}
-	if f, err := strconv.ParseFloat(raw, 64); err == nil {
-		return f, nil
 	}
 	if strings.HasPrefix(raw, "(") && strings.HasSuffix(raw, ")") {
 		inner := strings.TrimSpace(raw[1 : len(raw)-1])
