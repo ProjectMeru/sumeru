@@ -171,11 +171,6 @@ func (addon *Addon) SyncToDB(ctx context.Context) error {
 		}
 	}
 
-	if err := addon.syncCSVModelAccess(ctx); err != nil {
-		errs = append(errs, FatalSync(moduleName, "CSV ACL load", err))
-	} else {
-		orm.InvalidateRuleCache()
-	}
 	var inheritQueue []parser.Record
 	var deferredMenus []parser.MenuItem
 
@@ -192,6 +187,14 @@ func (addon *Addon) SyncToDB(ctx context.Context) error {
 		if fileErrs := loadManifestDataFile(ctx, moduleName, xmlPath, xmlFile, &inheritQueue, &deferredMenus); len(fileErrs) > 0 {
 			errs = append(errs, fileErrs...)
 		}
+	}
+
+	// Sync ACL CSV after XML data so sys.access rows can resolve the module's
+	// own groups (security/security.xml must be loaded first).
+	if err := addon.syncCSVModelAccess(ctx); err != nil {
+		errs = append(errs, FatalSync(moduleName, "CSV ACL load", err))
+	} else {
+		orm.InvalidateRuleCache()
 	}
 
 	if len(deferredMenus) > 0 {
