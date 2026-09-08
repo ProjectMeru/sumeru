@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // WriteOp selects PrepareValues behavior for create vs write.
@@ -216,6 +217,24 @@ func coerceFieldValue(fieldDef FieldDefinition, v interface{}) (interface{}, err
 		}
 		return AsString(v), nil
 	case Date, DateTime:
+		switch typed := v.(type) {
+		case time.Time:
+			if fieldDef.Type == Date {
+				return typed.Format("2006-01-02"), nil
+			}
+			return typed, nil
+		case *time.Time:
+			if typed == nil {
+				if fieldDef.Required {
+					return nil, newFieldValidationError(fieldDef, "")
+				}
+				return nil, nil
+			}
+			if fieldDef.Type == Date {
+				return typed.Format("2006-01-02"), nil
+			}
+			return *typed, nil
+		}
 		s := strings.TrimSpace(AsString(v))
 		if s == "" {
 			if fieldDef.Required {
