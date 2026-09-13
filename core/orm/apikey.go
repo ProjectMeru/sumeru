@@ -41,12 +41,19 @@ func UIDFromAPIKey(ctx context.Context, raw string) int {
 	tbl := MustQuotedTableName("core.user.apikey")
 	var uid int
 	var active bool
+	var expiresAt sql.NullString
 	err := DB.QueryRowContext(ctx,
-		`SELECT user_id, active FROM `+tbl+` WHERE key_hash = $1 LIMIT 1`, hash,
-	).Scan(&uid, &active)
+		`SELECT user_id, active, expires_at FROM `+tbl+` WHERE key_hash = $1 LIMIT 1`, hash,
+	).Scan(&uid, &active, &expiresAt)
 	if err == sql.ErrNoRows || err != nil || !active || uid <= 0 {
 		return 0
 	}
+	if expiresAt.Valid && strings.TrimSpace(expiresAt.String) != "" {
+		if t, parseErr := time.Parse(time.RFC3339, expiresAt.String); parseErr == nil && time.Now().UTC().After(t) {
+			return 0
+		}
+	}
+	_, _ = DB.ExecContext(ctx, `UPDATE `+tbl+` SET last_used_at = $1 WHERE key_hash = $2`, time.Now().UTC().Format(time.RFC3339), hash)
 	// Ensure user is active.
 	var userActive bool
 	err = DB.QueryRowContext(ctx,

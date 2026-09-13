@@ -2,8 +2,6 @@ package web
 
 import (
 	"net/http"
-
-	"sumeru/core/server/config"
 )
 
 const apiKeyFlashCookie = "sumeru_api_key_flash"
@@ -17,7 +15,7 @@ func SetAPIKeyFlash(w http.ResponseWriter, raw string) {
 		MaxAge:   120,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
-		Secure:   !config.AppConfig.DevMode,
+		Secure:   sessionCookieSecure(),
 	})
 }
 
@@ -31,7 +29,7 @@ func ConsumeAPIKeyFlash(r *http.Request, w http.ResponseWriter) string {
 		MaxAge:   -1,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
-		Secure:   !config.AppConfig.DevMode,
+		Secure:   sessionCookieSecure(),
 	})
 	if err != nil || c.Value == "" {
 		return ""
