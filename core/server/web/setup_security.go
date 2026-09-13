@@ -29,7 +29,7 @@ func allowSetupRequest(w http.ResponseWriter, r *http.Request, tokenFromBody str
 	if !validateSetupToken(w, r, tokenFromBody) {
 		return false
 	}
-	return allowSetupRateLimit(w, clientIP(r))
+	return allowSetupRateLimit(w, setupClientIP(r))
 }
 
 func requireSetupEnvironment(w http.ResponseWriter, r *http.Request) bool {
@@ -37,11 +37,16 @@ func requireSetupEnvironment(w http.ResponseWriter, r *http.Request) bool {
 		http.Error(w, "Setup already completed", http.StatusForbidden)
 		return false
 	}
-	if config.AppConfig.SetupLocalhostOnly && !isLoopbackIP(clientIP(r)) {
+	if config.AppConfig.SetupLocalhostOnly && !isLoopbackIP(setupClientIP(r)) {
 		http.Error(w, "Setup is restricted to localhost", http.StatusForbidden)
 		return false
 	}
 	return true
+}
+
+// setupClientIP returns the direct TCP peer for setup auth (never trusts X-Forwarded-For).
+func setupClientIP(r *http.Request) string {
+	return remoteAddrIP(r)
 }
 
 func validateSetupToken(w http.ResponseWriter, r *http.Request, tokenFromBody string) bool {

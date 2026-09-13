@@ -167,6 +167,14 @@ func ValidateSetupToken(w http.ResponseWriter, r *http.Request, tokenFromBody st
 	return validateSetupToken(w, r, tokenFromBody)
 }
 
+func RequireSetupEnvironmentForTest(w http.ResponseWriter, r *http.Request) bool {
+	return requireSetupEnvironment(w, r)
+}
+
+func SetupClientIPForTest(r *http.Request) string {
+	return setupClientIP(r)
+}
+
 func CheckSwcBusOrigin(r *http.Request) bool { return checkSwcBusOrigin(r) }
 
 func ResetSetupRateLimiterForTest() { setupRateLimiter.attemptsByIP = make(map[string][]time.Time) }

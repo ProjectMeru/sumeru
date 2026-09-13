@@ -19,7 +19,9 @@ dev_mode = false
 # dev_mode = true
 
 # Setup wizard — first run only.
-# When setup_localhost_only = false, setup_token must be non-empty.
+# When setup_localhost_only = true (default), setup listens on 127.0.0.1 only;
+# http_interface is ignored during setup. Setup auth uses RemoteAddr, not X-Forwarded-For.
+# When setup_localhost_only = false, setup_token is required and the server refuses to start without it.
 setup_localhost_only = true
 setup_token =
 
@@ -59,7 +61,8 @@ log_rolling = false
 rate_limit_rpm = 120
 
 # Comma-separated CIDRs/IPs of reverse proxies allowed to set X-Forwarded-For.
-# Empty (default) = never trust XFF; client IP is always RemoteAddr.
+# Empty (default) = never trust XFF; client IP is always RemoteAddr for login/RPC rate limits.
+# Does not affect setup wizard auth (setup always uses direct RemoteAddr).
 # trusted_proxies = 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.1
 
 # Shared CSRF HMAC secret (required for multi-instance). Env: SUMERU_CSRF_SECRET

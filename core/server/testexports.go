@@ -12,11 +12,26 @@ func SetupListenAddrForTest(cfg config.Config) string {
 	return setupListenAddr(cfg)
 }
 
+// ValidateSetupModeConfigForTest exposes validateSetupModeConfig for tests.
+func ValidateSetupModeConfigForTest(cfg config.Config) error {
+	return validateSetupModeConfig(cfg)
+}
+
 // ConfigForTest builds a minimal config for listen tests.
 func ConfigForTest(httpInterface, httpPort string, setupLocalhostOnly bool) config.Config {
 	return config.Config{
 		HttpInterface:      httpInterface,
 		HttpPort:           httpPort,
+		SetupLocalhostOnly: setupLocalhostOnly,
+	}
+}
+
+// ConfigForSetupTest builds config with setup token for listen/validation tests.
+func ConfigForSetupTest(httpInterface, httpPort, setupToken string, setupLocalhostOnly bool) config.Config {
+	return config.Config{
+		HttpInterface:      httpInterface,
+		HttpPort:           httpPort,
+		SetupToken:         setupToken,
 		SetupLocalhostOnly: setupLocalhostOnly,
 	}
 }
