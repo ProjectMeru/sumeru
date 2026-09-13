@@ -46,6 +46,7 @@ type Config struct {
 	RateLimitRPM       int      // rate_limit_rpm per client IP on /api/rpc and login; 0 = disabled
 	TrustedProxies     string   // trusted_proxies: comma-separated CIDRs/IPs allowed to set X-Forwarded-For; empty = never trust XFF
 	CSRFSecret         string   // csrf_secret: shared HMAC key for multi-instance; empty = ephemeral per process
+	ForceSecureCookies bool     // force_secure_cookies: set Secure on session/flash cookies even when dev_mode=true
 	MetricsScrapeToken string   // metrics_scrape_token: Bearer token for unauthenticated /metrics scrape; empty = admin session only
 	SMTPHost           string
 	SMTPPort           int
@@ -181,6 +182,8 @@ func LoadConfig(path string) error {
 			AppConfig.TrustedProxies = val
 		case keyCSRFSecret:
 			AppConfig.CSRFSecret = val
+		case keyForceSecureCookies:
+			AppConfig.ForceSecureCookies = parseBoolKey(val, false)
 		case keyMetricsScrapeToken:
 			AppConfig.MetricsScrapeToken = val
 		case keySMTPHost:

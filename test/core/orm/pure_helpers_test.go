@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"sumeru/core/orm"
+	"sumeru/core/server/config"
 )
 
 func TestAccessErrors(t *testing.T) {
@@ -104,6 +105,9 @@ func TestValidateModelAndFieldNames(t *testing.T) {
 }
 
 func TestDevFeatures(t *testing.T) {
+	savedDev := config.AppConfig.DevMode
+	config.AppConfig.DevMode = true
+	defer func() { config.AppConfig.DevMode = savedDev }()
 	orm.InitDevFeatures("sql,access,xml")
 	for _, feat := range []string{"sql", "access", "xml"} {
 		if !orm.DevFeatureEnabled(feat) {
@@ -116,6 +120,11 @@ func TestDevFeatures(t *testing.T) {
 	orm.InitDevFeatures("")
 	if orm.DevFeatureEnabled("SQL") {
 		t.Fatal("cleared features should not match SQL unless dev mode")
+	}
+	config.AppConfig.DevMode = false
+	orm.InitDevFeatures("sql")
+	if orm.DevFeatureEnabled("sql") {
+		t.Fatal("sql dev feature must be disabled when dev_mode=false")
 	}
 }
 

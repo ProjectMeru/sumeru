@@ -66,6 +66,7 @@ func containsSecretKeyword(haystack string) bool {
 }
 
 var secretKeywords = []string{
-	"password", "token", "secret", "authorization", "cookie",
+	"password", "token", "secret", "authorization", "cookie", "bearer",
 	"session", "api_key", "apikey", "key_hash", "csrf", "totp",
+	"credential", "private_key", "refresh",
 }
