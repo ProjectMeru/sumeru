@@ -1,6 +1,7 @@
 import { SwcComponent } from "../runtime/component.js";
 import { html, type TemplateResult } from "../template/html.js";
 import type { SwcArchField } from "../types/workspace.js";
+import type { SwcRecord } from "../model/record.js";
 import {
   getPendingChildren,
   setPendingChildren,
@@ -51,8 +52,20 @@ export class One2ManyField extends SwcComponent<FieldWidgetProps> {
   private onchangeSeq = 0;
 
   override setup(): void {
+    this.lastRecord = this.props.record;
     void this.loadLines();
     document.addEventListener("mousedown", this.onDocumentM2oDown);
+  }
+
+  // Track the record instance so a reloaded record (after an object action)
+  // triggers a fresh fetch of the child rows.
+  private lastRecord: SwcRecord | null = null;
+
+  override onPropsChanged(props: FieldWidgetProps): void {
+    if (props.record !== this.lastRecord) {
+      this.lastRecord = props.record;
+      void this.loadLines();
+    }
   }
 
   override onWillUnmount(): void {
@@ -499,6 +512,15 @@ export class One2ManyField extends SwcComponent<FieldWidgetProps> {
     this.m2oPopover = null;
   }
 
+  private numericColClass(col: SwcArchField): string {
+    const isNumeric =
+      col.type === "integer" ||
+      col.type === "float" ||
+      col.type === "float64" ||
+      col.type === "numeric";
+    return isNumeric ? "sum-o2m-numeric" : "";
+  }
+
   private renderCellEditor(col: SwcArchField, line: O2MLine): ReturnType<typeof html> {
     const fieldValue = String(line.data[col.name] ?? "");
     const readonly = !this.editable() || col.readonly === true;
@@ -575,7 +597,7 @@ export class One2ManyField extends SwcComponent<FieldWidgetProps> {
     return fieldControl(
       html`<input
         type=${inputType}
-        class="sum-field-input"
+        class="sum-field-input${isNumeric ? " sum-field-input--numeric" : ""}"
         data-cell-key=${this.cellKey(line.id, col)}
         value=${fieldValue}
         ${inputMode ? html`inputmode=${inputMode}` : ""}
@@ -588,7 +610,7 @@ export class One2ManyField extends SwcComponent<FieldWidgetProps> {
 
   private renderLineRow(line: O2MLine, cols: SwcArchField[], canEdit: boolean): TemplateResult {
     const cells: TemplateResult[] = cols.map(
-      (col) => html`<td data-col=${col.name}>${this.renderCellEditor(col, line)}</td>`,
+      (col) => html`<td data-col=${col.name} class=${this.numericColClass(col)}>${this.renderCellEditor(col, line)}</td>`,
     );
     if (canEdit) {
       cells.push(
@@ -624,7 +646,7 @@ export class One2ManyField extends SwcComponent<FieldWidgetProps> {
         <table class="sum-o2m-table">
           <thead>
             <tr>
-              ${cols.map((col) => html`<th>${col.string ?? col.name}</th>`)}
+              ${cols.map((col) => html`<th class=${this.numericColClass(col)}>${col.string ?? col.name}</th>`)}
               ${canEdit ? html`<th class="sum-o2m-col-actions"></th>` : ""}
             </tr>
           </thead>

@@ -102,6 +102,9 @@ export class RpcService {
     recordId: number,
     vals?: Record<string, string>,
   ): Promise<unknown> {
+    // Object actions (Confirm/Validate/…) change server state: drop cached
+    // search_read results so one2many lists (e.g. move lines) refresh.
+    this.invalidateSearchReadCache();
     const args: unknown[] = vals ? [recordId, method, vals] : [recordId, method];
     return this.dispatch(model, "call", args);
   }

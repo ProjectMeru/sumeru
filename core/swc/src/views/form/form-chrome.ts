@@ -1,7 +1,7 @@
 import { html, type TemplateResult } from "../../template/html.js";
 import type { SwcArchButton, SwcArchField, SwcWorkspacePayload } from "../../types/workspace.js";
 import type { SwcRecord } from "../../model/record.js";
-import { isButtonVisible } from "../../model/modifiers.js";
+import { evalModifierExpr, isButtonVisible } from "../../model/modifiers.js";
 import {
   exportFieldNamesCsv,
   headerButton,
@@ -44,14 +44,21 @@ export function renderFormToolbarPrimary(options: FormToolbarOptions): HTMLEleme
   } = options;
   const items: HTMLElement[] = [];
   const headerButtons = payload.arch.header?.buttons ?? [];
+  // Form-level edit lock (arch formMeta.editInvisibleExpr, e.g. state === 'sale'):
+  // when it evaluates true the record must not be edited, duplicated, or deleted.
+  const editLocked = payload.arch.formMeta?.editInvisibleExpr
+    ? Boolean(evalModifierExpr(payload.arch.formMeta.editInvisibleExpr, record))
+    : false;
 
   if (payload.recordId > 0 && readonly) {
     if (!inDialog) {
       items.push(renderNewButton(payload));
-      items.push(headerButton("Edit", undefined, onStartEdit, busy));
-      items.push(headerButton("Duplicate", undefined, onDuplicate, busy));
-      items.push(headerButton("Delete", "sum-btn--danger", onDelete, busy));
-    } else {
+      if (!editLocked) {
+        items.push(headerButton("Edit", undefined, onStartEdit, busy));
+        items.push(headerButton("Duplicate", undefined, onDuplicate, busy));
+        items.push(headerButton("Delete", "sum-btn--danger", onDelete, busy));
+      }
+    } else if (!editLocked) {
       items.push(headerButton("Edit", undefined, onStartEdit, busy));
     }
   } else {

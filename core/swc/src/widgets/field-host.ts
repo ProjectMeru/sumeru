@@ -24,6 +24,9 @@ export class FieldHost {
     const prev = this.entries.get(key);
 
     if (prev && prev.readonly === readonly && prev.widgetName === widgetName) {
+      // Reused widget must see the latest record: after an object action
+      // reloads the record, stale props would keep rendering old values.
+      prev.widget.updateProps({ field, record, readonly, modelName: record.model });
       return prev.widget.renderOrPatch();
     }
 

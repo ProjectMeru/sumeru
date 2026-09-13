@@ -25,6 +25,8 @@ export interface SwcViewArch {
 
 export interface SwcFormMeta {
   hasImageField?: boolean;
+  /** Hides Edit/Duplicate/Delete buttons when it evaluates true (form-level edit lock). */
+  editInvisibleExpr?: string;
 }
 
 export interface SwcArchFooter {

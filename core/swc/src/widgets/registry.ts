@@ -2,6 +2,7 @@ import { registry, type FieldWidgetConstructor } from "../runtime/registry.js";
 import type { SwcArchField } from "../types/workspace.js";
 import type { SwcEnv } from "../runtime/env.js";
 import type { SwcRecord } from "../model/record.js";
+import type { FieldWidgetProps } from "./field-props.js";
 import { DefaultField } from "./DefaultField.js";
 import { Many2OneField } from "./Many2OneField.js";
 import { StatusbarField } from "./StatusbarField.js";
@@ -102,6 +103,7 @@ export type FieldWidgetInstance = {
   renderOrPatch(): HTMLElement;
   destroy(): void;
   callSetup(): void;
+  updateProps(next: FieldWidgetProps): void;
 };
 
 export function instantiateFieldWidget(

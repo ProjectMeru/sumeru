@@ -11,7 +11,7 @@ import { initFormInteractions } from "./form-interactions.js";
 import { validatePasswordMatchGroups } from "../../widgets/password-match.js";
 import { FieldHost } from "../../widgets/field-host.js";
 import { ChatterPanel } from "../chatter/ChatterPanel.js";
-import { isFieldVisible } from "../../model/modifiers.js";
+import { evalModifierExpr, isFieldVisible } from "../../model/modifiers.js";
 import { VIEW_FORM, VIEW_LIST } from "../../constants/routes.js";
 import { runObjectAction } from "../shared/object-action.js";
 
@@ -122,6 +122,13 @@ export class FormView extends SwcComponent<FormViewProps> {
     return !this.editing;
   }
 
+  /** Form-level edit lock from arch formMeta.editInvisibleExpr evaluated against the record. */
+  private editLocked(): boolean {
+    const expr = this.props.payload.arch.formMeta?.editInvisibleExpr;
+    if (!expr) return false;
+    return Boolean(evalModifierExpr(expr, this.record));
+  }
+
   private toolbarBusy(): boolean {
     return this.saving || this.acting;
   }
@@ -132,6 +139,7 @@ export class FormView extends SwcComponent<FormViewProps> {
   }
 
   private startEdit(): void {
+    if (this.editLocked()) return;
     this.editing = true;
     this.error = "";
     this.rerender();
@@ -164,6 +172,9 @@ export class FormView extends SwcComponent<FormViewProps> {
     if (!rows[0]) return;
     this.snapshot = { ...rows[0] };
     this.bindRecord(this.recordStore.fromPayload(payload.model, payload.recordId, this.snapshot));
+    // A server action may have moved the record into a locked state (e.g. Confirm
+    // on a quotation) — drop out of edit mode when the form is no longer editable.
+    if (this.editLocked()) this.editing = false;
     this.rerender();
   }
 

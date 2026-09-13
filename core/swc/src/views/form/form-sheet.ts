@@ -13,7 +13,7 @@ import type { SwcRecord } from "../../model/record.js";
 import { renderField as defaultRenderField } from "../../widgets/registry.js";
 import { fieldInputId, fieldPlaceholder, fieldAutocomplete } from "../../widgets/field-shell.js";
 import { inputValueFromEvent } from "../../widgets/field-events.js";
-import { isFieldReadonly } from "../../model/modifiers.js";
+import { isButtonVisible, isFieldReadonly } from "../../model/modifiers.js";
 import {
   groupClassNames,
   packGroupRows,
@@ -238,11 +238,13 @@ function renderTitleDiv(
   if (cls.includes("sum_button_box") || cls.includes("button_box")) {
     const buttons = div.buttons ?? [];
     return html`<div class="sum-form-button-box ${cls}">
-      ${buttons.map(
-        (archButton) => html`<button type="button" class="sum-stat-button ${archButton.class ?? ""}" data-action=${archButton.name} @click=${() => onStatButton?.(archButton.name)}>
+      ${buttons
+        .filter((archButton) => isButtonVisible(archButton, record))
+        .map(
+          (archButton) => html`<button type="button" class="sum-stat-button ${archButton.class ?? ""}" data-action=${archButton.name} @click=${() => onStatButton?.(archButton.name)}>
           ${archButton.string || archButton.name}
         </button>`,
-      )}
+        )}
     </div>`;
   }
 
