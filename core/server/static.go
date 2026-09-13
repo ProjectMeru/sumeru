@@ -250,9 +250,22 @@ func registerAppLogo(ctx context.Context) string {
 func registerCoreAssetFileServer(ctx context.Context) {
 	assetsRoot := filepath.Clean(config.AppConfig.AssetsPath)
 	fileServer := http.FileServer(http.Dir(assetsRoot))
-	http.Handle(staticURLPrefix, http.StripPrefix(staticURLPrefix, fileServer))
+	var handler http.Handler = http.StripPrefix(staticURLPrefix, fileServer)
+	if config.AppConfig.DevMode {
+		// Dev mode: never let the browser cache assets, so CSS/JS edits show up
+		// on a plain reload without hard-refresh.
+		handler = noCacheStaticHandler(handler)
+	}
+	http.Handle(staticURLPrefix, handler)
 	applog.InfoMsg(ctx, "web", "static", "Serving static files",
 		map[string]interface{}{"path": assetsRoot})
+}
+
+func noCacheStaticHandler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-cache")
+		next.ServeHTTP(w, r)
+	})
 }
 
 // registerStaticFileHandler serves a fixed file at urlPath with a constant Content-Type.
