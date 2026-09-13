@@ -11,7 +11,7 @@ func AuditedBypass(ctx context.Context, reason string) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	applog.InfoMsg(ctx, "orm", "elevated", "elevated context entered",
+	applog.DebugMsg(ctx, "orm", "elevated", "elevated context entered",
 		map[string]interface{}{
 			"reason": reason,
 			"uid":    SecurityUID(ctx),

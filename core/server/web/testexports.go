@@ -407,6 +407,15 @@ func SessionCookieFromRequestForTest(r *http.Request) (sid, cookieName string) {
 	return sessionCookieFromRequest(r)
 }
 
+// LoginGetForTest exposes the login page GET handler for tests.
+func LoginGetForTest(w http.ResponseWriter, r *http.Request) { LoginGet(w, r) }
+
+// ValidateLoginCSRFForTest exposes pre-session login CSRF validation for tests.
+func ValidateLoginCSRFForTest(r *http.Request) bool { return validateLoginCSRF(r) }
+
+// TestLoginCSRFCookie is the HttpOnly login CSRF cookie name.
+const TestLoginCSRFCookie = loginCSRFCookie
+
 // ResolveSessionFromCookieForTest exposes session resolution for integration tests.
 func ResolveSessionFromCookieForTest(r *http.Request) (userID int, clearCookie bool) {
 	state := resolveSession(r)

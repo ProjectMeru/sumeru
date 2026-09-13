@@ -51,8 +51,8 @@ func LoginGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	setLoginCSRFCookie(w)
-	writeLoginPage(w, r, http.StatusOK, next, "")
+	csrfToken := setLoginCSRFCookie(w)
+	writeLoginPage(w, r, http.StatusOK, next, "", csrfToken)
 }
 
 func LoginPost(w http.ResponseWriter, r *http.Request) {
@@ -64,15 +64,15 @@ func LoginPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !validateLoginCSRF(r) {
-		setLoginCSRFCookie(w)
-		writeLoginPage(w, r, http.StatusForbidden, SafePathNext(r.PostFormValue(nextField), homeRoute), "Invalid or expired login form")
+		csrfToken := setLoginCSRFCookie(w)
+		writeLoginPage(w, r, http.StatusForbidden, SafePathNext(r.PostFormValue(nextField), homeRoute), "Invalid or expired login form", csrfToken)
 		return
 	}
 
 	credentials := parseLoginCredentials(r)
 	if loginLocked(credentials.Login) {
-		setLoginCSRFCookie(w)
-		writeLoginPage(w, r, http.StatusUnauthorized, credentials.Next, invalidLoginMessage)
+		csrfToken := setLoginCSRFCookie(w)
+		writeLoginPage(w, r, http.StatusUnauthorized, credentials.Next, invalidLoginMessage, csrfToken)
 		return
 	}
 	clientIP := clientIP(r)
@@ -88,8 +88,8 @@ func LoginPost(w http.ResponseWriter, r *http.Request) {
 				"ip":    clientIP,
 			},
 		})
-		setLoginCSRFCookie(w)
-		writeLoginPage(w, r, http.StatusUnauthorized, credentials.Next, invalidLoginMessage)
+		csrfToken := setLoginCSRFCookie(w)
+		writeLoginPage(w, r, http.StatusUnauthorized, credentials.Next, invalidLoginMessage, csrfToken)
 		return
 	}
 	if err := CreateSession(w, userID); err != nil {
@@ -175,7 +175,7 @@ func getLoginTemplate() (*template.Template, error) {
 	return cachedLoginTmpl, loginTemplateErr
 }
 
-func writeLoginPage(w http.ResponseWriter, r *http.Request, statusCode int, next, errorMessage string) {
+func writeLoginPage(w http.ResponseWriter, r *http.Request, statusCode int, next, errorMessage, csrfToken string) {
 	tmpl, err := getLoginTemplate()
 	if err != nil {
 		if statusCode == http.StatusOK {
@@ -197,10 +197,6 @@ func writeLoginPage(w http.ResponseWriter, r *http.Request, statusCode int, next
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if statusCode != http.StatusOK {
 		w.WriteHeader(statusCode)
-	}
-	csrfToken := ""
-	if c, err := r.Cookie(loginCSRFCookie); err == nil {
-		csrfToken = c.Value
 	}
 	_ = tmpl.Execute(w, loginPageData{
 		Next:        next,

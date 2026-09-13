@@ -12,8 +12,10 @@ import (
 
 const loginCSRFCookie = "sumeru_login_csrf"
 
-func setLoginCSRFCookie(w http.ResponseWriter) {
-	setNamedCookie(w, loginCSRFCookie, newLoginCSRFToken(), loginRoute, 600, http.SameSiteStrictMode)
+func setLoginCSRFCookie(w http.ResponseWriter) string {
+	token := newLoginCSRFToken()
+	setNamedCookie(w, loginCSRFCookie, token, loginRoute, 600, http.SameSiteStrictMode)
+	return token
 }
 
 func newLoginCSRFToken() string {
