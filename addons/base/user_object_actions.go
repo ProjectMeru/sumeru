@@ -44,10 +44,7 @@ func resetPasswordCoreUser(ctx context.Context, model string, id int, vals map[s
 	if to == "" && strings.Contains(login, "@") {
 		to = login
 	}
-	loginURL := strings.TrimSpace(vals["login_url"])
-	if loginURL == "" {
-		loginURL = "/web/login"
-	}
+	loginURL := "/web/login"
 	if mail.Configured() && to != "" {
 		if err := mail.SendPasswordResetEmail(ctx, to, login, loginURL); err != nil {
 			return "", fmt.Errorf("send reset email: %w", err)
