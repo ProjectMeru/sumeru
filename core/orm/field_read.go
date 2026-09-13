@@ -8,8 +8,9 @@ import (
 )
 
 var sensitiveReadFields = map[string]map[string]bool{
-	"core.user":        {"password": true},
+	"core.user":        {"password": true, "totp_secret": true},
 	"core.user.apikey": {"key_hash": true},
+	"sys.attachment":   {"datas": true},
 }
 
 // CheckFieldReadAccess errors if any requested field is read-denied by sys.field.access.
@@ -42,10 +43,24 @@ func RedactRecordForRead(ctx context.Context, uid int, model string, rec map[str
 	}
 	denied, err := fieldAccessDenied(ctx, uid, model, "read")
 	if err != nil {
+		redactAllExceptID(rec)
 		return
 	}
 	for field := range denied {
 		delete(rec, field)
+	}
+}
+
+func redactAllExceptID(rec map[string]interface{}) {
+	if rec == nil {
+		return
+	}
+	id := rec["id"]
+	for k := range rec {
+		delete(rec, k)
+	}
+	if id != nil {
+		rec["id"] = id
 	}
 }
 

@@ -41,7 +41,7 @@ func fieldAccessDenied(ctx context.Context, uid int, model, op string) (map[stri
 	rows, err := DB.QueryContext(ctx,
 		`SELECT field_name, group_id, `+col+` FROM `+tbl+` WHERE model = $1`, model)
 	if err != nil {
-		return out, nil
+		return nil, err
 	}
 	defer rows.Close()
 	type rule struct {
