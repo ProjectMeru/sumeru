@@ -37,12 +37,24 @@ func firstCompanyMailSettings(ctx context.Context) (companyMailSettings, bool) {
 	if orm.DB == nil {
 		return companyMailSettings{chatterEnabled: true, activityPanelEnabled: true}, false
 	}
+	companyID := orm.CompanyIDFromContext(ctx)
+	if companyID <= 0 {
+		companyID = orm.ActiveCompanyIDForUser(ctx, orm.SecurityUID(ctx))
+	}
 	tn := orm.MustQuotedTableName("core.company")
 	var id sql.NullInt64
 	var chatter, activity sql.NullBool
-	err := orm.DB.QueryRowContext(ctx,
-		`SELECT id, mail_chatter_enabled, mail_activity_panel_enabled FROM `+tn+` ORDER BY id ASC LIMIT 1`,
-	).Scan(&id, &chatter, &activity)
+	var err error
+	if companyID > 0 {
+		err = orm.DB.QueryRowContext(ctx,
+			`SELECT id, mail_chatter_enabled, mail_activity_panel_enabled FROM `+tn+` WHERE id = $1`,
+			companyID,
+		).Scan(&id, &chatter, &activity)
+	} else {
+		err = orm.DB.QueryRowContext(ctx,
+			`SELECT id, mail_chatter_enabled, mail_activity_panel_enabled FROM `+tn+` ORDER BY id ASC LIMIT 1`,
+		).Scan(&id, &chatter, &activity)
+	}
 	if err != nil {
 		return companyMailSettings{chatterEnabled: true, activityPanelEnabled: true}, false
 	}
