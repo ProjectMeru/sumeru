@@ -49,29 +49,31 @@ type ListSectionMeta struct {
 }
 
 type ViewArch struct {
-	Type       string        `json:"type"`
-	Model      string        `json:"model"`
-	Title      string        `json:"title,omitempty"`
-	HasChatter bool          `json:"hasChatter,omitempty"`
-	Fields     []ArchField   `json:"fields"`
-	Header     *ArchHeader   `json:"header,omitempty"`
-	Footer     *ArchFooter   `json:"footer,omitempty"`
-	Sheet      *ArchSheet    `json:"sheet,omitempty"`
-	FormMeta   *FormMeta     `json:"formMeta,omitempty"`
-	Kanban     *KanbanMeta   `json:"kanban,omitempty"`
-	Pivot      *PivotMeta    `json:"pivot,omitempty"`
-	Search     *SearchMeta   `json:"search,omitempty"`
-	Graph      *GraphMeta    `json:"graph,omitempty"`
-	Calendar   *CalendarMeta `json:"calendar,omitempty"`
-	Gantt      *GanttMeta    `json:"gantt,omitempty"`
-	Map        *MapMeta      `json:"map,omitempty"`
-	Cohort     *CohortMeta   `json:"cohort,omitempty"`
+	Type       string         `json:"type"`
+	Model      string         `json:"model"`
+	Title      string         `json:"title,omitempty"`
+	HasChatter bool           `json:"hasChatter,omitempty"`
+	Fields     []ArchField    `json:"fields"`
+	Header     *ArchHeader    `json:"header,omitempty"`
+	Footer     *ArchFooter    `json:"footer,omitempty"`
+	Sheet      *ArchSheet     `json:"sheet,omitempty"`
+	FormMeta   *FormMeta      `json:"formMeta,omitempty"`
+	Kanban     *KanbanMeta    `json:"kanban,omitempty"`
+	Pivot      *PivotMeta     `json:"pivot,omitempty"`
+	Search     *SearchMeta    `json:"search,omitempty"`
+	Graph      *GraphMeta     `json:"graph,omitempty"`
+	Calendar   *CalendarMeta  `json:"calendar,omitempty"`
+	Gantt      *GanttMeta     `json:"gantt,omitempty"`
+	Map        *MapMeta       `json:"map,omitempty"`
+	Cohort     *CohortMeta    `json:"cohort,omitempty"`
 	Hierarchy  *HierarchyMeta `json:"hierarchy,omitempty"`
-	Report     *ReportMeta   `json:"report,omitempty"`
+	Report     *ReportMeta    `json:"report,omitempty"`
 }
 
 type FormMeta struct {
 	HasImageField bool `json:"hasImageField"`
+	// EditInvisibleExpr hides Edit/Duplicate/Delete when it evaluates true.
+	EditInvisibleExpr string `json:"editInvisibleExpr,omitempty"`
 }
 
 type ArchFooter struct {
@@ -112,13 +114,13 @@ type ArchListSubview struct {
 }
 
 type ArchButton struct {
-	Name           string `json:"name"`
-	String         string `json:"string"`
-	Type           string `json:"type"`
-	Class          string `json:"class,omitempty"`
-	Invisible      bool   `json:"invisible,omitempty"`
-	InvisibleExpr  string `json:"invisible_expr,omitempty"`
-	Confirm        string `json:"confirm,omitempty"`
+	Name          string `json:"name"`
+	String        string `json:"string"`
+	Type          string `json:"type"`
+	Class         string `json:"class,omitempty"`
+	Invisible     bool   `json:"invisible,omitempty"`
+	InvisibleExpr string `json:"invisible_expr,omitempty"`
+	Confirm       string `json:"confirm,omitempty"`
 }
 
 type ArchHeader struct {
