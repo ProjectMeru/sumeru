@@ -141,18 +141,21 @@ func logHTTPRequestEnd(ctx context.Context, r *http.Request, statusCode int, dur
 }
 
 func buildSessionCookie(value string, deleteCookie bool) *http.Cookie {
-	cookie := &http.Cookie{
-		Name:     sessionCookieName,
-		Value:    value,
-		Path:     "/",
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-		Secure:   sessionCookieSecure(),
-	}
+	maxAge := 0
 	if deleteCookie {
-		cookie.MaxAge = -1
+		maxAge = -1
 	}
-	return cookie
+	return buildNamedCookie(effectiveSessionCookieName(), value, "/", maxAge, sessionSameSite(), true, sessionCookieSecure())
+}
+
+func sessionCookieFromRequest(r *http.Request) (sid, cookieName string) {
+	for _, name := range []string{effectiveSessionCookieName(), sessionCookieName} {
+		cookie, err := r.Cookie(name)
+		if err == nil && cookie.Value != "" {
+			return cookie.Value, name
+		}
+	}
+	return "", ""
 }
 
 func withSessionState(ctx context.Context, state sessionState) context.Context {
@@ -168,17 +171,16 @@ func resolveSession(r *http.Request) sessionState {
 	if orm.DB == nil {
 		return sessionState{}
 	}
-	cookie, err := r.Cookie(sessionCookieName)
-	if err != nil || cookie.Value == "" {
+	sid, _ := sessionCookieFromRequest(r)
+	if sid == "" {
 		return sessionState{}
 	}
-	sid := cookie.Value
 	sessionTbl := orm.MustQuotedTableName("sys.session")
 	userTbl := orm.MustQuotedTableName("core.user")
 
 	var userID int
 	var active bool
-	err = orm.DB.QueryRowContext(r.Context(),
+	err := orm.DB.QueryRowContext(r.Context(),
 		`SELECT s.user_id, u.active FROM `+sessionTbl+` s
 		 JOIN `+userTbl+` u ON u.id = s.user_id
 		 WHERE s.sid = $1 AND s.expires_at > NOW()`,
@@ -259,6 +261,7 @@ func CreateSession(w http.ResponseWriter, userID int) error {
 
 func ClearSessionCookie(w http.ResponseWriter) {
 	http.SetCookie(w, buildSessionCookie("", true))
+	http.SetCookie(w, buildNamedCookie(sessionCookieName, "", "/", -1, sessionSameSite(), true, sessionCookieSecure()))
 }
 
 func sessionForRequest(r *http.Request) sessionState {
@@ -280,9 +283,8 @@ func AuthViaSession(r *http.Request) bool {
 }
 
 func DestroySession(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie(sessionCookieName)
-	if err == nil && cookie.Value != "" {
-		deleteSession(r.Context(), cookie.Value)
+	if sid, _ := sessionCookieFromRequest(r); sid != "" {
+		deleteSession(r.Context(), sid)
 	}
 	ClearSessionCookie(w)
 }

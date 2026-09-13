@@ -402,6 +402,11 @@ func BuildSessionCookieForTest(value string, deleteCookie bool) *http.Cookie {
 	return buildSessionCookie(value, deleteCookie)
 }
 
+// SessionCookieFromRequestForTest exposes session cookie lookup for tests.
+func SessionCookieFromRequestForTest(r *http.Request) (sid, cookieName string) {
+	return sessionCookieFromRequest(r)
+}
+
 // ResolveSessionFromCookieForTest exposes session resolution for integration tests.
 func ResolveSessionFromCookieForTest(r *http.Request) (userID int, clearCookie bool) {
 	state := resolveSession(r)

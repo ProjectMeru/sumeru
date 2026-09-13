@@ -13,16 +13,7 @@ import (
 const loginCSRFCookie = "sumeru_login_csrf"
 
 func setLoginCSRFCookie(w http.ResponseWriter) {
-	token := newLoginCSRFToken()
-	http.SetCookie(w, &http.Cookie{
-		Name:     loginCSRFCookie,
-		Value:    token,
-		Path:     loginRoute,
-		MaxAge:   600,
-		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
-		Secure:   sessionCookieSecure(),
-	})
+	setNamedCookie(w, loginCSRFCookie, newLoginCSRFToken(), loginRoute, 600, http.SameSiteStrictMode)
 }
 
 func newLoginCSRFToken() string {
@@ -46,15 +37,7 @@ func validateLoginCSRF(r *http.Request) bool {
 }
 
 func clearLoginCSRFCookie(w http.ResponseWriter) {
-	http.SetCookie(w, &http.Cookie{
-		Name:     loginCSRFCookie,
-		Value:    "",
-		Path:     loginRoute,
-		MaxAge:   -1,
-		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
-		Secure:   sessionCookieSecure(),
-	})
+	clearNamedCookie(w, loginCSRFCookie, loginRoute, http.SameSiteStrictMode)
 }
 
 func sessionCookieSecure() bool {
