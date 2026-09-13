@@ -655,6 +655,19 @@
   color: var(--sum-muted);
 }
 
+/* Readonly field inputs: visually distinct from editable ones and non-interactive. */
+.sum-field-input--readonly {
+  background: var(--sum-surface-alt);
+  color: var(--sum-muted-ink);
+  cursor: default;
+  border-color: var(--sum-line);
+}
+
+.sum-field-input--readonly:focus {
+  outline: none;
+  box-shadow: none;
+}
+
 .sum-form-inline-input {
   box-sizing: border-box;
   width: 100%;
@@ -723,10 +736,16 @@
   cursor: pointer;
 }
 
+.sum-statusbar-stage[disabled] {
+  cursor: default;
+}
+
+/* Current state renders as a solid badge so it reads as a status, not an action button. */
 .sum-statusbar-stage--current {
-  background: color-mix(in srgb, var(--sum-header) 18%, var(--sum-surface));
-  border-color: color-mix(in srgb, var(--sum-header) 45%, var(--sum-line));
-  color: var(--sum-ink);
+  background: var(--sum-header);
+  border-color: var(--sum-header);
+  color: #ffffff;
+  cursor: default;
 }
 
 .sum-statusbar-stage--current.sum-statusbar-stage--color-0 { border-color: var(--sum-stage-0); color: var(--sum-stage-0); }
@@ -1784,6 +1803,26 @@ label.sum-form-label--hint {
   transition:
     border-color var(--sum-dur) var(--sum-ease),
     box-shadow var(--sum-dur) var(--sum-ease);
+}
+
+/* Numeric fields (unit price, subtotals, quantities) align right, like Odoo. */
+.sum-field-input--numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Numeric columns in one2many tables (headers and cells, readonly included). */
+.sum-o2m-table th.sum-o2m-numeric,
+.sum-o2m-table td.sum-o2m-numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Numeric columns in list views (headers and cells). */
+.sum-list-table th.sum-list-numeric,
+.sum-list-table td.sum-list-numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .sum-field-input:hover {
@@ -2855,6 +2894,18 @@ label.sum-form-label--hint {
   border-radius: var(--sum-radius-sm);
   padding: 0.5rem 0.75rem;
   cursor: pointer;
+}
+
+/* Smart-button box (Odoo-style stat buttons, e.g. the Deliveries link on a sale order):
+   a compact row pinned to the top-right of the sheet, above the first fields. */
+.sum-form-view .sum-form-sheet .sum-form-button-box {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 0.5rem;
+  width: 100%;
+  margin-bottom: 0.75rem;
 }
 
 .sum-progress {

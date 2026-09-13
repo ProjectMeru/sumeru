@@ -6,6 +6,7 @@ import {
   fieldPlaceholder,
   fieldAutocomplete,
   fieldReadonlyInput,
+  isNumericFieldType,
   renderFieldShell,
 } from "./field-shell.js";
 import type { FieldWidgetProps } from "./field-props.js";
@@ -47,11 +48,12 @@ export class DefaultField extends SwcComponent<FieldWidgetProps> {
     const inputType = inputTypeForField(field);
     const step = stepForField(field);
     const id = fieldInputId(field);
+    const numericCls = isNumericFieldType(field.type) ? " sum-field-input--numeric" : "";
 
     if (isFieldReadonly(field, record, readonly)) {
       return renderFieldShell(
         field,
-        field.type === "integer" || field.type === "float" || field.type === "numeric"
+        isNumericFieldType(field.type)
           ? fieldReadonlyInput(field, displayValue, "text")
           : fieldReadonlyInput(field, fieldValue, inputType === "text" ? "text" : inputType),
         { labelFor: id, modelName: record.model },
@@ -63,7 +65,7 @@ export class DefaultField extends SwcComponent<FieldWidgetProps> {
       html`<input
         id=${id}
         type=${inputType}
-        class="sum-field-input"
+        class="sum-field-input${numericCls}"
         name=${field.name}
         placeholder=${placeholder}
         value=${fieldValue}
