@@ -38,7 +38,7 @@ func WebHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if nav.kind == navActionURL {
-			renderURLActionWorkspace(w, r, actionID, menuQuery, nav.url)
+			renderURLActionWorkspace(w, r, actionID, menuQuery)
 			return
 		}
 		actionData = nav.windowData
