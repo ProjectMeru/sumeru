@@ -4,7 +4,6 @@ import (
 	"context"
 	"html/template"
 	"net/http"
-	"net/url"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -45,14 +44,18 @@ func LoginGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	next := strings.TrimSpace(r.URL.Query().Get(nextField))
+	if q := strings.TrimSpace(r.URL.Query().Get(nextField)); q != "" {
+		setLoginNextCookie(w, q)
+		http.Redirect(w, r, loginRoute, http.StatusFound)
+		return
+	}
 	if SessionUserID(r) > 0 {
-		http.Redirect(w, r, SafePathNext(next, homeRoute), http.StatusFound)
+		http.Redirect(w, r, resolveLoginNext(r), http.StatusFound)
 		return
 	}
 
 	csrfToken := setLoginCSRFCookie(w)
-	writeLoginPage(w, r, http.StatusOK, next, "", csrfToken)
+	writeLoginPage(w, r, http.StatusOK, resolveLoginNext(r), "", csrfToken)
 }
 
 func LoginPost(w http.ResponseWriter, r *http.Request) {
@@ -108,10 +111,12 @@ func LoginPost(w http.ResponseWriter, r *http.Request) {
 	clearLoginFailures(credentials.Login)
 	orm.AppendUserLog(r.Context(), userID, clientIP, "success")
 	clearLoginCSRFCookie(w)
+	clearLoginNextCookie(w)
 	http.Redirect(w, r, credentials.Next, http.StatusSeeOther)
 }
 
 func LogoutGet(w http.ResponseWriter, r *http.Request) {
+	clearLoginNextCookie(w)
 	http.Redirect(w, r, loginRoute, http.StatusFound)
 }
 
@@ -124,18 +129,26 @@ func LogoutPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	DestroySession(w, r)
+	clearLoginNextCookie(w)
 	http.Redirect(w, r, loginRoute, http.StatusSeeOther)
 }
 
-func loginURLWithReturn(returnTo string) string {
-	return loginRoute + "?next=" + url.QueryEscape(returnTo)
+func loginURLWithReturn(_ string) string {
+	return loginRoute
 }
 
 func parseLoginCredentials(r *http.Request) loginCredentials {
+	next := SafePathNext(r.PostFormValue(nextField), "")
+	if next == "" {
+		next = loginNextFromRequest(r)
+	}
+	if next == "" {
+		next = homeRoute
+	}
 	return loginCredentials{
 		Login:    strings.TrimSpace(r.PostFormValue(loginField)),
 		Password: r.PostFormValue(passwordField),
-		Next:     SafePathNext(r.PostFormValue(nextField), homeRoute),
+		Next:     next,
 	}
 }
 

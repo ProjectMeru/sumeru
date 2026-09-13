@@ -283,7 +283,16 @@ func ImportCSVFlashMessage(createdCount int) string { return importCSVFlashMessa
 
 func ParseCompanySwitchForm(r *http.Request) companySwitchForm { return parseCompanySwitchForm(r) }
 
-func LoginURLWithReturn(returnTo string) string { return loginURLWithReturn(returnTo) }
+// LoginURLWithReturn returns the login path (return target is stored in a cookie by redirectToLogin).
+func LoginURLWithReturn(_ string) string { return loginRoute }
+
+// SetLoginNextCookieForTest sets the pre-login return-path cookie for tests.
+func SetLoginNextCookieForTest(w http.ResponseWriter, returnTo string) { setLoginNextCookie(w, returnTo) }
+
+// RedirectToLoginForTest mirrors requireLogin redirect without session check.
+func RedirectToLoginForTest(w http.ResponseWriter, r *http.Request, returnTo string) {
+	redirectToLogin(w, r, returnTo)
+}
 
 func BearerToken(header string) string { return bearerToken(header) }
 

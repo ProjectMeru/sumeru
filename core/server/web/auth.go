@@ -308,8 +308,7 @@ func requireLogin(w http.ResponseWriter, r *http.Request) bool {
 	if SessionUserID(r) > 0 {
 		return true
 	}
-	returnTo := SafePathNext(r.URL.RequestURI(), homeRoute)
-	http.Redirect(w, r, loginURLWithReturn(returnTo), http.StatusFound)
+	redirectToLogin(w, r, r.URL.RequestURI())
 	return false
 }
 

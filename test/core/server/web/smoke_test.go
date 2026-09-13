@@ -24,11 +24,20 @@ func TestSmoke_unauthenticatedWebRedirectsToLogin(t *testing.T) {
 	}
 	loc := rr.Header().Get("Location")
 	u, err := url.Parse(loc)
-	if err != nil || !strings.HasPrefix(u.Path, "/web/login") {
-		t.Fatalf("Location %q: want path prefix /web/login", loc)
+	if err != nil || u.Path != "/web/login" {
+		t.Fatalf("Location %q: want path /web/login", loc)
 	}
-	if u.Query().Get("next") == "" {
-		t.Fatalf("Location %q: want non-empty next query", loc)
+	if u.Query().Get("next") != "" {
+		t.Fatalf("Location %q: want clean login URL without next query", loc)
+	}
+	var nextCookie string
+	for _, c := range rr.Result().Cookies() {
+		if c.Name == "sumeru_login_next" {
+			nextCookie = c.Value
+		}
+	}
+	if nextCookie != "/web" {
+		t.Fatalf("login next cookie=%q want /web", nextCookie)
 	}
 }
 
@@ -45,8 +54,12 @@ func TestSmoke_unauthenticatedSwcWorkspaceRedirectsToLogin(t *testing.T) {
 		t.Fatalf("GET /web/swc/workspace: status %d; want %d", rr.Code, http.StatusFound)
 	}
 	loc := rr.Header().Get("Location")
-	if !strings.Contains(loc, "/web/login") {
-		t.Fatalf("Location %q: want /web/login", loc)
+	u, err := url.Parse(loc)
+	if err != nil || u.Path != "/web/login" {
+		t.Fatalf("Location %q: want path /web/login", loc)
+	}
+	if u.Query().Get("next") != "" {
+		t.Fatalf("Location %q: want clean login URL without next query", loc)
 	}
 }
 

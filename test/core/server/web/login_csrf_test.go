@@ -41,6 +41,73 @@ func TestLoginGet_embedsLoginCSRFTokenInForm(t *testing.T) {
 	}
 }
 
+func TestRedirectToLogin_usesCleanURLAndNextCookie(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/web/home", nil)
+	rec := httptest.NewRecorder()
+	web.RedirectToLoginForTest(rec, req, "/web/home?menu_id=2")
+
+	if rec.Code != http.StatusFound {
+		t.Fatalf("status=%d want 302", rec.Code)
+	}
+	if loc := rec.Header().Get("Location"); loc != web.TestLoginRoute {
+		t.Fatalf("Location=%q want %q", loc, web.TestLoginRoute)
+	}
+	nextCookie := ""
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == "sumeru_login_next" {
+			nextCookie = c.Value
+		}
+	}
+	if nextCookie != "/web/home?menu_id=2" {
+		t.Fatalf("login next cookie=%q", nextCookie)
+	}
+}
+
+func TestLoginGet_stripsQueryNextToCleanURL(t *testing.T) {
+	root := sumeruModuleRoot(t)
+	prevTemplates := config.AppConfig.TemplatesPath
+	prevDev := config.AppConfig.DevMode
+	config.AppConfig.TemplatesPath = filepath.Join(root, "core", "engine", "templates")
+	config.AppConfig.DevMode = true
+	t.Cleanup(func() {
+		config.AppConfig.TemplatesPath = prevTemplates
+		config.AppConfig.DevMode = prevDev
+	})
+
+	req := httptest.NewRequest(http.MethodGet, web.TestLoginRoute+"?next=%2Fweb%2Fapps", nil)
+	rec := httptest.NewRecorder()
+	web.LoginGetForTest(rec, req)
+
+	if rec.Code != http.StatusFound {
+		t.Fatalf("status=%d want redirect", rec.Code)
+	}
+	if loc := rec.Header().Get("Location"); loc != web.TestLoginRoute {
+		t.Fatalf("Location=%q want clean login URL", loc)
+	}
+}
+
+func TestLoginGet_embedsNextFromCookie(t *testing.T) {
+	root := sumeruModuleRoot(t)
+	prevTemplates := config.AppConfig.TemplatesPath
+	prevDev := config.AppConfig.DevMode
+	config.AppConfig.TemplatesPath = filepath.Join(root, "core", "engine", "templates")
+	config.AppConfig.DevMode = true
+	t.Cleanup(func() {
+		config.AppConfig.TemplatesPath = prevTemplates
+		config.AppConfig.DevMode = prevDev
+	})
+
+	req := httptest.NewRequest(http.MethodGet, web.TestLoginRoute, nil)
+	req.AddCookie(&http.Cookie{Name: "sumeru_login_next", Value: "/web/apps"})
+	rec := httptest.NewRecorder()
+	web.LoginGetForTest(rec, req)
+
+	formNext := hiddenInputValue(rec.Body.String(), "next")
+	if formNext != "/web/apps" {
+		t.Fatalf("form next=%q want /web/apps", formNext)
+	}
+}
+
 func TestValidateLoginCSRFForTest_acceptsMatchingCookieAndForm(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, web.TestLoginRoute, strings.NewReader("csrf_token=abc&login=u&password=p"))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
