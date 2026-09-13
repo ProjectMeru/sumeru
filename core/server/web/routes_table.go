@@ -43,6 +43,8 @@ func registerAuthRoutes() {
 	registerPublic(http.MethodGet, loginRoute, LoginGet)
 	registerPublic(http.MethodPost, loginRoute, LoginPost)
 	registerPublic(http.MethodGet, logoutRoute, LogoutGet)
+	registerSession(http.MethodPost, logoutRoute, LogoutPost)
+	registerAPIKeyRevealRoute()
 }
 
 func registerWorkspaceRoutes() {
