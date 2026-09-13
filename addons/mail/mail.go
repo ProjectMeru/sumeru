@@ -136,15 +136,16 @@ func ListCommentsForRecord(ctx context.Context, model string, coreID int64, limi
 	if limit <= 0 || limit > 500 {
 		limit = 120
 	}
-	tn := orm.MustQuotedTableName("mail.message")
-	q := `SELECT body, subtype, author, create_date, model, core_id FROM ` + tn +
-		` WHERE model = $1 AND core_id = $2 AND subtype = $3 ORDER BY create_date ASC, id ASC LIMIT $4`
-	rows, err := orm.DB.QueryContext(ctx, q, model, coreID, SubtypeComment, limit)
+	domain := [][]interface{}{
+		{"model", "=", model},
+		{"core_id", "=", int(coreID)},
+		{"subtype", "=", SubtypeComment},
+	}
+	records, err := orm.SearchPage(ctx, "mail.message", domain, limit, 0, "create_date ASC")
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	return scanMessageRows(rows)
+	return rowsFromSearchResults(records), nil
 }
 
 // QueryActivityLog returns audit-oriented lines (module events, notifications, record saves).
@@ -156,45 +157,89 @@ func QueryActivityLog(ctx context.Context, limit int, ctxModel string, ctxID int
 	if limit <= 0 || limit > 200 {
 		limit = 40
 	}
-	tn := orm.MustQuotedTableName("mail.message")
+	uid := orm.SecurityUID(ctx)
+	if err := orm.CheckModelAccess(ctx, uid, "mail.message", "read"); err != nil {
+		return nil, err
+	}
 	ctxModel = strings.TrimSpace(ctxModel)
-	var rows *sql.Rows
-	var err error
 	if ctxModel != "" && ctxID > 0 {
 		if _, ok := orm.Registry[ctxModel]; !ok {
 			ctxModel, ctxID = "", 0
 		}
 	}
+	domain := [][]interface{}{{"subtype", "=", SubtypeNotification}}
 	if ctxModel != "" && ctxID > 0 {
-		q := `SELECT body, subtype, author, create_date, model, core_id FROM ` + tn +
-			` WHERE subtype = 'notification' AND model = $1 AND core_id = $2` +
-			` ORDER BY create_date DESC, id DESC LIMIT $3`
-		rows, err = orm.DB.QueryContext(ctx, q, ctxModel, ctxID, limit)
-	} else {
-		q := `SELECT body, subtype, author, create_date, model, core_id FROM ` + tn +
-			` WHERE subtype = 'notification'` +
-			` ORDER BY create_date DESC, id DESC LIMIT $1`
-		rows, err = orm.DB.QueryContext(ctx, q, limit)
+		if err := orm.CheckModelAccess(ctx, uid, ctxModel, "read"); err != nil {
+			return nil, err
+		}
+		if _, err := orm.SearchOne(ctx, ctxModel, map[string]interface{}{"id": int(ctxID)}); err != nil {
+			return nil, fmt.Errorf("record not found or access denied")
+		}
+		domain = append(domain,
+			[]interface{}{"model", "=", ctxModel},
+			[]interface{}{"core_id", "=", int(ctxID)},
+		)
 	}
+	records, err := orm.SearchPage(ctx, "mail.message", domain, limit, 0, "create_date DESC")
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	return scanMessageRows(rows)
+	return rowsFromSearchResults(records), nil
 }
 
-func scanMessageRows(rows *sql.Rows) ([]Row, error) {
-	var out []Row
-	for rows.Next() {
-		var r Row
-		var ts time.Time
-		if err := rows.Scan(&r.Body, &r.Subtype, &r.Author, &ts, &r.Model, &r.CoreID); err != nil {
-			return out, err
+func rowsFromSearchResults(records []map[string]interface{}) []Row {
+	out := make([]Row, 0, len(records))
+	for _, rec := range records {
+		r := Row{
+			Body:    rowString(rec, "body"),
+			Subtype: rowString(rec, "subtype"),
+			Author:  rowString(rec, "author"),
+			Model:   rowString(rec, "model"),
+			CoreID:  rowInt64(rec, "core_id"),
 		}
-		r.CreateDate = ts.UTC()
+		switch v := rec["create_date"].(type) {
+		case time.Time:
+			r.CreateDate = v.UTC()
+		case *time.Time:
+			if v != nil {
+				r.CreateDate = v.UTC()
+			}
+		}
 		out = append(out, r)
 	}
-	return out, rows.Err()
+	return out
+}
+
+func rowString(rec map[string]interface{}, key string) string {
+	if rec == nil {
+		return ""
+	}
+	switch v := rec[key].(type) {
+	case string:
+		return v
+	case []byte:
+		return string(v)
+	default:
+		return fmt.Sprint(v)
+	}
+}
+
+func rowInt64(rec map[string]interface{}, key string) int64 {
+	if rec == nil {
+		return 0
+	}
+	switch v := rec[key].(type) {
+	case int:
+		return int64(v)
+	case int32:
+		return int64(v)
+	case int64:
+		return v
+	case float64:
+		return int64(v)
+	default:
+		return 0
+	}
 }
 
 // LogModuleEvent records a module lifecycle line in app.log (not mail.message).
