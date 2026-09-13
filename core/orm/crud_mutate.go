@@ -145,6 +145,9 @@ func executeUpdateMutation(ctx context.Context, modelName string, domain [][]int
 			if err := CheckRecordRules(ctx, uid, modelName, "write", merged); err != nil {
 				return err
 			}
+			if err := RunWriteGuards(ctx, modelName, before, prepared); err != nil {
+				return err
+			}
 		}
 		var setClauses []string
 		var setArgs []interface{}
@@ -224,6 +227,9 @@ func executeDeleteMutation(ctx context.Context, modelName string, domain [][]int
 			if err := CheckRecordRules(ctx, uid, modelName, "unlink", recordMap); err != nil {
 				return err
 			}
+			if err := RunUnlinkGuards(ctx, modelName, recordMap); err != nil {
+				return err
+			}
 		}
 		delQ := fmt.Sprintf(`DELETE FROM %s WHERE %s`, table, securedSQL)
 		res, err := tx.ExecContext(ctx, delQ, args...)
@@ -254,7 +260,7 @@ func executeDeleteMutation(ctx context.Context, modelName string, domain [][]int
 		return result, err
 	}
 	if len(result.PendingEventIDs) > 0 {
-		publishRecordEvents(ctx, result.EventName, uid, modelName, result.PendingEventIDs)
+		publishDeleteEvents(ctx, uid, modelName, sideRows)
 	}
 	return result, nil
 }
