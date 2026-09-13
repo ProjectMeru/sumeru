@@ -181,6 +181,10 @@ func Run() {
 		os.Exit(0)
 	}
 
+	if err := web.ValidateProductionCSRFSecret(); err != nil {
+		applog.Fatal(ctx, "Invalid production security configuration", "err", err)
+	}
+
 	registerBrandingAndStatic()
 	registerAppRoutes()
 	web.InitRateLimit()

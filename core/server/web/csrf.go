@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -84,8 +85,16 @@ func ValidateCSRF(r *http.Request) bool {
 	if got == "" {
 		got = r.Header.Get(csrfHeaderName)
 	}
-	if got == "" {
-		got = strings.TrimSpace(r.URL.Query().Get(csrfFormField))
-	}
 	return got != "" && hmac.Equal([]byte(got), []byte(expected))
+}
+
+// ValidateProductionCSRFSecret fails startup when production lacks a shared CSRF secret.
+func ValidateProductionCSRFSecret() error {
+	if config.AppConfig.DevMode {
+		return nil
+	}
+	if strings.TrimSpace(config.AppConfig.CSRFSecret) == "" {
+		return fmt.Errorf("csrf_secret is required when dev_mode=false")
+	}
+	return nil
 }
