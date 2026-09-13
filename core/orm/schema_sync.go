@@ -17,7 +17,7 @@ import (
 
 // SyncRegistrySchema adds missing columns and indexes for every model in Registry.
 func SyncRegistrySchema() error {
-	return SyncRegistrySchemaContext(ContextWithBypass(context.Background(), true))
+	return WithElevated(context.Background(), "schema.sync", SyncRegistrySchemaContext)
 }
 
 // SyncRegistrySchemaContext is SyncRegistrySchema using the caller's context (typically with bypass).

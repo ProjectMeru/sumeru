@@ -99,21 +99,21 @@ func toSetupAdminParams(payload setupInitRequest) orm.SetupAdminParams {
 }
 
 func runFirstTimeSetup(ctx context.Context, adminParams orm.SetupAdminParams) error {
-	securityContext := orm.ContextWithBypass(context.Background(), true)
-
-	if err := module.RunFirstTimeInstallSync(securityContext); err != nil {
-		logSetupFailure(ctx, "First-time install sync failed", err)
-		return err
-	}
-	if err := module.InstallModuleByName(securityContext, baseModuleName); err != nil {
-		logSetupFailure(ctx, "Install base module failed", err)
-		return fmt.Errorf("install base failed: %w", err)
-	}
-	if err := orm.EnsureBootstrapSecurityFromSetup(adminParams); err != nil {
-		logSetupFailure(ctx, "Security bootstrap failed", err)
-		return fmt.Errorf("security bootstrap failed: %w", err)
-	}
-	return nil
+	return orm.WithElevated(context.Background(), "setup.bootstrap", func(securityContext context.Context) error {
+		if err := module.RunFirstTimeInstallSync(securityContext); err != nil {
+			logSetupFailure(ctx, "First-time install sync failed", err)
+			return err
+		}
+		if err := module.InstallModuleByName(securityContext, baseModuleName); err != nil {
+			logSetupFailure(ctx, "Install base module failed", err)
+			return fmt.Errorf("install base failed: %w", err)
+		}
+		if err := orm.EnsureBootstrapSecurityFromSetup(adminParams); err != nil {
+			logSetupFailure(ctx, "Security bootstrap failed", err)
+			return fmt.Errorf("security bootstrap failed: %w", err)
+		}
+		return nil
+	})
 }
 
 func logSetupFailure(ctx context.Context, message string, err error, fields ...map[string]interface{}) {

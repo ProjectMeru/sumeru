@@ -30,10 +30,16 @@ func InitDevFeatures(raw string) {
 
 // DevFeatureEnabled reports whether a --dev feature flag is active.
 func DevFeatureEnabled(name string) bool {
+	name = strings.ToLower(strings.TrimSpace(name))
+	if name == "sql" || name == "access" {
+		if !config.AppConfig.DevMode {
+			return false
+		}
+	}
 	devFeatureMu.RLock()
 	defer devFeatureMu.RUnlock()
 	if devFeatures == nil {
-		return config.AppConfig.DevMode && strings.EqualFold(strings.TrimSpace(name), "access")
+		return config.AppConfig.DevMode && name == "access"
 	}
-	return devFeatures[strings.ToLower(strings.TrimSpace(name))]
+	return devFeatures[name]
 }

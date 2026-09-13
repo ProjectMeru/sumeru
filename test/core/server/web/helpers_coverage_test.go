@@ -114,7 +114,7 @@ func TestWebHelperExportsCoverage(t *testing.T) {
 	if got := web.ImportCSVFlashMessage(3); !strings.Contains(got, "3") {
 		t.Fatalf("flash: %q", got)
 	}
-	if got := web.LoginURLWithReturn("/web"); !strings.Contains(got, "next=") {
+	if got := web.LoginURLWithReturn("/web"); got != web.TestLoginRoute {
 		t.Fatalf("login url: %q", got)
 	}
 	if got := web.BearerToken("Bearer abc"); got != "abc" {

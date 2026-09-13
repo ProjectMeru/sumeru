@@ -25,7 +25,7 @@ func runServerActionsForEvent(ctx context.Context, ev event.Event) error {
 	if _, ok := orm.Registry["sys.server.action"]; !ok {
 		return nil
 	}
-	bypass := orm.ContextWithBypass(ctx, true)
+	bypass := orm.AuditedBypass(ctx, "automation.server_action")
 	installed, err := orm.InstalledModuleNames(bypass)
 	if err != nil || !orm.ShouldMaterializeModel("sys.server.action", installed) {
 		return nil

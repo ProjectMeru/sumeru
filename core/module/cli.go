@@ -44,7 +44,7 @@ func UpdateModuleData(ctx context.Context, name string) error {
 // For -u, the token "all" (case-insensitive) means every installed (or to_upgrade) module
 // present on disk, in dependency order. Uninstalled modules are never updated.
 func RunModuleCLI(installCSV, updateCSV string) error {
-	ctx := orm.ContextWithBypass(context.Background(), true)
+	ctx := orm.AuditedBypass(context.Background(), "module.cli")
 
 	installNames, err := expandInstallModuleNames(ctx, splitCSV(installCSV))
 	if err != nil {

@@ -12,7 +12,7 @@ import (
 	"sumeru/core/server/config"
 )
 
-func renderURLActionWorkspace(w http.ResponseWriter, r *http.Request, actionID int, menuQuery, iframeURL string) {
+func renderURLActionWorkspace(w http.ResponseWriter, r *http.Request, actionID int, menuQuery string) {
 	ctx := r.Context()
 	menuID := CanonicalMenuID(ctx, menuQuery, actionID)
 	title := urlActionTitle(ctx, actionID)

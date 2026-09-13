@@ -25,6 +25,9 @@ func ReportPrintHandler(w http.ResponseWriter, r *http.Request) {
 	if !requireLogin(w, r) {
 		return
 	}
+	if !validateSessionCSRF(w, r) {
+		return
+	}
 	reportID, _ := strconv.Atoi(strings.TrimSpace(r.URL.Query().Get("report_id")))
 	recordID, _ := strconv.Atoi(strings.TrimSpace(r.URL.Query().Get("id")))
 	data, filename, err := report.RenderReportActionPDF(r.Context(), reportID, recordID)
@@ -33,7 +36,7 @@ func ReportPrintHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/pdf")
-	w.Header().Set("Content-Disposition", "attachment; filename="+filename)
+	w.Header().Set("Content-Disposition", safeContentDispositionFilename(filename))
 	_, _ = w.Write(data)
 }
 
@@ -71,7 +74,7 @@ func ExportPivotHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", "attachment; filename="+report.ExportFilename(modelName+"_pivot", "csv"))
+	w.Header().Set("Content-Disposition", safeContentDispositionFilename(report.ExportFilename(modelName+"_pivot", "csv")))
 	_, _ = w.Write(data)
 }
 
@@ -109,6 +112,6 @@ func ExportGraphHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", "attachment; filename="+report.ExportFilename(modelName+"_graph", "csv"))
+	w.Header().Set("Content-Disposition", safeContentDispositionFilename(report.ExportFilename(modelName+"_graph", "csv")))
 	_, _ = w.Write(data)
 }

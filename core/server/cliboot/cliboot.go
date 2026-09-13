@@ -78,7 +78,7 @@ func initFromLoadedConfig() (context.Context, error) {
 	if err := server.LoadAddonPaths(config.AppConfig.AddonPaths); err != nil {
 		return nil, fmt.Errorf("addons: %w", err)
 	}
-	ctx := orm.ContextWithBypass(context.Background(), true)
+	ctx := orm.AuditedBypass(context.Background(), "cli.boot")
 	if err := orm.EnsureDefaultGroupsAndImplied(); err != nil {
 		return nil, fmt.Errorf("security groups: %w", err)
 	}

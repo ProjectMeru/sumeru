@@ -90,7 +90,7 @@ func ExportCSVHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", "attachment; filename="+report.ExportFilename(in.Model, "csv"))
+	w.Header().Set("Content-Disposition", safeContentDispositionFilename(report.ExportFilename(in.Model, "csv")))
 	_, _ = w.Write(data)
 }
 
@@ -119,7 +119,7 @@ func ExportPDFHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/pdf")
-	w.Header().Set("Content-Disposition", "attachment; filename="+report.ExportFilename(csvIn.Model, "pdf"))
+	w.Header().Set("Content-Disposition", safeContentDispositionFilename(report.ExportFilename(csvIn.Model, "pdf")))
 	_, _ = w.Write(data)
 }
 
@@ -138,7 +138,7 @@ func ExportXLSXHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-	w.Header().Set("Content-Disposition", "attachment; filename="+report.ExportFilename(in.Model, "xlsx"))
+	w.Header().Set("Content-Disposition", safeContentDispositionFilename(report.ExportFilename(in.Model, "xlsx")))
 	_, _ = w.Write(data)
 }
 
@@ -172,7 +172,7 @@ func ExportTemplatePDFHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/pdf")
-	w.Header().Set("Content-Disposition", "attachment; filename="+report.ExportFilename("template_report", "pdf"))
+	w.Header().Set("Content-Disposition", safeContentDispositionFilename(report.ExportFilename("template_report", "pdf")))
 	_, _ = w.Write(data)
 }
 
@@ -195,6 +195,6 @@ func BulkTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", "attachment; filename="+report.ExportFilename(modelName+"_template", "csv"))
+	w.Header().Set("Content-Disposition", safeContentDispositionFilename(report.ExportFilename(modelName+"_template", "csv")))
 	_, _ = w.Write(data)
 }

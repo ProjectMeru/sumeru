@@ -57,7 +57,6 @@ func loadAppsModuleDetail(
 		listEntry = appsModuleFromParsed(parsed)
 		listEntry.IconURL = render.ModuleIconURL(ctx, parsed.Name)
 		listEntry.IconHue = render.IconHueFromString(parsed.Name)
-		listEntry.DetailURL = appsDetailPageURL(withModuleName(browse, parsed.Name), false)
 	}
 
 	moduleBrowse := withModuleName(browse, parsed.Name)

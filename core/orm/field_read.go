@@ -7,9 +7,8 @@ import (
 	"sumeru/core/applog"
 )
 
-var sensitiveReadFields = map[string]map[string]bool{
-	"core.user":        {"password": true},
-	"core.user.apikey": {"key_hash": true},
+func sensitiveReadFields(model string) map[string]bool {
+	return readRedactFields(model)
 }
 
 // CheckFieldReadAccess errors if any requested field is read-denied by sys.field.access.
@@ -34,7 +33,7 @@ func RedactRecordForRead(ctx context.Context, uid int, model string, rec map[str
 	if rec == nil {
 		return
 	}
-	for field := range sensitiveReadFields[model] {
+	for field := range sensitiveReadFields(model) {
 		delete(rec, field)
 	}
 	if SecurityBypass(ctx) || uid == superuserUID {
@@ -42,10 +41,24 @@ func RedactRecordForRead(ctx context.Context, uid int, model string, rec map[str
 	}
 	denied, err := fieldAccessDenied(ctx, uid, model, "read")
 	if err != nil {
+		redactAllExceptID(rec)
 		return
 	}
 	for field := range denied {
 		delete(rec, field)
+	}
+}
+
+func redactAllExceptID(rec map[string]interface{}) {
+	if rec == nil {
+		return
+	}
+	id := rec["id"]
+	for k := range rec {
+		delete(rec, k)
+	}
+	if id != nil {
+		rec["id"] = id
 	}
 }
 

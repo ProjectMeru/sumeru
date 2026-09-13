@@ -89,11 +89,11 @@ func insertSideEffectRow(ctx context.Context, tx TxWrapper, registryKey string, 
 	if !ok || inst == nil {
 		return fmt.Errorf("model %q not registered", registryKey)
 	}
-	bypass := ContextWithBypass(ctx, true)
+	elevated := AuditedBypass(ctx, "side_effect.insert")
 	if tx != nil {
 		var err error
-		execSideEffectOnTx(bypass, tx, registryKey, "insert_side_effect", func() error {
-			_, err = insertRawOnTx(bypass, tx, inst, vals)
+		execSideEffectOnTx(elevated, tx, registryKey, "insert_side_effect", func() error {
+			_, err = insertRawOnTx(elevated, tx, inst, vals)
 			return err
 		})
 		return err
@@ -101,7 +101,7 @@ func insertSideEffectRow(ctx context.Context, tx TxWrapper, registryKey string, 
 	if DB == nil {
 		return fmt.Errorf("no database")
 	}
-	_, err := Create(bypass, inst, vals)
+	_, err := Create(elevated, inst, vals)
 	if err != nil {
 		logSideEffectWarn(ctx, "insert_side_effect", registryKey, err)
 	}

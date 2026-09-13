@@ -23,6 +23,19 @@ func TestRedactRecordForRead_stripsPassword(t *testing.T) {
 	}
 }
 
+func TestRedactRecordForRead_stripsTotpSecret(t *testing.T) {
+	ctx := orm.ContextWithBypass(context.Background(), true)
+	rec := map[string]interface{}{
+		"id":          1,
+		"login":       "user",
+		"totp_secret": "BASE32SECRET",
+	}
+	orm.RedactRecordForRead(ctx, 2, "core.user", rec)
+	if _, ok := rec["totp_secret"]; ok {
+		t.Fatal("totp_secret should be redacted from core.user reads")
+	}
+}
+
 func TestRedactRecordForRead_stripsKeyHash(t *testing.T) {
 	ctx := orm.ContextWithBypass(context.Background(), true)
 	rec := map[string]interface{}{"id": 1, "key_hash": "secret", "name": "k1"}

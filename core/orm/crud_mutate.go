@@ -76,6 +76,11 @@ func executeUpdateMutation(ctx context.Context, modelName string, domain [][]int
 	if err != nil {
 		return result, err
 	}
+	if modelName == "core.user" {
+		if err := RejectCoreUserSecurityWrites(ctx, uid, values); err != nil {
+			return result, err
+		}
+	}
 	prepared, err := PrepareValues(inst, values, WriteOpWrite, PrepareOptions{
 		StrictUnknown:     false,
 		AllowPasswordHash: passwordHashWriteAllowed(ctx),

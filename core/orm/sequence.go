@@ -13,7 +13,7 @@ func NextSequence(ctx context.Context, code string) (string, error) {
 	if code == "" || DB == nil {
 		return "", fmt.Errorf("sequence code required")
 	}
-	bypass := ContextWithBypass(ctx, true)
+	bypass := AuditedBypass(ctx, "sequence.next")
 	tbl := MustQuotedTableName("sys.sequence")
 	tx, err := DB.BeginTx(bypass, nil)
 	if err != nil {
@@ -57,7 +57,7 @@ func GetConfig(ctx context.Context, key, def string) string {
 		return def
 	}
 	var val sql.NullString
-	err := DB.QueryRowContext(ContextWithBypass(ctx, true),
+	err := DB.QueryRowContext(AuditedBypass(ctx, "config.read"),
 		`SELECT value FROM `+MustQuotedTableName("sys.config.parameter")+` WHERE key = $1`, key,
 	).Scan(&val)
 	if err != nil || !val.Valid {
@@ -72,7 +72,7 @@ func SetConfig(ctx context.Context, key, value string) error {
 	if key == "" {
 		return fmt.Errorf("config key required")
 	}
-	bypass := ContextWithBypass(ctx, true)
+	bypass := AuditedBypass(ctx, "config.write")
 	tbl := MustQuotedTableName("sys.config.parameter")
 	res, err := DB.ExecContext(bypass, `UPDATE `+tbl+` SET value = $1 WHERE key = $2`, value, key)
 	if err != nil {

@@ -16,11 +16,11 @@ type PageFlash struct {
 // ConsumePageFlashes reads and clears one-time flash data (cookies).
 func ConsumePageFlashes(r *http.Request, w http.ResponseWriter) []PageFlash {
 	var out []PageFlash
-	if key := ConsumeAPIKeyFlash(r, w); key != "" {
+	if c, err := r.Cookie(apiKeyFlashCookie); err == nil && c.Value != "" {
 		out = append(out, PageFlash{
 			Kind:  "success",
 			Title: "API key created",
-			Body:  "Copy this key now — it will not be shown again:\n" + key,
+			Body:  "Open the one-time reveal page to copy your key (available for 2 minutes):\n/web/apikey/reveal",
 		})
 	}
 	if flash, ok := ConsumeRecordErrorFlash(r, w); ok {

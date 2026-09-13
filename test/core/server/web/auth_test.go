@@ -1,19 +1,17 @@
 package web_test
 
 import (
+	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"strings"
 	"sumeru/core/server/web"
 	"testing"
 )
 
 func TestLoginURLWithReturn(t *testing.T) {
-	returnTo := "/web/home?menu_id=1"
-	got := web.LoginURLWithReturn(returnTo)
-	want := web.TestLoginRoute + "?next=" + url.QueryEscape(returnTo)
-	if got != want {
-		t.Fatalf("got %q want %q", got, want)
+	got := web.LoginURLWithReturn("/web/home?menu_id=1")
+	if got != web.TestLoginRoute {
+		t.Fatalf("got %q want %q", got, web.TestLoginRoute)
 	}
 }
 
@@ -31,6 +29,19 @@ func TestBearerToken(t *testing.T) {
 		if got := web.BearerToken(test.header); got != test.want {
 			t.Fatalf("web.BearerToken(%q) = %q want %q", test.header, got, test.want)
 		}
+	}
+}
+
+func TestLogoutGet_redirectsToLogin(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, web.TestLogoutRoute, nil)
+	rec := httptest.NewRecorder()
+	web.LogoutGetForTest(rec, req)
+
+	if rec.Code != http.StatusFound {
+		t.Fatalf("status=%d want 302", rec.Code)
+	}
+	if loc := rec.Header().Get("Location"); loc != web.TestLoginRoute {
+		t.Fatalf("Location=%q want %q", loc, web.TestLoginRoute)
 	}
 }
 

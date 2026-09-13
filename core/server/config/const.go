@@ -44,6 +44,8 @@ const (
 	keyRateLimitRPM       = "rate_limit_rpm"
 	keyTrustedProxies     = "trusted_proxies"
 	keyCSRFSecret         = "csrf_secret"
+	keyForceSecureCookies          = "force_secure_cookies"
+	keySessionCookieStrictSameSite = "session_cookie_strict_samesite"
 	keyMetricsScrapeToken = "metrics_scrape_token"
 	keySMTPHost           = "smtp_host"
 	keySMTPPort           = "smtp_port"

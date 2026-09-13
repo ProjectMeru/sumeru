@@ -27,9 +27,16 @@ func rpcSearchRead(ctx context.Context, model string, args, kwargs json.RawMessa
 		return nil, newRPCError(CodeInvalidArgs, fmt.Sprintf("args[1] fields: %v", err), map[string]interface{}{"method": "search_read"})
 	}
 	limit, offset := parseLimitOffset(kwargs)
+	uid := orm.UIDFromContext(ctx)
 	rows, err := orm.SearchPage(ctx, model, domain, limit, offset, "")
 	if err != nil {
 		return nil, err
+	}
+	orm.RedactSearchResults(ctx, uid, model, rows)
+	if len(fields) > 0 {
+		if err := orm.CheckFieldReadAccess(ctx, uid, model, fields); err != nil {
+			return nil, err
+		}
 	}
 	return projectFields(rows, fields), nil
 }

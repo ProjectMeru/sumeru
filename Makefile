@@ -1,10 +1,16 @@
-.PHONY: help setup dev build css run generate bp check-sql check-logs db-check \
-	i18n-export i18n-import module shell test-db test-integration test-coverage \
-	test-modules test-modules-static test-modules-unit test-modules-addon test-modules-integration \
-	swc swc-build assets swc-check swc-test check lint
+# Sumeru kernel — `make` or `make all` runs the full local standard.
+.PHONY: help all check lint standards audit-test vet lint-go \
+	check-sql check-logs test test-go swc-test swc-check swc-build swc-deps swc assets \
+	setup run dev build build-check generate \
+	test-modules test-modules-static test-modules-unit test-modules-addon \
+	test-integration test-db \
+	bp css db-check i18n-export i18n-import module shell
 
-# Extra flags for `make run`, e.g. `make run EXTRA_RUN_FLAGS='-p 9090 -d sumeru_staging'`
 EXTRA_RUN_FLAGS ?=
+TEST_DSN ?= host=localhost port=5433 user=postgres password=postgres dbname=sumeru_test sslmode=disable
+GO_TEST_FLAGS ?= -count=1 -timeout 15m
+GO_COVERAGE_MIN ?= 42
+GOLANGCI := go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
 
 SWC_DIR := core/swc
 SWC_BUNDLE := core/engine/assets/swc/swc.js
@@ -13,28 +19,85 @@ SWC_JS_MATCH := core/engine/assets/js/sumeru-password-match.js
 SWC_JS_APPS_PAGE := core/engine/assets/js/apps-page.js
 SWC_ASSET_INPUTS := $(SWC_DIR)/esbuild.config.mjs $(SWC_DIR)/sum-compile.mjs $(SWC_DIR)/package.json
 
+# =============================================================================
+# Standard — default goal
+# =============================================================================
+
+all check: lint test build-check
+
+lint: standards swc-check vet lint-go audit-test
+
+test: swc-test test-go
+
+# =============================================================================
+# Static analysis
+# =============================================================================
+
+standards: check-sql check-logs
+	@bash scripts/check_security_bypass.sh
+
 check-sql:
 	@bash scripts/check_sql_safety.sh
 
 check-logs:
 	@bash scripts/check_no_stdlog.sh
 
-# Match CI: Go vet + golangci-lint v2 + SWC typecheck (see .golangci.yml).
-# Use go run so a stale v1 binary on PATH does not break the target.
-lint: swc-check
+audit-test:
+	go test ./test/core/security/... $(GO_TEST_FLAGS)
+
+vet:
 	go vet ./...
-	go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest run --timeout=10m
 
-generate:
-	go generate ./cmd/sumeru
+lint-go:
+	$(GOLANGCI) run --timeout=10m
 
-# Build SWC workspace bundle + login JS (always rebuild).
-swc-build:
-	cd $(SWC_DIR) && npm install && npm run build
+build-check:
+	go build ./...
+
+# =============================================================================
+# Tests — Go (one target for full suite + coverage gate)
+# =============================================================================
+
+test-go:
+	go test ./test/... -coverpkg=./... -coverprofile=coverage.out $(GO_TEST_FLAGS)
+	GO_COVERAGE_MIN=$(GO_COVERAGE_MIN) bash scripts/check_go_coverage.sh coverage.out
+
+test-modules-static:
+	go test ./test/module/static/... ./test/core/importgen/... $(GO_TEST_FLAGS)
+
+test-modules-unit:
+	go test ./test/module/unit/... $(GO_TEST_FLAGS)
+
+test-modules-addon:
+	go test ./test/module/addons/... ./test/addons/... $(GO_TEST_FLAGS)
+
+test-modules: test-modules-static test-modules-unit test-modules-addon
+
+test-db:
+	docker compose -f docker-compose.test.yml up -d --wait
+
+test-integration: test-db
+	SUMERU_TEST_DSN='$(TEST_DSN)' go test -tags=integration \
+		./test/integration/... ./test/module/integration/... $(GO_TEST_FLAGS)
+
+# =============================================================================
+# SWC & client assets
+# =============================================================================
+
+swc-deps:
+	cd $(SWC_DIR) && npm install
+
+swc-check: swc-deps
+	cd $(SWC_DIR) && npm run check
+
+swc-test: swc-deps
+	cd $(SWC_DIR) && npm run test:coverage
+
+swc-build: swc-deps
+	cd $(SWC_DIR) && npm run build
 
 swc: swc-build
 
-# Build client assets when missing or when SWC sources changed (used by run/build).
 assets:
 	@if [ ! -f $(SWC_BUNDLE) ] || [ ! -f $(SWC_JS_TOGGLE) ] || [ ! -f $(SWC_JS_MATCH) ] || [ ! -f $(SWC_JS_APPS_PAGE) ]; then \
 		echo "Building SWC assets (bundles missing)..."; \
@@ -46,49 +109,26 @@ assets:
 		echo "SWC assets up to date"; \
 	fi
 
-swc-check:
-	cd $(SWC_DIR) && npm install && npm run check
+# =============================================================================
+# Dev & production binary
+# =============================================================================
 
-swc-test:
-	cd $(SWC_DIR) && npm install && npm run test:coverage
-
-# First-time local bootstrap: config, client bundles, Go imports.
 setup:
 	@test -f sumeru.conf || cp sumeru.conf.example sumeru.conf
-	$(MAKE) assets
-	$(MAKE) generate
+	$(MAKE) assets generate
 
-# Dev server: imports + client assets + Go server.
-run: generate assets
+run dev: generate assets
 	go run ./cmd/sumeru -- -c sumeru.conf $(EXTRA_RUN_FLAGS)
 
-dev: run
-
-# Production-style binary next to Makefile.
 build: generate assets
 	go build -o sumeru ./cmd/sumeru
 
-check: lint test-modules-static
-	go test ./test/... -count=1
+generate:
+	go generate ./cmd/sumeru
 
-test-modules-static:
-	go test ./test/module/static/... ./test/core/importgen/... -count=1
-
-test-modules-unit:
-	go test ./test/module/unit/... -count=1
-
-test-modules-addon:
-	go test ./test/module/addons/... ./test/addons/... -count=1
-
-test-modules: test-modules-static test-modules-unit test-modules-addon
-
-test-modules-integration: test-db
-	SUMERU_TEST_DSN='host=localhost port=5433 user=postgres password=postgres dbname=sumeru_test sslmode=disable' \
-		go test -tags=integration ./test/integration/... ./test/module/integration/... -count=1
-
-test-coverage:
-	go test ./test/... -coverpkg=./... -coverprofile=coverage.out -count=1
-	@bash scripts/check_go_coverage.sh coverage.out
+# =============================================================================
+# CLI tools
+# =============================================================================
 
 bp:
 	@test -n "$(NAME)" || (echo 'usage: make bp NAME=my_module' >&2 && exit 1)
@@ -112,34 +152,66 @@ module:
 shell:
 	go run ./cmd/sumeru-shell -- -c sumeru.conf
 
-test-db:
-	docker compose -f docker-compose.test.yml up -d --wait
-
-test-integration: test-db
-	SUMERU_TEST_DSN='host=localhost port=5433 user=postgres password=postgres dbname=sumeru_test sslmode=disable' \
-		go test -tags=integration ./test/integration/... ./test/module/integration/... -count=1
+# =============================================================================
+# Help
+# =============================================================================
 
 help:
-	@echo "Sumeru Makefile — common dev flow:"
-	@echo "  make setup   - sumeru.conf (if missing), SWC assets, go generate"
-	@echo "  make run     - generate + assets + go run (alias: make dev)"
-	@echo "  make build   - generate + assets + go build -o sumeru"
+	@echo "Sumeru Makefile — run from the sumeru/ directory (kernel repo root)"
 	@echo ""
-	@echo "Client (SWC + login JS under core/engine/assets/):"
-	@echo "  make assets  - build bundles when missing or sources changed"
-	@echo "  make swc     - always rebuild SWC + login JS"
-	@echo "  make swc-check / swc-test - TypeScript check / vitest"
+	@echo "STANDARD (pre-PR / matches CI)"
+	@echo "  make                 full gate: lint + test + build-check  (default goal)"
+	@echo "  make all             same as make"
+	@echo "  make check           same as make"
 	@echo ""
-	@echo "Go / addons:"
-	@echo "  make generate - refresh cmd/sumeru/zimports.go"
-	@echo "  make bp NAME=x - scaffold kernel addon (then make generate)"
-	@echo "  make lint    - swc-check + go vet + golangci-lint (matches CI lint gates)"
-	@echo "  make check   - swc-check + lint + test-modules-static + go test ./test/..."
-	@echo "  make test-modules - static + unit + addon module suite tiers"
-	@echo "  make test-coverage - full repo coverage with 90% gate"
-	@echo "  make module  - module CLI (ARGS='list' | 'install sales' | ...)"
-	@echo "  make shell   - ORM REPL"
+	@echo "LINT (static analysis — no full test suite)"
+	@echo "  make lint            standards + swc-check + vet + golangci-lint + audit-test"
+	@echo "  make standards       check-sql + check-logs + security bypass script"
+	@echo "  make check-sql       reject raw SQL fmt.Sprintf in core/server/web"
+	@echo "  make check-logs      reject stdlib log/fmt.Print in core/"
+	@echo "  make audit-test      go test ./test/core/security/..."
+	@echo "  make vet             go vet ./..."
+	@echo "  make lint-go         golangci-lint only"
+	@echo "  make build-check     go build ./..."
 	@echo ""
-	@echo "Other: db-check | i18n-export | i18n-import | test-integration | check-sql | check-logs"
-	@echo "Vars: EXTRA_RUN_FLAGS='-p 9090 -d mydb'"
-	@echo "Prerequisites: Go 1.26.6+, Node.js (npm), PostgreSQL — see README.md"
+	@echo "TEST"
+	@echo "  make test            swc-test + test-go"
+	@echo "  make test-go         go test ./test/... + coverage gate (GO_COVERAGE_MIN=$(GO_COVERAGE_MIN))"
+	@echo "  make swc-test        vitest with coverage (core/swc)"
+	@echo "  make test-modules    module suite tiers 0–2 (static + unit + addon)"
+	@echo "  make test-modules-static   addon convention validation only"
+	@echo "  make test-modules-unit     module unit tier only"
+	@echo "  make test-modules-addon    addon tests tier only"
+	@echo "  make test-integration      PostgreSQL tests (-tags=integration; needs Docker)"
+	@echo "  make test-db               start docker-compose.test.yml postgres"
+	@echo ""
+	@echo "SWC & ASSETS"
+	@echo "  make swc-check       TypeScript typecheck (core/swc)"
+	@echo "  make swc-build       esbuild bundle + login JS → core/engine/assets/"
+	@echo "  make swc             alias for swc-build (force rebuild)"
+	@echo "  make assets          build SWC bundles if missing or sources changed"
+	@echo "  make swc-deps        npm install in core/swc (used by swc-* targets)"
+	@echo ""
+	@echo "DEV & BUILD"
+	@echo "  make setup           sumeru.conf + assets + generate (first-time bootstrap)"
+	@echo "  make dev             run server (alias: run)"
+	@echo "  make run             go run ./cmd/sumeru -c sumeru.conf"
+	@echo "  make build           production binary → ./sumeru"
+	@echo "  make generate        refresh cmd/sumeru/zimports.go"
+	@echo ""
+	@echo "TOOLS"
+	@echo "  make bp NAME=x       scaffold a kernel addon"
+	@echo "  make module ARGS='list'   module CLI (install, list, …)"
+	@echo "  make shell           ORM REPL"
+	@echo "  make db-check        database connectivity check"
+	@echo "  make i18n-export     export translations.csv"
+	@echo "  make i18n-import     import translations.csv"
+	@echo "  make css             reminder: edit core/engine/assets/css/*.css directly"
+	@echo ""
+	@echo "VARIABLES"
+	@echo "  EXTRA_RUN_FLAGS      passed to make run (e.g. -p 9090 -d mydb)"
+	@echo "  TEST_DSN             integration test postgres DSN"
+	@echo "  GO_COVERAGE_MIN      min Go coverage % for test-go (default $(GO_COVERAGE_MIN))"
+	@echo "  GO_TEST_FLAGS        default: $(GO_TEST_FLAGS)"
+
+.DEFAULT_GOAL := all

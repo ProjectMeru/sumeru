@@ -118,7 +118,10 @@
                     <div class="sum-dropdown-panel sum-dropdown-panel--align-end" role="menu">
                         <a href="{{.UserProfileHref}}" class="sum-dropdown-item" role="menuitem">Profile</a>
                         <a href="{{.UserDocsHref}}" class="sum-dropdown-item" role="menuitem" target="_blank" rel="noopener noreferrer">Documentation</a>
-                        <a href="/web/logout" class="sum-dropdown-item sum-dropdown-item--danger" role="menuitem">Log out</a>
+                        <form method="post" action="/web/logout" class="sum-dropdown-form">
+                            {{if $.CSRFToken}}<input type="hidden" name="csrf_token" value="{{$.CSRFToken}}" />{{end}}
+                            <button type="submit" class="sum-dropdown-item sum-dropdown-item--danger sum-dropdown-item--submit" role="menuitem">Log out</button>
+                        </form>
                     </div>
                 </details>
                 {{end}}
@@ -351,8 +354,8 @@
         if (ev.persisted) return;
         n = Math.max(0, parseInt(localStorage.getItem(TAB_KEY) || "1", 10) - 1);
         localStorage.setItem(TAB_KEY, String(n));
-        if (n === 0 && navigator.sendBeacon) {
-          navigator.sendBeacon("/web/logout");
+        if (n === 0) {
+          fetch("/web/logout", { method: "GET", keepalive: true, credentials: "include" });
         }
       });
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -134,11 +135,21 @@ func Run() {
 		applog.InfoMsg(ctx, "server", "startup", "Visit setup URL to initialize the system",
 			map[string]interface{}{"url": "http://localhost:" + config.AppConfig.HttpPort + "/setup"})
 
+		if err := validateSetupModeConfig(config.AppConfig); err != nil {
+			applog.Fatal(ctx, "Invalid setup configuration", "err", err)
+		}
+
 		registerBrandingAndStatic()
 		registerSetupRoutes()
 		web.InitRateLimit()
 		web.InitCSRFSecret()
 
+		if config.AppConfig.SetupLocalhostOnly {
+			if iface := strings.TrimSpace(config.AppConfig.HttpInterface); iface != "" && !isLoopbackBind(iface) {
+				applog.WarnMsg(ctx, "server", "setup", "http_interface ignored during setup; binding 127.0.0.1 only",
+					nil, map[string]interface{}{"http_interface": iface})
+			}
+		}
 		listenHost := setupListenAddr(config.AppConfig)
 		applog.InfoMsg(ctx, "server", "listen", "Server starting in setup mode",
 			map[string]interface{}{"port": config.AppConfig.HttpPort, "bind": listenHost})
@@ -168,6 +179,10 @@ func Run() {
 	if *stopAfterInit && hadModuleOperations {
 		applog.InfoMsg(ctx, "server", "shutdown", "stop-after-init: module operations finished, exiting", nil)
 		os.Exit(0)
+	}
+
+	if err := web.ValidateProductionCSRFSecret(); err != nil {
+		applog.Fatal(ctx, "Invalid production security configuration", "err", err)
 	}
 
 	registerBrandingAndStatic()
@@ -247,11 +262,27 @@ func listenAddr(host, port string) string {
 }
 
 func setupListenAddr(cfg config.Config) string {
-	if strings.TrimSpace(cfg.HttpInterface) != "" {
-		return listenAddr(cfg.HttpInterface, cfg.HttpPort)
-	}
 	if cfg.SetupLocalhostOnly {
 		return "127.0.0.1:" + cfg.HttpPort
 	}
+	if iface := strings.TrimSpace(cfg.HttpInterface); iface != "" {
+		return listenAddr(iface, cfg.HttpPort)
+	}
 	return listenAddr("", cfg.HttpPort)
+}
+
+func validateSetupModeConfig(cfg config.Config) error {
+	if !cfg.SetupLocalhostOnly && strings.TrimSpace(cfg.SetupToken) == "" {
+		return fmt.Errorf("setup_token is required when setup_localhost_only=false")
+	}
+	return nil
+}
+
+func isLoopbackBind(host string) bool {
+	host = strings.TrimSpace(host)
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }

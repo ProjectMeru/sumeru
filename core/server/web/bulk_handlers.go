@@ -33,6 +33,10 @@ func BulkUploadHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "empty file", http.StatusBadRequest)
 		return
 	}
+	if err := orm.ValidateAttachmentMIME("", content); err != nil {
+		http.Error(w, "file type not allowed", http.StatusBadRequest)
+		return
+	}
 	fields := report.ParseFieldsParam(r.FormValue(reportFieldsParam))
 	mode := strings.TrimSpace(r.FormValue(importModeField))
 	if mode == "" {

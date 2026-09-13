@@ -40,7 +40,7 @@ var InitialSetupModelNames = []string{
 
 // SyncModelsInitialSetup creates tables only for InitialSetupModelNames (first-run /setup).
 func SyncModelsInitialSetup() error {
-	ctx := ContextWithBypass(context.Background(), true)
+	ctx := AuditedBypass(context.Background(), "setup.sync")
 	for _, name := range InitialSetupModelNames {
 		m, ok := Registry[name]
 		if !ok {
@@ -63,7 +63,7 @@ func SyncRegistrySchemaForNames(modelNames []string) error {
 	if DB == nil {
 		return nil
 	}
-	ctx := ContextWithBypass(context.Background(), true)
+	ctx := AuditedBypass(context.Background(), "setup.sync")
 	names := append([]string(nil), modelNames...)
 	sort.Strings(names)
 	for _, name := range names {

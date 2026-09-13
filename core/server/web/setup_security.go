@@ -1,6 +1,7 @@
 package web
 
 import (
+	"crypto/subtle"
 	"fmt"
 	"net"
 	"net/http"
@@ -29,7 +30,7 @@ func allowSetupRequest(w http.ResponseWriter, r *http.Request, tokenFromBody str
 	if !validateSetupToken(w, r, tokenFromBody) {
 		return false
 	}
-	return allowSetupRateLimit(w, clientIP(r))
+	return allowSetupRateLimit(w, setupClientIP(r))
 }
 
 func requireSetupEnvironment(w http.ResponseWriter, r *http.Request) bool {
@@ -37,11 +38,16 @@ func requireSetupEnvironment(w http.ResponseWriter, r *http.Request) bool {
 		http.Error(w, "Setup already completed", http.StatusForbidden)
 		return false
 	}
-	if config.AppConfig.SetupLocalhostOnly && !isLoopbackIP(clientIP(r)) {
+	if config.AppConfig.SetupLocalhostOnly && !isLoopbackIP(setupClientIP(r)) {
 		http.Error(w, "Setup is restricted to localhost", http.StatusForbidden)
 		return false
 	}
 	return true
+}
+
+// setupClientIP returns the direct TCP peer for setup auth (never trusts X-Forwarded-For).
+func setupClientIP(r *http.Request) string {
+	return remoteAddrIP(r)
 }
 
 func validateSetupToken(w http.ResponseWriter, r *http.Request, tokenFromBody string) bool {
@@ -55,7 +61,7 @@ func validateSetupToken(w http.ResponseWriter, r *http.Request, tokenFromBody st
 		return true
 	}
 	providedToken := setupTokenFromRequest(r, tokenFromBody)
-	if providedToken == expectedToken {
+	if subtle.ConstantTimeCompare([]byte(providedToken), []byte(expectedToken)) == 1 {
 		return true
 	}
 	http.Error(w, "Invalid setup token", http.StatusForbidden)
@@ -74,7 +80,7 @@ func allowSetupRateLimit(w http.ResponseWriter, requestIP string) bool {
 	setupRateLimiter.Lock()
 	defer setupRateLimiter.Unlock()
 
-	recentAttempts := pruneSetupAttempts(setupRateLimiter.attemptsByIP[requestIP], now)
+	recentAttempts := pruneAttemptsWithin(setupRateLimiter.attemptsByIP[requestIP], now, setupRateLimitWindow)
 	if len(recentAttempts) >= setupRateLimitMax {
 		setupRateLimiter.attemptsByIP[requestIP] = recentAttempts
 		http.Error(w, "Too many setup attempts", http.StatusTooManyRequests)
@@ -83,16 +89,6 @@ func allowSetupRateLimit(w http.ResponseWriter, requestIP string) bool {
 
 	setupRateLimiter.attemptsByIP[requestIP] = append(recentAttempts, now)
 	return true
-}
-
-func pruneSetupAttempts(attempts []time.Time, now time.Time) []time.Time {
-	recentAttempts := make([]time.Time, 0, len(attempts))
-	for _, attemptTime := range attempts {
-		if now.Sub(attemptTime) <= setupRateLimitWindow {
-			recentAttempts = append(recentAttempts, attemptTime)
-		}
-	}
-	return recentAttempts
 }
 
 func clientIP(r *http.Request) string {

@@ -123,6 +123,44 @@ func TestValidateSetupTokenAllowsEmptyWhenLocalhostOnly(t *testing.T) {
 	}
 }
 
+func TestRequireSetupEnvironmentRejectsSpoofedXFF(t *testing.T) {
+	prevLocal := config.AppConfig.SetupLocalhostOnly
+	prevProxies := config.AppConfig.TrustedProxies
+	config.AppConfig.SetupLocalhostOnly = true
+	config.AppConfig.TrustedProxies = "0.0.0.0/0"
+	t.Cleanup(func() {
+		config.AppConfig.SetupLocalhostOnly = prevLocal
+		config.AppConfig.TrustedProxies = prevProxies
+	})
+
+	req := httptest.NewRequest("GET", web.TestSetupInitRoute, nil)
+	req.RemoteAddr = "203.0.113.5:443"
+	req.Header.Set(web.TestForwardedForHeader, "127.0.0.1")
+	rec := httptest.NewRecorder()
+	if web.RequireSetupEnvironmentForTest(rec, req) {
+		t.Fatal("spoofed X-Forwarded-For must not bypass localhost-only setup gate")
+	}
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status %d want %d", rec.Code, http.StatusForbidden)
+	}
+	if got := web.SetupClientIPForTest(req); got != "203.0.113.5" {
+		t.Fatalf("setupClientIP = %q want RemoteAddr host", got)
+	}
+}
+
+func TestRequireSetupEnvironmentAllowsLoopbackRemoteAddr(t *testing.T) {
+	prevLocal := config.AppConfig.SetupLocalhostOnly
+	config.AppConfig.SetupLocalhostOnly = true
+	t.Cleanup(func() { config.AppConfig.SetupLocalhostOnly = prevLocal })
+
+	req := httptest.NewRequest("GET", web.TestSetupInitRoute, nil)
+	req.RemoteAddr = "127.0.0.1:12345"
+	rec := httptest.NewRecorder()
+	if !web.RequireSetupEnvironmentForTest(rec, req) {
+		t.Fatal("loopback RemoteAddr should be allowed for localhost-only setup")
+	}
+}
+
 func TestValidateSetupTokenMatchesConfigured(t *testing.T) {
 	prevToken := config.AppConfig.SetupToken
 	prevLocal := config.AppConfig.SetupLocalhostOnly

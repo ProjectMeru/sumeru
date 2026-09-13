@@ -4,7 +4,6 @@ import (
 	"context"
 	"html/template"
 	"net/http"
-	"net/url"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -17,12 +16,12 @@ import (
 	"sumeru/core/orm"
 	"sumeru/core/server/config"
 
-	"golang.org/x/crypto/bcrypt"
 )
 
 type loginPageData struct {
 	Next        string
 	Error       string
+	CSRFToken   string
 	Stylesheets []string
 	LogoURL     string
 }
@@ -45,13 +44,18 @@ func LoginGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	next := strings.TrimSpace(r.URL.Query().Get(nextField))
+	if q := strings.TrimSpace(r.URL.Query().Get(nextField)); q != "" {
+		setLoginNextCookie(w, q)
+		http.Redirect(w, r, loginRoute, http.StatusFound)
+		return
+	}
 	if SessionUserID(r) > 0 {
-		http.Redirect(w, r, SafePathNext(next, homeRoute), http.StatusFound)
+		http.Redirect(w, r, resolveLoginNext(r), http.StatusFound)
 		return
 	}
 
-	writeLoginPage(w, r, http.StatusOK, next, "")
+	csrfToken := setLoginCSRFCookie(w)
+	writeLoginPage(w, r, http.StatusOK, resolveLoginNext(r), "", csrfToken)
 }
 
 func LoginPost(w http.ResponseWriter, r *http.Request) {
@@ -62,8 +66,18 @@ func LoginPost(w http.ResponseWriter, r *http.Request) {
 	if !ParsePostForm(w, r) {
 		return
 	}
+	if !validateLoginCSRF(r) {
+		csrfToken := setLoginCSRFCookie(w)
+		writeLoginPage(w, r, http.StatusForbidden, SafePathNext(r.PostFormValue(nextField), homeRoute), "Invalid or expired login form", csrfToken)
+		return
+	}
 
 	credentials := parseLoginCredentials(r)
+	if loginLocked(credentials.Login) {
+		csrfToken := setLoginCSRFCookie(w)
+		writeLoginPage(w, r, http.StatusUnauthorized, credentials.Next, invalidLoginMessage, csrfToken)
+		return
+	}
 	clientIP := clientIP(r)
 
 	userID, ok := verifyLoginCredentials(r.Context(), credentials, clientIP)
@@ -77,7 +91,8 @@ func LoginPost(w http.ResponseWriter, r *http.Request) {
 				"ip":    clientIP,
 			},
 		})
-		writeLoginPage(w, r, http.StatusUnauthorized, credentials.Next, invalidLoginMessage)
+		csrfToken := setLoginCSRFCookie(w)
+		writeLoginPage(w, r, http.StatusUnauthorized, credentials.Next, invalidLoginMessage, csrfToken)
 		return
 	}
 	if err := CreateSession(w, userID); err != nil {
@@ -93,24 +108,44 @@ func LoginPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	clearLoginFailures(credentials.Login)
 	orm.AppendUserLog(r.Context(), userID, clientIP, "success")
+	clearLoginCSRFCookie(w)
+	clearLoginNextCookie(w)
 	http.Redirect(w, r, credentials.Next, http.StatusSeeOther)
 }
 
 func LogoutGet(w http.ResponseWriter, r *http.Request) {
 	DestroySession(w, r)
+	clearLoginNextCookie(w)
 	http.Redirect(w, r, loginRoute, http.StatusFound)
 }
 
-func loginURLWithReturn(returnTo string) string {
-	return loginRoute + "?next=" + url.QueryEscape(returnTo)
+func LogoutPost(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if !ParsePostForm(w, r) || !validateSessionCSRF(w, r) {
+		return
+	}
+	DestroySession(w, r)
+	clearLoginNextCookie(w)
+	http.Redirect(w, r, loginRoute, http.StatusSeeOther)
 }
 
 func parseLoginCredentials(r *http.Request) loginCredentials {
+	next := SafePathNext(r.PostFormValue(nextField), "")
+	if next == "" {
+		next = loginNextFromRequest(r)
+	}
+	if next == "" {
+		next = homeRoute
+	}
 	return loginCredentials{
 		Login:    strings.TrimSpace(r.PostFormValue(loginField)),
 		Password: r.PostFormValue(passwordField),
-		Next:     SafePathNext(r.PostFormValue(nextField), homeRoute),
+		Next:     next,
 	}
 }
 
@@ -123,12 +158,15 @@ func verifyLoginCredentials(ctx context.Context, credentials loginCredentials, c
 		`SELECT id, COALESCE(password, ''), active FROM `+userTbl+` WHERE LOWER(TRIM(login)) = LOWER(TRIM($1)) LIMIT 1`,
 		credentials.Login,
 	).Scan(&userID, &passwordHash, &active)
-	if err != nil || !active || strings.TrimSpace(passwordHash) == "" {
+	if err != nil || !active {
+		comparePasswordConstantTime("", credentials.Password)
 		recordFailedLogin(ctx, 0, clientIP, "login="+credentials.Login)
+		recordLoginFailure(credentials.Login)
 		return 0, false
 	}
-	if bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(credentials.Password)) != nil {
+	if !comparePasswordConstantTime(passwordHash, credentials.Password) {
 		recordFailedLogin(ctx, userID, clientIP, "bad password")
+		recordLoginFailure(credentials.Login)
 		return 0, false
 	}
 	return userID, true
@@ -147,7 +185,7 @@ func getLoginTemplate() (*template.Template, error) {
 	return cachedLoginTmpl, loginTemplateErr
 }
 
-func writeLoginPage(w http.ResponseWriter, r *http.Request, statusCode int, next, errorMessage string) {
+func writeLoginPage(w http.ResponseWriter, r *http.Request, statusCode int, next, errorMessage, csrfToken string) {
 	tmpl, err := getLoginTemplate()
 	if err != nil {
 		if statusCode == http.StatusOK {
@@ -173,6 +211,7 @@ func writeLoginPage(w http.ResponseWriter, r *http.Request, statusCode int, next
 	_ = tmpl.Execute(w, loginPageData{
 		Next:        next,
 		Error:       errorMessage,
+		CSRFToken:   csrfToken,
 		Stylesheets: assets.LoginStylesheetURLs(),
 		LogoURL:     render.ShellLogoURL(),
 	})

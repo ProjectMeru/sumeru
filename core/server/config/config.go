@@ -17,7 +17,7 @@ type Config struct {
 	DbName             string
 	DbSslMode          string
 	HttpPort           string
-	HttpInterface      string   // optional bind address; empty = all interfaces (:port)
+	HttpInterface      string   // optional bind address; empty = all interfaces (:port); ignored during setup when setup_localhost_only=true
 	AddonsPath         string   // raw from file: comma-separated addon directory roots (see AddonPaths after AbsPaths)
 	AddonPaths         []string // absolute addon roots from addons_path; filled by AbsPaths()
 	SumeruHome         string   // optional: directory of standard sumeru repo (go.mod); used for default assets/templates if set
@@ -37,8 +37,8 @@ type Config struct {
 	LogTimezone        string   // log_timezone: UTC, Local (default), or IANA (e.g. Asia/Kolkata) for timestamps
 	DevMode            bool     // dev_mode INI key; parseBoolKey(..., false) — debug slog level and dev-only server paths
 	DevFeatures        string   // dev_features INI: comma-separated sql, access, xml
-	SetupToken         string   // secret for POST /setup/init; required when setup_localhost_only is false
-	SetupLocalhostOnly bool     // when true (default), setup mode listens on 127.0.0.1 only; false requires setup_token
+	SetupToken         string   // secret for POST /setup/init; required when setup_localhost_only is false (startup fails if empty)
+	SetupLocalhostOnly bool     // when true (default), setup binds 127.0.0.1 only and ignores http_interface; false requires setup_token
 	DbMaxOpenConns     int      // db_max_open_conns; 0 = Go default
 	DbMaxIdleConns     int      // db_max_idle_conns; 0 = Go default
 	DbConnMaxLifetimeMin int    // db_conn_max_lifetime_minutes; 0 = no limit
@@ -46,6 +46,8 @@ type Config struct {
 	RateLimitRPM       int      // rate_limit_rpm per client IP on /api/rpc and login; 0 = disabled
 	TrustedProxies     string   // trusted_proxies: comma-separated CIDRs/IPs allowed to set X-Forwarded-For; empty = never trust XFF
 	CSRFSecret         string   // csrf_secret: shared HMAC key for multi-instance; empty = ephemeral per process
+	ForceSecureCookies           bool // force_secure_cookies: set Secure on session/flash cookies even when dev_mode=true
+	SessionCookieStrictSameSite  bool // session_cookie_strict_samesite: use SameSite=Strict on session cookie (default Lax)
 	MetricsScrapeToken string   // metrics_scrape_token: Bearer token for unauthenticated /metrics scrape; empty = admin session only
 	SMTPHost           string
 	SMTPPort           int
@@ -181,6 +183,10 @@ func LoadConfig(path string) error {
 			AppConfig.TrustedProxies = val
 		case keyCSRFSecret:
 			AppConfig.CSRFSecret = val
+		case keyForceSecureCookies:
+			AppConfig.ForceSecureCookies = parseBoolKey(val, false)
+		case keySessionCookieStrictSameSite:
+			AppConfig.SessionCookieStrictSameSite = parseBoolKey(val, false)
 		case keyMetricsScrapeToken:
 			AppConfig.MetricsScrapeToken = val
 		case keySMTPHost:

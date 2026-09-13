@@ -1,5 +1,7 @@
 package orm
 
+// superuserUID is break-glass kernel access (uid=1). New code should prefer group_system
+// or AuditedBypass/WithElevated over numeric uid checks.
 const superuserUID = 1
 
 const (

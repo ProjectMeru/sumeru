@@ -1,6 +1,10 @@
 package applog
 
-import "strings"
+import (
+	"strings"
+
+	"sumeru/core/security"
+)
 
 const RedactedPlaceholder = "***"
 
@@ -58,6 +62,9 @@ func TextContainsSecretKeyword(text string) bool {
 
 func containsSecretKeyword(haystack string) bool {
 	for _, keyword := range secretKeywords {
+		if keyword == "sid" {
+			continue
+		}
 		if strings.Contains(haystack, keyword) {
 			return true
 		}
@@ -65,7 +72,4 @@ func containsSecretKeyword(haystack string) bool {
 	return false
 }
 
-var secretKeywords = []string{
-	"password", "token", "secret", "authorization", "cookie",
-	"session", "api_key", "apikey", "key_hash", "csrf", "totp",
-}
+var secretKeywords = security.ScrubKeywords()

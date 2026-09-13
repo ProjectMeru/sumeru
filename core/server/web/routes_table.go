@@ -37,12 +37,25 @@ func RegisterAppRoutes(mux *http.ServeMux) {
 
 	router.Apply(serveMux)
 	registerAppAliases(serveMux)
+	registerContentPrefixRoute(serveMux)
+}
+
+func registerContentPrefixRoute(mux *http.ServeMux) {
+	mux.HandleFunc(contentRoutePrefix, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		ContentHandler(w, r)
+	})
 }
 
 func registerAuthRoutes() {
 	registerPublic(http.MethodGet, loginRoute, LoginGet)
 	registerPublic(http.MethodPost, loginRoute, LoginPost)
 	registerPublic(http.MethodGet, logoutRoute, LogoutGet)
+	registerSession(http.MethodPost, logoutRoute, LogoutPost)
+	registerAPIKeyRevealRoute()
 }
 
 func registerWorkspaceRoutes() {

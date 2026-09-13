@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -56,11 +57,8 @@ func InitCSRFSecret() {
 }
 
 func sessionIDFromRequest(r *http.Request) string {
-	cookie, err := r.Cookie(sessionCookieName)
-	if err != nil || cookie.Value == "" {
-		return ""
-	}
-	return cookie.Value
+	sid, _ := sessionCookieFromRequest(r)
+	return sid
 }
 
 // CSRFTokenForRequest returns the per-session CSRF token (empty when not logged in).
@@ -74,7 +72,7 @@ func CSRFTokenForRequest(r *http.Request) string {
 	return hex.EncodeToString(mac.Sum(nil)[:16])
 }
 
-// ValidateCSRF checks the csrf_token form field, query param, or X-CSRF-Token header against the session-bound token.
+// ValidateCSRF checks the csrf_token form field or X-CSRF-Token header against the session-bound token.
 func ValidateCSRF(r *http.Request) bool {
 	expected := CSRFTokenForRequest(r)
 	if expected == "" {
@@ -84,8 +82,16 @@ func ValidateCSRF(r *http.Request) bool {
 	if got == "" {
 		got = r.Header.Get(csrfHeaderName)
 	}
-	if got == "" {
-		got = strings.TrimSpace(r.URL.Query().Get(csrfFormField))
-	}
 	return got != "" && hmac.Equal([]byte(got), []byte(expected))
+}
+
+// ValidateProductionCSRFSecret fails startup when production lacks a shared CSRF secret.
+func ValidateProductionCSRFSecret() error {
+	if config.AppConfig.DevMode {
+		return nil
+	}
+	if strings.TrimSpace(config.AppConfig.CSRFSecret) == "" {
+		return fmt.Errorf("csrf_secret is required when dev_mode=false")
+	}
+	return nil
 }

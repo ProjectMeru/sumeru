@@ -1,20 +1,15 @@
 ## Summary
 
-<!-- What changed and why? -->
+<!-- What changed and why -->
 
-## Verification
+## Checklist
 
-- [ ] `make check` (or `make swc-check` + `go test ./...`) from the `sumeru` module root
-- [ ] `make swc-test` when `core/swc/` changed
-- [ ] `make generate` when imports or `sumeru.conf.example` addons path changed
+- [ ] `make` from `sumeru/` (lint, test, build)
+- [ ] Sensitive fields → `core/security/fields.go`; bypass → `AuditedBypass` / `WithElevated`
+- [ ] Auth/session cookies → `core/server/web/cookie_helpers.go`
+- [ ] Tests under `test/` or `core/swc/tests/` where behavior changed
 
-**Areas touched:** <!-- e.g. ORM, server/web, SWC, module loader, addons/base -->
-
-## CI
-
-Pull requests run **Go build**, **Go test**, **SWC check/test**, and **generate drift** (`cmd/sumeru/zimports.go`).
-
-**Integration** (PostgreSQL + install `base` + tagged tests) runs on push to `main` or `dev` only.
+**If applicable:** `make generate` · `make test-modules` · `make test-integration`
 
 ## Notes
 

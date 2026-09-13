@@ -12,5 +12,7 @@ type CoreUserAPIKey struct {
 	KeyPrefix  sdk.String             `sumeru:"required,string=Prefix"`
 	KeyHash    sdk.String             `sumeru:"required,string=Hash"`
 	Active     sdk.Boolean            `sumeru:"string=Active,default=true"`
+	ExpiresAt  sdk.DateTime           `sumeru:"string=Expires"`
+	LastUsedAt sdk.DateTime           `sumeru:"string=Last Used"`
 	CreateDate sdk.DateTime           `sumeru:"required,string=Created"`
 }

@@ -57,6 +57,9 @@ func StoreAttachment(_ context.Context, name string, data []byte) (storeFname st
 	if len(data) == 0 {
 		return "", 0, fmt.Errorf("filestore: empty data")
 	}
+	if err := ValidateAttachmentMIME(normalizeAttachmentMIME("", data), data); err != nil {
+		return "", 0, err
+	}
 	key := strings.TrimSpace(name)
 	if key == "" {
 		key = hex.EncodeToString(sha256Sum(data))

@@ -11,5 +11,29 @@
             <field name="category_id" ref="module_category_mail"/>
             <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
         </record>
+
+        <record id="rule_mail_message_multi_company" model="sys.rule">
+            <field name="name">Mail Message: multi-company</field>
+            <field name="model">mail.message</field>
+            <field name="domain_force">["|", ["company_id", "=", false], ["company_id", "in", "$company_ids"]]</field>
+            <field name="active" eval="True"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+            <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+        </record>
+
+        <record id="rule_mail_activity_multi_company" model="sys.rule">
+            <field name="name">Mail Activity: multi-company</field>
+            <field name="model">mail.activity</field>
+            <field name="domain_force">["|", ["company_id", "=", false], ["company_id", "in", "$company_ids"]]</field>
+            <field name="active" eval="True"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+            <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+        </record>
     </data>
 </sumeru>

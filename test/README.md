@@ -1,5 +1,7 @@
 # Sumeru tests
 
+Standards index: [AGENTS.md](../../AGENTS.md) (monorepo root). Test layout rule: [test-layout.mdc](../../.cursor/rules/test-layout.mdc).
+
 All Go test cases live under `test/` only. The only exception is `export_test.go` files colocated with source packages — they expose unexported symbols to external tests, not test cases themselves.
 
 SWC tests live under `core/swc/tests/` (see `core/swc/tests/README.md`).
@@ -20,11 +22,12 @@ test/
 ## Running tests
 
 ```bash
-make check                 # SWC coverage + module static gate + go test ./test/...
+make                       # full standard: lint + SWC + Go tests + coverage gate + build
+make check                 # same as make
 make test-modules          # Module suite tiers 0–2 (static + unit + addon)
 make test-modules-static   # Convention validation for all discovered addons
 make test-integration      # PostgreSQL integration (requires Docker)
-make test-coverage         # Full repo coverage profile
+make test-go               # Full repo coverage profile + gate
 ```
 
 ## Module test suite tiers
@@ -42,7 +45,7 @@ make test-coverage         # Full repo coverage profile
 - **Current baseline:** ~42% (unit + sqlmock); DB-backed ORM/module/web paths need PostgreSQL integration CI
 - **SWC:** 90% on scoped globs in `core/swc/vitest.config.ts`; CI runs `npm run test:coverage`
 - **Go gate:** `scripts/check_go_coverage.sh` — default `GO_COVERAGE_MIN=90`; CI uses `GO_COVERAGE_MIN=42` until integration tier is enabled
-- **Measure:** `make test-coverage` or `GO_COVERAGE_MIN=90 make test-coverage` for strict gate
+- **Measure:** `make test-go` or `GO_COVERAGE_MIN=90 make test-go` for strict gate
 
 ## Writing new tests
 

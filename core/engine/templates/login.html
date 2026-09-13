@@ -27,6 +27,7 @@
     {{end}}
     
     <form method="post" action="/web/login">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}"/>
         <input type="hidden" name="next" value="{{.Next}}"/>
         
         <div class="field">

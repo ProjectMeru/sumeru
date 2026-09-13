@@ -63,7 +63,7 @@ func runDue(ctx context.Context) {
 	if _, ok := orm.Registry["sys.cron"]; !ok {
 		return
 	}
-	bypass := orm.ContextWithBypass(ctx, true)
+	bypass := orm.AuditedBypass(ctx, "cron.run")
 	tbl := orm.MustQuotedTableName("sys.cron")
 	now := time.Now().UTC()
 
