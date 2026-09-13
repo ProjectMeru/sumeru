@@ -16,7 +16,7 @@ func TestFilestoreRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
-	data := []byte("attachment-bytes")
+	data := []byte("%PDF-1.4 attachment-bytes")
 	key, size, err := orm.StoreAttachment(ctx, "doc.pdf", data)
 	if err != nil || size != int64(len(data)) || key != "doc.pdf" {
 		t.Fatalf("StoreAttachment: key=%q size=%d err=%v", key, size, err)
