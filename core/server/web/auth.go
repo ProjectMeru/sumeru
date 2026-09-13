@@ -147,7 +147,7 @@ func buildSessionCookie(value string, deleteCookie bool) *http.Cookie {
 		Path:     "/",
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
-		Secure:   !config.AppConfig.DevMode,
+		Secure:   sessionCookieSecure(),
 	}
 	if deleteCookie {
 		cookie.MaxAge = -1
