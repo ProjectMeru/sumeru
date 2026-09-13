@@ -74,7 +74,7 @@ func ExportPivotHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", "attachment; filename="+report.ExportFilename(modelName+"_pivot", "csv"))
+	w.Header().Set("Content-Disposition", safeContentDispositionFilename(report.ExportFilename(modelName+"_pivot", "csv")))
 	_, _ = w.Write(data)
 }
 
@@ -112,6 +112,6 @@ func ExportGraphHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", "attachment; filename="+report.ExportFilename(modelName+"_graph", "csv"))
+	w.Header().Set("Content-Disposition", safeContentDispositionFilename(report.ExportFilename(modelName+"_graph", "csv")))
 	_, _ = w.Write(data)
 }
