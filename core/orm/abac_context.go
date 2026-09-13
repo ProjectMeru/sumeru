@@ -52,14 +52,21 @@ func UserCompanyIDs(ctx context.Context, uid int) ([]int64, error) {
 	return out, rows.Err()
 }
 
-// UserAllowedCompany returns true if cid is in the user's company set (or user has none configured → allow current only).
+// UserAllowedCompany returns true if cid is in the user's allowed company set (fail closed).
 func UserAllowedCompany(ctx context.Context, uid int, cid int64) bool {
 	if uid == superuserUID {
 		return true
 	}
+	if cid <= 0 {
+		return false
+	}
 	ids, err := UserCompanyIDs(ctx, uid)
-	if err != nil || len(ids) == 0 {
-		return true
+	if err != nil {
+		return false
+	}
+	if len(ids) == 0 {
+		active := ActiveCompanyIDForUser(ctx, uid)
+		return active > 0 && cid == active
 	}
 	for _, id := range ids {
 		if id == cid {
