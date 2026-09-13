@@ -8,8 +8,8 @@ import (
 )
 
 func TestAcceptsJSONContentType(t *testing.T) {
-	if !web.AcceptsJSONContentType("") {
-		t.Fatal("empty content type should be accepted")
+	if web.AcceptsJSONContentType("") {
+		t.Fatal("empty content type should be rejected")
 	}
 	if !web.AcceptsJSONContentType(" application/json; charset=utf-8 ") {
 		t.Fatal("json content type should be accepted")

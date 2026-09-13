@@ -30,10 +30,10 @@ func Upsert(ctx context.Context, model Model, values map[string]interface{}, con
 	defer func() {
 		logORMOperation(ctx, start, "upsert", model.ModelName(), err, map[string]interface{}{"resource_id": id})
 	}()
-	uid := SecurityUID(ctx)
-	if err := CheckModelAccess(ctx, uid, model.ModelName(), "create"); err != nil {
-		return 0, err
+	if !SecurityBypass(ctx) {
+		return 0, fmt.Errorf("upsert requires elevated internal context")
 	}
+	uid := SecurityUID(ctx)
 	prepared, err := PrepareValues(model, values, WriteOpCreate, PrepareOptions{
 		StrictUnknown:     !SecurityBypass(ctx),
 		AllowPasswordHash: passwordHashWriteAllowed(ctx),
