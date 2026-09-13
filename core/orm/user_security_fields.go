@@ -5,15 +5,6 @@ import (
 	"fmt"
 )
 
-// coreUserSecurityWriteFields may only be written by system administrators (or bypass/superuser).
-var coreUserSecurityWriteFields = map[string]bool{
-	"totp_secret":  true,
-	"totp_enabled": true,
-	"active":       true,
-	"user_type":    true,
-	"company_id":   true,
-}
-
 // RejectCoreUserSecurityWrites blocks mass-assignment of security-sensitive core.user columns.
 func RejectCoreUserSecurityWrites(ctx context.Context, uid int, values map[string]interface{}) error {
 	if len(values) == 0 {
@@ -25,11 +16,12 @@ func RejectCoreUserSecurityWrites(ctx context.Context, uid int, values map[strin
 	if UserHasGroupXML(ctx, uid, "base.group_system") {
 		return nil
 	}
+	denyFields := writeDenyUnlessSysFields("core.user")
 	for k := range values {
 		if k == "id" {
 			continue
 		}
-		if coreUserSecurityWriteFields[k] {
+		if denyFields[k] {
 			return fmt.Errorf("field %q on core.user requires system administrator", k)
 		}
 	}
