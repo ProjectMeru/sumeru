@@ -1,6 +1,7 @@
 package web
 
 import (
+	"crypto/subtle"
 	"fmt"
 	"net"
 	"net/http"
@@ -60,7 +61,7 @@ func validateSetupToken(w http.ResponseWriter, r *http.Request, tokenFromBody st
 		return true
 	}
 	providedToken := setupTokenFromRequest(r, tokenFromBody)
-	if providedToken == expectedToken {
+	if subtle.ConstantTimeCompare([]byte(providedToken), []byte(expectedToken)) == 1 {
 		return true
 	}
 	http.Error(w, "Invalid setup token", http.StatusForbidden)
