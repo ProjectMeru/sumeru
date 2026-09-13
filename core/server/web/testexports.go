@@ -34,6 +34,7 @@ const (
 	TestRootRoute              = rootRoute
 	TestSetupRoute             = setupRoute
 	TestLoginRoute             = loginRoute
+	TestLogoutRoute            = logoutRoute
 	TestPinnedAppsRoute        = pinnedAppsRoute
 	TestChatterPostRoute       = chatterPostRoute
 	TestCompanySwitchRoute     = companySwitchRoute
@@ -418,6 +419,15 @@ func SessionCookieFromRequestForTest(r *http.Request) (sid, cookieName string) {
 
 // LoginGetForTest exposes the login page GET handler for tests.
 func LoginGetForTest(w http.ResponseWriter, r *http.Request) { LoginGet(w, r) }
+
+// LogoutGetForTest exposes the logout GET handler for tests.
+func LogoutGetForTest(w http.ResponseWriter, r *http.Request) { LogoutGet(w, r) }
+
+// LogoutPostForTest exposes the logout POST handler for tests.
+func LogoutPostForTest(w http.ResponseWriter, r *http.Request) { LogoutPost(w, r) }
+
+// CSRFTokenForRequestForTest exposes the session-bound CSRF token for tests.
+func CSRFTokenForRequestForTest(r *http.Request) string { return CSRFTokenForRequest(r) }
 
 // ValidateLoginCSRFForTest exposes pre-session login CSRF validation for tests.
 func ValidateLoginCSRFForTest(r *http.Request) bool { return validateLoginCSRF(r) }

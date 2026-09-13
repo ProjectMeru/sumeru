@@ -57,11 +57,8 @@ func InitCSRFSecret() {
 }
 
 func sessionIDFromRequest(r *http.Request) string {
-	cookie, err := r.Cookie(sessionCookieName)
-	if err != nil || cookie.Value == "" {
-		return ""
-	}
-	return cookie.Value
+	sid, _ := sessionCookieFromRequest(r)
+	return sid
 }
 
 // CSRFTokenForRequest returns the per-session CSRF token (empty when not logged in).

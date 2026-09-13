@@ -121,6 +121,83 @@ func TestSecurityMiddlewareClearsCookieForInvalidSession(t *testing.T) {
 	}
 }
 
+func TestLogoutGetDestroysSession(t *testing.T) {
+	integrationDB(t)
+	userID := existingActiveUserID(t)
+	sid := "test-logout-get-" + time.Now().Format("150405.000000")
+	t.Cleanup(func() { _ = web.DeleteTestSessionForTest(sid) })
+
+	if err := web.InsertTestSessionForTest(sid, userID, time.Now().UTC().Add(time.Hour)); err != nil {
+		t.Fatalf("insert session: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, web.TestLogoutRoute, nil)
+	req.AddCookie(&http.Cookie{Name: web.TestSessionCookieName, Value: sid})
+	rec := httptest.NewRecorder()
+	web.LogoutGetForTest(rec, req)
+
+	if rec.Code != http.StatusFound {
+		t.Fatalf("status=%d want 302", rec.Code)
+	}
+	if loc := rec.Header().Get("Location"); loc != web.TestLoginRoute {
+		t.Fatalf("Location=%q want %q", loc, web.TestLoginRoute)
+	}
+	count, err := web.CountTestSessionsForUserForTest(userID)
+	if err != nil {
+		t.Fatalf("count sessions: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("session row count=%d want 0 after logout", count)
+	}
+	setCookies := rec.Result().Header.Values("Set-Cookie")
+	foundClear := false
+	for _, raw := range setCookies {
+		if strings.Contains(raw, web.TestSessionCookieName+"=") {
+			foundClear = true
+			break
+		}
+	}
+	if !foundClear {
+		t.Fatalf("expected cleared session cookie, got %v", setCookies)
+	}
+}
+
+func TestLogoutPostDestroysSessionWithCSRF(t *testing.T) {
+	integrationDB(t)
+	userID := existingActiveUserID(t)
+	sid := "test-logout-post-" + time.Now().Format("150405.000000")
+	t.Cleanup(func() { _ = web.DeleteTestSessionForTest(sid) })
+
+	if err := web.InsertTestSessionForTest(sid, userID, time.Now().UTC().Add(time.Hour)); err != nil {
+		t.Fatalf("insert session: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, web.TestLogoutRoute, strings.NewReader("csrf_token=placeholder"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(&http.Cookie{Name: web.TestSessionCookieName, Value: sid})
+	csrf := web.CSRFTokenForRequestForTest(req)
+	if csrf == "" {
+		t.Fatal("expected non-empty CSRF token for session")
+	}
+	req = httptest.NewRequest(http.MethodPost, web.TestLogoutRoute, strings.NewReader("csrf_token="+csrf))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(&http.Cookie{Name: web.TestSessionCookieName, Value: sid})
+
+	rec := httptest.NewRecorder()
+	web.LogoutPostForTest(rec, req)
+
+	if rec.Code != http.StatusSeeOther {
+		t.Fatalf("status=%d want 303", rec.Code)
+	}
+	count, err := web.CountTestSessionsForUserForTest(userID)
+	if err != nil {
+		t.Fatalf("count sessions: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("session row count=%d want 0 after logout POST", count)
+	}
+}
+
 func TestInactiveUserSessionRevoked(t *testing.T) {
 	integrationDB(t)
 	userID := insertTestUser(t)
