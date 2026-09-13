@@ -25,7 +25,7 @@ func TestPrepareValuesRejectsDirectPassword(t *testing.T) {
 		"login":    "a@b.c",
 		"password": "plaintext",
 	}, orm.WriteOpWrite, orm.PrepareOptions{})
-	if err == nil || !strings.Contains(err.Error(), "password cannot be set directly") {
+	if err == nil || !strings.Contains(err.Error(), "cannot be set directly") || !strings.Contains(err.Error(), "password") {
 		t.Fatalf("want direct password rejection, got %v", err)
 	}
 }

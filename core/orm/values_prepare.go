@@ -34,14 +34,15 @@ func PrepareValues(model Model, values map[string]interface{}, op WriteOp, opts 
 		values = map[string]interface{}{}
 	}
 	fieldDefs := fieldDefinitionsByName(model)
+	directWriteDenied := writeDenyDirectFields(model.ModelName())
 
 	out := make(map[string]interface{}, len(values))
 	for k, v := range values {
 		if k == "id" {
 			continue
 		}
-		if model.ModelName() == "core.user" && k == "password" && !opts.AllowPasswordHash {
-			return nil, fmt.Errorf("password cannot be set directly; use the password change API")
+		if directWriteDenied[k] && !opts.AllowPasswordHash {
+			return nil, fmt.Errorf("%q cannot be set directly on model %s", k, model.ModelName())
 		}
 		fieldDef, ok := fieldDefs[k]
 		if !ok {

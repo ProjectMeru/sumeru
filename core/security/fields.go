@@ -4,12 +4,14 @@ package security
 type FieldPolicy struct {
 	ReadRedact         bool
 	WriteDenyUnlessSys bool
+	// WriteDenyDirect blocks direct ORM writes unless PrepareOptions.AllowPasswordHash (password API).
+	WriteDenyDirect bool
 }
 
 // FieldRegistry is the single source of truth for sensitive field handling.
 var FieldRegistry = map[string]map[string]FieldPolicy{
 	"core.user": {
-		"password":     {ReadRedact: true},
+		"password":     {ReadRedact: true, WriteDenyDirect: true},
 		"totp_secret":  {ReadRedact: true, WriteDenyUnlessSys: true},
 		"totp_enabled": {WriteDenyUnlessSys: true},
 		"active":       {WriteDenyUnlessSys: true},
@@ -32,6 +34,11 @@ func ReadRedactFields(model string) map[string]bool {
 // WriteDenyUnlessSysFields returns fields denied on write for non-system admins.
 func WriteDenyUnlessSysFields(model string) map[string]bool {
 	return fieldsMatching(model, func(p FieldPolicy) bool { return p.WriteDenyUnlessSys })
+}
+
+// WriteDenyDirectFields returns fields that cannot be written via ORM except explicit escape hatches.
+func WriteDenyDirectFields(model string) map[string]bool {
+	return fieldsMatching(model, func(p FieldPolicy) bool { return p.WriteDenyDirect })
 }
 
 func fieldsMatching(model string, pred func(FieldPolicy) bool) map[string]bool {

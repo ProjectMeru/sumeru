@@ -157,7 +157,7 @@ func SetupTokenFromRequest(r *http.Request, bodyToken string) string {
 }
 
 func PruneSetupAttempts(attempts []time.Time, now time.Time) []time.Time {
-	return pruneSetupAttempts(attempts, now)
+	return pruneAttemptsWithin(attempts, now, setupRateLimitWindow)
 }
 
 func AllowSetupRateLimit(w http.ResponseWriter, requestIP string) bool {
@@ -428,6 +428,39 @@ func LogoutPostForTest(w http.ResponseWriter, r *http.Request) { LogoutPost(w, r
 
 // CSRFTokenForRequestForTest exposes the session-bound CSRF token for tests.
 func CSRFTokenForRequestForTest(r *http.Request) string { return CSRFTokenForRequest(r) }
+
+// ValidateProductionCSRFSecretForTest exposes production CSRF secret validation.
+func ValidateProductionCSRFSecretForTest() error { return ValidateProductionCSRFSecret() }
+
+// LoginPostForTest exposes the login POST handler for tests.
+func LoginPostForTest(w http.ResponseWriter, r *http.Request) { LoginPost(w, r) }
+
+// LoginLockedForTest exposes login brute-force lockout state.
+func LoginLockedForTest(login string) bool { return loginLocked(login) }
+
+// RecordLoginFailureForTest records a failed login attempt for lockout tests.
+func RecordLoginFailureForTest(login string) { recordLoginFailure(login) }
+
+// ClearLoginFailuresForTest clears lockout state for a login key.
+func ClearLoginFailuresForTest(login string) { clearLoginFailures(login) }
+
+// ResetLoginLockoutForTest clears all in-memory login lockout state.
+func ResetLoginLockoutForTest() { resetLoginLockoutState() }
+
+// ComparePasswordConstantTimeForTest exposes constant-time password compare for tests.
+func ComparePasswordConstantTimeForTest(storedHash, plain string) bool {
+	return comparePasswordConstantTime(storedHash, plain)
+}
+
+// RequireSystemAdminForTest exposes requireSystemAdmin for handler tests.
+func RequireSystemAdminForTest(w http.ResponseWriter, r *http.Request, redirectOnDeny bool) bool {
+	return requireSystemAdmin(w, r, redirectOnDeny)
+}
+
+// RequireModelAccessForTest exposes requireModelAccess for handler tests.
+func RequireModelAccessForTest(w http.ResponseWriter, r *http.Request, model, perm string) bool {
+	return requireModelAccess(w, r, model, perm)
+}
 
 // ValidateLoginCSRFForTest exposes pre-session login CSRF validation for tests.
 func ValidateLoginCSRFForTest(r *http.Request) bool { return validateLoginCSRF(r) }

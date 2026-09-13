@@ -134,10 +134,6 @@ func LogoutPost(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, loginRoute, http.StatusSeeOther)
 }
 
-func loginURLWithReturn(_ string) string {
-	return loginRoute
-}
-
 func parseLoginCredentials(r *http.Request) loginCredentials {
 	next := SafePathNext(r.PostFormValue(nextField), "")
 	if next == "" {

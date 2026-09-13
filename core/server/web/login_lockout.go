@@ -42,7 +42,7 @@ func loginLocked(login string) bool {
 	loginLockoutMu.Lock()
 	defer loginLockoutMu.Unlock()
 	cutoff := time.Now().Add(-loginLockoutWindow)
-	attempts := pruneAttempts(loginFailures[key], cutoff)
+	attempts := pruneAttemptsAfter(loginFailures[key], cutoff)
 	loginFailures[key] = attempts
 	return len(attempts) >= loginLockoutMaxFailures
 }
@@ -55,7 +55,7 @@ func recordLoginFailure(login string) {
 	loginLockoutMu.Lock()
 	defer loginLockoutMu.Unlock()
 	cutoff := time.Now().Add(-loginLockoutWindow)
-	loginFailures[key] = append(pruneAttempts(loginFailures[key], cutoff), time.Now())
+	loginFailures[key] = append(pruneAttemptsAfter(loginFailures[key], cutoff), time.Now())
 }
 
 func clearLoginFailures(login string) {
@@ -68,14 +68,10 @@ func clearLoginFailures(login string) {
 	loginLockoutMu.Unlock()
 }
 
-func pruneAttempts(attempts []time.Time, cutoff time.Time) []time.Time {
-	out := attempts[:0]
-	for _, t := range attempts {
-		if t.After(cutoff) {
-			out = append(out, t)
-		}
-	}
-	return out
+func resetLoginLockoutState() {
+	loginLockoutMu.Lock()
+	loginFailures = map[string][]time.Time{}
+	loginLockoutMu.Unlock()
 }
 
 func comparePasswordConstantTime(storedHash, plain string) bool {

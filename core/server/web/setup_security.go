@@ -80,7 +80,7 @@ func allowSetupRateLimit(w http.ResponseWriter, requestIP string) bool {
 	setupRateLimiter.Lock()
 	defer setupRateLimiter.Unlock()
 
-	recentAttempts := pruneSetupAttempts(setupRateLimiter.attemptsByIP[requestIP], now)
+	recentAttempts := pruneAttemptsWithin(setupRateLimiter.attemptsByIP[requestIP], now, setupRateLimitWindow)
 	if len(recentAttempts) >= setupRateLimitMax {
 		setupRateLimiter.attemptsByIP[requestIP] = recentAttempts
 		http.Error(w, "Too many setup attempts", http.StatusTooManyRequests)
@@ -89,16 +89,6 @@ func allowSetupRateLimit(w http.ResponseWriter, requestIP string) bool {
 
 	setupRateLimiter.attemptsByIP[requestIP] = append(recentAttempts, now)
 	return true
-}
-
-func pruneSetupAttempts(attempts []time.Time, now time.Time) []time.Time {
-	recentAttempts := make([]time.Time, 0, len(attempts))
-	for _, attemptTime := range attempts {
-		if now.Sub(attemptTime) <= setupRateLimitWindow {
-			recentAttempts = append(recentAttempts, attemptTime)
-		}
-	}
-	return recentAttempts
 }
 
 func clientIP(r *http.Request) string {

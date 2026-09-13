@@ -9,3 +9,7 @@ func readRedactFields(model string) map[string]bool {
 func writeDenyUnlessSysFields(model string) map[string]bool {
 	return security.WriteDenyUnlessSysFields(model)
 }
+
+func writeDenyDirectFields(model string) map[string]bool {
+	return security.WriteDenyDirectFields(model)
+}

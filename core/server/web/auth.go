@@ -255,13 +255,13 @@ func CreateSession(w http.ResponseWriter, userID int) error {
 	if _, err := orm.DB.Exec(`INSERT INTO `+sessionTbl+` (sid, user_id, expires_at) VALUES ($1, $2, $3)`, sessionID, userID, expiresAt); err != nil {
 		return err
 	}
-	http.SetCookie(w, buildSessionCookie(sessionID, false))
+	setSessionCookie(w, sessionID, false)
 	return nil
 }
 
 func ClearSessionCookie(w http.ResponseWriter) {
-	http.SetCookie(w, buildSessionCookie("", true))
-	http.SetCookie(w, buildNamedCookie(sessionCookieName, "", "/", -1, sessionSameSite(), true, sessionCookieSecure()))
+	setSessionCookie(w, "", true)
+	clearLegacySessionNamedCookie(w)
 }
 
 func sessionForRequest(r *http.Request) sessionState {

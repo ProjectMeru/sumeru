@@ -63,6 +63,31 @@ func TestRedirectToLogin_usesCleanURLAndNextCookie(t *testing.T) {
 	}
 }
 
+func TestLoginPost_rejectsMissingLoginCSRF(t *testing.T) {
+	root := sumeruModuleRoot(t)
+	prevTemplates := config.AppConfig.TemplatesPath
+	prevDev := config.AppConfig.DevMode
+	config.AppConfig.TemplatesPath = filepath.Join(root, "core", "engine", "templates")
+	config.AppConfig.DevMode = true
+	t.Cleanup(func() {
+		config.AppConfig.TemplatesPath = prevTemplates
+		config.AppConfig.DevMode = prevDev
+	})
+
+	body := "login=admin&password=secret&next=%2Fweb%2Fhome"
+	req := httptest.NewRequest(http.MethodPost, web.TestLoginRoute, strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	web.LoginPostForTest(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status=%d want 403 for missing login CSRF", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "Invalid or expired login form") {
+		t.Fatalf("body should mention invalid login form")
+	}
+}
+
 func TestLoginGet_stripsQueryNextToCleanURL(t *testing.T) {
 	root := sumeruModuleRoot(t)
 	prevTemplates := config.AppConfig.TemplatesPath

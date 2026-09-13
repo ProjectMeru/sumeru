@@ -30,6 +30,34 @@ func TestNoUnsafeContentDispositionInWebHandlers(t *testing.T) {
 	}
 }
 
+func TestNoRawSetCookieOutsideHelpers(t *testing.T) {
+	root := webRoot(t)
+	allowlist := map[string]bool{
+		filepath.Join(root, "cookie_helpers.go"): true,
+	}
+	pattern := regexp.MustCompile(`http\.SetCookie\(`)
+	var hits []string
+	_ = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() || !strings.HasSuffix(path, ".go") {
+			return nil
+		}
+		if allowlist[path] {
+			return nil
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return nil
+		}
+		if pattern.Match(data) {
+			hits = append(hits, path)
+		}
+		return nil
+	})
+	if len(hits) > 0 {
+		t.Fatalf("http.SetCookie outside cookie_helpers.go: %v", hits)
+	}
+}
+
 func TestNoEmptyGroupIDACLRowsInAddons(t *testing.T) {
 	addons := filepath.Join(moduleRoot(t), "addons")
 	pattern := regexp.MustCompile(`,,\d,\d`)

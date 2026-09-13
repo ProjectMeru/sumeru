@@ -28,7 +28,7 @@ func SetRecordErrorFlash(w http.ResponseWriter, flash PageFlash) {
 	}
 	cookie := recordErrorFlashCookieAttrs()
 	cookie.Value = base64.StdEncoding.EncodeToString(payload)
-	http.SetCookie(w, cookie)
+	setCookie(w, cookie)
 }
 
 // ConsumeRecordErrorFlash reads and clears the one-time record error flash cookie.
