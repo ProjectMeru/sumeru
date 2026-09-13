@@ -75,7 +75,7 @@ func CSRFTokenForRequest(r *http.Request) string {
 	return hex.EncodeToString(mac.Sum(nil)[:16])
 }
 
-// ValidateCSRF checks the csrf_token form field, query param, or X-CSRF-Token header against the session-bound token.
+// ValidateCSRF checks the csrf_token form field or X-CSRF-Token header against the session-bound token.
 func ValidateCSRF(r *http.Request) bool {
 	expected := CSRFTokenForRequest(r)
 	if expected == "" {

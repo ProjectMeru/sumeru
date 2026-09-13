@@ -19,7 +19,7 @@ func runDueDigests(ctx context.Context, _ event.Event) error {
 	if orm.DB == nil {
 		return nil
 	}
-	bypass := orm.ContextWithBypass(ctx, true)
+	bypass := orm.AuditedBypass(ctx, "digest.hook")
 	rows, err := orm.Search(bypass, "digest.digest", [][]interface{}{{"active", "=", true}})
 	if err != nil || len(rows) == 0 {
 		return err

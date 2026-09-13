@@ -87,6 +87,9 @@ jobs:
           go-version: "1.26.6"
           cache: true
 
+      - name: Security bypass lint
+        run: bash scripts/check_security_bypass.sh
+
       - name: go vet
         run: go vet ./...
 

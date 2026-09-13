@@ -118,6 +118,6 @@ func AppendUserLog(ctx context.Context, userID int, ip, result string) {
 	if userID > 0 {
 		vals["user_id"] = userID
 	}
-	bypass := ContextWithBypass(ctx, true)
-	_, _ = Create(bypass, inst, vals)
+	elevated := AuditedBypass(ctx, "apikey.audit_log")
+	_, _ = Create(elevated, inst, vals)
 }

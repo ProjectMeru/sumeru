@@ -42,7 +42,7 @@ func SyncModels() error {
 	if DB == nil {
 		return nil
 	}
-	ctx := ContextWithBypass(context.Background(), true)
+	ctx := AuditedBypass(context.Background(), "registry.init")
 	installed, err := InstalledModuleNames(ctx)
 	if err != nil {
 		return err

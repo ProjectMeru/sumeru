@@ -8,7 +8,7 @@ import (
 // xml ids base.group_system / base.group_user, and the Admin implies User edge.
 // Call before module data sync (-i / -u) so addon XML can use ref('base.group_user') in implied_ids.
 func EnsureDefaultGroupsAndImplied() error {
-	ctx := ContextWithBypass(context.Background(), true)
+	ctx := AuditedBypass(context.Background(), "security.bootstrap")
 	_, _, err := ensureDefaultKernelGroups(ctx)
 	return err
 }

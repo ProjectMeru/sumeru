@@ -22,7 +22,7 @@ func InstallModuleByName(ctx context.Context, moduleName string) error {
 	if err := orm.CheckModelAccess(ctx, orm.SecurityUID(ctx), "sys.module", "write"); err != nil {
 		return err
 	}
-	systemContext := orm.ContextWithBypass(ctx, true)
+	systemContext := orm.AuditedBypass(ctx, "module.install")
 	installMu.Lock()
 	defer installMu.Unlock()
 	if closure, err := ResolveInstallClosure(DiscoveredAddons, moduleName); err != nil {
@@ -172,7 +172,7 @@ func UninstallModuleByName(ctx context.Context, moduleName string) error {
 	if err := orm.CheckModelAccess(ctx, orm.SecurityUID(ctx), "sys.module", "write"); err != nil {
 		return err
 	}
-	systemContext := orm.ContextWithBypass(ctx, true)
+	systemContext := orm.AuditedBypass(ctx, "module.install")
 	installMu.Lock()
 	defer installMu.Unlock()
 
@@ -250,7 +250,7 @@ func SetModuleActive(ctx context.Context, moduleName string, active bool) error 
 	if err := orm.CheckModelAccess(ctx, orm.SecurityUID(ctx), "sys.module", "write"); err != nil {
 		return err
 	}
-	systemContext := orm.ContextWithBypass(ctx, true)
+	systemContext := orm.AuditedBypass(ctx, "module.install")
 	installMu.Lock()
 	defer installMu.Unlock()
 

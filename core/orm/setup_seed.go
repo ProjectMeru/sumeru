@@ -26,7 +26,7 @@ func seedXmlID(ctx context.Context, module, xmlName, model string, coreID int) e
 }
 
 func ensureDefaultKernelGroups(ctx context.Context) (adminGID int, userGID int, err error) {
-	ctx = ContextWithBypass(ctx, true)
+	ctx = AuditedBypass(ctx, "setup.seed")
 	if DB == nil {
 		return 0, 0, nil
 	}
@@ -118,7 +118,7 @@ func ensureDefaultKernelGroups(ctx context.Context) (adminGID int, userGID int, 
 }
 
 func ensureBootstrapSecurity(ctx context.Context, first *SetupAdminParams) error {
-	ctx = ContextWithBypass(ctx, true)
+	ctx = AuditedBypass(ctx, "setup.seed")
 	if DB == nil {
 		return nil
 	}

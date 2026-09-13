@@ -25,7 +25,7 @@ func DrainOutboxOnce(ctx context.Context) int {
 	if _, ok := Registry["sys.outbox.event"]; !ok {
 		return 0
 	}
-	bypass := ContextWithBypass(ctx, true)
+	bypass := AuditedBypass(ctx, "outbox.drain")
 	tbl := MustQuotedTableName("sys.outbox.event")
 	rows, err := DB.QueryContext(bypass,
 		`SELECT id, name, COALESCE(payload_json,''), COALESCE(actor,0) FROM `+tbl+

@@ -16,7 +16,7 @@ import (
 // LoadAddonPaths discovers addons from multiple roots (comma-separated in config),
 // syncs sys.module rows (if DB initialized), then loads XML for installed & active modules.
 func LoadAddonPaths(rootPaths []string) error {
-	contextWithBypass := orm.ContextWithBypass(context.Background(), true)
+	contextWithBypass := orm.AuditedBypass(context.Background(), "module.discovery")
 
 	var sanitizedRoots []string
 	for _, path := range rootPaths {

@@ -17,7 +17,7 @@ func Translate(ctx context.Context, lang, src string) string {
 		return src
 	}
 	var val sql.NullString
-	err := DB.QueryRowContext(ContextWithBypass(ctx, true),
+	err := DB.QueryRowContext(AuditedBypass(ctx, "i18n.translate"),
 		`SELECT value FROM `+MustQuotedTableName("sys.translation")+
 			` WHERE lang = $1 AND src = $2 LIMIT 1`, lang, src,
 	).Scan(&val)
