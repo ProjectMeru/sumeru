@@ -18,6 +18,8 @@ import {
 
 export interface WorkspaceRoute {
   actionId: number;
+  /** Raw action query value: numeric id or an XML id (e.g. account.action_account_moves_out). */
+  actionRef?: string;
   menuId: string;
   viewType: string;
   recordId: number;
@@ -36,7 +38,10 @@ export interface WorkspaceRoute {
 export class RouterService {
   static searchParams(route: Partial<WorkspaceRoute>): URLSearchParams {
     const params = new URLSearchParams();
-    if (route.actionId) params.set(Q_ACTION, String(route.actionId));
+    // Preserve the action verbatim: the server resolves XML ids like
+    // account.action_account_moves_out, the client only knows numeric ids.
+    const action = route.actionRef ?? String(route.actionId ?? 0);
+    if (action && action !== "0") params.set(Q_ACTION, action);
     if (route.menuId) params.set(Q_MENU_ID, route.menuId);
     if (route.viewType) params.set(Q_VIEW_TYPE, route.viewType);
     if (route.recordId) params.set(Q_RECORD_ID, String(route.recordId));
@@ -58,8 +63,10 @@ export class RouterService {
 
   parse(location: { search: string } = window.location): WorkspaceRoute {
     const q = new URLSearchParams(location.search);
+    const actionRaw = q.get(Q_ACTION) ?? "";
     return {
-      actionId: Number(q.get(Q_ACTION) ?? "0"),
+      actionId: Number(actionRaw || "0"),
+      actionRef: actionRaw,
       menuId: q.get(Q_MENU_ID) ?? "",
       viewType: q.get(Q_VIEW_TYPE) ?? "",
       recordId: Number(q.get(Q_RECORD_ID) ?? "0"),
