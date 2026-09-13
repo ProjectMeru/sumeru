@@ -18,6 +18,11 @@ func AppLogsHandler(w http.ResponseWriter, r *http.Request) {
 	if !requireMenuAccess(w, r, appLogsMenuXMLID) {
 		return
 	}
+	uid := SessionUserID(r)
+	if err := orm.CheckModelAccess(r.Context(), uid, appLogModel, "read"); err != nil {
+		http.Error(w, "Access denied", http.StatusForbidden)
+		return
+	}
 
 	ctx := r.Context()
 	events, err := loadAppLogEvents(ctx)
