@@ -2,6 +2,7 @@ package parser_test
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"sumeru/core/engine/parser"
@@ -111,5 +112,40 @@ func TestParseViewFromArch_listOpenDefault(t *testing.T) {
 	}
 	if v.ListNoRowOpen {
 		t.Fatalf("expected ListNoRowOpen false by default, got %#v", v)
+	}
+}
+
+func TestParseViewFromArch_listOpenInvalid(t *testing.T) {
+	_, err := parser.ParseViewFromArch(`<list open="off"><field name="a"/></list>`)
+	if err == nil {
+		t.Fatal("expected error for open=off")
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "off") || !strings.Contains(msg, "true") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestParseViewFromArch_invisibleLegacyRejected(t *testing.T) {
+	_, err := parser.ParseViewFromArch(`<form><field name="a" invisible="1"/></form>`)
+	if err == nil {
+		t.Fatal("expected error for invisible=1")
+	}
+	if !strings.Contains(err.Error(), "1") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestParseViewFromArch_listOpenInvalidWithViewMeta(t *testing.T) {
+	arch := `<view type="list" id="sale.order.list" model="sale.order" open="0"><field name="a"/></view>`
+	_, err := parser.ParseViewFromArch(arch)
+	if err == nil {
+		t.Fatal("expected error for open=0")
+	}
+	msg := err.Error()
+	for _, want := range []string{"0", "sale.order.list", "sale.order"} {
+		if !strings.Contains(msg, want) {
+			t.Fatalf("error %q missing %q", msg, want)
+		}
 	}
 }

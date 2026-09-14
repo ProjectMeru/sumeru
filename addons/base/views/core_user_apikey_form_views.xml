@@ -11,9 +11,9 @@
                 <group>
                     <group string="Key">
                         <field name="user_id" string="User"/>
-                        <field name="key_prefix" string="Prefix" readonly="1"/>
+                        <field name="key_prefix" string="Prefix" readonly="true"/>
                         <field name="active" string="Active"/>
-                        <field name="create_date" string="Created" readonly="1"/>
+                        <field name="create_date" string="Created" readonly="true"/>
                     </group>
                 </group>
             </sheet>

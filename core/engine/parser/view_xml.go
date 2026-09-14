@@ -15,10 +15,14 @@ type View struct {
 	Type     string   `xml:"type,attr"`
 	Title    string   `xml:"title,attr"`
 	Priority int      `xml:"priority,attr"`
-	// ListOpenAttr is the raw <list open="..."/> or <view type="list" open="..."/> attribute (false/0/off disables row→form).
+	// ListOpenAttr is the raw <list open="..."/> or <view type="list" open="..."/> attribute (only true/false; false disables row→form).
 	ListOpenAttr string `xml:"open,attr"`
 	// ListNoRowOpen is derived from ListOpenAttr by the arch parser for type list.
-	ListNoRowOpen bool     `xml:"-"`
+	ListNoRowOpen bool `xml:"-"`
+	// Derived by ValidateViewArch when quick_create / records_draggable are set.
+	kanbanQuickCreate bool
+	kanbanDraggable   bool
+	bulkUpload        bool
 	Header        *Header  `xml:"header"`
 	Sheet         *Sheet   `xml:"sheet"`
 	Footer        *Footer  `xml:"footer"`
@@ -81,31 +85,34 @@ func (v *View) KanbanGroupField() string {
 	return strings.TrimSpace(v.GroupBy)
 }
 
-// KanbanDraggable is true when records_draggable is not explicitly "0"/"false".
+// KanbanDraggable is true when grouped and records_draggable is empty or true.
 func (v *View) KanbanDraggable() bool {
-	if v == nil {
+	if v == nil || v.KanbanGroupField() == "" {
 		return false
 	}
-	if v.KanbanGroupField() == "" {
-		return false
+	if strings.TrimSpace(v.RecordsDraggable) == "" {
+		return true
 	}
-	s := strings.ToLower(strings.TrimSpace(v.RecordsDraggable))
-	if s == "0" || s == "false" || s == "off" || s == "no" {
-		return false
-	}
-	return true
+	return v.kanbanDraggable
 }
 
-// KanbanQuickCreate is true when grouped and quick_create is not explicitly off.
+// KanbanQuickCreate is true when grouped and quick_create is empty or true.
 func (v *View) KanbanQuickCreate() bool {
 	if v == nil || v.KanbanGroupField() == "" {
 		return false
 	}
-	s := strings.ToLower(strings.TrimSpace(v.QuickCreate))
-	if s == "0" || s == "false" || s == "off" || s == "no" {
+	if strings.TrimSpace(v.QuickCreate) == "" {
+		return true
+	}
+	return v.kanbanQuickCreate
+}
+
+// BulkUploadEnabled is true when bulk_upload="true" was validated on the view.
+func (v *View) BulkUploadEnabled() bool {
+	if v == nil {
 		return false
 	}
-	return true
+	return v.bulkUpload
 }
 
 const kanbanColumnsPerRowDefault = 4
@@ -317,9 +324,14 @@ func ParseViewList(filePath string) (*ViewList, error) {
 	if err := xml.Unmarshal(data, &viewList); err != nil {
 		return nil, err
 	}
-	viewList.MergeViewListData()
+	if err := viewList.MergeViewListData(); err != nil {
+		return nil, fmt.Errorf("%s: %w", filePath, err)
+	}
 	for i := range viewList.Views {
 		promoteNestedForm(&viewList.Views[i])
+		if err := ValidateViewArch(&viewList.Views[i]); err != nil {
+			return nil, fmt.Errorf("%s: %w", filePath, err)
+		}
 	}
 	return &viewList, nil
 }
@@ -349,6 +361,8 @@ func ParseMenuList(filePath string) (*MenuList, error) {
 	if err := xml.Unmarshal(data, &menuList); err != nil {
 		return nil, err
 	}
-	menuList.MergeMenuListData()
+	if err := menuList.MergeMenuListData(); err != nil {
+		return nil, fmt.Errorf("%s: %w", filePath, err)
+	}
 	return &menuList, nil
 }

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <sumeru>
-    <data noupdate="1">
+    <data noupdate="true">
         <!-- core.company : default company -->
         <record id="company_default" model="core.company">
             <field name="name">My Company</field>

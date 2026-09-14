@@ -55,7 +55,7 @@ func TestCapabilitiesFromView_table(t *testing.T) {
 		{
 			name: "bulk upload attr",
 			view: func() *parser.View {
-				v, _ := parser.ParseViewFromArch(`<view type="list" bulk_upload="1"><field name="x"/></view>`)
+				v, _ := parser.ParseViewFromArch(`<view type="list" bulk_upload="true"><field name="x"/></view>`)
 				return v
 			}(),
 			check: func(t *testing.T, caps report.Capabilities) {

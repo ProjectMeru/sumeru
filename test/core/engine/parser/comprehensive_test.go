@@ -96,12 +96,14 @@ func TestActionToRecord_domainAndViewID(t *testing.T) {
 
 func TestMergeMenuListData_noUpdate(t *testing.T) {
 	t.Parallel()
-	in := []byte(`<sumeru><data noupdate="1"><menuitem id="m1" name="Menu"/></data></sumeru>`)
+	in := []byte(`<sumeru><data noupdate="true"><menuitem id="m1" name="Menu"/></data></sumeru>`)
 	var ml parser.MenuList
 	if err := xml.Unmarshal(in, &ml); err != nil {
 		t.Fatal(err)
 	}
-	ml.MergeMenuListData()
+	if err := ml.MergeMenuListData(); err != nil {
+		t.Fatal(err)
+	}
 	if !ml.NoUpdate || len(ml.MenuItems) != 1 {
 		t.Fatalf("MergeMenuListData: noupdate=%v menus=%d", ml.NoUpdate, len(ml.MenuItems))
 	}
@@ -169,16 +171,16 @@ func TestParseViewFromArch_allRoots(t *testing.T) {
 			},
 		},
 		{
-			name: "list open off", arch: `<list open="off"><field name="a"/></list>`,
+			name: "list open false", arch: `<list open="false"><field name="a"/></list>`,
 			typeWant: "list",
 			check: func(t *testing.T, v *parser.View) {
 				if !v.ListNoRowOpen {
-					t.Fatal("ListNoRowOpen expected true for open=off")
+					t.Fatal("ListNoRowOpen expected true for open=false")
 				}
 			},
 		},
 		{
-			name: "kanban quick create off", arch: `<kanban default_group_by="stage" quick_create="no"><field name="n"/></kanban>`,
+			name: "kanban quick create off", arch: `<kanban default_group_by="stage" quick_create="false"><field name="n"/></kanban>`,
 			typeWant: "kanban",
 			check: func(t *testing.T, v *parser.View) {
 				if v.KanbanQuickCreate() {
@@ -196,7 +198,7 @@ func TestParseViewFromArch_allRoots(t *testing.T) {
 			},
 		},
 		{
-			name: "view report attrs", arch: `<view type="list" report_download="csv,pdf" bulk_upload="1"><field name="x"/></view>`,
+			name: "view report attrs", arch: `<view type="list" report_download="csv,pdf" bulk_upload="true"><field name="x"/></view>`,
 			typeWant: "list",
 		},
 	}
@@ -248,16 +250,3 @@ func TestParseViewList_invalidRoot(t *testing.T) {
 	}
 }
 
-func TestIsFalsyAttr_table(t *testing.T) {
-	t.Parallel()
-	for _, v := range []string{"0", "false", "no", "off", " FALSE "} {
-		if !parser.IsFalsyAttr(v) {
-			t.Errorf("IsFalsyAttr(%q) = false", v)
-		}
-	}
-	for _, v := range []string{"", "1", "yes"} {
-		if parser.IsFalsyAttr(v) {
-			t.Errorf("IsFalsyAttr(%q) = true", v)
-		}
-	}
-}

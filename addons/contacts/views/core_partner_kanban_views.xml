@@ -2,8 +2,8 @@
 <sumeru>
     <data>
         <view id="view_core_partner_kanban" model="core.partner" type="kanban">
-            <field name="color" invisible="1"/>
-            <field name="gender" invisible="1"/>
+            <field name="color" invisible="true"/>
+            <field name="gender" invisible="true"/>
             <field name="image"/>
             <field name="name" string="Name"/>
             <field name="email" string="Email"/>

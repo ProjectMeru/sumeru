@@ -37,8 +37,8 @@ func TestApplyInheritArch_table(t *testing.T) {
 		{
 			name:   "data wrapper stripped",
 			parent: `<form><field name="x"/></form>`,
-			frag:   `<data><xpath expr="//field[@name='x']" position="attributes"><attribute name="readonly">1</attribute></xpath></data>`,
-			want:   []string{`readonly="1"`},
+			frag:   `<data><xpath expr="//field[@name='x']" position="attributes"><attribute name="readonly">true</attribute></xpath></data>`,
+			want:   []string{`readonly="true"`},
 		},
 		{
 			name:   "invalid xpath",

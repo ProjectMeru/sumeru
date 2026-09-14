@@ -21,7 +21,9 @@ func TestModuleXML_dataWrapperSumeru(t *testing.T) {
 	if err := xml.Unmarshal(in, &vl); err != nil {
 		t.Fatal(err)
 	}
-	vl.MergeViewListData()
+	if err := vl.MergeViewListData(); err != nil {
+		t.Fatal(err)
+	}
 	if len(vl.Records) != 1 || vl.Records[0].ID != "x" {
 		t.Fatalf("records: %+v", vl.Records)
 	}
@@ -47,7 +49,9 @@ func TestActionHelpNestedInnerXML(t *testing.T) {
 	if err := xml.Unmarshal(in, &vl); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	vl.MergeViewListData()
+	if err := vl.MergeViewListData(); err != nil {
+		t.Fatal(err)
+	}
 	if len(vl.Actions) != 1 {
 		t.Fatalf("actions=%d", len(vl.Actions))
 	}
@@ -81,7 +85,9 @@ func TestActionSearchViewIDInContext(t *testing.T) {
 	if err := xml.Unmarshal(in, &vl); err != nil {
 		t.Fatal(err)
 	}
-	vl.MergeViewListData()
+	if err := vl.MergeViewListData(); err != nil {
+		t.Fatal(err)
+	}
 	if len(vl.Actions) != 1 {
 		t.Fatalf("actions=%d", len(vl.Actions))
 	}
@@ -106,7 +112,9 @@ func TestActionURLTypeToRecord(t *testing.T) {
 	if err := xml.Unmarshal(in, &vl); err != nil {
 		t.Fatal(err)
 	}
-	vl.MergeViewListData()
+	if err := vl.MergeViewListData(); err != nil {
+		t.Fatal(err)
+	}
 	if len(vl.Actions) != 1 {
 		t.Fatalf("actions=%d", len(vl.Actions))
 	}

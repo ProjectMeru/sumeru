@@ -171,7 +171,7 @@ func TestSerializeFieldListSubview(t *testing.T) {
 
 func TestSerializeModifierExpressions(t *testing.T) {
 	fields := swcmeta.SerializeFieldsForTest(context.Background(), []parser.Field{
-		{Name: "amount", Invisible: "state == 'done'", Readonly: "1"},
+		{Name: "amount", Invisible: "state == 'done'", Readonly: "true"},
 	})
 	if len(fields) != 1 {
 		t.Fatalf("fields: %+v", fields)

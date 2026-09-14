@@ -99,6 +99,13 @@ type archPivotRoot struct {
 	Field   []Field  `xml:"field"`
 }
 
+func finishParseView(v *View) (*View, error) {
+	if err := ValidateViewArch(v); err != nil {
+		return nil, fmt.Errorf("parse view arch: %w", err)
+	}
+	return v, nil
+}
+
 func applyKanbanRootAttrs(v *View, k archKanbanRoot) {
 	if v == nil {
 		return
@@ -147,14 +154,13 @@ func parseViewFromArchInternal(arch string) (*View, error) {
 	if err := xml.Unmarshal([]byte(arch), &v); err == nil {
 		promoteNestedForm(&v)
 		if viewLooksPopulated(&v) {
-			applyListOpenFlag(&v)
-			return &v, nil
+			return finishParseView(&v)
 		}
 	}
 
 	var f archFormRoot
 	if err := xml.Unmarshal([]byte(arch), &f); err == nil && formArchHasContent(&f) {
-		return &View{
+		return finishParseView(&View{
 			Type:    "form",
 			Header:  f.Header,
 			Sheet:   f.Sheet,
@@ -162,22 +168,22 @@ func parseViewFromArchInternal(arch string) (*View, error) {
 			Chatter: f.Chatter,
 			Field:   f.Field,
 			Group:   f.Group,
-		}, nil
+		})
 	}
 
 	var l archListRoot
 	if err := xml.Unmarshal([]byte(arch), &l); err == nil && strings.HasPrefix(strings.ToLower(strings.TrimSpace(arch)), "<list") {
-		return &View{
+		out := &View{
 			Type:            "list",
 			Field:           l.Field,
 			ListOpenAttr:    l.Open,
-			ListNoRowOpen:   listOpenAttrDisablesRowNavigation(l.Open),
 			Report:          l.Report,
 			ReportDownload:  l.ReportDownload,
 			BulkUpload:      l.BulkUpload,
 			ReportPDFSizes:  l.ReportPDFSizes,
 			ReportBulkModes: l.ReportBulkModes,
-		}, nil
+		}
+		return finishParseView(out)
 	}
 
 	var k archKanbanRoot
@@ -192,17 +198,17 @@ func parseViewFromArchInternal(arch string) (*View, error) {
 			ReportBulkModes: k.ReportBulkModes,
 		}
 		applyKanbanRootAttrs(v, k)
-		return v, nil
+		return finishParseView(v)
 	}
 
 	var s archSearchRoot
 	if err := xml.Unmarshal([]byte(arch), &s); err == nil && strings.HasPrefix(strings.ToLower(strings.TrimSpace(arch)), "<search") {
-		return &View{
+		return finishParseView(&View{
 			Type:         "search",
 			Title:        s.String,
 			Field:        s.Field,
 			SearchFilter: s.Filter,
-		}, nil
+		})
 	}
 
 	var g archGraphRoot
@@ -211,66 +217,66 @@ func parseViewFromArchInternal(arch string) (*View, error) {
 		if chart == "" {
 			chart = strings.TrimSpace(g.Type)
 		}
-		return &View{
+		return finishParseView(&View{
 			Type:  "graph",
 			Title: g.String,
 			Chart: chart,
 			Field: g.Field,
-		}, nil
+		})
 	}
 
 	var cal archCalendarRoot
 	if err := xml.Unmarshal([]byte(arch), &cal); err == nil && strings.HasPrefix(strings.ToLower(strings.TrimSpace(arch)), "<calendar") {
-		return &View{
+		return finishParseView(&View{
 			Type:      "calendar",
 			Title:     cal.String,
 			DateStart: cal.DateStart,
 			DateStop:  cal.DateStop,
 			Field:     cal.Field,
-		}, nil
+		})
 	}
 
 	var gantt archGanttRoot
 	if err := xml.Unmarshal([]byte(arch), &gantt); err == nil && strings.HasPrefix(strings.ToLower(strings.TrimSpace(arch)), "<gantt") {
-		return &View{
+		return finishParseView(&View{
 			Type:      "gantt",
 			Title:     gantt.String,
 			DateStart: gantt.DateStart,
 			DateStop:  gantt.DateStop,
 			Field:     gantt.Field,
-		}, nil
+		})
 	}
 
 	var mp archMapRoot
 	if err := xml.Unmarshal([]byte(arch), &mp); err == nil && strings.HasPrefix(strings.ToLower(strings.TrimSpace(arch)), "<map") {
-		return &View{
+		return finishParseView(&View{
 			Type:      "map",
 			Title:     mp.String,
 			Latitude:  mp.Latitude,
 			Longitude: mp.Longitude,
 			Field:     mp.Field,
-		}, nil
+		})
 	}
 
 	var coh archCohortRoot
 	if err := xml.Unmarshal([]byte(arch), &coh); err == nil && strings.HasPrefix(strings.ToLower(strings.TrimSpace(arch)), "<cohort") {
-		return &View{
+		return finishParseView(&View{
 			Type:      "cohort",
 			Title:     coh.String,
 			DateStart: coh.DateStart,
 			Interval:  coh.Interval,
 			Measure:   coh.Measure,
 			Field:     coh.Field,
-		}, nil
+		})
 	}
 
 	var pvt archPivotRoot
 	if err := xml.Unmarshal([]byte(arch), &pvt); err == nil && strings.HasPrefix(strings.ToLower(strings.TrimSpace(arch)), "<pivot") {
-		return &View{
+		return finishParseView(&View{
 			Type:  "pivot",
 			Title: pvt.String,
 			Field: pvt.Field,
-		}, nil
+		})
 	}
 
 	if err := xml.Unmarshal([]byte(arch), &v); err != nil {
@@ -279,7 +285,7 @@ func parseViewFromArchInternal(arch string) (*View, error) {
 	if !viewLooksPopulated(&v) {
 		return nil, fmt.Errorf("parse view arch: unsupported or empty root (use <view>, <form>, <list>, <kanban>, <search>, <graph>, <calendar>, <gantt>, <map>, <cohort>, or <pivot>)")
 	}
-	return &v, nil
+	return finishParseView(&v)
 }
 
 func viewLooksPopulated(v *View) bool {

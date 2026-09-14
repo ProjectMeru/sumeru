@@ -7,7 +7,7 @@ import (
 )
 
 func TestParseKanbanDefaultGroupBy(t *testing.T) {
-	arch := `<view model="crm.lead" type="kanban" default_group_by="stage_id" records_draggable="1">
+	arch := `<view model="crm.lead" type="kanban" default_group_by="stage_id" records_draggable="true">
 		<field name="name"/>
 	</view>`
 	v, err := parser.ParseViewFromArch(arch)
@@ -34,7 +34,7 @@ func TestParseKanbanRootDefaultGroupBy(t *testing.T) {
 }
 
 func TestKanbanDraggableFalse(t *testing.T) {
-	arch := `<view type="kanban" default_group_by="x" records_draggable="0"><field name="a"/></view>`
+	arch := `<view type="kanban" default_group_by="x" records_draggable="false"><field name="a"/></view>`
 	v, err := parser.ParseViewFromArch(arch)
 	if err != nil {
 		t.Fatal(err)
