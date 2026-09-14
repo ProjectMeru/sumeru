@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
+	"sort"
+	"strconv"
 	"strings"
 
 	"sumeru/core/engine/parser"
@@ -11,6 +13,29 @@ import (
 	"sumeru/core/orm"
 	"sumeru/core/sdk/platformmsg"
 )
+
+const defaultInheritPriority = 16
+
+// sortInheritQueue orders inherit records by ascending priority (lower first), preserving file order for ties.
+func sortInheritQueue(records []parser.Record) {
+	sort.SliceStable(records, func(i, j int) bool {
+		pi := inheritRecordPriority(records[i])
+		pj := inheritRecordPriority(records[j])
+		return pi < pj
+	})
+}
+
+func inheritRecordPriority(rec parser.Record) int {
+	raw := strings.TrimSpace(parser.RecordFieldMap(rec)["priority"])
+	if raw == "" {
+		return defaultInheritPriority
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil {
+		return defaultInheritPriority
+	}
+	return n
+}
 
 // viewArchXML persists the full parsed view (header, sheet, notebook, etc.) for sys.view.arch.
 func viewArchXML(viewDef *parser.View) string {

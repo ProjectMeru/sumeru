@@ -198,6 +198,7 @@ func (addon *Addon) SyncToDB(ctx context.Context) error {
 		syncMenusFromItems(ctx, moduleName, deferredMenus)
 	}
 
+	sortInheritQueue(inheritQueue)
 	for _, xmlRecord := range inheritQueue {
 		if err := applySysUIViewInherit(ctx, moduleName, xmlRecord); err != nil {
 			errs = append(errs, RecoverableSync(moduleName, "view inherit "+xmlRecord.ID, err))
