@@ -33,12 +33,11 @@ func buildSearchWhereClause(modelName string, domain [][]interface{}) (string, [
 			return "", nil, fmt.Errorf("domain field name")
 		}
 		op := strings.TrimSpace(strings.ToLower(fmt.Sprint(clause[1])))
-		if frag, fragArgs, handled, err := buildFalsyDomainClause(modelName, field, op, clause[2]); handled {
+		if frag, handled, err := buildFalsyDomainClause(modelName, field, op, clause[2]); handled {
 			if err != nil {
 				return "", nil, err
 			}
 			parts = append(parts, frag)
-			args = append(args, fragArgs...)
 			continue
 		}
 		col, err := QuotedColumnForModel(modelName, field)
@@ -59,10 +58,7 @@ func buildSearchWhereClause(modelName string, domain [][]interface{}) (string, [
 			if !ok {
 				return "", nil, fmt.Errorf("operator in requires array value")
 			}
-			listClause, listArgs, nextIndex, err := appendDomainListClause(col, "in", list, placeholderIndex)
-			if err != nil {
-				return "", nil, err
-			}
+			listClause, listArgs, nextIndex := appendDomainListClause(col, "in", list, placeholderIndex)
 			parts = append(parts, listClause)
 			args = append(args, listArgs...)
 			placeholderIndex = nextIndex
@@ -83,10 +79,7 @@ func buildSearchWhereClause(modelName string, domain [][]interface{}) (string, [
 			if !ok {
 				return "", nil, fmt.Errorf("operator not in requires array value")
 			}
-			listClause, listArgs, nextIndex, err := appendDomainListClause(col, "not in", list, placeholderIndex)
-			if err != nil {
-				return "", nil, err
-			}
+			listClause, listArgs, nextIndex := appendDomainListClause(col, "not in", list, placeholderIndex)
 			parts = append(parts, listClause)
 			args = append(args, listArgs...)
 			placeholderIndex = nextIndex
@@ -97,10 +90,10 @@ func buildSearchWhereClause(modelName string, domain [][]interface{}) (string, [
 	return strings.Join(parts, " AND "), args, nil
 }
 
-func appendDomainListClause(col, op string, list []interface{}, placeholderIndex int) (clause string, args []interface{}, nextIndex int, err error) {
+func appendDomainListClause(col, op string, list []interface{}, placeholderIndex int) (clause string, args []interface{}, nextIndex int) {
 	if op == "in" {
 		if len(list) == 0 {
-			return "FALSE", nil, placeholderIndex, nil
+			return "FALSE", nil, placeholderIndex
 		}
 		placeholders := make([]string, len(list))
 		for i, item := range list {
@@ -108,10 +101,10 @@ func appendDomainListClause(col, op string, list []interface{}, placeholderIndex
 			args = append(args, item)
 			placeholderIndex++
 		}
-		return fmt.Sprintf("%s IN (%s)", col, strings.Join(placeholders, ",")), args, placeholderIndex, nil
+		return fmt.Sprintf("%s IN (%s)", col, strings.Join(placeholders, ",")), args, placeholderIndex
 	}
 	if len(list) == 0 {
-		return "TRUE", nil, placeholderIndex, nil
+		return "TRUE", nil, placeholderIndex
 	}
 	placeholders := make([]string, len(list))
 	for i, item := range list {
@@ -119,7 +112,7 @@ func appendDomainListClause(col, op string, list []interface{}, placeholderIndex
 		args = append(args, item)
 		placeholderIndex++
 	}
-	return fmt.Sprintf("%s NOT IN (%s)", col, strings.Join(placeholders, ",")), args, placeholderIndex, nil
+	return fmt.Sprintf("%s NOT IN (%s)", col, strings.Join(placeholders, ",")), args, placeholderIndex
 }
 
 func joinShiftedWhereFragments(separator, modelName string, domains [][][]interface{}, startPlaceholder int) (string, []interface{}, error) {
@@ -134,10 +127,7 @@ func joinShiftedWhereFragments(separator, modelName string, domains [][][]interf
 		if err != nil {
 			return "", nil, err
 		}
-		shifted, err := shiftPlaceholders(whereFragment, placeholderIndex)
-		if err != nil {
-			return "", nil, err
-		}
+		shifted := shiftPlaceholders(whereFragment, placeholderIndex)
 		parts = append(parts, "("+shifted+")")
 		args = append(args, fragmentArgs...)
 		placeholderIndex += len(fragmentArgs)
@@ -151,7 +141,7 @@ func buildAndWhereClauses(modelName string, parts [][][]interface{}) (string, []
 	return joinShiftedWhereFragments(" AND ", modelName, parts, 1)
 }
 
-func shiftPlaceholders(whereFragment string, start int) (string, error) {
+func shiftPlaceholders(whereFragment string, start int) string {
 	// Replace from highest index downward to avoid $1 colliding with $10.
 	max := 0
 	for i := 1; i <= 256; i++ {
@@ -166,5 +156,5 @@ func shiftPlaceholders(whereFragment string, start int) (string, error) {
 	for i := max; i >= 1; i-- {
 		out = strings.ReplaceAll(out, fmt.Sprintf("$$TMP%d$$", i), fmt.Sprintf("$%d", start+i-1))
 	}
-	return out, nil
+	return out
 }

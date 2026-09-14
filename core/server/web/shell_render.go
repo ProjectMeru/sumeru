@@ -33,7 +33,7 @@ func renderShellPage(w http.ResponseWriter, r *http.Request, opts shellPageOpts)
 	}
 
 	page := finalizeShellPage(ctx, r, opts, innerHTML, route)
-	layoutHTML, err := render.RenderPage(ctx, config.AppConfig.TemplatesPath, page)
+	layoutHTML, err := render.RenderPage(ctx, config.AppConfig.TemplatesPath, page, nil)
 	if err != nil {
 		webLogFail(ctx, route, "render", "Failed to render page layout", err, logStatusFailure, nil)
 		http.Error(w, "Layout render error", http.StatusInternalServerError)

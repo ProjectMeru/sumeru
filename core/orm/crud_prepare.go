@@ -24,7 +24,7 @@ func prepareCreateWrite(ctx context.Context, model Model, values map[string]inte
 		return nil, 0, err
 	}
 	fieldDefs := fieldDefinitionsByName(model)
-	if err := applySpecialDefaults(ctx, model, fieldDefs, prepared); err != nil {
+	if err := applySpecialDefaults(ctx, fieldDefs, prepared); err != nil {
 		return nil, 0, err
 	}
 	working := mergeRecordMap(map[string]interface{}{}, prepared)

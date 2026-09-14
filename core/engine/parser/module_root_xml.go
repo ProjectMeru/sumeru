@@ -95,11 +95,15 @@ func ValidateModuleRoot(n xml.Name) error {
 }
 
 // MergeViewListData flattens <data> children into the top-level slices.
-func (v *ViewList) MergeViewListData() {
+func (v *ViewList) MergeViewListData() error {
 	if v.Data == nil {
-		return
+		return nil
 	}
-	v.NoUpdate = parseNoUpdateFlag(v.Data.NoUpdate)
+	noUpdate, err := ParseXMLBoolAttr("noupdate", v.Data.NoUpdate)
+	if err != nil {
+		return err
+	}
+	v.NoUpdate = noUpdate
 	v.Records = append(v.Data.Records, v.Records...)
 	v.Views = append(v.Data.Views, v.Views...)
 	v.MenuItems = append(v.Data.MenuItems, v.MenuItems...)
@@ -108,14 +112,19 @@ func (v *ViewList) MergeViewListData() {
 	}
 	v.Actions = append(v.Data.Actions, v.Actions...)
 	v.Data = nil
+	return nil
 }
 
 // MergeMenuListData flattens <data> menuitem children.
-func (m *MenuList) MergeMenuListData() {
+func (m *MenuList) MergeMenuListData() error {
 	if m.Data == nil {
-		return
+		return nil
 	}
-	m.NoUpdate = parseNoUpdateFlag(m.Data.NoUpdate)
+	noUpdate, err := ParseXMLBoolAttr("noupdate", m.Data.NoUpdate)
+	if err != nil {
+		return err
+	}
+	m.NoUpdate = noUpdate
 	m.MenuItems = append(m.Data.MenuItems, m.MenuItems...)
 	m.Records = append(m.Data.Records, m.Records...)
 	for _, a := range m.Data.Actions {
@@ -123,11 +132,7 @@ func (m *MenuList) MergeMenuListData() {
 	}
 	m.Actions = append(m.Data.Actions, m.Actions...)
 	m.Data = nil
-}
-
-func parseNoUpdateFlag(raw string) bool {
-	s := strings.TrimSpace(strings.ToLower(raw))
-	return s == "1" || s == "true" || s == "yes"
+	return nil
 }
 
 // PeekModuleXMLRootName returns the local name of the first start element (e.g. sumeru).

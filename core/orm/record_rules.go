@@ -221,10 +221,7 @@ func BuildWhereWithRecordRules(ctx context.Context, uid int, model, op string, b
 			if len(clauses) == 0 {
 				return orSQL, orArgs, nil
 			}
-			shifted, err := shiftPlaceholders(orSQL, len(andArgs)+1)
-			if err != nil {
-				return "", nil, err
-			}
+			shifted := shiftPlaceholders(orSQL, len(andArgs)+1)
 			return andSQL + " AND (" + shifted + ")", append(andArgs, orArgs...), nil
 		}
 	}

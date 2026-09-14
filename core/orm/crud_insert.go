@@ -42,7 +42,7 @@ func Upsert(ctx context.Context, model Model, values map[string]interface{}, con
 		return 0, err
 	}
 	fieldDefs := fieldDefinitionsByName(model)
-	if err := applySpecialDefaults(ctx, model, fieldDefs, prepared); err != nil {
+	if err := applySpecialDefaults(ctx, fieldDefs, prepared); err != nil {
 		return 0, err
 	}
 	if !SecurityBypass(ctx) {

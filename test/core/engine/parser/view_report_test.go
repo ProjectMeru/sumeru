@@ -26,7 +26,7 @@ func TestReportElementOnListArch(t *testing.T) {
 }
 
 func TestReportViewAttributes(t *testing.T) {
-	arch := `<view type="list" model="product.product" report_download="csv" bulk_upload="1"><field name="name"/></view>`
+	arch := `<view type="list" model="product.product" report_download="csv" bulk_upload="true"><field name="name"/></view>`
 	v, err := parser.ParseViewFromArch(arch)
 	if err != nil {
 		t.Fatal(err)

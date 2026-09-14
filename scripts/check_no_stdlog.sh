@@ -8,7 +8,7 @@ cd "$ROOT"
 violations=()
 while IFS= read -r line; do
   violations+=("$line")
-done < <(rg -n '\blog\.(Print|Fatal|Panic)|\bfmt\.Print' core --glob '*.go' --glob '!**/export_test.go' || true)
+done < <(rg -n '\blog\.(Print|Fatal|Panic)|\bfmt\.Print' core --glob '*.go' || true)
 
 if ((${#violations[@]} > 0)); then
   echo "stdlib log/fmt.Print in core/ (use core/applog):" >&2

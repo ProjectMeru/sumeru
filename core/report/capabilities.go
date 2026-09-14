@@ -18,7 +18,7 @@ func CapabilitiesFromView(v *parser.View) Capabilities {
 	if v.ReportDownload != "" {
 		mergeCaps(&caps, v.ReportDownload, "", v.ReportPDFSizes, v.ReportBulkModes)
 	}
-	if parser.IsTruthyAttr(v.BulkUpload) {
+	if v.BulkUploadEnabled() {
 		caps.BulkUpload = true
 	}
 	if v.Header != nil {
@@ -44,8 +44,14 @@ func mergeCaps(caps *Capabilities, download, upload, pdfSizes, modes string) {
 			caps.DownloadFormats = appendUnique(caps.DownloadFormats, f)
 		}
 	}
-	if strings.EqualFold(strings.TrimSpace(upload), "bulk") || parser.IsTruthyAttr(upload) {
+	switch strings.ToLower(strings.TrimSpace(upload)) {
+	case "bulk":
 		caps.BulkUpload = true
+	case "":
+	default:
+		if b, err := parser.ParseXMLBoolAttr("upload", upload); err == nil && b {
+			caps.BulkUpload = true
+		}
 	}
 	if pdfSizes != "" {
 		caps.PDFSizes = splitCSVList(pdfSizes)

@@ -27,7 +27,7 @@ func CheckFieldWriteAccess(ctx context.Context, uid int, model string, values ma
 func fieldAccessDenied(ctx context.Context, uid int, model, op string) (map[string]bool, error) {
 	out := map[string]bool{}
 	if _, ok := Registry["sys.field.access"]; !ok || DB == nil {
-		return applyGroupsFieldDenial(ctx, uid, model, op, out)
+		return applyGroupsFieldDenial(ctx, uid, model, out)
 	}
 	col, err := QuotedPermColumnForOp(op)
 	if err != nil {
@@ -78,14 +78,14 @@ func fieldAccessDenied(ctx context.Context, uid int, model, op string) (map[stri
 			out[field] = true
 		}
 	}
-	out, err = applyGroupsFieldDenial(ctx, uid, model, op, out)
+	out, err = applyGroupsFieldDenial(ctx, uid, model, out)
 	if err != nil {
 		return out, err
 	}
 	return out, rows.Err()
 }
 
-func applyGroupsFieldDenial(ctx context.Context, uid int, model, op string, out map[string]bool) (map[string]bool, error) {
+func applyGroupsFieldDenial(ctx context.Context, uid int, model string, out map[string]bool) (map[string]bool, error) {
 	inst, ok := Registry[model]
 	if !ok || inst == nil {
 		return out, nil

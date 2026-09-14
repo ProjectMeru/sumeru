@@ -195,11 +195,6 @@ func appsBrowseQuery(browse appsBrowseState) string {
 	return query.Encode()
 }
 
-// appsDetailURL builds links for module detail, edit, and cancel views.
-func appsDetailURL(browse appsBrowseState, editing bool) string {
-	return appsDetailPageURL(browse, editing)
-}
-
 func buildAppsNavVM(browse appsBrowseState) appsNavVM {
 	withFilter := func(filter string) string {
 		linkBrowse := browse

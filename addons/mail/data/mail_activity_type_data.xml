@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <sumeru>
-    <data noupdate="1">
+    <data noupdate="true">
         <record id="mail_activity_data_email" model="mail.activity.type">
             <field name="name">Email</field>
             <field name="summary">Email</field>

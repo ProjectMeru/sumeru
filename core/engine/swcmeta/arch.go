@@ -347,9 +347,9 @@ func serializeButtons(buttons []parser.Button) []ArchButton {
 			Class:  strings.TrimSpace(b.Class),
 			Confirm: strings.TrimSpace(b.Confirm),
 		}
-		if lit, truthy, expr := parser.AttrLiteralOrExpr(b.Invisible); lit {
+		if lit, truthy, expr, err := parser.ParseModifierAttr("invisible", b.Invisible); err == nil && lit {
 			ab.Invisible = truthy
-		} else {
+		} else if err == nil {
 			ab.InvisibleExpr = expr
 		}
 		out = append(out, ab)
@@ -372,19 +372,19 @@ func serializeFields(ctx context.Context, fields []parser.Field) []ArchField {
 			PivotType:   strings.TrimSpace(f.PivotType),
 			Options:     parseFieldOptions(f.Options),
 		}
-		if lit, truthy, expr := parser.AttrLiteralOrExpr(f.Readonly); lit {
+		if lit, truthy, expr, err := parser.ParseModifierAttr("readonly", f.Readonly); err == nil && lit {
 			af.Readonly = truthy
-		} else {
+		} else if err == nil {
 			af.ReadonlyExpr = expr
 		}
-		if lit, truthy, expr := parser.AttrLiteralOrExpr(f.Required); lit {
+		if lit, truthy, expr, err := parser.ParseModifierAttr("required", f.Required); err == nil && lit {
 			af.Required = truthy
-		} else {
+		} else if err == nil {
 			af.RequiredExpr = expr
 		}
-		if lit, truthy, expr := parser.AttrLiteralOrExpr(f.Invisible); lit {
+		if lit, truthy, expr, err := parser.ParseModifierAttr("invisible", f.Invisible); err == nil && lit {
 			af.Invisible = truthy
-		} else {
+		} else if err == nil {
 			af.InvisibleExpr = expr
 		}
 		sub := f.List

@@ -1,31 +1,48 @@
 package parser
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
-// IsTruthyAttr reports whether an XML attribute is a recognized true value.
-func IsTruthyAttr(raw string) bool {
-	s := strings.ToLower(strings.TrimSpace(raw))
-	return s == "1" || s == "true" || s == "yes" || s == "on"
+// ParseXMLBoolAttr parses a boolean XML attribute (empty → false; only true/false allowed).
+func ParseXMLBoolAttr(name, raw string) (bool, error) {
+	v := strings.TrimSpace(raw)
+	if v == "" {
+		return false, nil
+	}
+	if strings.EqualFold(v, "true") {
+		return true, nil
+	}
+	if strings.EqualFold(v, "false") {
+		return false, nil
+	}
+	return false, fmt.Errorf("invalid %s=%q (only \"true\" or \"false\" allowed)", name, v)
 }
 
-// IsFalsyAttr reports whether an XML attribute is a recognized false value.
-func IsFalsyAttr(raw string) bool {
-	s := strings.ToLower(strings.TrimSpace(raw))
-	return s == "0" || s == "false" || s == "no" || s == "off"
+func isLegacyBoolAlias(s string) bool {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "0", "1", "yes", "no", "on", "off":
+		return true
+	default:
+		return false
+	}
 }
 
-// AttrLiteralOrExpr splits a modifier attribute into a boolean literal or an expression.
-// Empty and recognized true/false values are literals; anything else is an expression.
-func AttrLiteralOrExpr(raw string) (literal bool, truthy bool, expr string) {
+// ParseModifierAttr splits invisible/readonly/required into a literal or expression.
+func ParseModifierAttr(name, raw string) (literal bool, truthy bool, expr string, err error) {
 	s := strings.TrimSpace(raw)
 	if s == "" {
-		return true, false, ""
+		return true, false, "", nil
 	}
-	if IsTruthyAttr(s) {
-		return true, true, ""
+	if strings.EqualFold(s, "true") {
+		return true, true, "", nil
 	}
-	if IsFalsyAttr(s) {
-		return true, false, ""
+	if strings.EqualFold(s, "false") {
+		return true, false, "", nil
 	}
-	return false, false, s
+	if isLegacyBoolAlias(s) {
+		return false, false, "", fmt.Errorf("invalid %s=%q (only \"true\" or \"false\" allowed)", name, s)
+	}
+	return false, false, s, nil
 }

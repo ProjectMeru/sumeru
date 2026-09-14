@@ -85,8 +85,6 @@ func RenderSWCWorkspace(ctx context.Context, in SWCPageInput) string {
 		FormEdit:   recData.FormEditing,
 		ListSearch: recData.ListSearchQuery,
 	}
-	EnrichShellPageData(ctx, &pageData)
-	pageData.SWCBootstrapJSON = BuildSWCBootstrapJSON(ctx, pageData, ws)
 	if !SidebarHasMenus(sidebarMenus) {
 		pageData.SuppressSidebar = true
 	}
@@ -95,7 +93,7 @@ func RenderSWCWorkspace(ctx context.Context, in SWCPageInput) string {
 		fmt.Sprintf("Rendering SWC workspace for model %s", view.Model),
 		map[string]interface{}{"active_menu": activeMenuID, "view_type": selectedMode})
 
-	out, err := RenderPage(ctx, templatesDir, pageData)
+	out, err := RenderPage(ctx, templatesDir, pageData, ws)
 	if err != nil {
 		applog.WarnMsg(ctx, "render", "swc", "Error rendering SWC page", err,
 			map[string]interface{}{"model": view.Model})

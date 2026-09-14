@@ -18,6 +18,10 @@ import (
 
 var menuIconKey = regexp.MustCompile(`^[a-z0-9-]+$`)
 
+func shellMenuAllowed(ctx context.Context, uid int, mi parser.MenuItem) bool {
+	return orm.UserMayAccessMenu(ctx, uid, mi.AccessGroups)
+}
+
 func sanitizeMenuIcon(s string) string {
 	s = strings.TrimSpace(s)
 	if menuIconKey.MatchString(s) {
@@ -28,7 +32,7 @@ func sanitizeMenuIcon(s string) string {
 
 func LoadShellMenus(ctx context.Context, activeMenuID string) (topMenus []parser.MenuItem, sidebarMenus []SidebarMenu, activeModuleID, shellModuleTitle string) {
 	shellModuleTitle = AppDisplayName
-	allMenus, _ := fetchShellMenus(ctx)
+	allMenus := fetchShellMenus(ctx)
 	if len(allMenus) == 0 {
 		return nil, nil, "", AppDisplayName
 	}
@@ -39,9 +43,7 @@ func LoadShellMenus(ctx context.Context, activeMenuID string) (topMenus []parser
 	}
 
 	uid := orm.UIDFromContext(ctx)
-	menuAllowed := func(mi parser.MenuItem) bool {
-		return orm.UserMayAccessMenu(ctx, uid, mi.AccessGroups)
-	}
+	menuAllowed := func(mi parser.MenuItem) bool { return shellMenuAllowed(ctx, uid, mi) }
 
 	topMenus = buildTopBarMenus(allMenus, appMods, menuAllowed)
 	activeModuleID = resolveActiveModuleID(allMenus, activeMenuID)
@@ -50,7 +52,7 @@ func LoadShellMenus(ctx context.Context, activeMenuID string) (topMenus []parser
 	return topMenus, sidebarMenus, activeModuleID, shellModuleTitle
 }
 
-func fetchShellMenus(ctx context.Context) ([]parser.MenuItem, string) {
+func fetchShellMenus(ctx context.Context) []parser.MenuItem {
 	modTbl := orm.MustQuotedTableName("sys.module")
 	menuTbl := orm.MustQuotedTableName("sys.menu")
 	query := fmt.Sprintf(
@@ -69,7 +71,7 @@ func fetchShellMenus(ctx context.Context) ([]parser.MenuItem, string) {
 	rows, err := orm.DB.QueryContext(ctx, query)
 	if err != nil {
 		applog.WarnMsg(ctx, "render", "menus", "Error fetching menus", err, nil)
-		return nil, "en_US"
+		return nil
 	}
 	defer rows.Close()
 
@@ -114,7 +116,7 @@ func fetchShellMenus(ctx context.Context) ([]parser.MenuItem, string) {
 	if err := rows.Err(); err != nil {
 		applog.WarnMsg(ctx, "render", "menus", "Menu rows error", err, nil)
 	}
-	return allMenus, lang
+	return allMenus
 }
 
 func buildTopBarMenus(allMenus []parser.MenuItem, appMods map[string]struct{}, menuAllowed func(parser.MenuItem) bool) []parser.MenuItem {
@@ -334,10 +336,8 @@ func BuildAppLauncherJSON(ctx context.Context) template.JS {
 	}
 
 	uid := orm.UIDFromContext(ctx)
-	allMenus, _ := fetchShellMenus(ctx)
-	menuAllowed := func(mi parser.MenuItem) bool {
-		return orm.UserMayAccessMenu(ctx, uid, mi.AccessGroups)
-	}
+	allMenus := fetchShellMenus(ctx)
+	menuAllowed := func(mi parser.MenuItem) bool { return shellMenuAllowed(ctx, uid, mi) }
 	for _, m := range allMenus {
 		if !menuAllowed(m) {
 			continue

@@ -42,5 +42,5 @@ func ValidatePasswordPolicy(plain string) error {
 
 // BackgroundBypass returns a background context with security bypass for config reads.
 func BackgroundBypass() context.Context {
-	return ContextWithBypass(context.Background(), true)
+	return context.WithValue(context.Background(), bypassKey, true)
 }

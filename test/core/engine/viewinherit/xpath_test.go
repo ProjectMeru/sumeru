@@ -53,12 +53,12 @@ func TestApplyInheritArchButtonAndAttributes(t *testing.T) {
 	if !strings.Contains(out, `string="Mark Lost"`) {
 		t.Fatalf("button attr: %s", out)
 	}
-	frag2 := `<xpath expr="//field[@name='phone']" position="attributes"><attribute name="invisible">1</attribute></xpath>`
+	frag2 := `<xpath expr="//field[@name='phone']" position="attributes"><attribute name="invisible">true</attribute></xpath>`
 	out2, err := viewinherit.ApplyInheritArch(out, frag2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out2, `invisible="1"`) {
+	if !strings.Contains(out2, `invisible="true"`) {
 		t.Fatalf("field attr: %s", out2)
 	}
 }
@@ -89,12 +89,12 @@ func TestApplyInheritArchNestedGroupInside(t *testing.T) {
 
 func TestApplyInheritArchSingleQuotedAttr(t *testing.T) {
 	parent := `<view type="form"><field name='phone' string="Phone"/></view>`
-	frag := `<xpath expr="//field[@name='phone']" position="attributes"><attribute name="invisible">1</attribute></xpath>`
+	frag := `<xpath expr="//field[@name='phone']" position="attributes"><attribute name="invisible">true</attribute></xpath>`
 	out, err := viewinherit.ApplyInheritArch(parent, frag)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out, `invisible="1"`) {
+	if !strings.Contains(out, `invisible="true"`) {
 		t.Fatalf("field attr: %s", out)
 	}
 }

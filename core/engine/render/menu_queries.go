@@ -10,37 +10,47 @@ import (
 	"sumeru/core/orm"
 )
 
-// RootMenuIDForModule returns the root sys.menu id for an installed module (parent_id IS NULL).
-func RootMenuIDForModule(ctx context.Context, moduleName string) int {
-	if orm.DB == nil || strings.TrimSpace(moduleName) == "" {
-		return 0
+func queryModuleRootMenuRow(ctx context.Context, moduleName string) (id int, webIcon string, ok bool) {
+	if orm.DB == nil {
+		return 0, "", false
+	}
+	moduleName = strings.TrimSpace(moduleName)
+	if moduleName == "" {
+		return 0, "", false
 	}
 	table := orm.MustQuotedTableName("sys.menu")
-	query := `SELECT id FROM ` + table + ` WHERE module = $1 AND parent_id IS NULL ORDER BY sequence ASC, id ASC LIMIT 1`
-	var id int
-	if err := orm.DB.QueryRowContext(ctx, query, strings.TrimSpace(moduleName)).Scan(&id); err != nil {
+	query := `SELECT id, COALESCE(NULLIF(TRIM(web_icon), ''), '') FROM ` + table +
+		` WHERE module = $1 AND parent_id IS NULL ORDER BY sequence ASC, id ASC LIMIT 1`
+	var rawIcon string
+	if err := orm.DB.QueryRowContext(ctx, query, moduleName).Scan(&id, &rawIcon); err != nil {
+		return 0, "", false
+	}
+	icon := strings.TrimSpace(rawIcon)
+	if menuIconKey.MatchString(icon) {
+		webIcon = icon
+	}
+	return id, webIcon, true
+}
+
+func RootMenuIDForModule(ctx context.Context, moduleName string) int {
+	id, _, ok := queryModuleRootMenuRow(ctx, moduleName)
+	if !ok {
 		return 0
 	}
 	return id
 }
 
-// RootMenuWebIconForModule returns the sanitized web_icon sprite key on a module root menu.
 func RootMenuWebIconForModule(ctx context.Context, moduleName string) string {
-	if orm.DB == nil || strings.TrimSpace(moduleName) == "" {
+	_, webIcon, ok := queryModuleRootMenuRow(ctx, moduleName)
+	if !ok {
 		return ""
 	}
-	table := orm.MustQuotedTableName("sys.menu")
-	query := `SELECT COALESCE(NULLIF(TRIM(web_icon), ''), '') FROM ` + table +
-		` WHERE module = $1 AND parent_id IS NULL ORDER BY sequence ASC, id ASC LIMIT 1`
-	var icon string
-	if err := orm.DB.QueryRowContext(ctx, query, strings.TrimSpace(moduleName)).Scan(&icon); err != nil {
-		return ""
-	}
-	icon = strings.TrimSpace(icon)
-	if menuIconKey.MatchString(icon) {
-		return icon
-	}
-	return ""
+	return webIcon
+}
+
+func ModuleRootMenu(ctx context.Context, moduleName string) (menuID int, webIcon string) {
+	menuID, webIcon, _ = queryModuleRootMenuRow(ctx, moduleName)
+	return menuID, webIcon
 }
 
 // ModuleIconServePath returns the on-disk path for a module icon, or empty when unavailable.

@@ -62,34 +62,34 @@ func lookupFalsyField(modelName, fieldName string) (FieldDefinition, falsyKind, 
 	return FieldDefinition{}, falsyNone, false
 }
 
-func buildFalsyDomainClause(modelName, fieldName, op string, value interface{}) (clause string, args []interface{}, handled bool, err error) {
+func buildFalsyDomainClause(modelName, fieldName, op string, value interface{}) (clause string, handled bool, err error) {
 	b, ok := value.(bool)
 	if !ok {
-		return "", nil, false, nil
+		return "", false, nil
 	}
 	wantSet, ok := falsyWantSet(op, b)
 	if !ok {
-		return "", nil, false, nil
+		return "", false, nil
 	}
 	fieldDef, kind, ok := lookupFalsyField(modelName, fieldName)
 	if !ok {
-		return "", nil, false, nil
+		return "", false, nil
 	}
 	switch kind {
 	case falsyNull, falsyEmpty, falsyNullOrZero:
 		col, err := QuotedColumnForModel(modelName, fieldName)
 		if err != nil {
-			return "", nil, false, err
+			return "", false, err
 		}
-		return falsyColumnClause(col, kind, wantSet), nil, true, nil
+		return falsyColumnClause(col, kind, wantSet), true, nil
 	case falsyRelOne2Many:
 		clause, err := falsyOne2ManyClause(modelName, fieldDef, wantSet)
-		return clause, nil, true, err
+		return clause, true, err
 	case falsyRelMany2Many:
 		clause, err := falsyMany2ManyClause(modelName, fieldDef, wantSet)
-		return clause, nil, true, err
+		return clause, true, err
 	default:
-		return "", nil, false, nil
+		return "", false, nil
 	}
 }
 
