@@ -22,6 +22,7 @@ var recordSyncSpecs = map[string]recordSyncSpec{
 	"core.user":            {conflictKey: "login"},
 	"core.country":         {conflictKey: "code"},
 	"core.lang":            {conflictKey: "code"},
+	"sys.sequence":         {conflictKey: "code"},
 	"account.account":      {conflictKey: "code"},
 	"core.country.state":   {naturalKeys: naturalKeyNameCountry},
 	"core.city":            {naturalKeys: naturalKeyNameCountryState},

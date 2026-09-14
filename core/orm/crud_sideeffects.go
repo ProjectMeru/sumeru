@@ -52,6 +52,24 @@ func publishRecordEvents(ctx context.Context, eventName string, uid int, modelNa
 	}
 }
 
+// publishDeleteEvents publishes record.deleted events carrying the row's
+// pre-delete data, so subscribers can react to the removed record (e.g.
+// sale_stock resetting a sale order when its delivery is deleted).
+func publishDeleteEvents(ctx context.Context, uid int, modelName string, rows []sideEffectRow) {
+	if !shouldEmitSideEffects(ctx, modelName) {
+		return
+	}
+	for _, row := range rows {
+		if errs := event.Publish(ctx, event.Event{
+			Name:    EventRecordDeleted,
+			Actor:   uid,
+			Payload: map[string]interface{}{"model": modelName, "id": int(row.ResID), "before": row.Before},
+		}); len(errs) > 0 {
+			logSideEffectWarn(ctx, "publish", modelName, fmt.Errorf("%v", errs), "resource_id", row.ResID)
+		}
+	}
+}
+
 func logSideEffectWarn(ctx context.Context, operation, modelName string, err error, extra ...interface{}) {
 	ctxMap := map[string]interface{}{"resource": modelName}
 	for i := 0; i+1 < len(extra); i += 2 {

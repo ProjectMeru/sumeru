@@ -2,6 +2,8 @@ package swcmeta
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -41,7 +43,7 @@ func SerializeViewForUser(ctx context.Context, view *parser.View) ViewArch {
 	if view.Sheet != nil {
 		arch.Sheet = serializeSheet(ctx, model, view.Sheet)
 	}
-	arch.FormMeta = formMetaForModel(model)
+	arch.FormMeta = formMetaForModel(model, view)
 	if view.Chatter != nil {
 		arch.HasChatter = true
 	}
@@ -104,12 +106,21 @@ func serializeSearch(view *parser.View) *SearchMeta {
 	return BuildSearchMeta(context.Background(), strings.TrimSpace(view.Model), view)
 }
 
-func formMetaForModel(model string) *FormMeta {
+func formMetaForModel(model string, view *parser.View) *FormMeta {
+	meta := &FormMeta{}
+	if view != nil {
+		if lit, truthy, expr := parser.AttrLiteralOrExpr(view.EditInvisible); lit {
+			if truthy {
+				meta.EditInvisibleExpr = "true"
+			}
+		} else {
+			meta.EditInvisibleExpr = expr
+		}
+	}
 	inst, ok := orm.Registry[model]
 	if !ok {
-		return &FormMeta{}
+		return meta
 	}
-	meta := &FormMeta{}
 	for _, f := range inst.Fields() {
 		if f.Name == "image" {
 			meta.HasImageField = true
@@ -341,10 +352,10 @@ func serializeButtons(buttons []parser.Button) []ArchButton {
 	out := make([]ArchButton, 0, len(buttons))
 	for _, b := range buttons {
 		ab := ArchButton{
-			Name:   strings.TrimSpace(b.Name),
-			String: strings.TrimSpace(b.String),
-			Type:   strings.TrimSpace(b.Type),
-			Class:  strings.TrimSpace(b.Class),
+			Name:    strings.TrimSpace(b.Name),
+			String:  strings.TrimSpace(b.String),
+			Type:    strings.TrimSpace(b.Type),
+			Class:   strings.TrimSpace(b.Class),
 			Confirm: strings.TrimSpace(b.Confirm),
 		}
 		if lit, truthy, expr := parser.AttrLiteralOrExpr(b.Invisible); lit {
@@ -409,19 +420,42 @@ func serializeFieldList(ctx context.Context, list *parser.FieldList) *ArchListSu
 	}
 }
 
+// parseFieldOptions parses a field's options attribute into string pairs.
+// Accepts JSON objects ({"k": "v"}) and Python-dict style ({'k': 'v', ...}),
+// stripping braces and quotes so {'clickable': '0'} yields clickable → "0".
 func parseFieldOptions(raw string) map[string]string {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
 		return nil
 	}
 	out := map[string]string{}
-	for _, part := range strings.Split(raw, ",") {
+	if strings.HasPrefix(raw, "{") && strings.HasSuffix(raw, "}") {
+		var m map[string]interface{}
+		if err := json.Unmarshal([]byte(raw), &m); err == nil {
+			for k, v := range m {
+				if k = strings.TrimSpace(k); k != "" {
+					out[k] = strings.Trim(strings.TrimSpace(fmt.Sprint(v)), "'\"")
+				}
+			}
+			if len(out) > 0 {
+				return out
+			}
+		}
+	}
+	body := strings.TrimSpace(raw)
+	body = strings.TrimPrefix(body, "{")
+	body = strings.TrimSuffix(body, "}")
+	for _, part := range strings.Split(body, ",") {
 		part = strings.TrimSpace(part)
 		if part == "" {
 			continue
 		}
 		if kv := strings.SplitN(part, ":", 2); len(kv) == 2 {
-			out[strings.TrimSpace(kv[0])] = strings.TrimSpace(kv[1])
+			k := strings.Trim(strings.TrimSpace(kv[0]), "'\"")
+			v := strings.Trim(strings.TrimSpace(kv[1]), "'\"")
+			if k != "" {
+				out[k] = v
+			}
 		}
 	}
 	if len(out) == 0 {

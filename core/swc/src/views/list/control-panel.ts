@@ -1,6 +1,7 @@
 import { html, type TemplateResult } from "../../template/html.js";
 import type { SwcArchField, SwcSearchFilter, SwcWorkspacePayload } from "../../types/workspace.js";
 import { checkboxCheckedFromEvent } from "../../widgets/field-events.js";
+import { isNumericFieldType } from "../../widgets/field-shell.js";
 
 export interface ControlPanelState {
   search: string;
@@ -111,7 +112,8 @@ export function renderSortHeader(
   const desc = currentSort === `-${name}`;
   const marker = active ? (desc ? " ↓" : " ↑") : "";
   return html`<th
-    class=${active ? "sum-list-th sum-list-th--sort" : "sum-list-th"}
+    class=${(active ? "sum-list-th sum-list-th--sort" : "sum-list-th") +
+    (isNumericFieldType(field.type) ? " sum-list-numeric" : "")}
     @click=${() => onSort(name)}
   >
     ${field.string ?? field.name}${marker}

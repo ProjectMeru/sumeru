@@ -8,6 +8,12 @@ export interface SwcBootstrapUser {
   initials: string;
 }
 
+export interface SwcNumberFormat {
+  decimalPoint: string;
+  thousandsSep: string;
+  grouping: string;
+}
+
 export interface SwcBootstrapCompany {
   id: number;
   name: string;
@@ -43,6 +49,7 @@ export interface SwcBootstrap {
   rpcUrl: string;
   swcApiBase: string;
   user: SwcBootstrapUser;
+  numberFormat: SwcNumberFormat;
   company: SwcBootstrapCompany;
   companies: SwcBootstrapCompany[];
   activeCompanyId: number;

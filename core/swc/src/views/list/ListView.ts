@@ -1,6 +1,7 @@
 import { html } from "../../template/html.js";
 import type { SwcArchButton, SwcWorkspacePayload } from "../../types/workspace.js";
 import { headerButton } from "../shared/view-toolbar.js";
+import { isNumericFieldType } from "../../widgets/field-shell.js";
 import { SwcError } from "../../runtime/error.js";
 import {
   parseFilterCSV,
@@ -206,7 +207,10 @@ export class ListView extends CollectionView {
       ${renderRowCheckbox(id, this.panelState.selectedIds.has(id), (rid, checked) =>
         this.toggleRow(rid, checked),
       )}
-      ${cols.map((c) => html`<td class="sum-list-td">${formatFieldValue(row, c)}</td>`)}
+      ${cols.map(
+        (c) =>
+          html`<td class="sum-list-td${isNumericFieldType(c.type) ? " sum-list-numeric" : ""}">${formatFieldValue(row, c)}</td>`,
+      )}
     </tr>`;
   }
 

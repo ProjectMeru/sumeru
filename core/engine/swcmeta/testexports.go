@@ -19,7 +19,7 @@ func SerializeDivForTest(ctx context.Context, model string, d parser.Div) ArchDi
 	return serializeDiv(ctx, model, d)
 }
 
-func FormMetaForModelForTest(model string) *FormMeta { return formMetaForModel(model) }
+func FormMetaForModelForTest(model string) *FormMeta { return formMetaForModel(model, nil) }
 
 func SerializeFieldsForTest(ctx context.Context, fields []parser.Field) []ArchField {
 	return serializeFields(ctx, fields)

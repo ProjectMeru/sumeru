@@ -76,10 +76,15 @@ export class StatusbarField extends SwcComponent<FieldWidgetProps> {
     const { field, record, readonly } = this.props;
     const current = this.currentId();
     const clickable = isClickable(field) && !isFieldReadonly(field, record, readonly);
+    // options="{'display': 'current'}" renders only the active stage instead of the full tracker.
+    const currentOnly = (field.options?.display ?? "") === "current";
+    const isActive = (stage: StageRow): boolean =>
+      stage.id === current || String(stage.id) === String(current);
+    const stages = currentOnly ? this.stages.filter(isActive) : this.stages;
 
     return html`<div class="sum-statusbar-stages" role="group" aria-label=${field.string ?? field.name}>
-      ${this.stages.map((stage) => {
-        const active = stage.id === current || String(stage.id) === String(current);
+      ${stages.map((stage) => {
+        const active = isActive(stage);
         const colorClass =
           active && stage.color != null && stage.color >= 0 && stage.color <= 11
             ? ` sum-statusbar-stage--color-${stage.color}`

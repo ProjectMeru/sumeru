@@ -18,7 +18,10 @@ type View struct {
 	// ListOpenAttr is the raw <list open="..."/> or <view type="list" open="..."/> attribute (false/0/off disables row→form).
 	ListOpenAttr string `xml:"open,attr"`
 	// ListNoRowOpen is derived from ListOpenAttr by the arch parser for type list.
-	ListNoRowOpen bool     `xml:"-"`
+	ListNoRowOpen bool `xml:"-"`
+	// EditInvisible is a form-level expression that hides Edit/Duplicate/Delete
+	// buttons when it evaluates true (e.g. edit_invisible="state === 'sale'").
+	EditInvisible string   `xml:"edit_invisible,attr"`
 	Header        *Header  `xml:"header"`
 	Sheet         *Sheet   `xml:"sheet"`
 	Footer        *Footer  `xml:"footer"`

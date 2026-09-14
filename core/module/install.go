@@ -147,7 +147,19 @@ func loadModuleXMLData(ctx context.Context, moduleName string, mode moduleReload
 		}
 	}
 	ctx = ContextWithSyncMode(ctx, mode)
-	return recordSyncToDBResult(ctx, moduleName, addon.SyncToDB(ctx))
+	if err := recordSyncToDBResult(ctx, moduleName, addon.SyncToDB(ctx)); err != nil {
+		return err
+	}
+	// Updating the kernel module (base) wipes its seeded security-group XML ids
+	// (base.group_user / base.group_system are created by bootstrap Go code, not
+	// by base's XML data). Re-seed them so downstream module updates can resolve
+	// ref('base.group_user') / ref('base.group_system').
+	if moduleName == KernelModule {
+		if err := orm.EnsureDefaultGroupsAndImplied(); err != nil {
+			return fmt.Errorf("re-seed kernel groups after %q data load: %w", moduleName, err)
+		}
+	}
+	return nil
 }
 
 func finalizeModuleReload(ctx context.Context, moduleName string, mode moduleReloadMode) error {

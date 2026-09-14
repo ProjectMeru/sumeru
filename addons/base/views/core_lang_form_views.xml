@@ -8,6 +8,9 @@
                     <field name="name" string="Name"/>
                     <field name="iso_code" string="ISO Code"/>
                     <field name="active" string="Active"/>
+                    <field name="decimal_point" string="Decimal Separator"/>
+                    <field name="thousands_sep" string="Thousands Separator"/>
+                    <field name="grouping" string="Grouping"/>
                 </group>
             </sheet>
         </view>

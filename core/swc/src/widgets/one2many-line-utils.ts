@@ -1,5 +1,8 @@
 import type { SwcArchField } from "../types/workspace.js";
 import { booleanFromUnknown } from "./field-value.js";
+import { formatNumericValue } from "../i18n/number.js";
+
+export { formatNumericValue } from "../i18n/number.js";
 
 export function inverseFieldName(parentModel: string): string {
   const part = parentModel.split(".").pop() ?? "parent";
@@ -27,15 +30,6 @@ export function isNumericType(col: SwcArchField): boolean {
     col.type === "float64" ||
     col.type === "numeric"
   );
-}
-
-/** Formats a number with thousand separators (e.g. 12000 → "12,000"). */
-export function formatNumericValue(raw: unknown): string {
-  const num = Number(raw);
-  if (!Number.isFinite(num)) return raw == null ? "" : String(raw);
-  const [intPart, decPart] = String(num).split(".");
-  const withSep = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  return decPart !== undefined ? `${withSep}.${decPart}` : withSep;
 }
 
 export function displayCellValue(col: SwcArchField, line: Record<string, unknown>): string {

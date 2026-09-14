@@ -34,6 +34,10 @@ export function fieldAutocomplete(field: SwcArchField): string {
   return "off";
 }
 
+export function isNumericFieldType(type: string | undefined): boolean {
+  return type === "integer" || type === "float" || type === "float64" || type === "numeric";
+}
+
 function isFullWidthField(field: SwcArchField): boolean {
   if (field.type === "text" || field.widget === "text") return true;
   if (field.type === "one2many" || field.widget === "one2many") return true;
@@ -104,16 +108,17 @@ export function fieldReadonlyInput(
   inputType = "text",
 ): TemplateResult {
   const placeholder = fieldPlaceholder(field);
+  const numericCls = isNumericFieldType(field.type) ? " sum-field-input--numeric" : "";
   return html`<input
     type=${inputType}
     id=${fieldInputId(field)}
-    class="sum-field-input"
+    class="sum-field-input sum-field-input--readonly${numericCls}"
     name=${field.name}
     value=${val}
     placeholder=${placeholder}
-    autocomplete=${fieldAutocomplete(field)}
     readonly
     tabindex="-1"
+    autocomplete=${fieldAutocomplete(field)}
   />`;
 }
 

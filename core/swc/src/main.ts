@@ -30,6 +30,7 @@ import { IframeView } from "./views/iframe/IframeView.js";
 import { loadTranslations } from "./i18n/translate.js";
 import { mountDebugPanel } from "./devtools/debug.js";
 import { initDevtoolsBridge } from "./devtools/bridge.js";
+import { configureNumberFormat } from "./i18n/number.js";
 
 const VIEW_CONSTRUCTORS = {
   list: ListView,
@@ -83,6 +84,7 @@ function bootstrap(): void {
   }
 
   const env = buildEnv(boot);
+  configureNumberFormat(boot.numberFormat);
   env.services.action.setEnv(env);
   loadTranslations(boot.translations);
   initDevtoolsBridge();
