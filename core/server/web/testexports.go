@@ -71,13 +71,13 @@ const (
 
 // Numeric and URL constants for external tests.
 var (
-	TestWorkspaceStylesheetURL   = workspaceStylesheetURL
-	TestPagesStylesheetURL       = pagesStylesheetURL
-	TestSettingsHubStylesheetURL = settingsHubStylesheetURL
+	TestWorkspaceStylesheetURL         = workspaceStylesheetURL
+	TestPagesStylesheetURL             = pagesStylesheetURL
+	TestSettingsHubStylesheetURL       = settingsHubStylesheetURL
 	TestMaxRPCBodyBytes          int64 = maxRPCBodyBytes
-	TestMaxChatterBodyRunes      = maxChatterBodyRunes
-	TestSetupRateLimitWindow     = setupRateLimitWindow
-	TestSetupRateLimitMax        = setupRateLimitMax
+	TestMaxChatterBodyRunes            = maxChatterBodyRunes
+	TestSetupRateLimitWindow           = setupRateLimitWindow
+	TestSetupRateLimitMax              = setupRateLimitMax
 )
 
 func HTTPStatusFromWorkspaceError(err error) int { return httpStatusFromWorkspaceError(err) }
@@ -288,7 +288,9 @@ func ParseCompanySwitchForm(r *http.Request) companySwitchForm { return parseCom
 func LoginURLWithReturn(_ string) string { return loginRoute }
 
 // SetLoginNextCookieForTest sets the pre-login return-path cookie for tests.
-func SetLoginNextCookieForTest(w http.ResponseWriter, returnTo string) { setLoginNextCookie(w, returnTo) }
+func SetLoginNextCookieForTest(w http.ResponseWriter, returnTo string) {
+	setLoginNextCookie(w, returnTo)
+}
 
 // RedirectToLoginForTest mirrors requireLogin redirect without session check.
 func RedirectToLoginForTest(w http.ResponseWriter, r *http.Request, returnTo string) {
@@ -362,7 +364,7 @@ func AppsLinkFromBrowse(browse AppsBrowseState) string {
 }
 
 func AppsDetailURL(browse AppsBrowseState, editing bool) string {
-	return appsDetailURL(browse, editing)
+	return appsDetailPageURL(browse, editing)
 }
 
 func FindAppsModule(modules []AppsModule, moduleName string) (AppsModule, bool) {
@@ -526,7 +528,9 @@ const (
 
 func HomeRouteWithMenuForTest(menuID string) string { return homeRouteWithMenu(menuID) }
 
-func PrependViewModeForTest(mode string, modes []string) []string { return prependViewMode(mode, modes) }
+func PrependViewModeForTest(mode string, modes []string) []string {
+	return prependViewMode(mode, modes)
+}
 
 func IsNumericRecordIDForTest(recordID string) bool { return isNumericRecordID(recordID) }
 

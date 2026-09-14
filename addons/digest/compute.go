@@ -8,7 +8,7 @@ import (
 )
 
 // ComputeKPI evaluates a digest KPI compute_code and returns a numeric value.
-// ponytail: stub registry only; add handlers as modules register KPIs.
+// sumeru: stub — extensible KPI registry; add cases as modules register KPIs.
 func ComputeKPI(ctx context.Context, code string) (float64, error) {
 	switch code {
 	case "crm.lead_count":
