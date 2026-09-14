@@ -33,7 +33,7 @@ test: swc-test test-go
 # Static analysis
 # =============================================================================
 
-standards: check-sql check-logs
+standards: check-sql check-logs check-test-layout
 	@bash scripts/check_security_bypass.sh
 
 check-sql:
@@ -41,6 +41,9 @@ check-sql:
 
 check-logs:
 	@bash scripts/check_no_stdlog.sh
+
+check-test-layout:
+	@bash scripts/check_test_layout.sh
 
 audit-test:
 	go test ./test/core/security/... $(GO_TEST_FLAGS)

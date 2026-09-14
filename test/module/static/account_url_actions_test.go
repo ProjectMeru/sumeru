@@ -24,7 +24,9 @@ func TestAccountReportActionsAreURLActions(t *testing.T) {
 	if err := xml.Unmarshal(raw, &vl); err != nil {
 		t.Fatal(err)
 	}
-	vl.MergeViewListData()
+	if err := vl.MergeViewListData(); err != nil {
+		t.Fatal(err)
+	}
 	want := map[string]string{
 		"action_report_profit_loss":      "/account/reports/view?type=profit_loss",
 		"action_report_balance_sheet":    "/account/reports/view?type=balance_sheet",
@@ -70,7 +72,9 @@ func TestAccountBankReconcileIsURLAction(t *testing.T) {
 	if err := xml.Unmarshal(raw, &vl); err != nil {
 		t.Fatal(err)
 	}
-	vl.MergeViewListData()
+	if err := vl.MergeViewListData(); err != nil {
+		t.Fatal(err)
+	}
 	var found bool
 	for _, rec := range vl.Records {
 		if rec.ID != "action_bank_reconcile_workspace" {
