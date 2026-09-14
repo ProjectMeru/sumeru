@@ -32,15 +32,47 @@ func appendAppsTabQuery(q url.Values, layout, msg, module, filter, scope, search
 	}
 }
 
-// AppsViewTabs builds Grid / List links for the Apps dashboard (?layout=) preserving browse params.
-func AppsViewTabs(currentLayout, msg, module, filter, scope, search, category, groupBy string) []ViewSwitchTab {
-	cur := strings.ToLower(strings.TrimSpace(currentLayout))
+func normalizeAppsHubLayout(layout string, collapseNonList bool) string {
+	cur := strings.ToLower(strings.TrimSpace(layout))
 	if cur == "" {
 		cur = "grid"
 	}
 	if cur == "kanban" {
 		cur = "grid"
 	}
+	if collapseNonList && cur != "list" {
+		cur = "grid"
+	}
+	return cur
+}
+
+var appsHubLayoutTabOrder = []struct {
+	layoutKey string
+	label     string
+	mode      string
+}{
+	{"grid", "Grid", "apps_grid"},
+	{"list", "List", "apps_list"},
+}
+
+func buildAppsHubLayoutTabs(basePath string, cur string, fill func(q url.Values, layoutKey string)) []ViewSwitchTab {
+	out := make([]ViewSwitchTab, 0, len(appsHubLayoutTabOrder))
+	for _, o := range appsHubLayoutTabOrder {
+		q := url.Values{}
+		fill(q, o.layoutKey)
+		out = append(out, ViewSwitchTab{
+			Label:  o.label,
+			Href:   basePath + "?" + q.Encode(),
+			Mode:   o.mode,
+			Active: cur == o.layoutKey,
+		})
+	}
+	return out
+}
+
+// AppsViewTabs builds Grid / List links for the Apps dashboard (?layout=) preserving browse params.
+func AppsViewTabs(currentLayout, msg, module, filter, scope, search, category, groupBy string) []ViewSwitchTab {
+	cur := normalizeAppsHubLayout(currentLayout, false)
 	msg = strings.TrimSpace(msg)
 	module = strings.TrimSpace(module)
 	filter = strings.ToLower(strings.TrimSpace(filter))
@@ -55,61 +87,15 @@ func AppsViewTabs(currentLayout, msg, module, filter, scope, search, category, g
 	category = strings.TrimSpace(category)
 	groupBy = strings.TrimSpace(groupBy)
 
-	order := []struct {
-		layoutKey string
-		label     string
-		mode      string
-	}{
-		{"grid", "Grid", "apps_grid"},
-		{"list", "List", "apps_list"},
-	}
-	var out []ViewSwitchTab
-	for _, o := range order {
-		q := url.Values{}
-		appendAppsTabQuery(q, o.layoutKey, msg, module, filter, scope, search, category, groupBy)
-		out = append(out, ViewSwitchTab{
-			Label:  o.label,
-			Href:   "/web/apps?" + q.Encode(),
-			Mode:   o.mode,
-			Active: cur == o.layoutKey,
-		})
-	}
-	return out
+	return buildAppsHubLayoutTabs("/web/apps", cur, func(q url.Values, layoutKey string) {
+		appendAppsTabQuery(q, layoutKey, msg, module, filter, scope, search, category, groupBy)
+	})
 }
 
 // HomeViewTabs builds Grid / List links for the Home dashboard.
 func HomeViewTabs(currentLayout string) []ViewSwitchTab {
-	cur := strings.ToLower(strings.TrimSpace(currentLayout))
-	if cur == "" {
-		cur = "grid"
-	}
-	if cur == "kanban" {
-		cur = "grid"
-	}
-	if cur != "list" {
-		cur = "grid"
-	}
-
-	order := []struct {
-		layoutKey string
-		label     string
-		mode      string
-	}{
-		{"grid", "Grid", "apps_grid"},
-		{"list", "List", "apps_list"},
-	}
-	var out []ViewSwitchTab
-	for _, o := range order {
-		q := url.Values{}
-		if o.layoutKey == "list" || o.layoutKey == "grid" {
-			q.Set("layout", o.layoutKey)
-		}
-		out = append(out, ViewSwitchTab{
-			Label:  o.label,
-			Href:   "/web/home?" + q.Encode(),
-			Mode:   o.mode,
-			Active: cur == o.layoutKey,
-		})
-	}
-	return out
+	cur := normalizeAppsHubLayout(currentLayout, true)
+	return buildAppsHubLayoutTabs("/web/home", cur, func(q url.Values, layoutKey string) {
+		appendAppsTabQuery(q, layoutKey, "", "", "all", "all", "", "", "")
+	})
 }

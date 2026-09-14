@@ -24,14 +24,15 @@ func loadInstalledAppTiles(ctx context.Context, forHome bool) ([]render.AppTile,
 		if !ok || !parsed.Application || parsed.State != "installed" || !parsed.Active {
 			continue
 		}
+		menuID, rootWebIcon := render.ModuleRootMenu(ctx, parsed.Name)
 		openHref := appsRoute
-		if menuID := render.RootMenuIDForModule(ctx, parsed.Name); menuID > 0 {
+		if menuID > 0 {
 			openHref = menuHrefFromMenuID(menuID)
 		}
 		iconURL := render.ModuleIconURL(ctx, parsed.Name)
 		webIcon := ""
 		if !forHome && iconURL == "" {
-			webIcon = render.RootMenuWebIconForModule(ctx, parsed.Name)
+			webIcon = rootWebIcon
 		}
 		tiles = append(tiles, render.AppTile{
 			Name:         parsed.Name,

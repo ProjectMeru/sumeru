@@ -10,7 +10,6 @@ import (
 	"sumeru/core/orm"
 )
 
-// ParsePinnedAppsJSON decodes a core.user pinned_apps column value.
 func ParsePinnedAppsJSON(raw string) []string {
 	raw = strings.TrimSpace(raw)
 	if raw == "" || raw == "[]" {
@@ -23,7 +22,7 @@ func ParsePinnedAppsJSON(raw string) []string {
 	return out
 }
 
-// SanitizePinnedModuleList keeps unique module names present in allowed (stable order).
+// SanitizePinnedModuleList drops unknown modules and duplicates; stable order.
 func SanitizePinnedModuleList(raw []string, allowed map[string]struct{}) []string {
 	if len(raw) == 0 || len(allowed) == 0 {
 		return nil

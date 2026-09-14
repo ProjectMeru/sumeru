@@ -8,10 +8,10 @@ import (
 )
 
 // RenderPage executes base.html with the given shell + content data.
-func RenderPage(ctx context.Context, templatesDir string, data PageData) (string, error) {
+func RenderPage(ctx context.Context, templatesDir string, data PageData, bootstrapWorkspace *SWCBootstrapWorkspace) (string, error) {
 	EnrichShellPageData(ctx, &data)
 	if len(data.SWCBootstrapJSON) == 0 {
-		data.SWCBootstrapJSON = BuildSWCBootstrapJSON(ctx, data, nil)
+		data.SWCBootstrapJSON = BuildSWCBootstrapJSON(ctx, data, bootstrapWorkspace)
 	}
 	tmpl, err := template.ParseFiles(
 		filepath.Join(templatesDir, "base.html"),

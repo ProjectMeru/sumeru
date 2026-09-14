@@ -48,8 +48,8 @@ type PageData struct {
 	Title               string // legacy / diagnostics; prefer ViewBreadcrumb for UI
 	ViewBreadcrumb      string // human label for breadcrumb (not the technical model id)
 	AppName             string // product display name (browser tab suffix, header)
-	ModuleName          string
-	Content             template.HTML
+	ModuleName string
+	Content    template.HTML
 	TopMenus            []parser.MenuItem
 	SidebarMenus        []SidebarMenu
 	ActiveModuleID      string
@@ -74,7 +74,8 @@ type PageData struct {
 	PinnedAppsJSON     template.JS
 	ShellCompany       string
 	ShellUser          string
-	ShellUserImage     template.URL      // profile photo for top bar (template.URL so data: URLs are not scrubbed); empty → initials
+	ShellUserLogin     string
+	ShellUserImage     template.URL // template.URL so data: URLs are not scrubbed
 	ShellUserImageCrop template.HTMLAttr // inline crop style for shell avatar when image_crop is set
 	UserInitial        string            // legacy single-letter hint; prefer ShellUserInitials in shell chrome
 	ShellUserInitials  string            // two-letter avatar label in top bar when no photo
@@ -100,14 +101,9 @@ type PageData struct {
 	// ExtraBodyClasses is appended to the shell body class list (leading space recommended, e.g. " sum-body--settings-hub").
 	ExtraBodyClasses string
 
-	// CSRFToken is injected into POST forms when the user is logged in.
-	CSRFToken string
-
-	// FlashMessages are one-time banners (e.g. newly created API key).
-	FlashMessages []FlashMessage
-	// ToastMessages are success/info notifications shown in the top-right stack.
-	ToastMessages []FlashMessage
-	// ToastMessagesJSON bootstraps client toasts on first paint.
+	CSRFToken         string
+	FlashMessages     []FlashMessage
+	ToastMessages     []FlashMessage
 	ToastMessagesJSON template.JS
 
 	// Right activity panel: Log tab (audit); Messages tab HTML set in RenderView when chatter applies.

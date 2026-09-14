@@ -14,8 +14,7 @@ type BreadcrumbItem struct {
 	Href  string // empty = current page (no link)
 }
 
-// HomeWebURL returns the canonical Home dashboard URL.
-func HomeWebURL(ctx context.Context) string {
+func HomeWebURL() string {
 	return "/web/home"
 }
 
@@ -203,7 +202,7 @@ func workspaceRecordBreadcrumbLabel(in BreadcrumbInput) string {
 	if in.RecordID > 0 {
 		label := ""
 		if in.Record != nil {
-			label = strings.TrimSpace(recStr(in.Record, "name"))
+			label = strings.TrimSpace(orm.AsString(in.Record["name"]))
 		}
 		if label == "" {
 			label = "Record"
@@ -216,7 +215,7 @@ func workspaceRecordBreadcrumbLabel(in BreadcrumbInput) string {
 // BuildAppsBreadcrumbs returns Home + Apps (+ optional module detail as current).
 func BuildAppsBreadcrumbs(ctx context.Context, appsListHref string, detailTitle string) []BreadcrumbItem {
 	out := []BreadcrumbItem{
-		{Label: "Home", Href: HomeWebURL(ctx)},
+		{Label: "Home", Href: HomeWebURL()},
 	}
 	if strings.TrimSpace(detailTitle) != "" {
 		listHref := strings.TrimSpace(appsListHref)
@@ -234,7 +233,7 @@ func BuildAppsBreadcrumbs(ctx context.Context, appsListHref string, detailTitle 
 // BuildHomeDashboardBreadcrumbs returns Home + Dashboard (current).
 func BuildHomeDashboardBreadcrumbs(ctx context.Context) []BreadcrumbItem {
 	return []BreadcrumbItem{
-		{Label: "Home", Href: HomeWebURL(ctx)},
+		{Label: "Home", Href: HomeWebURL()},
 		{Label: "Dashboard", Href: ""},
 	}
 }
@@ -249,7 +248,7 @@ func BuildSettingsHubBreadcrumbs(ctx context.Context) []BreadcrumbItem {
 // BuildAppLogsBreadcrumbs returns Home + menu path to the Event Log menu (current = leaf).
 func BuildAppLogsBreadcrumbs(ctx context.Context, appLogsMenuID int) []BreadcrumbItem {
 	items := []BreadcrumbItem{
-		{Label: "Home", Href: HomeWebURL(ctx)},
+		{Label: "Home", Href: HomeWebURL()},
 	}
 	if appLogsMenuID <= 0 {
 		return items

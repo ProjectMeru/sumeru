@@ -43,10 +43,7 @@ func EnrichShellPageData(ctx context.Context, d *PageData) {
 	d.AppsNavAllowed = orm.UserHasGroupXML(ctx, uidShell, "base.group_system")
 	d.SettingsNavAllowed = orm.UserHasGroupXML(ctx, uidShell, "base.group_user")
 	if strings.TrimSpace(d.BrandLockupHref) == "" {
-		d.BrandLockupHref = HomeWebURL(ctx)
-	}
-	if strings.TrimSpace(d.BrandLockupHref) == "" {
-		d.BrandLockupHref = "/web/home"
+		d.BrandLockupHref = HomeWebURL()
 	}
 	if strings.TrimSpace(d.HomeNavHref) == "" {
 		d.HomeNavHref = d.BrandLockupHref
@@ -67,7 +64,7 @@ func EnrichShellPageData(ctx context.Context, d *PageData) {
 	d.ShellUser = strings.TrimSpace(shell.User)
 	d.ShellUserImage = ""
 	if orm.DB == nil {
-		d.applyShellUserInitials()
+		d.ShellUserInitials = UserInitialsFromName(d.ShellUser)
 		return
 	}
 
@@ -78,10 +75,10 @@ func EnrichShellPageData(ctx context.Context, d *PageData) {
 	activeCID := 0
 	if uid > 0 {
 		if u, err := orm.SearchOne(ctx, "core.user", map[string]interface{}{"id": uid}); err == nil {
-			// Prefer the logged-in user's name and photo over static config labels.
+			d.ShellUserLogin = strings.TrimSpace(orm.AsString(u["login"]))
 			name := strings.TrimSpace(orm.AsString(u["name"]))
 			if name == "" {
-				name = strings.TrimSpace(orm.AsString(u["login"]))
+				name = d.ShellUserLogin
 			}
 			if name != "" {
 				d.ShellUser = name
@@ -113,7 +110,7 @@ func EnrichShellPageData(ctx context.Context, d *PageData) {
 			}
 		}
 	}
-	d.applyShellUserInitials()
+	d.ShellUserInitials = UserInitialsFromName(d.ShellUser)
 
 	d.ActivityEnabled = mail.CompanyChatterEnabled(ctx) && mail.CompanyActivityPanelEnabled(ctx)
 	if len(d.ExtraScriptURLs) == 0 {
@@ -149,16 +146,6 @@ func EnrichShellPageData(ctx context.Context, d *PageData) {
 	}
 
 	d.appendShellHooks(ctx)
-}
-
-func (d *PageData) applyShellUserInitials() {
-	d.ShellUserInitials = UserInitialsFromName(d.ShellUser)
-	if d.UserInitial == "" && d.ShellUser != "" {
-		r := []rune(d.ShellUser)
-		if len(r) > 0 {
-			d.UserInitial = strings.ToUpper(string(r[0]))
-		}
-	}
 }
 
 func (d *PageData) appendShellHooks(ctx context.Context) {
