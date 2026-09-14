@@ -2,9 +2,19 @@
 
 Standards index: [AGENTS.md](../../AGENTS.md) (monorepo root). Test layout rule: [test-layout.mdc](../../.cursor/rules/test-layout.mdc).
 
-All Go test cases live under `test/` only. The only exception is `export_test.go` files colocated with source packages — they expose unexported symbols to external tests, not test cases themselves.
+All Go test cases live under `test/` only. Colocated `testexports.go` files in source packages expose symbols for external tests in `test/core/*` and `test/addons/*`; they are not test cases themselves.
 
 SWC tests live under `core/swc/tests/` (see `core/swc/tests/README.md`).
+
+## Layout policy (golden rule)
+
+| Kind | Allowed location |
+|------|------------------|
+| Go `*_test.go` | `sumeru/test/**` only |
+| SWC `*.test.ts` | `sumeru/core/swc/tests/**` only |
+| Test export hooks | `**/testexports.go` next to source (not tests) |
+
+CI and local `make standards` run [`scripts/check_test_layout.sh`](../scripts/check_test_layout.sh) to reject colocated Go tests or SWC tests under `core/swc/src/`.
 
 ## Layout
 
@@ -51,5 +61,5 @@ make test-go               # Full repo coverage profile + gate
 
 1. Add `*_test.go` under the matching `test/` subtree — never under `core/` or `addons/`
 2. Use `test/harness` for repo root, model activation, and temp addon fixtures
-3. For unexported symbols, add exports to the source package's `export_test.go`
+3. For symbols needed only from external tests, add exports to the source package's `testexports.go`
 4. Integration tests must use `//go:build integration`
