@@ -158,10 +158,7 @@ func executeUpdateMutation(ctx context.Context, modelName string, domain [][]int
 			setArgs = append(setArgs, v)
 			placeholderIndex++
 		}
-		shiftedWhere, err := shiftPlaceholders(securedSQL, len(setArgs)+1)
-		if err != nil {
-			return err
-		}
+		shiftedWhere := shiftPlaceholders(securedSQL, len(setArgs)+1)
 		allArgs := append(setArgs, args...)
 		updQ := fmt.Sprintf(`UPDATE %s SET %s WHERE %s`, table, strings.Join(setClauses, ", "), shiftedWhere)
 		res, err := tx.ExecContext(ctx, updQ, allArgs...)

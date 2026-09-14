@@ -258,7 +258,7 @@ func validateFieldRange(fieldDef FieldDefinition, v interface{}) error {
 	return nil
 }
 
-func applySpecialDefaults(ctx context.Context, model Model, fieldDefs map[string]FieldDefinition, out map[string]interface{}) error {
+func applySpecialDefaults(ctx context.Context, fieldDefs map[string]FieldDefinition, out map[string]interface{}) error {
 	for name, fieldDef := range fieldDefs {
 		if _, ok := out[name]; ok {
 			continue

@@ -26,7 +26,7 @@ type searchPaging struct {
 
 func execSearchQuery(ctx context.Context, modelName string, domain [][]interface{}, paging *searchPaging) ([]map[string]interface{}, error) {
 	ctx = ContextWithReadReplica(ctx, true)
-	uid, whereClause, args, _, err := prepareSearchRead(ctx, modelName, domain)
+	uid, whereClause, args, err := prepareSearchRead(ctx, modelName, domain)
 	if err != nil {
 		return nil, err
 	}
@@ -63,25 +63,25 @@ func execSearchQuery(ctx context.Context, modelName string, domain [][]interface
 	return results, nil
 }
 
-func prepareSearchRead(ctx context.Context, modelName string, domain [][]interface{}) (uid int, whereClause string, args []interface{}, domainOut [][]interface{}, err error) {
+func prepareSearchRead(ctx context.Context, modelName string, domain [][]interface{}) (uid int, whereClause string, args []interface{}, err error) {
 	if _, ok := Registry[modelName]; !ok {
-		return 0, "", nil, nil, fmt.Errorf("model %s not found", modelName)
+		return 0, "", nil, fmt.Errorf("model %s not found", modelName)
 	}
 	uid = SecurityUID(ctx)
 	if err := CheckModelAccess(ctx, uid, modelName, "read"); err != nil {
-		return 0, "", nil, nil, err
+		return 0, "", nil, err
 	}
 	for _, interceptor := range SearchInterceptors {
 		domain, err = interceptor(ctx, modelName, domain)
 		if err != nil {
-			return 0, "", nil, nil, err
+			return 0, "", nil, err
 		}
 	}
 	whereClause, args, err = BuildWhereWithRecordRules(ctx, uid, modelName, "read", domain)
 	if err != nil {
-		return 0, "", nil, nil, err
+		return 0, "", nil, err
 	}
-	return uid, whereClause, args, domain, nil
+	return uid, whereClause, args, nil
 }
 
 // Search finds records matching the criteria
@@ -153,7 +153,7 @@ func SearchCount(ctx context.Context, modelName string, domain [][]interface{}) 
 		logORMOperation(ctx, start, "search_count", modelName, err, map[string]interface{}{"count": n})
 	}()
 	ctx = ContextWithReadReplica(ctx, true)
-	_, whereClause, args, _, err := prepareSearchRead(ctx, modelName, domain)
+	_, whereClause, args, err := prepareSearchRead(ctx, modelName, domain)
 	if err != nil {
 		return 0, err
 	}

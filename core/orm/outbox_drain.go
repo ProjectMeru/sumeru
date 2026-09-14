@@ -66,6 +66,10 @@ func DrainOutboxOnce(ctx context.Context) int {
 		}
 		published++
 	}
+	if published > 0 {
+		applog.DebugMsg(bypass, "orm", "outbox_drain", "outbox events published",
+			map[string]interface{}{"count": published})
+	}
 	return published
 }
 
