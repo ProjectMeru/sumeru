@@ -36,6 +36,9 @@ func SearchOne(ctx context.Context, modelName string, criteria map[string]interf
 	if _, ok := Registry[modelName]; !ok {
 		return nil, fmt.Errorf("model %s not registered", modelName)
 	}
+	if err := RejectSmuggledUserBypass(ctx); err != nil {
+		return nil, err
+	}
 	uid := SecurityUID(ctx)
 	if !SecurityBypass(ctx) {
 		if err := CheckModelAccess(ctx, uid, modelName, "read"); err != nil {

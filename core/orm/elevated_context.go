@@ -22,6 +22,26 @@ func elevationActive(ctx context.Context) bool {
 	return ok && strings.TrimSpace(reason) != ""
 }
 
+// IsElevatedContext reports whether ctx is inside an audited WithElevated boundary.
+func IsElevatedContext(ctx context.Context) bool {
+	return elevationActive(ctx)
+}
+
+// RejectSmuggledUserBypass returns an error when a non-superuser uid has bypass without elevation.
+func RejectSmuggledUserBypass(ctx context.Context) error {
+	if !BypassFromContext(ctx) {
+		return nil
+	}
+	if elevationActive(ctx) {
+		return nil
+	}
+	uid := UIDFromContext(ctx)
+	if uid <= 0 || uid == superuserUID {
+		return nil
+	}
+	return &SmuggledBypassError{UID: uid}
+}
+
 func contextWithElevationMarker(ctx context.Context, reason string) context.Context {
 	return context.WithValue(ContextWithBypass(ctx, true), elevatedReasonKey{}, reason)
 }

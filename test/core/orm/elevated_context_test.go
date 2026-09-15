@@ -72,6 +72,13 @@ func TestWithElevatedNested(t *testing.T) {
 	}
 }
 
+func TestRejectSmuggledUserBypass_anonymousOK(t *testing.T) {
+	ctx := orm.ContextWithBypass(context.Background(), true)
+	if err := orm.RejectSmuggledUserBypass(ctx); err != nil {
+		t.Fatalf("uid 0 bypass: %v", err)
+	}
+}
+
 func TestAuditedBypassEmptyReason(t *testing.T) {
 	ctx := orm.ContextWithUID(context.Background(), 1)
 	out := orm.AuditedBypass(ctx, "")

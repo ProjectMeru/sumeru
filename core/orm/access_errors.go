@@ -1,6 +1,9 @@
 package orm
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 // AccessDeniedError indicates the user lacks model-level ACL permission.
 type AccessDeniedError struct {
@@ -40,5 +43,22 @@ func IsAccessDenied(err error) bool {
 
 func IsRecordRuleFailed(err error) bool {
 	var target *RecordRuleError
+	return errors.As(err, &target)
+}
+
+// SmuggledBypassError indicates bypass was set on an authenticated user context outside WithElevated.
+type SmuggledBypassError struct {
+	UID int
+}
+
+func (e *SmuggledBypassError) Error() string {
+	if e == nil || e.UID <= 0 {
+		return "security bypass not allowed for authenticated user"
+	}
+	return fmt.Sprintf("security bypass not allowed for user %d", e.UID)
+}
+
+func IsSmuggledBypass(err error) bool {
+	var target *SmuggledBypassError
 	return errors.As(err, &target)
 }
