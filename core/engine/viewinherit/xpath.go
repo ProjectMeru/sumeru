@@ -30,9 +30,11 @@ type elementSpan struct {
 var xpathBlockRe = regexp.MustCompile(`(?s)<xpath\s+expr="([^"]+)"\s+position="([^"]+)"\s*>(.*?)</xpath>`)
 var xpathBlockReSingle = regexp.MustCompile(`(?s)<xpath\s+expr='([^']+)'\s+position='([^']+)'\s*>(.*?)</xpath>`)
 var fieldNameFromExpr = regexp.MustCompile(`@name=['"]([^'"]+)['"]`)
-var xpathTargetRe = regexp.MustCompile(`//(field|button|group|sheet|header|notebook|page|div|label|separator|filter|search|tree|list|form|kanban)\[@([a-zA-Z_:][\w-]*)=['"]([^'"]+)['"]\](?:\[(\d+)\])?`)
-var xpathHasClassRe = regexp.MustCompile(`//(field|button|group|sheet|header|notebook|page|div|label|separator|filter|search|tree|list|form|kanban)\[hasclass\(['"]([^'"]+)['"]\)\](?:\[(\d+)\])?`)
-var xpathTagOnlyRe = regexp.MustCompile(`//(field|button|group|sheet|header|notebook|page|div|label|separator|filter|search|tree|list|form|kanban)\s*$`)
+var xpathTagNames = `field|button|group|sheet|header|notebook|page|div|label|separator|filter|search|tree|list|form|kanban|section|document|report|title|table|row|p`
+
+var xpathTargetRe = regexp.MustCompile(`//(` + xpathTagNames + `)\[@([a-zA-Z_:][\w-]*)=['"]([^'"]+)['"]\](?:\[(\d+)\])?`)
+var xpathHasClassRe = regexp.MustCompile(`//(` + xpathTagNames + `)\[hasclass\(['"]([^'"]+)['"]\)\](?:\[(\d+)\])?`)
+var xpathTagOnlyRe = regexp.MustCompile(`//(` + xpathTagNames + `)\s*$`)
 var dataWrapperRe = regexp.MustCompile(`(?s)^\s*<data[^>]*>(.*)</data>\s*$`)
 var attributeOpRe = regexp.MustCompile(`(?s)<attribute\s+name=['"]([^'"]+)['"]\s*>(.*?)</attribute>`)
 
