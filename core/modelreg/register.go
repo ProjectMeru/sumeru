@@ -45,9 +45,10 @@ func MustRegister(module string, models ...any) {
 			panic(fmt.Sprintf("modelreg: model %s: %v", entry.spec.Name, err))
 		}
 		pending = append(pending, pendingModel{
-			name:   entry.spec.Name,
-			extend: entry.spec.Extend,
-			fields: fields,
+			name:          entry.spec.Name,
+			extend:        entry.spec.Extend,
+			companyShared: entry.spec.CompanyShared,
+			fields:        fields,
 		})
 	}
 	queueRegistration(module, pending)

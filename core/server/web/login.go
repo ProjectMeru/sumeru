@@ -112,7 +112,8 @@ func LoginPost(w http.ResponseWriter, r *http.Request) {
 	orm.AppendUserLog(r.Context(), userID, clientIP, "success")
 	clearLoginCSRFCookie(w)
 	clearLoginNextCookie(w)
-	http.Redirect(w, r, credentials.Next, http.StatusSeeOther)
+	dest := postLoginDestination(r.Context(), userID, credentials.Next)
+	http.Redirect(w, r, dest, http.StatusSeeOther)
 }
 
 func LogoutGet(w http.ResponseWriter, r *http.Request) {

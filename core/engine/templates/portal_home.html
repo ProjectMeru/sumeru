@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal | {{.AppName}}</title>
+    {{range .Stylesheets}}
+    <link rel="stylesheet" href="{{.}}">
+    {{end}}
+</head>
+<body class="sum-portal-body">
+<header class="sum-portal-header">
+    {{if .LogoURL}}<img src="{{.LogoURL}}" alt="" class="sum-portal-logo" width="32" height="32">{{end}}
+    <span class="sum-portal-title">{{.AppName}} Portal</span>
+    <a class="sum-portal-logout" href="/web/logout">Sign out</a>
+</header>
+<main class="sum-portal-main">
+    {{if .Error}}<p class="sum-portal-error">{{.Error}}</p>{{end}}
+    <h1 class="sum-portal-heading">Your contacts</h1>
+    <ul class="sum-portal-list">
+        {{range .Records}}
+        <li><a href="/portal/record?model=core.partner&amp;id={{.ID}}">{{if .Name}}{{.Name}}{{else}}#{{.ID}}{{end}}</a></li>
+        {{else}}
+        <li class="sum-portal-muted">No records to show.</li>
+        {{end}}
+    </ul>
+</main>
+</body>
+</html>

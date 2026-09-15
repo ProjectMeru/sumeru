@@ -25,7 +25,7 @@ func TestObjectActionRegistration(t *testing.T) {
 }
 
 func TestOnchangeExtended(t *testing.T) {
-	if orm.HasOnchange("test.model", "name") != true {
+	if orm.HasOnchange("core.partner", "name") != true {
 		t.Fatal("expected registered onchange")
 	}
 	if orm.HasOnchange("no.model", "x") {

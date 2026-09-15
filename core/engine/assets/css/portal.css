@@ -1,0 +1,80 @@
+.sum-portal-body {
+  margin: 0;
+  font-family: Roboto, system-ui, sans-serif;
+  background: var(--sum-bg-muted, #f4f5f7);
+  color: var(--sum-text, #1a1a1a);
+}
+
+.sum-portal-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--sum-surface, #fff);
+  border-bottom: 1px solid var(--sum-border, #e0e0e0);
+}
+
+.sum-portal-title {
+  font-weight: 600;
+  flex: 1;
+}
+
+.sum-portal-logout {
+  font-size: 0.875rem;
+}
+
+.sum-portal-main {
+  max-width: 48rem;
+  margin: 1.5rem auto;
+  padding: 0 1rem;
+}
+
+.sum-portal-heading {
+  font-size: 1.25rem;
+  margin: 0 0 1rem;
+}
+
+.sum-portal-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  background: var(--sum-surface, #fff);
+  border-radius: 8px;
+  border: 1px solid var(--sum-border, #e0e0e0);
+}
+
+.sum-portal-list li {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--sum-border, #e0e0e0);
+}
+
+.sum-portal-list li:last-child {
+  border-bottom: none;
+}
+
+.sum-portal-muted {
+  color: var(--sum-text-muted, #666);
+}
+
+.sum-portal-error {
+  color: #b42318;
+}
+
+.sum-portal-dl {
+  display: grid;
+  grid-template-columns: minmax(8rem, 30%) 1fr;
+  gap: 0.5rem 1rem;
+  background: var(--sum-surface, #fff);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--sum-border, #e0e0e0);
+}
+
+.sum-portal-dl dt {
+  font-weight: 500;
+  color: var(--sum-text-muted, #666);
+}
+
+.sum-portal-dl dd {
+  margin: 0;
+}

@@ -59,6 +59,9 @@ func executeCreateMutation(ctx context.Context, model Model, values map[string]i
 }
 
 func mutationAccessCheck(ctx context.Context, modelName, op string) (uid int, model Model, err error) {
+	if err := RejectSmuggledUserBypass(ctx); err != nil {
+		return 0, nil, err
+	}
 	uid = SecurityUID(ctx)
 	if err := CheckModelAccess(ctx, uid, modelName, op); err != nil {
 		return 0, nil, err

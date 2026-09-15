@@ -19,13 +19,21 @@ var (
 
 // DrainOutboxOnce publishes pending outbox rows (up to 100) and marks them published.
 func DrainOutboxOnce(ctx context.Context) int {
+	var published int
+	_ = WithElevated(ctx, "outbox.drain", func(bypass context.Context) error {
+		published = drainOutboxOnce(bypass)
+		return nil
+	})
+	return published
+}
+
+func drainOutboxOnce(bypass context.Context) int {
 	if DB == nil {
 		return 0
 	}
 	if _, ok := Registry["sys.outbox.event"]; !ok {
 		return 0
 	}
-	bypass := AuditedBypass(ctx, "outbox.drain")
 	tbl := MustQuotedTableName("sys.outbox.event")
 	rows, err := DB.QueryContext(bypass,
 		`SELECT id, name, COALESCE(payload_json,''), COALESCE(actor,0) FROM `+tbl+

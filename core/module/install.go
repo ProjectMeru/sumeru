@@ -22,32 +22,33 @@ func InstallModuleByName(ctx context.Context, moduleName string) error {
 	if err := orm.CheckModelAccess(ctx, orm.SecurityUID(ctx), "sys.module", "write"); err != nil {
 		return err
 	}
-	systemContext := orm.AuditedBypass(ctx, "module.install")
-	installMu.Lock()
-	defer installMu.Unlock()
-	if closure, err := ResolveInstallClosure(DiscoveredAddons, moduleName); err != nil {
-		return err
-	} else {
-		var deps []string
-		for _, name := range closure {
-			if name != moduleName {
-				deps = append(deps, name)
+	return orm.WithElevated(ctx, "module.install", func(systemContext context.Context) error {
+		installMu.Lock()
+		defer installMu.Unlock()
+		if closure, err := ResolveInstallClosure(DiscoveredAddons, moduleName); err != nil {
+			return err
+		} else {
+			var deps []string
+			for _, name := range closure {
+				if name != moduleName {
+					deps = append(deps, name)
+				}
+			}
+			if len(deps) > 0 {
+				applog.InfoMsg(systemContext, "module", "install",
+					fmt.Sprintf("Installing %s (+ deps: %s)", moduleName, strings.Join(deps, ", ")),
+					map[string]interface{}{"module": moduleName, "depends": deps})
+			} else {
+				applog.InfoMsg(systemContext, "module", "install",
+					fmt.Sprintf("Installing %s", moduleName),
+					map[string]interface{}{"module": moduleName})
 			}
 		}
-		if len(deps) > 0 {
-			applog.InfoMsg(systemContext, "module", "install",
-				fmt.Sprintf("Installing %s (+ deps: %s)", moduleName, strings.Join(deps, ", ")),
-				map[string]interface{}{"module": moduleName, "depends": deps})
-		} else {
-			applog.InfoMsg(systemContext, "module", "install",
-				fmt.Sprintf("Installing %s", moduleName),
-				map[string]interface{}{"module": moduleName})
+		if err := installModuleUnlocked(systemContext, moduleName); err != nil {
+			return err
 		}
-	}
-	if err := installModuleUnlocked(systemContext, moduleName); err != nil {
-		return err
-	}
-	return runAutoInstallPass(systemContext)
+		return runAutoInstallPass(systemContext)
+	})
 }
 
 func installModuleUnlocked(ctx context.Context, moduleName string) error {
@@ -172,36 +173,37 @@ func UninstallModuleByName(ctx context.Context, moduleName string) error {
 	if err := orm.CheckModelAccess(ctx, orm.SecurityUID(ctx), "sys.module", "write"); err != nil {
 		return err
 	}
-	systemContext := orm.AuditedBypass(ctx, "module.install")
-	installMu.Lock()
-	defer installMu.Unlock()
+	return orm.WithElevated(ctx, "module.install", func(systemContext context.Context) error {
+		installMu.Lock()
+		defer installMu.Unlock()
 
-	if orm.IsPlatformModule(moduleName) {
-		return fmt.Errorf("cannot uninstall platform module %q", moduleName)
-	}
-	if _, ok := DiscoveredAddons[moduleName]; !ok {
-		return fmt.Errorf("unknown module %q", moduleName)
-	}
+		if orm.IsPlatformModule(moduleName) {
+			return fmt.Errorf("cannot uninstall platform module %q", moduleName)
+		}
+		if _, ok := DiscoveredAddons[moduleName]; !ok {
+			return fmt.Errorf("unknown module %q", moduleName)
+		}
 
-	if dependency, err := installedModuleDependingOn(systemContext, moduleName); err != nil {
-		return err
-	} else if dependency != "" {
-		return fmt.Errorf("module %q is required by installed module %q; uninstall that first", moduleName, dependency)
-	}
+		if dependency, err := installedModuleDependingOn(systemContext, moduleName); err != nil {
+			return err
+		} else if dependency != "" {
+			return fmt.Errorf("module %q is required by installed module %q; uninstall that first", moduleName, dependency)
+		}
 
-	if err := setModuleToRemove(systemContext, moduleName); err != nil {
-		return err
-	}
+		if err := setModuleToRemove(systemContext, moduleName); err != nil {
+			return err
+		}
 
-	if err := deleteModuleMetadata(systemContext, moduleName); err != nil {
-		return err
-	}
+		if err := deleteModuleMetadata(systemContext, moduleName); err != nil {
+			return err
+		}
 
-	if err := setModuleState(systemContext, moduleName, "uninstalled", true); err != nil {
-		return err
-	}
-	mail.LogModuleEvent(systemContext, moduleName, "Uninstalled", "")
-	return nil
+		if err := setModuleState(systemContext, moduleName, "uninstalled", true); err != nil {
+			return err
+		}
+		mail.LogModuleEvent(systemContext, moduleName, "Uninstalled", "")
+		return nil
+	})
 }
 
 func deleteModuleMetadata(ctx context.Context, moduleName string) error {
@@ -250,34 +252,35 @@ func SetModuleActive(ctx context.Context, moduleName string, active bool) error 
 	if err := orm.CheckModelAccess(ctx, orm.SecurityUID(ctx), "sys.module", "write"); err != nil {
 		return err
 	}
-	systemContext := orm.AuditedBypass(ctx, "module.install")
-	installMu.Lock()
-	defer installMu.Unlock()
+	return orm.WithElevated(ctx, "module.install", func(systemContext context.Context) error {
+		installMu.Lock()
+		defer installMu.Unlock()
 
-	if moduleName == KernelModule && !active {
-		return fmt.Errorf("cannot deactivate core module %q", KernelModule)
-	}
-	if _, ok := DiscoveredAddons[moduleName]; !ok {
-		return fmt.Errorf("unknown module %q", moduleName)
-	}
+		if moduleName == KernelModule && !active {
+			return fmt.Errorf("cannot deactivate core module %q", KernelModule)
+		}
+		if _, ok := DiscoveredAddons[moduleName]; !ok {
+			return fmt.Errorf("unknown module %q", moduleName)
+		}
 
-	moduleRow, err := moduleRow(systemContext, moduleName)
-	if err != nil {
-		return err
-	}
-	if moduleStateString(moduleRow) != "installed" {
-		return fmt.Errorf("module %q is not installed; activate/install it first", moduleName)
-	}
+		moduleRow, err := moduleRow(systemContext, moduleName)
+		if err != nil {
+			return err
+		}
+		if moduleStateString(moduleRow) != "installed" {
+			return fmt.Errorf("module %q is not installed; activate/install it first", moduleName)
+		}
 
-	if err := setModuleActiveOnly(systemContext, moduleName, active); err != nil {
-		return err
-	}
-	if active {
-		mail.LogModuleEvent(systemContext, moduleName, "Activated", "")
-	} else {
-		mail.LogModuleEvent(systemContext, moduleName, "Deactivated", "")
-	}
-	return nil
+		if err := setModuleActiveOnly(systemContext, moduleName, active); err != nil {
+			return err
+		}
+		if active {
+			mail.LogModuleEvent(systemContext, moduleName, "Activated", "")
+		} else {
+			mail.LogModuleEvent(systemContext, moduleName, "Deactivated", "")
+		}
+		return nil
+	})
 }
 
 // ListModules returns sys.module rows for the Apps UI (non-application modules included for completeness).

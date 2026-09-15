@@ -52,6 +52,21 @@ func RunOnchange(ctx context.Context, model, field string, values map[string]int
 	if values == nil {
 		values = map[string]interface{}{}
 	}
+	if err := RejectSmuggledUserBypass(ctx); err != nil {
+		return OnchangeResult{}, err
+	}
+	uid := SecurityUID(ctx)
+	recordID, ok := CoerceInt64(values["id"])
+	if ok && recordID > 0 {
+		if err := CheckModelAccess(ctx, uid, model, "write"); err != nil {
+			return OnchangeResult{}, err
+		}
+		if _, err := SearchOne(ctx, model, map[string]interface{}{"id": recordID}); err != nil {
+			return OnchangeResult{}, fmt.Errorf("record not found")
+		}
+	} else if err := CheckModelAccess(ctx, uid, model, "create"); err != nil {
+		return OnchangeResult{}, err
+	}
 	return fn(ctx, values, field)
 }
 

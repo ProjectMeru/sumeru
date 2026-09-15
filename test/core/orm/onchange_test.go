@@ -8,10 +8,11 @@ import (
 )
 
 func TestRegisterOnchange(t *testing.T) {
-	orm.RegisterOnchange("test.model", "name", func(ctx context.Context, values map[string]interface{}, field string) (orm.OnchangeResult, error) {
+	orm.RegisterOnchange("core.partner", "name", func(ctx context.Context, values map[string]interface{}, field string) (orm.OnchangeResult, error) {
 		return orm.OnchangeResult{Value: map[string]interface{}{"note": "ok"}}, nil
 	})
-	result, err := orm.RunOnchange(context.Background(), "test.model", "name", map[string]interface{}{"name": "A"})
+	ctx := orm.ContextWithUID(context.Background(), 1)
+	result, err := orm.RunOnchange(ctx, "core.partner", "name", map[string]interface{}{"name": "A"})
 	if err != nil {
 		t.Fatal(err)
 	}

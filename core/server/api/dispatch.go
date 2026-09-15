@@ -70,6 +70,9 @@ func dispatchRPC(ctx context.Context, body []byte) (interface{}, error) {
 	if orm.UIDFromContext(ctx) <= 0 {
 		return nil, newRPCError(CodeUnauthorized, "authentication required", nil)
 	}
+	if err := orm.EnforcePortalRPCModel(ctx, model); err != nil {
+		return nil, newRPCError(CodeAccessDenied, err.Error(), map[string]interface{}{"model": model})
+	}
 
 	switch method {
 	case "search":
