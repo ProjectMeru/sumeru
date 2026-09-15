@@ -42,6 +42,9 @@ func RunObjectAction(ctx context.Context, model string, id int, method string, v
 	if id <= 0 {
 		return "", fmt.Errorf("invalid record id")
 	}
+	if err := RejectSmuggledUserBypass(ctx); err != nil {
+		return "", err
+	}
 	uid := SecurityUID(ctx)
 	if err := CheckModelAccess(ctx, uid, model, "write"); err != nil {
 		return "", err

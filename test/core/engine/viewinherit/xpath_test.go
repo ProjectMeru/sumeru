@@ -159,23 +159,32 @@ func TestApplyInheritArchSheetReplace(t *testing.T) {
 	}
 }
 
-func TestApplyInheritArchFirstMatchWins(t *testing.T) {
+func TestApplyInheritArchAmbiguousMatchErrors(t *testing.T) {
 	parent := `<view type="form"><field name="phone" string="First"/><field name="phone" string="Second"/></view>`
 	frag := `<xpath expr="//field[@name='phone']" position="attributes"><attribute name="string">Updated</attribute></xpath>`
+	_, err := viewinherit.ApplyInheritArch(parent, frag)
+	if err == nil || !strings.Contains(err.Error(), "ambiguous") {
+		t.Fatalf("expected ambiguous match error, got: %v", err)
+	}
+}
+
+func TestApplyInheritArchIndexedMatch(t *testing.T) {
+	parent := `<view type="form"><field name="phone" string="First"/><field name="phone" string="Second"/></view>`
+	frag := `<xpath expr="//field[@name='phone'][2]" position="attributes"><attribute name="string">Updated</attribute></xpath>`
 	out, err := viewinherit.ApplyInheritArch(parent, frag)
 	if err != nil {
 		t.Fatal(err)
 	}
-	firstIdx := strings.Index(out, `string="Updated"`)
-	secondIdx := strings.Index(out, `string="Second"`)
-	if firstIdx < 0 || secondIdx < 0 {
-		t.Fatalf("unexpected merge: %s", out)
-	}
-	if firstIdx > secondIdx {
-		t.Fatalf("expected first field updated only: %s", out)
+	if !strings.Contains(out, `string="First"`) {
+		t.Fatalf("expected first field unchanged: %s", out)
 	}
 	if strings.Count(out, `string="Updated"`) != 1 {
-		t.Fatalf("expected single update: %s", out)
+		t.Fatalf("expected second field updated once: %s", out)
+	}
+	firstIdx := strings.Index(out, `string="First"`)
+	updatedIdx := strings.Index(out, `string="Updated"`)
+	if firstIdx < 0 || updatedIdx < 0 || firstIdx > updatedIdx {
+		t.Fatalf("expected first then updated: %s", out)
 	}
 }
 

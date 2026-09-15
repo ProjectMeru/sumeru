@@ -57,76 +57,78 @@ func loop(ctx context.Context, every time.Duration) {
 }
 
 func runDue(ctx context.Context) {
-	if orm.DB == nil {
-		return
-	}
-	if _, ok := orm.Registry["sys.cron"]; !ok {
-		return
-	}
-	bypass := orm.AuditedBypass(ctx, "cron.run")
-	tbl := orm.MustQuotedTableName("sys.cron")
-	now := time.Now().UTC()
-
-	tx, err := orm.DB.BeginTx(bypass, nil)
-	if err != nil {
-		return
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	rows, err := tx.QueryContext(bypass,
-		`SELECT id, name, COALESCE(event_name,''), COALESCE(code,'') FROM `+tbl+
-			` WHERE active = true AND (next_call IS NULL OR next_call <= $1)
-			  ORDER BY id FOR UPDATE SKIP LOCKED LIMIT 20`, now,
-	)
-	if err != nil {
-		return
-	}
-	defer rows.Close()
-
-	type cronRow struct {
-		id        int64
-		name      string
-		eventName string
-		code      string
-	}
-	var due []cronRow
-	for rows.Next() {
-		var row cronRow
-		if err := rows.Scan(&row.id, &row.name, &row.eventName, &row.code); err != nil {
-			continue
+	_ = orm.WithElevated(ctx, "cron.run", func(bypass context.Context) error {
+		if orm.DB == nil {
+			return nil
 		}
-		due = append(due, row)
-	}
-	if err := rows.Err(); err != nil {
-		return
-	}
+		if _, ok := orm.Registry["sys.cron"]; !ok {
+			return nil
+		}
+		tbl := orm.MustQuotedTableName("sys.cron")
+		now := time.Now().UTC()
 
-	for _, row := range due {
-		executeCron(bypass, CronRunInput{ID: row.id, Name: row.name, EventName: row.eventName, Code: row.code})
-		interval := cronIntervalTx(bypass, tx, row.id)
-		next := now.Add(interval)
-		if _, err := tx.ExecContext(bypass,
-			`UPDATE `+tbl+` SET next_call = $1, last_call = $2 WHERE id = $3`,
-			next, now, row.id,
-		); err != nil {
-			applog.WarnCode(bypass, errcode.CronUpdateFailed, "cron next_call update failed", applog.Event{
+		tx, err := orm.DB.BeginTx(bypass, nil)
+		if err != nil {
+			return nil
+		}
+		defer func() { _ = tx.Rollback() }()
+
+		rows, err := tx.QueryContext(bypass,
+			`SELECT id, name, COALESCE(event_name,''), COALESCE(code,'') FROM `+tbl+
+				` WHERE active = true AND (next_call IS NULL OR next_call <= $1)
+				  ORDER BY id FOR UPDATE SKIP LOCKED LIMIT 20`, now,
+		)
+		if err != nil {
+			return nil
+		}
+		defer rows.Close()
+
+		type cronRow struct {
+			id        int64
+			name      string
+			eventName string
+			code      string
+		}
+		var due []cronRow
+		for rows.Next() {
+			var row cronRow
+			if err := rows.Scan(&row.id, &row.name, &row.eventName, &row.code); err != nil {
+				continue
+			}
+			due = append(due, row)
+		}
+		if err := rows.Err(); err != nil {
+			return nil
+		}
+
+		for _, row := range due {
+			executeCron(bypass, CronRunInput{ID: row.id, Name: row.name, EventName: row.eventName, Code: row.code})
+			interval := cronIntervalTx(bypass, tx, row.id)
+			next := now.Add(interval)
+			if _, err := tx.ExecContext(bypass,
+				`UPDATE `+tbl+` SET next_call = $1, last_call = $2 WHERE id = $3`,
+				next, now, row.id,
+			); err != nil {
+				applog.WarnCode(bypass, errcode.CronUpdateFailed, "cron next_call update failed", applog.Event{
+					Component: "scheduler",
+					Operation: "run_due",
+					Status:    "failure",
+					Context:   map[string]interface{}{"cron_id": row.id},
+					Err:       err,
+				})
+				return nil
+			}
+		}
+		if err := tx.Commit(); err != nil {
+			applog.WarnCode(bypass, errcode.CronCommitFailed, "cron transaction commit failed", applog.Event{
 				Component: "scheduler",
 				Operation: "run_due",
 				Status:    "failure",
-				Context:   map[string]interface{}{"cron_id": row.id},
 				Err:       err,
 			})
-			return
 		}
-	}
-	if err := tx.Commit(); err != nil {
-		applog.WarnCode(bypass, errcode.CronCommitFailed, "cron transaction commit failed", applog.Event{
-			Component: "scheduler",
-			Operation: "run_due",
-			Status:    "failure",
-			Err:       err,
-		})
-	}
+		return nil
+	})
 }
 
 func cronIntervalTx(ctx context.Context, tx orm.TxWrapper, id int64) time.Duration {

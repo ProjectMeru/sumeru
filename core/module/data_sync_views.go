@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
+	"sort"
+	"strconv"
 	"strings"
 
 	"sumeru/core/engine/parser"
@@ -11,6 +13,29 @@ import (
 	"sumeru/core/orm"
 	"sumeru/core/sdk/platformmsg"
 )
+
+const defaultInheritPriority = 16
+
+// sortInheritQueue orders inherit records by ascending priority (lower first), preserving file order for ties.
+func sortInheritQueue(records []parser.Record) {
+	sort.SliceStable(records, func(i, j int) bool {
+		pi := inheritRecordPriority(records[i])
+		pj := inheritRecordPriority(records[j])
+		return pi < pj
+	})
+}
+
+func inheritRecordPriority(rec parser.Record) int {
+	raw := strings.TrimSpace(parser.RecordFieldMap(rec)["priority"])
+	if raw == "" {
+		return defaultInheritPriority
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil {
+		return defaultInheritPriority
+	}
+	return n
+}
 
 // viewArchXML persists the full parsed view (header, sheet, notebook, etc.) for sys.view.arch.
 func viewArchXML(viewDef *parser.View) string {
@@ -192,6 +217,43 @@ func applySysUIViewInherit(ctx context.Context, moduleName string, xmlRecord par
 	}
 	if xmlRecord.ID != "" {
 		return linkXMLRecord(ctx, moduleName, xmlRecord.ID, "sys.view", parentID)
+	}
+	return nil
+}
+
+// applySysReportActionInherit merges xpath fragments into the parent sys.report.action arch.
+func applySysReportActionInherit(ctx context.Context, moduleName string, xmlRecord parser.Record) error {
+	fieldMap := parser.RecordFieldMap(xmlRecord)
+	inheritReference := strings.TrimSpace(fieldMap["inherit_id"])
+	architectureFragment := fieldMap["arch"]
+	if inheritReference == "" {
+		return fmt.Errorf("inherit_id missing on record %q", xmlRecord.ID)
+	}
+	if strings.TrimSpace(architectureFragment) == "" {
+		return fmt.Errorf("arch missing on inherit record %q", xmlRecord.ID)
+	}
+	parentID, err := resolveXMLIDInModule(ctx, moduleName, inheritReference)
+	if err != nil || parentID == 0 {
+		return fmt.Errorf("resolve inherit_id %q: %w", inheritReference, err)
+	}
+	parent, err := orm.SearchOne(ctx, "sys.report.action", map[string]interface{}{"id": parentID})
+	if err != nil {
+		return fmt.Errorf("load parent report action id %d: %w", parentID, err)
+	}
+	parentArch := orm.AsString(parent["arch"])
+	if strings.TrimSpace(parentArch) == "" {
+		return fmt.Errorf("parent report action %d has empty arch", parentID)
+	}
+	mergedArch, err := viewinherit.ApplyInheritArch(parentArch, architectureFragment)
+	if err != nil {
+		return fmt.Errorf("merge inherit %q: %w", xmlRecord.ID, err)
+	}
+	tableName := orm.MustQuotedTableName("sys.report.action")
+	if _, err := orm.DB.ExecContext(ctx, `UPDATE `+tableName+` SET arch = $1 WHERE id = $2`, mergedArch, parentID); err != nil {
+		return err
+	}
+	if xmlRecord.ID != "" {
+		return linkXMLRecord(ctx, moduleName, xmlRecord.ID, "sys.report.action", parentID)
 	}
 	return nil
 }

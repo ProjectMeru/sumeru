@@ -25,29 +25,30 @@ func runServerActionsForEvent(ctx context.Context, ev event.Event) error {
 	if _, ok := orm.Registry["sys.server.action"]; !ok {
 		return nil
 	}
-	bypass := orm.AuditedBypass(ctx, "automation.server_action")
-	installed, err := orm.InstalledModuleNames(bypass)
-	if err != nil || !orm.ShouldMaterializeModel("sys.server.action", installed) {
-		return nil
-	}
-	rows, err := orm.Search(bypass, "sys.server.action", [][]interface{}{
-		{"event_name", "=", ev.Name},
-		{"active", "=", true},
-	})
-	if err != nil {
-		return err
-	}
-	for _, row := range rows {
-		if err := executeServerAction(ctx, row, ev); err != nil {
-			applog.Warn(ctx, applog.Event{
-				Message:   "server action failed",
-				Component: "automation",
-				Operation: "server_action",
-				Status:    "failed",
-				Context:   map[string]interface{}{"event": ev.Name, "action": row["name"]},
-				Err:       err,
-			})
+	return orm.WithElevated(ctx, "automation.server_action", func(bypass context.Context) error {
+		installed, err := orm.InstalledModuleNames(bypass)
+		if err != nil || !orm.ShouldMaterializeModel("sys.server.action", installed) {
+			return nil
 		}
-	}
-	return nil
+		rows, err := orm.Search(bypass, "sys.server.action", [][]interface{}{
+			{"event_name", "=", ev.Name},
+			{"active", "=", true},
+		})
+		if err != nil {
+			return err
+		}
+		for _, row := range rows {
+			if err := executeServerAction(ctx, row, ev); err != nil {
+				applog.Warn(ctx, applog.Event{
+					Message:   "server action failed",
+					Component: "automation",
+					Operation: "server_action",
+					Status:    "failed",
+					Context:   map[string]interface{}{"event": ev.Name, "action": row["name"]},
+					Err:       err,
+				})
+			}
+		}
+		return nil
+	})
 }

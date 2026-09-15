@@ -10,5 +10,30 @@
             <field name="paperformat">a4</field>
             <field name="active" eval="True"/>
         </record>
+        <record id="report_action_document_demo" model="sys.report.action">
+            <field name="name">Document Arch Demo</field>
+            <field name="model">core.company</field>
+            <field name="report_type">pdf</field>
+            <field name="arch"><![CDATA[
+<document>
+  <title>Company Document</title>
+  <subtitle>{{.Record.name}}</subtitle>
+  <section heading="Details">
+    <field name="name"/>
+    <field name="email"/>
+  </section>
+</document>
+            ]]></field>
+            <field name="paperformat">a4</field>
+            <field name="active" eval="True"/>
+        </record>
+        <record id="report_action_document_demo_inherit" model="sys.report.action">
+            <field name="inherit_id" ref="base.report_action_document_demo"/>
+            <field name="arch"><![CDATA[
+<xpath expr="//section[@heading='Details']" position="inside">
+  <p>Extended by inherit</p>
+</xpath>
+            ]]></field>
+        </record>
     </data>
 </sumeru>

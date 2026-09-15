@@ -8,56 +8,44 @@ import (
 	"sumeru/core/orm"
 )
 
-// RenderReportActionPDF loads sys.report.action by id and renders a template PDF.
-func RenderReportActionPDF(ctx context.Context, reportID, recordID int) ([]byte, string, error) {
-	if reportID <= 0 {
-		return nil, "", fmt.Errorf("report id required")
-	}
-	row, err := orm.SearchOne(ctx, "sys.report.action", map[string]interface{}{"id": reportID})
+// RenderReportActionPDF loads sys.report.action by id and renders a document PDF.
+func RenderReportActionPDF(ctx context.Context, reportID, recordID int, opts ReportRenderOptions) ([]byte, string, error) {
+	row, err := loadReportAction(ctx, reportID)
 	if err != nil {
 		return nil, "", err
 	}
-	if !orm.AsBool(row["active"]) {
-		return nil, "", fmt.Errorf("report action inactive")
-	}
 	modelName := strings.TrimSpace(orm.AsString(row["model"]))
-	title := strings.TrimSpace(orm.AsString(row["name"]))
-	if modelName == "" {
-		return nil, "", fmt.Errorf("report model required")
-	}
 	if err := orm.CheckModelAccess(ctx, orm.SecurityUID(ctx), modelName, "read"); err != nil {
 		return nil, "", err
 	}
-	pageSize := strings.TrimSpace(orm.AsString(row["paperformat"]))
-	if pageSize == "" {
-		pageSize = PageSizeA4
-	}
-	var subtitle string
-	if recordID > 0 {
-		rec, err := orm.SearchOne(ctx, modelName, map[string]interface{}{"id": recordID})
-		if err != nil {
-			return nil, "", err
-		}
-		subtitle = strings.TrimSpace(orm.AsString(rec["name"]))
-	}
-	data, err := ExportTemplatePDF(TemplatePDFInput{
-		Title:    title,
-		Subtitle: subtitle,
-		Sections: []TemplatePDFSection{
-			{Heading: "Report registry", Body: fmt.Sprintf("Model: %s · Template: %s", modelName, orm.AsString(row["template_path"]))},
-		},
-		TableHead: []string{"Field", "Value"},
-		TableRows: [][]string{
-			{"Model", modelName},
-			{"Record ID", fmt.Sprintf("%d", recordID)},
-		},
-		PageSize: pageSize,
-	})
+	data, filename, err := BuildDocumentPDF(ctx, row, recordID)
 	if err != nil {
 		return nil, "", err
 	}
-	safe := strings.ReplaceAll(modelName, ".", "_")
-	return data, ExportFilename(safe+"_"+title, "pdf"), nil
+	if opts.StoreAttachment {
+		if _, err := StoreReportPDFAttachment(ctx, modelName, recordID, filename, data); err != nil {
+			return nil, "", err
+		}
+	}
+	return data, filename, nil
+}
+
+func loadReportAction(ctx context.Context, reportID int) (map[string]interface{}, error) {
+	if reportID <= 0 {
+		return nil, fmt.Errorf("report id required")
+	}
+	row, err := orm.SearchOne(ctx, "sys.report.action", map[string]interface{}{"id": reportID})
+	if err != nil {
+		return nil, err
+	}
+	if !orm.AsBool(row["active"]) {
+		return nil, fmt.Errorf("report action inactive")
+	}
+	modelName := strings.TrimSpace(orm.AsString(row["model"]))
+	if modelName == "" {
+		return nil, fmt.Errorf("report model required")
+	}
+	return row, nil
 }
 
 // PivotExportInput configures a pivot read_group CSV export.

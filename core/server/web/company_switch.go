@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -42,11 +43,14 @@ func parseCompanySwitchForm(r *http.Request) companySwitchForm {
 
 func switchActiveCompany(ctx context.Context, userID, companyID int) {
 	if companyID <= 0 || !companyRecordExists(ctx, companyID) {
+		auditCompanySwitchDeny(ctx, userID, companyID, "invalid company")
 		return
 	}
 	if !orm.UserAllowedCompany(ctx, userID, int64(companyID)) {
+		auditCompanySwitchDeny(ctx, userID, companyID, "not allowed")
 		return
 	}
+	previous := int(orm.ActiveCompanyIDForUser(ctx, userID))
 	if err := updateUserActiveCompany(ctx, userID, companyID); err != nil {
 		WebLogEvent(ctx, WebLogInput{
 			Route:     companySwitchRoute,
@@ -62,10 +66,20 @@ func switchActiveCompany(ctx context.Context, userID, companyID int) {
 		})
 		return
 	}
+	detail := fmt.Sprintf("user=%d company=%d", userID, companyID)
+	if previous > 0 && previous != companyID {
+		detail = fmt.Sprintf("user=%d %d->%d", userID, previous, companyID)
+	}
+	orm.AppendAudit(ctx, "company_switch", "sys.security", 0, nil, nil, detail)
 	WebLogNavigation(ctx, companySwitchRoute, "company_switch", "Active company switched", map[string]interface{}{
 		"company_id": companyID,
 		"user_id":    userID,
 	})
+}
+
+func auditCompanySwitchDeny(ctx context.Context, userID, companyID int, reason string) {
+	detail := fmt.Sprintf("user=%d company=%d: %s", userID, companyID, reason)
+	orm.AppendAudit(ctx, "company_switch_deny", "sys.security", 0, nil, nil, detail)
 }
 
 func companyRecordExists(ctx context.Context, companyID int) bool {

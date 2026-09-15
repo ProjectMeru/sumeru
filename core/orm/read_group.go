@@ -71,6 +71,9 @@ func ReadGroupDirect(ctx context.Context, modelName string, domain [][]interface
 	if _, ok := Registry[modelName]; !ok {
 		return nil, fmt.Errorf("model %s not found", modelName)
 	}
+	if err := RejectSmuggledUserBypass(ctx); err != nil {
+		return nil, err
+	}
 	uid := SecurityUID(ctx)
 	if err := CheckModelAccess(ctx, uid, modelName, "read"); err != nil {
 		return nil, err

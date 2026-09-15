@@ -8,6 +8,7 @@
                     <field name="model" string="Model"/>
                     <field name="report_type" string="Report Type"/>
                     <field name="template_path" string="Template Path"/>
+                    <field name="arch" string="Document Arch"/>
                     <field name="paperformat" string="Paper Format"/>
                     <field name="active" string="Active"/>
                 </group>
