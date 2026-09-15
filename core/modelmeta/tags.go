@@ -43,6 +43,7 @@ type FieldTags struct {
 	Groups     string
 	Related    string
 	Compute    string
+	Company    string // model tag: company=shared skips auto multi-company isolation
 }
 
 // ParseModelTag parses the sumeru tag on an embedded ModelMeta.
@@ -166,6 +167,8 @@ func setTagOption(tags *FieldTags, key, value string) error {
 		tags.Inherit = value
 	case "inherits":
 		tags.Inherits = value
+	case "company":
+		tags.Company = value
 	case "required":
 		tags.Required = true
 	case "unique":

@@ -305,11 +305,15 @@ func AuthenticatedUserID(r *http.Request) int {
 }
 
 func requireLogin(w http.ResponseWriter, r *http.Request) bool {
-	if SessionUserID(r) > 0 {
-		return true
+	uid := SessionUserID(r)
+	if uid <= 0 {
+		redirectToLogin(w, r, r.URL.RequestURI())
+		return false
 	}
-	redirectToLogin(w, r, r.URL.RequestURI())
-	return false
+	if redirectPortalUserFromWeb(w, r, uid) {
+		return false
+	}
+	return true
 }
 
 func apiKeyFromRequest(r *http.Request) string {
@@ -336,7 +340,19 @@ func enrichRequestContext(r *http.Request, requestID string, session sessionStat
 	}
 	ctx = orm.ContextWithUID(ctx, userID)
 	if userID > 0 {
-		ctx = orm.ContextWithCompanyID(ctx, orm.ActiveCompanyIDForUser(ctx, userID))
+		ctx = orm.ContextWithCompanyID(ctx, sessionActiveCompanyID(ctx, userID))
 	}
 	return ctx
+}
+
+func sessionActiveCompanyID(ctx context.Context, userID int) int64 {
+	companyID := orm.ActiveCompanyIDForUser(ctx, userID)
+	if companyID > 0 && orm.UserAllowedCompany(ctx, userID, companyID) {
+		return companyID
+	}
+	ids, err := orm.UserCompanyIDs(ctx, userID)
+	if err != nil || len(ids) == 0 {
+		return 0
+	}
+	return ids[0]
 }
