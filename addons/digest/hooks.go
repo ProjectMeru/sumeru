@@ -19,23 +19,24 @@ func runDueDigests(ctx context.Context, _ event.Event) error {
 	if orm.DB == nil {
 		return nil
 	}
-	bypass := orm.AuditedBypass(ctx, "digest.hook")
-	rows, err := orm.Search(bypass, "digest.digest", [][]interface{}{{"active", "=", true}})
-	if err != nil || len(rows) == 0 {
-		return err
-	}
-	for _, digestRow := range rows {
-		if err := runDigest(bypass, digestRow); err != nil {
-			applog.Warn(ctx, applog.Event{
-				Message:   "digest run failed",
-				Component: "digest",
-				Operation: "cron.tick",
-				Status:    "failed",
-				Err:       err,
-			})
+	return orm.WithElevated(ctx, "digest.hook", func(bypass context.Context) error {
+		rows, err := orm.Search(bypass, "digest.digest", [][]interface{}{{"active", "=", true}})
+		if err != nil || len(rows) == 0 {
+			return err
 		}
-	}
-	return nil
+		for _, digestRow := range rows {
+			if err := runDigest(bypass, digestRow); err != nil {
+				applog.Warn(ctx, applog.Event{
+					Message:   "digest run failed",
+					Component: "digest",
+					Operation: "cron.tick",
+					Status:    "failed",
+					Err:       err,
+				})
+			}
+		}
+		return nil
+	})
 }
 
 func runDigest(ctx context.Context, digestRow map[string]interface{}) error {

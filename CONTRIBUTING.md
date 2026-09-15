@@ -111,6 +111,25 @@ make test-integration
 
 See the [Actions tab](https://github.com/ProjectMeru/sumeru/actions/workflows/ci.yml) for workflow runs. Dependabot opens weekly Go/npm and monthly GitHub Actions update PRs.
 
+## Security elevation
+
+Kernel paths that must bypass record rules (module install, cron, outbox drain, setup bootstrap) must use **`orm.WithElevated(ctx, reason, fn)`** with a **stable reason string** — never user input, tokens, or dynamic SQL.
+
+- **`WithElevated`** time-boxes work (15 minutes), sets bypass on the callback context, and writes `security_elevate` / `security_elevate_done` / `security_elevate_fail` rows to `sys.audit` (best-effort).
+- **`AuditedBypass`** is for ORM internals and code already running inside an elevated boundary (sequences, side effects, i18n). Do not call it on `r.Context()` in web handlers or at addon hook entry.
+- **`BackgroundBypass`** in tests/config is not audited; do not use it in handlers or addons.
+- CI enforces raw `ContextWithBypass` and addon `AuditedBypass` via [`scripts/check_security_bypass.sh`](scripts/check_security_bypass.sh).
+
+| Reason | Use |
+|--------|-----|
+| `module.install` | Install / uninstall / activate modules |
+| `cron.run` | Scheduler tick |
+| `outbox.drain` | Outbox publisher |
+| `automation.server_action` | Server action event hooks |
+| `digest.hook` | Digest cron hook |
+| `setup.bootstrap` | First-time setup handler |
+| `schema.sync` | Registry schema sync |
+
 ## Pull requests
 
 - Keep diffs focused; one concern per PR when practical.

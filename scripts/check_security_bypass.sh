@@ -43,4 +43,17 @@ if rg -n 'ContextWithBypass\(r\.Context\(\)' core/server/web --glob '*.go' 2>/de
   exit 1
 fi
 
+# Addons must use WithElevated at hook entry; AuditedBypass is for core/orm internals only.
+addon_violations=()
+while IFS= read -r line; do
+  [[ -z "$line" ]] && continue
+  addon_violations+=("$line")
+done < <(rg -n 'AuditedBypass\(' addons --glob '*.go' 2>/dev/null || true)
+
+if ((${#addon_violations[@]} > 0)); then
+  echo "AuditedBypass used in addons (use orm.WithElevated at hook entry):" >&2
+  printf '  %s\n' "${addon_violations[@]}" >&2
+  exit 1
+fi
+
 echo "security bypass check passed"
