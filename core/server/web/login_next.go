@@ -21,13 +21,18 @@ func loginNextFromRequest(r *http.Request) string {
 }
 
 func resolveLoginNext(r *http.Request) string {
-	if next := loginNextFromRequest(r); next != "" {
-		return next
+	var next string
+	if n := loginNextFromRequest(r); n != "" {
+		next = n
+	} else if q := strings.TrimSpace(r.URL.Query().Get(nextField)); q != "" {
+		next = SafePathNext(q, homeRoute)
+	} else {
+		next = homeRoute
 	}
-	if q := strings.TrimSpace(r.URL.Query().Get(nextField)); q != "" {
-		return SafePathNext(q, homeRoute)
+	if uid := SessionUserID(r); uid > 0 {
+		return postLoginDestination(r.Context(), uid, next)
 	}
-	return homeRoute
+	return next
 }
 
 func clearLoginNextCookie(w http.ResponseWriter) {
