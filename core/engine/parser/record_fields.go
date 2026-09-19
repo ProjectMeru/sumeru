@@ -1,6 +1,9 @@
 package parser
 
-import "strings"
+import (
+	"html"
+	"strings"
+)
 
 // RecordField captures <field> values; use Body (innerxml) for rich content (e.g. arch with xpath).
 type RecordField struct {
@@ -26,7 +29,7 @@ func RecordFieldMap(rec Record) map[string]string {
 			m[f.Name] = strings.TrimSpace(f.Eval)
 			continue
 		}
-		m[f.Name] = strings.TrimSpace(f.Body)
+		m[f.Name] = html.UnescapeString(strings.TrimSpace(f.Body))
 	}
 	return m
 }
