@@ -22,6 +22,7 @@ var recordSyncSpecs = map[string]recordSyncSpec{
 	"core.user":            {conflictKey: "login"},
 	"core.country":         {conflictKey: "code"},
 	"core.lang":            {conflictKey: "code"},
+	"sys.sequence":         {conflictKey: "code"},
 	"account.account":      {conflictKey: "code"},
 	"core.country.state":   {naturalKeys: naturalKeyNameCountry},
 	"core.city":            {naturalKeys: naturalKeyNameCountryState},
@@ -31,6 +32,8 @@ var recordSyncSpecs = map[string]recordSyncSpec{
 	"core.partner":         {naturalKeys: naturalKeyName},
 	"account.journal":      {naturalKeys: naturalKeyCode},
 	"account.move.line":    {naturalKeys: naturalKeyMoveLine},
+	"mail.activity.type":   {naturalKeys: naturalKeyName},
+	"sys.report.action":    {naturalKeys: naturalKeyReportAction},
 }
 
 func recordConflictColumn(model string) string {
@@ -77,6 +80,13 @@ func naturalKeyMoveLine(fieldValues map[string]interface{}) map[string]interface
 		criteria["move_id"] = mid
 	}
 	return criteria
+}
+
+func naturalKeyReportAction(fieldValues map[string]interface{}) map[string]interface{} {
+	if tpl, ok := fieldValues["template_path"]; ok && tpl != nil {
+		return map[string]interface{}{"template_path": tpl}
+	}
+	return map[string]interface{}{"name": fieldValues["name"]}
 }
 
 func syncGenericRegistryRecord(ctx context.Context, moduleName string, xmlRecord parser.Record) {
