@@ -5,9 +5,9 @@
         <menuitem id="menu_contacts_root" name="Contacts" sequence="20" web_icon="users" groups="contacts.group_contacts_user"/>
 
         <menuitem id="menu_contacts_category" name="Contacts organization" parent="menu_contacts_root"
-            sequence="100" groups="contacts.group_contacts_user"/>
+            sequence="100" groups="contacts.group_contacts_user" web_icon="folder"/>
 
         <menuitem id="menu_contacts_action" name="All Contacts" parent="menu_contacts_category"
-            action="action_contacts" sequence="10" groups="contacts.group_contacts_user"/>
+            action="action_contacts" sequence="10" groups="contacts.group_contacts_user" web_icon="contact"/>
     </data>
 </sumeru>
