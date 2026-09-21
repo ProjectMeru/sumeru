@@ -66,7 +66,6 @@ func manifestFromViewList(xmlPath string) (parsedManifestFile, error) {
 		views:     parsedViewData.Views,
 		menuItems: parsedViewData.MenuItems,
 	}
-	out.records = append(out.records, RecordsFromActions(parsedViewData.Actions)...)
 	return out, nil
 }
 
@@ -80,7 +79,6 @@ func manifestFromMenuList(xmlPath string) (parsedManifestFile, error) {
 		records:   append([]parser.Record(nil), menuList.Records...),
 		menuItems: menuList.MenuItems,
 	}
-	out.records = append(out.records, RecordsFromActions(menuList.Actions)...)
 	return out, nil
 }
 
