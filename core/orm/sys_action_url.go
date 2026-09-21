@@ -8,5 +8,5 @@ type SysActionURL struct {
 	modelmeta.ModelMeta `sumeru:"model=sys.action.url"`
 
 	Name modelmeta.String `sumeru:"required,unique"`
-	URL  modelmeta.String `sumeru:"required"`
+	URL  modelmeta.String `sumeru:"required,column=url,string=URL"`
 }
