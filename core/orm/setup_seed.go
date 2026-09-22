@@ -181,7 +181,7 @@ func ensureBootstrapSecurity(ctx context.Context, first *SetupAdminParams) error
 	if err != nil {
 		return err
 	}
-	if err := SetUserPasswordHash(ctx, adminUID, string(hash)); err != nil {
+	if _, err := DB.ExecContext(ctx, `UPDATE `+userTbl+` SET password = $1 WHERE id = $2`, string(hash), adminUID); err != nil {
 		return fmt.Errorf("set administrator password: %w", err)
 	}
 
