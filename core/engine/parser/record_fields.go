@@ -1,6 +1,9 @@
 package parser
 
-import "strings"
+import (
+	"html"
+	"strings"
+)
 
 // RecordField captures <field> values; use Body (innerxml) for rich content (e.g. arch with xpath).
 type RecordField struct {
@@ -26,7 +29,21 @@ func RecordFieldMap(rec Record) map[string]string {
 			m[f.Name] = strings.TrimSpace(f.Eval)
 			continue
 		}
-		m[f.Name] = strings.TrimSpace(f.Body)
+		m[f.Name] = fieldBodyValue(f)
 	}
 	return m
+}
+
+// fieldBodyValue unwraps CDATA (literal character data, no entity decoding)
+// and decodes XML entities for plain text fields. Rich (type="html") bodies
+// keep their escaped form so they re-render as valid HTML.
+func fieldBodyValue(f RecordField) string {
+	body := strings.TrimSpace(f.Body)
+	if strings.HasPrefix(body, "<![CDATA[") && strings.HasSuffix(body, "]]>") {
+		return strings.TrimSuffix(strings.TrimPrefix(body, "<![CDATA["), "]]>")
+	}
+	if f.Type == "html" {
+		return body
+	}
+	return html.UnescapeString(body)
 }

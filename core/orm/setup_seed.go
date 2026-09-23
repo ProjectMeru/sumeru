@@ -169,7 +169,6 @@ func ensureBootstrapSecurity(ctx context.Context, first *SetupAdminParams) error
 		"active":    true,
 		"email":     first.Email,
 		"lang":      first.Lang,
-		"password":  "",
 		"user_type": "internal",
 	}, "login")
 	if err != nil {
