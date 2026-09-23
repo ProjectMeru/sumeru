@@ -64,6 +64,9 @@ func execSearchQuery(ctx context.Context, modelName string, domain [][]interface
 }
 
 func prepareSearchRead(ctx context.Context, modelName string, domain [][]interface{}) (uid int, whereClause string, args []interface{}, err error) {
+	if err := RejectSmuggledUserBypass(ctx); err != nil {
+		return 0, "", nil, err
+	}
 	if _, ok := Registry[modelName]; !ok {
 		return 0, "", nil, fmt.Errorf("model %s not found", modelName)
 	}

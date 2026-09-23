@@ -594,3 +594,33 @@ func ResolveNavigationActionForTest(ctx context.Context, actionID int, actionQue
 		return 0, "", err
 	}
 }
+
+// ShareTokenParsed is the decoded portal share token payload.
+type ShareTokenParsed struct {
+	IssuerUID int
+	Model     string
+	ResID     int64
+}
+
+// MintShareTokenForTest signs a share link for tests.
+func MintShareTokenForTest(issuerUID int, model string, resID int64) (string, error) {
+	return MintShareToken(issuerUID, model, resID)
+}
+
+// MintShareTokenForTestWithExpiry signs a share link with a fixed expiry unix time.
+func MintShareTokenForTestWithExpiry(issuerUID int, model string, resID int64, expUnix int64) (string, error) {
+	return mintShareTokenAt(issuerUID, model, resID, expUnix)
+}
+
+// ParseShareTokenForTest validates and decodes a share token.
+func ParseShareTokenForTest(token string) (ShareTokenParsed, error) {
+	parsed, err := parseShareToken(token)
+	if err != nil {
+		return ShareTokenParsed{}, err
+	}
+	return ShareTokenParsed{
+		IssuerUID: parsed.IssuerUID,
+		Model:     parsed.Model,
+		ResID:     parsed.ResID,
+	}, nil
+}

@@ -34,10 +34,12 @@ func RegisterAppRoutes(mux *http.ServeMux) {
 	registerActionRoutes()
 	registerSettingsRoutes()
 	registerAPIRoutes()
+	registerPortalRoutes()
 
 	router.Apply(serveMux)
 	registerAppAliases(serveMux)
 	registerContentPrefixRoute(serveMux)
+	registerPortalSharePrefixRoute(serveMux)
 }
 
 func registerContentPrefixRoute(mux *http.ServeMux) {
@@ -99,6 +101,21 @@ func registerAPIRoutes() {
 	registerPublic(http.MethodGet, apiHealthRoute, APIHealthHandler)
 	registerPublic(http.MethodGet, apiReadyRoute, APIReadyHandler)
 	registerPublic(http.MethodPost, apiRPCRoute, RPCJSONHandler)
+}
+
+func registerPortalRoutes() {
+	registerSession(http.MethodGet, portalHomeRoute, PortalHomeHandler)
+	registerSession(http.MethodGet, portalRecordRoute, PortalRecordHandler)
+}
+
+func registerPortalSharePrefixRoute(mux *http.ServeMux) {
+	mux.HandleFunc(portalShareRoutePrefix, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		PortalShareHandler(w, r)
+	})
 }
 
 func registerPublic(method, path string, handler http.HandlerFunc) {

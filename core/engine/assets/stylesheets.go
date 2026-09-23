@@ -26,6 +26,15 @@ func AppLogsStylesheetURLs() []string {
 	return []string{"/static/css/sumeru-workspace.css", "/static/css/sumeru-pages.css"}
 }
 
+// PortalStylesheetURLs is the minimal CSS stack for /portal pages.
+func PortalStylesheetURLs() []string {
+	return []string{
+		"/static/css/sumeru-theme.css",
+		"/static/css/sumeru-base.css",
+		"/static/css/portal.css",
+	}
+}
+
 // AIStylesheetURL is the optional AI assistant stylesheet path.
 func AIStylesheetURL() string {
 	return "/static/css/sumeru-ai.css"

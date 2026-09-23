@@ -6,6 +6,9 @@ import (
 )
 
 func prepareCreateWrite(ctx context.Context, model Model, values map[string]interface{}, opts PrepareOptions) (prepared map[string]interface{}, uid int, err error) {
+	if err := RejectSmuggledUserBypass(ctx); err != nil {
+		return nil, 0, err
+	}
 	uid = SecurityUID(ctx)
 	if err := CheckModelAccess(ctx, uid, model.ModelName(), "create"); err != nil {
 		return nil, 0, err

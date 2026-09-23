@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shared record | {{.AppName}}</title>
+    {{range .Stylesheets}}
+    <link rel="stylesheet" href="{{.}}">
+    {{end}}
+</head>
+<body class="sum-portal-body">
+<header class="sum-portal-header">
+    {{if .LogoURL}}<img src="{{.LogoURL}}" alt="" class="sum-portal-logo" width="32" height="32">{{end}}
+    <span class="sum-portal-title">{{.AppName}}</span>
+</header>
+<main class="sum-portal-main">
+    {{if .Error}}<p class="sum-portal-error">{{.Error}}</p>{{else}}
+    <h1 class="sum-portal-heading">{{.Model}}</h1>
+    <dl class="sum-portal-dl">
+        {{range $k, $v := .Record}}
+        <dt>{{$k}}</dt><dd>{{$v}}</dd>
+        {{end}}
+    </dl>
+    {{end}}
+</main>
+</body>
+</html>

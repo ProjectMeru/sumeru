@@ -8,9 +8,10 @@ import (
 )
 
 type pendingModel struct {
-	name   string
-	extend bool
-	fields []orm.FieldDefinition
+	name          string
+	extend        bool
+	companyShared bool
+	fields        []orm.FieldDefinition
 }
 
 var (
@@ -60,6 +61,9 @@ func activateAllLocked(moduleOrder []string) error {
 				continue
 			}
 			orm.RegisterModelWithModule(&reflectedModel{name: pending.name, fields: pending.fields}, moduleName)
+			if pending.companyShared {
+				orm.SetModelCompanyShared(pending.name, true)
+			}
 		}
 	}
 	return nil

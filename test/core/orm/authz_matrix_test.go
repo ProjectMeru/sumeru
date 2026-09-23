@@ -25,6 +25,30 @@ func TestAuthzMatrix_bypassAllows(t *testing.T) {
 	}
 }
 
+func TestAuthzMatrix_smuggledBypassRejected(t *testing.T) {
+	ctx := orm.ContextWithUID(orm.ContextWithBypass(context.Background(), true), 42)
+	err := orm.RejectSmuggledUserBypass(ctx)
+	if err == nil || !orm.IsSmuggledBypass(err) {
+		t.Fatalf("want SmuggledBypassError, got %v", err)
+	}
+}
+
+func TestAuthzMatrix_smuggledBypassAllowedInElevation(t *testing.T) {
+	parent := orm.ContextWithUID(context.Background(), 42)
+	err := orm.WithElevated(parent, "test.authz", func(elevated context.Context) error {
+		if err := orm.RejectSmuggledUserBypass(elevated); err != nil {
+			t.Fatalf("elevated boundary: %v", err)
+		}
+		if !orm.BypassFromContext(elevated) {
+			t.Fatal("expected bypass inside WithElevated")
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("WithElevated: %v", err)
+	}
+}
+
 func TestAuthzMatrix_superuserAllows(t *testing.T) {
 	ctx := context.Background()
 	if err := orm.CheckModelAccess(ctx, 1, "core.user", "write"); err != nil {

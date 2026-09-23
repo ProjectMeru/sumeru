@@ -57,13 +57,7 @@ func loadRuleDomainParts(ctx context.Context, uid int, model string, op string) 
 	if err != nil {
 		return empty, err
 	}
-	dc := DomainContext{UID: uid}
-	if cids, err := UserCompanyIDs(ctx, uid); err == nil {
-		dc.CompanyIDs = cids
-		if len(cids) > 0 {
-			dc.CompanyID = cids[0]
-		}
-	}
+	dc := domainContextForUser(ctx, uid)
 	key := ruleCacheKey(uid, model, op, groups, dc.CompanyIDs)
 	ruleCacheMu.RLock()
 	if c, ok := ruleCache[key]; ok && time.Now().Before(c.until) {
@@ -76,6 +70,7 @@ func loadRuleDomainParts(ctx context.Context, uid int, model string, op string) 
 	if err != nil {
 		return empty, err
 	}
+	parts = appendCompanyIsolationRule(parts, model, dc)
 	ruleCacheMu.Lock()
 	ruleCache[key] = cachedRules{parts: parts, until: time.Now().Add(30 * time.Second)}
 	ruleCacheMu.Unlock()

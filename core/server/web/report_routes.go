@@ -5,17 +5,20 @@ import (
 	"strconv"
 	"strings"
 
+	"sumeru/core/orm"
 	"sumeru/core/report"
 )
 
 const (
 	reportPrintRoute    = "/web/report/print"
+	reportPreviewRoute  = "/web/report/preview"
 	exportPivotRoute    = "/web/export/pivot"
 	exportGraphRoute    = "/web/export/graph"
 )
 
 func registerReportRoutes() {
 	registerSession(http.MethodGet, reportPrintRoute, ReportPrintHandler)
+	registerSession(http.MethodGet, reportPreviewRoute, ReportPreviewHandler)
 	registerSession(http.MethodGet, exportPivotRoute, ExportPivotHandler)
 	registerSession(http.MethodGet, exportGraphRoute, ExportGraphHandler)
 }
@@ -30,7 +33,10 @@ func ReportPrintHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	reportID, _ := strconv.Atoi(strings.TrimSpace(r.URL.Query().Get("report_id")))
 	recordID, _ := strconv.Atoi(strings.TrimSpace(r.URL.Query().Get("id")))
-	data, filename, err := report.RenderReportActionPDF(r.Context(), reportID, recordID)
+	storeAttach := strings.TrimSpace(r.URL.Query().Get("attach")) == "1"
+	data, filename, err := report.RenderReportActionPDF(r.Context(), reportID, recordID, report.ReportRenderOptions{
+		StoreAttachment: storeAttach,
+	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -38,6 +44,37 @@ func ReportPrintHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/pdf")
 	w.Header().Set("Content-Disposition", safeContentDispositionFilename(filename))
 	_, _ = w.Write(data)
+}
+
+// ReportPreviewHandler GET /web/report/preview?report_id=&id=
+func ReportPreviewHandler(w http.ResponseWriter, r *http.Request) {
+	if !requireLogin(w, r) {
+		return
+	}
+	if !validateSessionCSRF(w, r) {
+		return
+	}
+	if !requireSystemAdmin(w, r, false) {
+		return
+	}
+	reportID, _ := strconv.Atoi(strings.TrimSpace(r.URL.Query().Get("report_id")))
+	recordID, _ := strconv.Atoi(strings.TrimSpace(r.URL.Query().Get("id")))
+	row, err := report.LoadReportActionForPreview(r.Context(), reportID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	modelName := strings.TrimSpace(orm.AsString(row["model"]))
+	if !requireModelAccess(w, r, modelName, "read") {
+		return
+	}
+	html, err := report.RenderReportHTMLPreview(r.Context(), row, recordID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = w.Write([]byte(html))
 }
 
 // ExportPivotHandler GET /web/export/pivot
