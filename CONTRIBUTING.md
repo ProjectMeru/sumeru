@@ -131,6 +131,10 @@ Kernel paths that must bypass record rules (module install, cron, outbox drain, 
 | `setup.bootstrap` | First-time setup handler |
 | `schema.sync` | Registry schema sync |
 
+## View modifier expressions (SWC)
+
+Dynamic `invisible` / `readonly` / `required` expressions in form and list arch are evaluated client-side with a **frozen allowlist** of identifiers: record field names, `user_id`, `company_id`, and `context` (object). Expressions must be boolean JavaScript fragments (for example `state == 'done'`), not statements. Tokens such as `function`, `=>`, `[`, `` ` ``, or `;` are rejected. Static arch flags still apply when an expression is missing or invalid.
+
 ## Pull requests
 
 - Keep diffs focused; one concern per PR when practical.

@@ -1,6 +1,10 @@
 import type { RpcService } from "../services/rpc.js";
+import type { BusService } from "../services/bus.js";
+import { RECORD_UPDATED } from "../constants/routes.js";
 import { SwcError } from "../runtime/error.js";
 import type { SwcArchField } from "../types/workspace.js";
+
+export type RecordUpdatedPayload = { model: string; id?: number; recordId?: number };
 
 export interface OnchangeResult {
   value?: Record<string, unknown>;
@@ -140,5 +144,111 @@ export class RecordStore {
         throw new SwcError(`Field ${f} is required`, "validation");
       }
     }
+  }
+}
+
+/** Shared client cache keyed by model:id; use via env.services.record. */
+export class RecordService {
+  private readonly store: RecordStore;
+  private readonly bus: BusService;
+  private readonly cache = new Map<string, SwcRecord>();
+  // ponytail: FIFO eviction at 64 entries; upgrade to LRU if profiling shows churn.
+  private static readonly maxCache = 64;
+
+  constructor(rpc: RpcService, bus: BusService) {
+    this.store = new RecordStore(rpc);
+    this.bus = bus;
+    bus.subscribe(RECORD_UPDATED, (payload) => {
+      const msg = payload as RecordUpdatedPayload;
+      if (!msg?.model) return;
+      const rid = msg.id ?? msg.recordId;
+      if (rid != null && rid > 0) {
+        this.invalidate(msg.model, rid);
+      } else {
+        this.invalidate(msg.model);
+      }
+    });
+  }
+
+  private cacheKey(model: string, id: number): string {
+    return `${model}:${id}`;
+  }
+
+  fromPayload(model: string, id: number, data: Record<string, unknown>): SwcRecord {
+    if (id > 0) {
+      const hit = this.cache.get(this.cacheKey(model, id));
+      if (hit) {
+        hit.data = { ...data };
+        hit.clearDirty();
+        return hit;
+      }
+    }
+    const rec = this.store.fromPayload(model, id, data);
+    if (id > 0) {
+      this.remember(model, id, rec);
+    }
+    return rec;
+  }
+
+  get(model: string, id: number): SwcRecord | undefined {
+    if (id <= 0) return undefined;
+    return this.cache.get(this.cacheKey(model, id));
+  }
+
+  invalidate(model: string, id?: number): void {
+    if (id != null && id > 0) {
+      this.cache.delete(this.cacheKey(model, id));
+      return;
+    }
+    for (const key of [...this.cache.keys()]) {
+      if (key.startsWith(`${model}:`)) {
+        this.cache.delete(key);
+      }
+    }
+  }
+
+  private remember(model: string, id: number, rec: SwcRecord): void {
+    while (this.cache.size >= RecordService.maxCache) {
+      const first = this.cache.keys().next().value;
+      if (first === undefined) break;
+      this.cache.delete(first);
+    }
+    this.cache.set(this.cacheKey(model, id), rec);
+  }
+
+  private emitUpdated(model: string, id: number): void {
+    this.bus.emit(RECORD_UPDATED, { model, id });
+  }
+
+  async save(rec: SwcRecord): Promise<number> {
+    const id = await this.store.save(rec);
+    if (id > 0) {
+      this.remember(rec.model, id, rec);
+    }
+    this.emitUpdated(rec.model, id > 0 ? id : rec.id);
+    return id;
+  }
+
+  async unlink(rec: SwcRecord): Promise<void> {
+    const id = rec.id;
+    await this.store.unlink(rec);
+    if (id > 0) {
+      this.invalidate(rec.model, id);
+    }
+    this.emitUpdated(rec.model, id);
+  }
+
+  async duplicate(rec: SwcRecord, omit: string[] = ["id"]): Promise<number> {
+    const newId = await this.store.duplicate(rec, omit);
+    this.emitUpdated(rec.model, newId);
+    return newId;
+  }
+
+  applyOnchange(rec: SwcRecord, field: string): Promise<OnchangeResult | null> {
+    return this.store.applyOnchange(rec, field);
+  }
+
+  validate(rec: SwcRecord, requiredFields: string[]): void {
+    this.store.validate(rec, requiredFields);
   }
 }
