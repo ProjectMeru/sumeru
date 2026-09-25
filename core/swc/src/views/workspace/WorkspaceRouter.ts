@@ -4,7 +4,7 @@ import type { SwcWorkspacePayload } from "../../types/workspace.js";
 import { ListView } from "../list/ListView.js";
 import { SwcError } from "../../runtime/error.js";
 import { registry, type ViewConstructor } from "../../runtime/registry.js";
-import { logWorkspacePayload, logViewArch } from "../../devtools/debug.js";
+import { logWorkspacePayload, logViewArch, updateDebugPanel } from "../../devtools/debug.js";
 import { ShellPageView } from "../../shell/ShellPageView.js";
 import { syncWorkspaceViewTabs } from "../../shell/view-tab-sync.js";
 import { syncWorkspaceBreadcrumbs } from "../../shell/breadcrumb-sync.js";
@@ -67,6 +67,10 @@ export class WorkspaceRouter extends SwcComponent {
       syncWorkspaceViewTabs(this.payload.viewTabs);
       syncWorkspaceBreadcrumbs(this.payload.breadcrumbs);
       this.syncView();
+      void updateDebugPanel(this.env.bootstrap, {
+        model: this.payload.model,
+        recordId: this.payload.recordId,
+      });
     } catch (err) {
       this.error = err instanceof SwcError ? err.message : String(err);
     } finally {
@@ -118,6 +122,10 @@ export class WorkspaceRouter extends SwcComponent {
         syncWorkspaceBreadcrumbs(payload.breadcrumbs);
         this.syncView();
         this.patch();
+        void updateDebugPanel(this.env.bootstrap, {
+          model: payload.model,
+          recordId: payload.recordId,
+        });
       })
       .catch((err) => {
         this.error = err instanceof SwcError ? err.message : String(err);

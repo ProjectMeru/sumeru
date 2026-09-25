@@ -1,8 +1,9 @@
 import type { ActionService } from "../services/action.js";
+import type { CommandService } from "../services/command.js";
 import type { SwcBootstrap, SwcBootstrapApp } from "../types/bootstrap.js";
 
 export interface LauncherItem {
-  kind: "app" | "menu";
+  kind: "app" | "menu" | "command";
   name: string;
   module: string;
   action: string;
@@ -92,7 +93,22 @@ export function filterLauncherItems(items: LauncherItem[], query: string): Launc
 
 let initialized = false;
 
-export function initAppLauncher(boot: SwcBootstrap, action: ActionService): void {
+export function filterCommands(command: CommandService, query: string): { id: string; label: string }[] {
+  const q = query.trim();
+  const list = command.list();
+  if (!q) return list.map((c) => ({ id: c.id, label: c.label }));
+  return list
+    .map((c) => ({ c, score: fuzzyScore(q, c.label) }))
+    .filter(({ score }) => score > 0)
+    .sort((a, b) => b.score - a.score || a.c.label.localeCompare(b.c.label))
+    .map(({ c }) => ({ id: c.id, label: c.label }));
+}
+
+export function initAppLauncher(
+  boot: SwcBootstrap,
+  action: ActionService,
+  command?: CommandService,
+): void {
   if (initialized) return;
   initialized = true;
 
@@ -109,8 +125,19 @@ export function initAppLauncher(boot: SwcBootstrap, action: ActionService): void
   let activeIndex = 0;
   let open = false;
   let pointerNav = false;
+  let pane: "apps" | "commands" = "apps";
 
-  const filtered = (): LauncherItem[] => filterLauncherItems(items, query);
+  const filtered = (): LauncherItem[] => {
+    if (pane === "commands" && command) {
+      return filterCommands(command, query).map((c) => ({
+        kind: "command" as const,
+        name: c.label,
+        module: "Command",
+        action: c.id,
+      }));
+    }
+    return filterLauncherItems(items, query);
+  };
 
   const scrollActiveIntoView = (): void => {
     const active = results.querySelector(".sum-app-launcher-result.is-active");
@@ -178,7 +205,7 @@ export function initAppLauncher(boot: SwcBootstrap, action: ActionService): void
 
       const kind = document.createElement("span");
       kind.className = `sum-app-launcher-result-kind sum-app-launcher-result-kind--${item.kind}`;
-      kind.textContent = item.kind === "app" ? "App" : "Menu";
+      kind.textContent = item.kind === "app" ? "App" : item.kind === "command" ? "Cmd" : "Menu";
 
       nameRow.append(name, kind);
 
@@ -194,7 +221,11 @@ export function initAppLauncher(boot: SwcBootstrap, action: ActionService): void
         setActiveIndex(index);
       });
       row.addEventListener("click", () => {
-        action.navigate(item.action);
+        if (item.kind === "command" && command) {
+          command.run(item.action);
+        } else {
+          action.navigate(item.action);
+        }
         close();
       });
       results.appendChild(row);
@@ -207,7 +238,9 @@ export function initAppLauncher(boot: SwcBootstrap, action: ActionService): void
     pointerNav = false;
     query = "";
     activeIndex = 0;
+    pane = "apps";
     input.value = "";
+    ensurePaneTabs();
     renderResults();
     if (!dlg.open) dlg.showModal();
     queueMicrotask(() => input.focus());
@@ -222,7 +255,11 @@ export function initAppLauncher(boot: SwcBootstrap, action: ActionService): void
     const list = filtered();
     const item = list[activeIndex];
     if (!item) return;
-    action.navigate(item.action);
+    if (item.kind === "command" && command) {
+      command.run(item.action);
+    } else {
+      action.navigate(item.action);
+    }
     close();
   };
 
@@ -259,10 +296,52 @@ export function initAppLauncher(boot: SwcBootstrap, action: ActionService): void
   };
 
   const onGlobalKeydown = (ev: KeyboardEvent): void => {
+    const target = ev.target;
+    if (
+      target instanceof HTMLElement &&
+      (target.isContentEditable ||
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.tagName === "SELECT")
+    ) {
+      return;
+    }
     if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "k") {
       ev.preventDefault();
       toggle();
     }
+  };
+
+  const ensurePaneTabs = (): void => {
+    if (!command || dlg.querySelector(".sum-app-launcher-panes")) return;
+    const panes = document.createElement("div");
+    panes.className = "sum-app-launcher-panes";
+    const appsBtn = document.createElement("button");
+    appsBtn.type = "button";
+    appsBtn.textContent = "Apps";
+    const cmdBtn = document.createElement("button");
+    cmdBtn.type = "button";
+    cmdBtn.textContent = "Commands";
+    const syncPane = (): void => {
+      appsBtn.classList.toggle("is-active", pane === "apps");
+      cmdBtn.classList.toggle("is-active", pane === "commands");
+      input.placeholder = pane === "commands" ? "Search commands…" : "Search apps and menus…";
+    };
+    appsBtn.addEventListener("click", () => {
+      pane = "apps";
+      activeIndex = 0;
+      syncPane();
+      renderResults();
+    });
+    cmdBtn.addEventListener("click", () => {
+      pane = "commands";
+      activeIndex = 0;
+      syncPane();
+      renderResults();
+    });
+    panes.append(appsBtn, cmdBtn);
+    dlg.insertBefore(panes, dlg.firstChild);
+    syncPane();
   };
 
   input.addEventListener("input", () => {

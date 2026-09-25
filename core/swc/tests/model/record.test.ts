@@ -1,5 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
-import { RecordStore, SwcRecord } from "../../src/model/record.ts";
+import { RecordStore, RecordService, SwcRecord } from "../../src/model/record.ts";
+import { BusService } from "../../src/services/bus.js";
+import { RECORD_UPDATED } from "../../src/constants/routes.js";
 import { SwcError } from "../../src/runtime/error.js";
 
 describe("SwcRecord", () => {
@@ -104,5 +106,28 @@ describe("RecordStore", () => {
     const store = new RecordStore({} as never);
     const rec = store.fromPayload("m", 0, {});
     expect(() => store.validate(rec, ["name"])).toThrow();
+  });
+});
+
+describe("RecordService", () => {
+  it("caches records by model:id", () => {
+    const bus = new BusService();
+    const rpc = {} as never;
+    const svc = new RecordService(rpc, bus);
+    const a = svc.fromPayload("m", 1, { name: "A" });
+    const b = svc.fromPayload("m", 1, { name: "B" });
+    expect(a).toBe(b);
+    expect(b.get("name")).toBe("B");
+  });
+
+  it("invalidates cache on bus record.updated", () => {
+    const bus = new BusService();
+    const rpc = {} as never;
+    const svc = new RecordService(rpc, bus);
+    const rec = svc.fromPayload("m", 2, { x: 1 });
+    bus.emit(RECORD_UPDATED, { model: "m", id: 2 });
+    const next = svc.fromPayload("m", 2, { x: 9 });
+    expect(next).not.toBe(rec);
+    expect(next.get("x")).toBe(9);
   });
 });

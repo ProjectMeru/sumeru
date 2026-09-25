@@ -71,4 +71,9 @@ describe("field modifiers", () => {
     const record = { data: {}, modifierOverrides: new Map() } as never;
     expect(evalModifierExpr("not valid ++", record)).toBeUndefined();
   });
+
+  it("evalModifierExpr rejects unsafe tokens", () => {
+    const record = new SwcRecord("m", 1, {});
+    expect(evalModifierExpr("function(){return true}", record)).toBeUndefined();
+  });
 });

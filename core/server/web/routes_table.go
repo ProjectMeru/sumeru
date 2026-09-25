@@ -76,6 +76,7 @@ func registerAppsRoutes() {
 
 func registerRecordRoutes() {
 	registerReportRoutes()
+	registerDebugRoutes()
 	registerSession(http.MethodGet, exportCSVRoute, ExportCSVHandler)
 	registerSession(http.MethodGet, exportPDFRoute, ExportPDFHandler)
 	registerSession(http.MethodGet, exportXLSXRoute, ExportXLSXHandler)

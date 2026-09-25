@@ -6,6 +6,8 @@ import type { ActionService } from "../services/action.js";
 import type { RouterService } from "../services/router.js";
 import type { BusService } from "../services/bus.js";
 import type { DialogService } from "../services/dialog.js";
+import type { RecordService } from "../model/record.js";
+import type { CommandService } from "../services/command.js";
 
 export interface SwcServices {
   rpc: RpcService;
@@ -15,6 +17,8 @@ export interface SwcServices {
   router: RouterService;
   bus: BusService;
   dialog: DialogService;
+  record: RecordService;
+  command: CommandService;
 }
 
 export class SwcEnv {

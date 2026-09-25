@@ -97,11 +97,17 @@ describe("ActionService", () => {
       breadcrumbs: [],
     });
     const action = new ActionService();
+    const { RecordService } = await import("../../src/model/record.js");
+    const { BusService } = await import("../../src/services/bus.js");
+    const bus = new BusService();
     action.setEnv({
       bootstrap: { swcApiBase: "/web/swc" },
       services: {
         http: { getJSON },
         dialog: { openHost, close: vi.fn() },
+        rpc: { onchange: vi.fn() },
+        record: new RecordService({ onchange: vi.fn() } as never, bus),
+        bus,
       },
     } as never);
     await (

@@ -15,6 +15,7 @@ import { VIEW_LIST } from "../../constants/routes.js";
 import { runObjectAction } from "../shared/object-action.js";
 import { formatFieldValue } from "../shared/field-display.js";
 import { listColumns } from "../shared/arch-fields.js";
+import { isFieldVisible } from "../../model/modifiers.js";
 import { navigateCollectionQuery } from "../shared/collection-query.js";
 import { CollectionView } from "../shared/collection-view.js";
 import { openWorkspaceRecord } from "../shared/collection-navigation.js";
@@ -86,7 +87,7 @@ export class ListView extends CollectionView {
   }
 
   private columns() {
-    return listColumns(this.props.payload.arch);
+    return listColumns(this.props.payload.arch).filter((col) => isFieldVisible(col));
   }
 
   private pageRows() {

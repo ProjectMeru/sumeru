@@ -1,35 +1,61 @@
 import type { SwcArchButton, SwcArchField } from "../types/workspace.js";
 import type { SwcRecord } from "./record.js";
+import { isDebugMode } from "../devtools/debug.js";
 
 type ModifierTriplet = { invisible: boolean; readonly: boolean; required: boolean };
 
-/**
- * Evaluate a dynamic modifier expression against record values.
- * Expressions come from trusted view arch only (`new Function` + `with`).
- */
-export function evalModifierExpr(expr: string | undefined, record?: SwcRecord): boolean | undefined {
+export interface ModifierViewContext {
+  userId?: number;
+  companyId?: number;
+  context?: Record<string, unknown>;
+}
+
+const UNSAFE_EXPR = /[`\\[\];]|=>|\bfunction\b|\bclass\b|\bimport\b|\beval\b|\bnew\b/i;
+
+/** Evaluate a dynamic modifier expression against allowlisted ctx keys only. */
+export function evalModifierExpr(
+  expr: string | undefined,
+  record?: SwcRecord,
+  viewCtx?: ModifierViewContext,
+): boolean | undefined {
   if (!expr || !record) return undefined;
   const trimmed = expr.trim();
   if (!trimmed) return undefined;
+  if (UNSAFE_EXPR.test(trimmed)) {
+    if (isDebugMode()) {
+      console.warn("[SWC modifiers] rejected expression", trimmed);
+    }
+    return undefined;
+  }
 
   try {
-    const ctx: Record<string, unknown> = { ...record.data, record: record.data };
+    const ctx: Record<string, unknown> = {
+      ...record.data,
+      record: record.data,
+      user_id: viewCtx?.userId,
+      company_id: viewCtx?.companyId,
+      context: viewCtx?.context ?? {},
+    };
     const fn = new Function("ctx", `with (ctx) { return !!(${trimmed}); }`);
     return Boolean(fn(ctx));
   } catch {
+    if (isDebugMode()) {
+      console.warn("[SWC modifiers] failed to evaluate", trimmed);
+    }
     return undefined;
   }
 }
 
 /** Static arch modifiers plus dynamic overrides from onchange and modifier expressions. */
-export function fieldModifiers(
+export function resolveFieldModifiers(
   field: SwcArchField,
   record?: SwcRecord,
+  viewCtx?: ModifierViewContext,
 ): ModifierTriplet {
   const override = record?.modifierOverrides.get(field.name);
-  const dynamicInvisible = evalModifierExpr(field.invisible_expr, record);
-  const dynamicReadonly = evalModifierExpr(field.readonly_expr, record);
-  const dynamicRequired = evalModifierExpr(field.required_expr, record);
+  const dynamicInvisible = evalModifierExpr(field.invisible_expr, record, viewCtx);
+  const dynamicReadonly = evalModifierExpr(field.readonly_expr, record, viewCtx);
+  const dynamicRequired = evalModifierExpr(field.required_expr, record, viewCtx);
 
   return {
     invisible: override?.invisible ?? dynamicInvisible ?? field.invisible ?? false,
@@ -38,16 +64,26 @@ export function fieldModifiers(
   };
 }
 
-export function isFieldVisible(field: SwcArchField, record?: SwcRecord): boolean {
-  return !fieldModifiers(field, record).invisible;
+/** @deprecated Use resolveFieldModifiers */
+export function fieldModifiers(field: SwcArchField, record?: SwcRecord): ModifierTriplet {
+  return resolveFieldModifiers(field, record);
+}
+
+export function isFieldVisible(
+  field: SwcArchField,
+  record?: SwcRecord,
+  viewCtx?: ModifierViewContext,
+): boolean {
+  return !resolveFieldModifiers(field, record, viewCtx).invisible;
 }
 
 export function isFieldReadonly(
   field: SwcArchField,
   record: SwcRecord | undefined,
   viewReadonly: boolean,
+  viewCtx?: ModifierViewContext,
 ): boolean {
-  return viewReadonly || fieldModifiers(field, record).readonly;
+  return viewReadonly || resolveFieldModifiers(field, record, viewCtx).readonly;
 }
 
 export function fieldDomain(field: SwcArchField, record?: SwcRecord): unknown[] | undefined {
@@ -89,8 +125,12 @@ export function createDefaults(fields: SwcArchField[]): Record<string, unknown> 
   return out;
 }
 
-export function isButtonVisible(button: SwcArchButton, record?: SwcRecord): boolean {
-  const dynamic = evalModifierExpr(button.invisible_expr, record);
+export function isButtonVisible(
+  button: SwcArchButton,
+  record?: SwcRecord,
+  viewCtx?: ModifierViewContext,
+): boolean {
+  const dynamic = evalModifierExpr(button.invisible_expr, record, viewCtx);
   if (dynamic !== undefined) return !dynamic;
   return !button.invisible;
 }

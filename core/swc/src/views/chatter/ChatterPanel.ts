@@ -38,9 +38,25 @@ export class ChatterPanel extends SwcComponent<ChatterPanelProps> {
   private posting = false;
   private enabled = true;
   private tab: "messages" | "attachments" = "messages";
+  private unsubRecordUpdated: (() => void) | null = null;
 
   override setup(): void {
     void this.load();
+  }
+
+  override onMount(): void {
+    this.unsubRecordUpdated = this.env.services.bus.subscribe(RECORD_UPDATED, (payload) => {
+      const msg = payload as { model?: string; id?: number; recordId?: number };
+      const rid = msg.id ?? msg.recordId;
+      if (msg.model !== this.props.model) return;
+      if (rid != null && rid > 0 && rid !== this.props.recordId) return;
+      void this.load();
+    });
+  }
+
+  override onWillUnmount(): void {
+    this.unsubRecordUpdated?.();
+    this.unsubRecordUpdated = null;
   }
 
   private async load(): Promise<void> {
@@ -83,6 +99,7 @@ export class ChatterPanel extends SwcComponent<ChatterPanelProps> {
       this.env.services.bus.emit(RECORD_UPDATED, {
         model: this.props.model,
         id: this.props.recordId,
+        recordId: this.props.recordId,
       });
     } finally {
       this.posting = false;

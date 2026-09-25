@@ -1,7 +1,7 @@
 import { SwcComponent } from "../../runtime/component.js";
 import { html } from "../../template/html.js";
 import type { SwcArchButton, SwcWorkspacePayload } from "../../types/workspace.js";
-import { RecordStore, SwcRecord } from "../../model/record.js";
+import type { SwcRecord } from "../../model/record.js";
 import { takePendingChildren } from "../../model/pending-children.js";
 import { SwcError } from "../../runtime/error.js";
 import { headerButton } from "../shared/view-toolbar.js";
@@ -21,7 +21,6 @@ interface FormViewProps {
 }
 
 export class FormView extends SwcComponent<FormViewProps> {
-  private recordStore!: RecordStore;
   private record!: SwcRecord;
   private snapshot: Record<string, unknown> = {};
   private editing = false;
@@ -34,7 +33,6 @@ export class FormView extends SwcComponent<FormViewProps> {
   private chatterPanel!: ChatterPanel;
 
   override setup(): void {
-    this.recordStore = new RecordStore(this.env.services.rpc);
     this.fieldHost = new FieldHost(this.env);
     this.initRecordState(this.props.payload);
     this.chatterPanel = new ChatterPanel(
@@ -61,7 +59,7 @@ export class FormView extends SwcComponent<FormViewProps> {
   private initRecordState(payload: SwcWorkspacePayload): void {
     this.editing = payload.formEdit || payload.recordId <= 0;
     this.snapshot = { ...(payload.record ?? {}) };
-    this.bindRecord(this.recordStore.fromPayload(payload.model, payload.recordId, this.snapshot));
+    this.bindRecord(this.env.services.record.fromPayload(payload.model, payload.recordId, this.snapshot));
   }
 
   override onMount(): void {
@@ -97,7 +95,7 @@ export class FormView extends SwcComponent<FormViewProps> {
 
   private async handleFieldChange(field: string): Promise<void> {
     if (this.isReadonly()) return;
-    const result = await this.recordStore.applyOnchange(this.record, field);
+    const result = await this.env.services.record.applyOnchange(this.record, field);
     if (result?.warning) {
       this.env.services.notification.warning(result.warning.title, result.warning.message);
     }
@@ -150,7 +148,9 @@ export class FormView extends SwcComponent<FormViewProps> {
       this.env.services.action.navigate(url);
       return;
     }
-    this.bindRecord(this.recordStore.fromPayload(payload.model, payload.recordId, { ...this.snapshot }));
+    this.bindRecord(
+      this.env.services.record.fromPayload(payload.model, payload.recordId, { ...this.snapshot }),
+    );
     this.editing = false;
     this.error = "";
     this.rerender();
@@ -163,7 +163,7 @@ export class FormView extends SwcComponent<FormViewProps> {
     const rows = await this.env.services.rpc.read(payload.model, [payload.recordId], fieldNames);
     if (!rows[0]) return;
     this.snapshot = { ...rows[0] };
-    this.bindRecord(this.recordStore.fromPayload(payload.model, payload.recordId, this.snapshot));
+    this.bindRecord(this.env.services.record.fromPayload(payload.model, payload.recordId, this.snapshot));
     this.rerender();
   }
 
@@ -178,10 +178,10 @@ export class FormView extends SwcComponent<FormViewProps> {
     this.rerender();
     try {
       const required = this.fields().filter((f) => f.required).map((f) => f.name);
-      this.recordStore.validate(this.record, required);
+      this.env.services.record.validate(this.record, required);
       const payload = this.props.payload;
       const isNew = payload.recordId <= 0;
-      const id = await this.recordStore.save(this.record);
+      const id = await this.env.services.record.save(this.record);
       if (isNew && id > 0) {
         await this.savePendingChildren(id);
       }
@@ -236,7 +236,7 @@ export class FormView extends SwcComponent<FormViewProps> {
     const ok = await this.env.services.dialog.confirm("Delete record", "This cannot be undone.");
     if (!ok) return;
     try {
-      await this.recordStore.unlink(this.record);
+      await this.env.services.record.unlink(this.record);
       this.env.services.notification.success("Deleted", "Record deleted.");
       this.env.services.action.navigate(
         this.env.services.router.workspaceUrl({
@@ -258,7 +258,7 @@ export class FormView extends SwcComponent<FormViewProps> {
     const payload = this.props.payload;
     if (payload.recordId <= 0) return;
     try {
-      const newId = await this.recordStore.duplicate(this.record);
+      const newId = await this.env.services.record.duplicate(this.record);
       this.env.services.notification.success("Duplicated", "Record duplicated.");
       this.env.services.action.openRecord({
         actionId: payload.actionId,
