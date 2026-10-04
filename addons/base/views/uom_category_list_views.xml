@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_uom.category_list" model="uom.category" type="list">
+            <field name="name" string="Category"/>
+        </view>
+    </data>
+</sumeru>

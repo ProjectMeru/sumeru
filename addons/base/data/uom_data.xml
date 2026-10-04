@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <!-- UoM categories: units inside a category convert between each other. -->
+        <record id="uom_cat_unit" model="uom.category"><field name="name">Unit</field></record>
+        <record id="uom_cat_weight" model="uom.category"><field name="name">Weight</field></record>
+        <record id="uom_cat_volume" model="uom.category"><field name="name">Volume</field></record>
+        <record id="uom_cat_length" model="uom.category"><field name="name">Length</field></record>
+        <record id="uom_cat_time" model="uom.category"><field name="name">Time</field></record>
+
+        <!-- Unit (factor 1 = reference) -->
+        <record id="uom_unit" model="uom.uom"><field name="name">Unit</field><field name="category_id" ref="base.uom_cat_unit"/><field name="factor">1</field><field name="rounding">1</field><field name="active">True</field></record>
+        <record id="uom_dozen" model="uom.uom"><field name="name">Dozens</field><field name="category_id" ref="base.uom_cat_unit"/><field name="factor">12</field><field name="rounding">1</field><field name="active">True</field></record>
+        <record id="uom_hundred" model="uom.uom"><field name="name">Hundreds</field><field name="category_id" ref="base.uom_cat_unit"/><field name="factor">100</field><field name="rounding">1</field><field name="active">True</field></record>
+
+        <!-- Weight (kg = reference) -->
+        <record id="uom_kg" model="uom.uom"><field name="name">kg</field><field name="category_id" ref="base.uom_cat_weight"/><field name="factor">1</field><field name="rounding">0.001</field><field name="active">True</field></record>
+        <record id="uom_g" model="uom.uom"><field name="name">g</field><field name="category_id" ref="base.uom_cat_weight"/><field name="factor">0.001</field><field name="rounding">0.001</field><field name="active">True</field></record>
+        <record id="uom_mg" model="uom.uom"><field name="name">mg</field><field name="category_id" ref="base.uom_cat_weight"/><field name="factor">0.000001</field><field name="rounding">0.001</field><field name="active">True</field></record>
+        <record id="uom_ton" model="uom.uom"><field name="name">t</field><field name="category_id" ref="base.uom_cat_weight"/><field name="factor">1000</field><field name="rounding">0.001</field><field name="active">True</field></record>
+
+        <!-- Volume (l = reference) -->
+        <record id="uom_l" model="uom.uom"><field name="name">l</field><field name="category_id" ref="base.uom_cat_volume"/><field name="factor">1</field><field name="rounding">0.001</field><field name="active">True</field></record>
+        <record id="uom_ml" model="uom.uom"><field name="name">ml</field><field name="category_id" ref="base.uom_cat_volume"/><field name="factor">0.001</field><field name="rounding">0.001</field><field name="active">True</field></record>
+        <record id="uom_m3" model="uom.uom"><field name="name">m³</field><field name="category_id" ref="base.uom_cat_volume"/><field name="factor">1000</field><field name="rounding">0.001</field><field name="active">True</field></record>
+
+        <!-- Length (m = reference) -->
+        <record id="uom_m" model="uom.uom"><field name="name">m</field><field name="category_id" ref="base.uom_cat_length"/><field name="factor">1</field><field name="rounding">0.01</field><field name="active">True</field></record>
+        <record id="uom_cm" model="uom.uom"><field name="name">cm</field><field name="category_id" ref="base.uom_cat_length"/><field name="factor">0.01</field><field name="rounding">0.01</field><field name="active">True</field></record>
+        <record id="uom_mm" model="uom.uom"><field name="name">mm</field><field name="category_id" ref="base.uom_cat_length"/><field name="factor">0.001</field><field name="rounding">0.01</field><field name="active">True</field></record>
+        <record id="uom_km" model="uom.uom"><field name="name">km</field><field name="category_id" ref="base.uom_cat_length"/><field name="factor">1000</field><field name="rounding">0.01</field><field name="active">True</field></record>
+
+        <!-- Time (hour = reference) -->
+        <record id="uom_hour" model="uom.uom"><field name="name">Hours</field><field name="category_id" ref="base.uom_cat_time"/><field name="factor">1</field><field name="rounding">0.01</field><field name="active">True</field></record>
+        <record id="uom_day" model="uom.uom"><field name="name">Days</field><field name="category_id" ref="base.uom_cat_time"/><field name="factor">8</field><field name="rounding">0.01</field><field name="active">True</field></record>
+    </data>
+</sumeru>

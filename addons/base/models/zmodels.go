@@ -7,6 +7,8 @@ import "sumeru/core/sdk"
 func init() {
 	sdk.MustRegister("base",
 		&CoreCompany{},
+		&CoreCurrency{},
+		&CoreCurrencyRate{},
 		&CoreGroup{},
 		&CorePartner{},
 		&CoreUser{},
@@ -17,5 +19,7 @@ func init() {
 		&ResConfigSettings{},
 		&SysAuthProvider{},
 		&SysFieldAccess{},
+		&UomCategory{},
+		&UomUom{},
 	)
 }

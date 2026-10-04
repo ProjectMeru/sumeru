@@ -4,6 +4,8 @@ import (
 	"sumeru/core/sdk"
 )
 
+// CoreCurrency is the platform currency catalog. Rates are kept on
+// core.currency.rate (see core_currency_rate.go).
 type CoreCurrency struct {
 	sdk.Model `sumeru:"model=core.currency"`
 

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <!-- Platform currency catalog. USD is the reference currency (rate 1.0). -->
+        <record id="currency_usd" model="core.currency"><field name="name">USD</field><field name="symbol">$</field><field name="active">True</field></record>
+        <record id="currency_eur" model="core.currency"><field name="name">EUR</field><field name="symbol">€</field><field name="active">True</field></record>
+        <record id="currency_gbp" model="core.currency"><field name="name">GBP</field><field name="symbol">£</field><field name="active">True</field></record>
+        <record id="currency_idr" model="core.currency"><field name="name">IDR</field><field name="symbol">Rp</field><field name="active">True</field></record>
+        <record id="currency_sgd" model="core.currency"><field name="name">SGD</field><field name="symbol">S$</field><field name="active">True</field></record>
+        <record id="currency_jpy" model="core.currency"><field name="name">JPY</field><field name="symbol">¥</field><field name="active">True</field></record>
+        <record id="currency_inr" model="core.currency"><field name="name">INR</field><field name="symbol">₹</field><field name="active">True</field></record>
+        <record id="currency_aud" model="core.currency"><field name="name">AUD</field><field name="symbol">A$</field><field name="active">True</field></record>
+
+        <!-- Bootstrap rates effective 2026-01-01 (value of 1 unit in USD).
+        Static seed data: vertical rate providers are expected to supersede these. -->
+        <record id="rate_usd_2026" model="core.currency.rate"><field name="currency_id" ref="base.currency_usd"/><field name="rate">1.0</field><field name="date_from">2026-01-01</field><field name="active">True</field></record>
+        <record id="rate_eur_2026" model="core.currency.rate"><field name="currency_id" ref="base.currency_eur"/><field name="rate">1.09</field><field name="date_from">2026-01-01</field><field name="active">True</field></record>
+        <record id="rate_gbp_2026" model="core.currency.rate"><field name="currency_id" ref="base.currency_gbp"/><field name="rate">1.27</field><field name="date_from">2026-01-01</field><field name="active">True</field></record>
+        <record id="rate_idr_2026" model="core.currency.rate"><field name="currency_id" ref="base.currency_idr"/><field name="rate">0.000064</field><field name="date_from">2026-01-01</field><field name="active">True</field></record>
+        <record id="rate_sgd_2026" model="core.currency.rate"><field name="currency_id" ref="base.currency_sgd"/><field name="rate">0.74</field><field name="date_from">2026-01-01</field><field name="active">True</field></record>
+        <record id="rate_jpy_2026" model="core.currency.rate"><field name="currency_id" ref="base.currency_jpy"/><field name="rate">0.0067</field><field name="date_from">2026-01-01</field><field name="active">True</field></record>
+        <record id="rate_inr_2026" model="core.currency.rate"><field name="currency_id" ref="base.currency_inr"/><field name="rate">0.012</field><field name="date_from">2026-01-01</field><field name="active">True</field></record>
+        <record id="rate_aud_2026" model="core.currency.rate"><field name="currency_id" ref="base.currency_aud"/><field name="rate">0.66</field><field name="date_from">2026-01-01</field><field name="active">True</field></record>
+    </data>
+</sumeru>

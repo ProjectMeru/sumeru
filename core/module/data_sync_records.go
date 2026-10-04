@@ -30,6 +30,8 @@ var recordSyncSpecs = map[string]recordSyncSpec{
 	"account.payment.term": {naturalKeys: naturalKeyName},
 	"account.move":         {naturalKeys: naturalKeyName},
 	"core.partner":         {naturalKeys: naturalKeyName},
+	"core.currency.rate":   {naturalKeys: naturalKeyCurrencyRate},
+	"uom.uom":              {naturalKeys: naturalKeyUom},
 	"account.journal":      {naturalKeys: naturalKeyCode},
 	"account.move.line":    {naturalKeys: naturalKeyMoveLine},
 	"mail.activity.type":   {naturalKeys: naturalKeyName},
@@ -87,6 +89,26 @@ func naturalKeyReportAction(fieldValues map[string]interface{}) map[string]inter
 		return map[string]interface{}{"template_path": tpl}
 	}
 	return map[string]interface{}{"name": fieldValues["name"]}
+}
+
+// naturalKeyCurrencyRate keys core.currency.rate rows by (currency, date_from):
+// one effective rate row per currency and start date.
+func naturalKeyCurrencyRate(fieldValues map[string]interface{}) map[string]interface{} {
+	criteria := map[string]interface{}{"currency_id": fieldValues["currency_id"]}
+	if df, ok := fieldValues["date_from"]; ok && df != nil {
+		criteria["date_from"] = df
+	}
+	return criteria
+}
+
+// naturalKeyUom keys uom.uom rows by (name, category): unit names are only
+// unique inside their category (e.g. "oz" weight vs fluid ounce).
+func naturalKeyUom(fieldValues map[string]interface{}) map[string]interface{} {
+	criteria := map[string]interface{}{"name": fieldValues["name"]}
+	if cid, ok := fieldValues["category_id"]; ok && cid != nil {
+		criteria["category_id"] = cid
+	}
+	return criteria
 }
 
 func syncGenericRegistryRecord(ctx context.Context, moduleName string, xmlRecord parser.Record) {
