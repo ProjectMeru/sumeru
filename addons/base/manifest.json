@@ -7,7 +7,7 @@
   "application": true,
   "data": [
     "data/core_company_data.xml",
-    "data/core_currency_rate_data.xml",
+    "data/core_currency_data.xml",
     "data/uom_data.xml",
     "views/core_company_actions.xml",
     "views/core_users_actions.xml",

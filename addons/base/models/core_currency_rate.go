@@ -9,7 +9,8 @@ import (
 //
 // Rates are global in this first iteration; verticals (e.g. accounting) can
 // layer company-scoped rates and rate providers on top of this primitive.
-// Lookups resolve the newest DateFrom <= the conversion date (see
+// No rates are seeded as core data — rows are created by verticals or rate
+// providers. Lookups resolve the newest DateFrom <= the conversion date (see
 // sdk.ConvertCurrency).
 type CoreCurrencyRate struct {
 	sdk.Model `sumeru:"model=core.currency.rate"`

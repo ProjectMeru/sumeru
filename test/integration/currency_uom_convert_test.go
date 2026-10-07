@@ -11,6 +11,7 @@ import (
 	"time"
 
 	_ "sumeru/addons/base"
+	_ "sumeru/addons/i18n"
 	"sumeru/core/modelreg"
 	"sumeru/core/orm"
 	"sumeru/core/sdk"
@@ -25,7 +26,9 @@ func setupCurrencyUom(t *testing.T) context.Context {
 		t.Skip("SUMERU_TEST_DSN not set")
 	}
 	orm.InitDB(dsn)
-	_ = modelreg.ActivateAll([]string{"base"})
+	// i18n is loaded so ensureExtraIndexes can resolve sys.translation on an
+	// already-installed database (the index is created for any synced schema).
+	_ = modelreg.ActivateAll([]string{"base", "i18n"})
 	if err := orm.SyncRegistrySchemaForNames([]string{
 		"core.currency", "core.currency.rate", "uom.category", "uom.uom",
 	}); err != nil {

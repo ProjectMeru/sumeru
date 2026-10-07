@@ -49,9 +49,10 @@ func freshSyncTestDB(t *testing.T, dsn string) string {
 }
 
 // TestBaseAddonSyncToDBLoadsCurrencyUomData exercises Addon.SyncToDB with the
-// base manifest XML: currencies, rates, uom categories/units, views, actions,
-// and menus must all land in the database, with rate/uom records resolving
-// cross-record refs and natural keys (regression test for the
+// base manifest XML: the currency catalog (with no seeded rates — rate rows
+// are business data created by verticals/providers), uom categories/units,
+// views, actions, and menus must all land in the database, with uom records
+// resolving cross-record refs and natural keys (regression test for the
 // core.currency.rate / uom.uom recordSyncSpecs entries).
 func TestBaseAddonSyncToDBLoadsCurrencyUomData(t *testing.T) {
 	dsn := os.Getenv("SUMERU_TEST_DSN")
@@ -60,7 +61,16 @@ func TestBaseAddonSyncToDBLoadsCurrencyUomData(t *testing.T) {
 	}
 	orm.InitDB(freshSyncTestDB(t, dsn))
 	_ = modelreg.ActivateAll([]string{"base"})
-	if err := orm.SyncRegistrySchemaForNames(orm.InitialSetupModelNames); err != nil {
+	// Sync the kernel setup subset, skipping models owned by addons this
+	// binary does not load (e.g. sys.translation from the i18n addon) —
+	// base's data sync does not need them.
+	var kernelModels []string
+	for _, name := range orm.InitialSetupModelNames {
+		if _, ok := orm.Registry[name]; ok {
+			kernelModels = append(kernelModels, name)
+		}
+	}
+	if err := orm.SyncRegistrySchemaForNames(kernelModels); err != nil {
 		t.Fatalf("kernel schema sync: %v", err)
 	}
 	if err := orm.SyncRegistrySchemaForModule("base"); err != nil {
@@ -85,7 +95,7 @@ func TestBaseAddonSyncToDBLoadsCurrencyUomData(t *testing.T) {
 		want  int
 	}{
 		"currencies":     {"core.currency", 8},
-		"rates":          {"core.currency.rate", 8},
+		"rates":          {"core.currency.rate", 0}, // no core seed: filled by verticals/providers
 		"uom categories": {"uom.category", 5},
 		"uom units":      {"uom.uom", 16},
 	}
@@ -99,20 +109,13 @@ func TestBaseAddonSyncToDBLoadsCurrencyUomData(t *testing.T) {
 		}
 	}
 
-	// Rate rows resolve the currency ref and carry the expected value.
+	// The currency catalog loads with its symbol data.
 	eur, err := orm.SearchOne(ctx, "core.currency", map[string]interface{}{"name": "EUR"})
 	if err != nil {
 		t.Fatalf("find EUR: %v", err)
 	}
-	eurID, _ := orm.CoerceInt64(eur["id"])
-	rateRow, err := orm.SearchOne(ctx, "core.currency.rate", map[string]interface{}{
-		"currency_id": int(eurID), "date_from": "2026-01-01",
-	})
-	if err != nil {
-		t.Fatalf("find EUR rate: %v", err)
-	}
-	if rate, ok := rateRow["rate"].(float64); !ok || math.Abs(rate-1.09) > 1e-9 {
-		t.Fatalf("EUR rate = %v, want 1.09", rateRow["rate"])
+	if sym, ok := eur["symbol"].(string); !ok || sym != "€" {
+		t.Fatalf("EUR symbol = %v, want €", eur["symbol"])
 	}
 
 	// UoM rows resolve the category ref and carry the expected factor.
