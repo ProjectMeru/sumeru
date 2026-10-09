@@ -5,9 +5,8 @@ package models
 import "sumeru/core/sdk"
 
 func init() {
-	sdk.MustRegister("geo",
-		&CoreCity{},
-		&CoreCountry{},
-		&CoreCountryState{},
+	sdk.MustRegister("uom",
+		&UomCategory{},
+		&UomUom{},
 	)
 }

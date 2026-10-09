@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <!-- Platform currency catalog (master data).
+        No rates are seeded as core data: core.currency.rate rows are
+        date-sensitive business values created by verticals or rate
+        providers (sdk.ConvertCurrency looks them up by date). -->
+        <record id="currency_usd" model="core.currency"><field name="name">USD</field><field name="symbol">$</field><field name="active">True</field></record>
+        <record id="currency_eur" model="core.currency"><field name="name">EUR</field><field name="symbol">€</field><field name="active">True</field></record>
+        <record id="currency_gbp" model="core.currency"><field name="name">GBP</field><field name="symbol">£</field><field name="active">True</field></record>
+        <record id="currency_idr" model="core.currency"><field name="name">IDR</field><field name="symbol">Rp</field><field name="active">True</field></record>
+        <record id="currency_sgd" model="core.currency"><field name="name">SGD</field><field name="symbol">S$</field><field name="active">True</field></record>
+        <record id="currency_jpy" model="core.currency"><field name="name">JPY</field><field name="symbol">¥</field><field name="active">True</field></record>
+        <record id="currency_inr" model="core.currency"><field name="name">INR</field><field name="symbol">₹</field><field name="active">True</field></record>
+        <record id="currency_aud" model="core.currency"><field name="name">AUD</field><field name="symbol">A$</field><field name="active">True</field></record>
+    </data>
+</sumeru>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <menuitem id="menu_uom_section" name="Units of Measure" parent="base.menu_settings_root"
+            sequence="26" web_icon="settings" groups="base.group_system" />
+        <menuitem id="menu_uom_category" name="UoM Categories" parent="menu_uom_section"
+            sequence="10" action="uom.action_uom.category" web_icon="settings"
+            groups="base.group_system" />
+        <menuitem id="menu_uom_uom" name="UoM Units" parent="menu_uom_section"
+            sequence="20" action="uom.action_uom.uom" web_icon="settings"
+            groups="base.group_system" />
+    </data>
+</sumeru>
