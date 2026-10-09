@@ -63,23 +63,6 @@
         <menuitem id="menu_user_login_log" name="Login History" parent="menu_user_section"
             sequence="60" action="base.action_core.user.log" web_icon="log" />
 
-        <!-- Currencies & Units: platform FX / UoM master data -->
-        <menuitem id="menu_currency_uom_section" name="Currencies &amp; Units"
-            parent="menu_settings_root" sequence="25" web_icon="settings"
-            groups="base.group_system" />
-        <menuitem id="menu_core_currency" name="Currencies" parent="menu_currency_uom_section"
-            sequence="10" action="base.action_core.currency" web_icon="settings"
-            groups="base.group_system" />
-        <menuitem id="menu_core_currency_rate" name="Currency Rates"
-            parent="menu_currency_uom_section" sequence="20" action="base.action_core.currency.rate"
-            web_icon="settings" groups="base.group_system" />
-        <menuitem id="menu_uom_category" name="UoM Categories" parent="menu_currency_uom_section"
-            sequence="30" action="base.action_uom.category" web_icon="settings"
-            groups="base.group_system" />
-        <menuitem id="menu_uom_uom" name="Units of Measure" parent="menu_currency_uom_section"
-            sequence="40" action="base.action_uom.uom" web_icon="settings"
-            groups="base.group_system" />
-
         <!-- App Logs: module lifecycle event history (install / uninstall / update) -->
         <menuitem id="menu_app_logs_section" name="App Logs" parent="menu_settings_root"
             sequence="90" web_icon="log" groups="base.group_system" />

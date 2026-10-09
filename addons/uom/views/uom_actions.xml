@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <sumeru>
     <data>
-        <action id="action_core.currency" type="window" model="core.currency" name="Currencies" view_mode="list,form"/>
-        <action id="action_core.currency.rate" type="window" model="core.currency.rate" name="Currency Rates" view_mode="list,form"/>
         <action id="action_uom.category" type="window" model="uom.category" name="UoM Categories" view_mode="list,form"/>
         <action id="action_uom.uom" type="window" model="uom.uom" name="Units of Measure" view_mode="list,form"/>
     </data>

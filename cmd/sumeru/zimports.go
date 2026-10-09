@@ -5,6 +5,7 @@ package main
 import (
 	_ "sumeru/addons/base"
 	_ "sumeru/addons/contacts"
+	_ "sumeru/addons/currency"
 	_ "sumeru/addons/geo"
 	_ "sumeru/addons/i18n"
 	_ "sumeru/addons/im"
@@ -13,4 +14,5 @@ import (
 	_ "sumeru/addons/platform"
 	_ "sumeru/addons/audit"
 	_ "sumeru/addons/automation"
+	_ "sumeru/addons/uom"
 )

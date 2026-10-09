@@ -1,0 +1,19 @@
+{
+  "name": "currency",
+  "display_name": "Currencies",
+  "version": "1.0.0",
+  "author": "Sumeru",
+  "description": "Currency catalog and exchange rates as platform primitives.",
+  "depends": ["base"],
+  "auto_install": true,
+  "application": false,
+  "data": [
+    "data/core_currency_data.xml",
+    "views/currency_actions.xml",
+    "views/core_currency_list_views.xml",
+    "views/core_currency_form_views.xml",
+    "views/core_currency_rate_list_views.xml",
+    "views/core_currency_rate_form_views.xml",
+    "views/menus.xml"
+  ]
+}

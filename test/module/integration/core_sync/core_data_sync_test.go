@@ -1,10 +1,10 @@
 //go:build integration
 
-// Package base_sync integration-tests the module data sync path (Addon.SyncToDB)
-// for the base addon in isolation from other integration test binaries, because
-// activating kernel models changes access-check behavior for tests that search
-// sys.* without a bypass context.
-package base_sync_test
+// Package core_sync integration-tests the module data sync path (Addon.SyncToDB)
+// for the core addon install closure (base, currency, uom) in isolation from
+// other integration test binaries, because activating kernel models changes
+// access-check behavior for tests that search sys.* without a bypass context.
+package core_sync_test
 
 import (
 	"context"
@@ -16,6 +16,8 @@ import (
 	"testing"
 
 	_ "sumeru/addons/base"
+	_ "sumeru/addons/currency"
+	_ "sumeru/addons/uom"
 	"sumeru/core/modelreg"
 	"sumeru/core/module"
 	"sumeru/core/orm"
@@ -48,22 +50,23 @@ func freshSyncTestDB(t *testing.T, dsn string) string {
 	return re.ReplaceAllString(dsn, "dbname="+syncDBName)
 }
 
-// TestBaseAddonSyncToDBLoadsCurrencyUomData exercises Addon.SyncToDB with the
-// base manifest XML: the currency catalog (with no seeded rates — rate rows
-// are business data created by verticals/providers), uom categories/units,
-// views, actions, and menus must all land in the database, with uom records
-// resolving cross-record refs and natural keys (regression test for the
-// core.currency.rate / uom.uom recordSyncSpecs entries).
-func TestBaseAddonSyncToDBLoadsCurrencyUomData(t *testing.T) {
+// TestCoreAddonSyncToDBLoadsCurrencyUomData exercises Addon.SyncToDB across the
+// core addon install closure (base, currency, uom): the currency catalog (with
+// no seeded rates — rate rows are business data created by verticals/providers),
+// uom categories/units, views, actions, and menus must all land in the
+// database, with uom records resolving cross-record refs and natural keys
+// (regression test for the core.currency.rate / uom.uom recordSyncSpecs
+// entries).
+func TestCoreAddonSyncToDBLoadsCurrencyUomData(t *testing.T) {
 	dsn := os.Getenv("SUMERU_TEST_DSN")
 	if dsn == "" {
 		t.Skip("SUMERU_TEST_DSN not set")
 	}
 	orm.InitDB(freshSyncTestDB(t, dsn))
-	_ = modelreg.ActivateAll([]string{"base"})
+	_ = modelreg.ActivateAll([]string{"base", "currency", "uom"})
 	// Sync the kernel setup subset, skipping models owned by addons this
 	// binary does not load (e.g. sys.translation from the i18n addon) —
-	// base's data sync does not need them.
+	// the core data sync does not need them.
 	var kernelModels []string
 	for _, name := range orm.InitialSetupModelNames {
 		if _, ok := orm.Registry[name]; ok {
@@ -73,21 +76,24 @@ func TestBaseAddonSyncToDBLoadsCurrencyUomData(t *testing.T) {
 	if err := orm.SyncRegistrySchemaForNames(kernelModels); err != nil {
 		t.Fatalf("kernel schema sync: %v", err)
 	}
-	if err := orm.SyncRegistrySchemaForModule("base"); err != nil {
-		t.Fatalf("base schema sync: %v", err)
-	}
 	root := harness.RepoRoot(t)
 	discovered, err := module.DiscoverAddonRoots([]string{filepath.Join(root, "addons")})
 	if err != nil {
 		t.Fatalf("discover addons: %v", err)
 	}
-	addon, ok := discovered["base"]
-	if !ok {
-		t.Fatal("base addon not discovered")
-	}
 	ctx := orm.ContextWithBypass(context.Background(), true)
-	if err := addon.SyncToDB(ctx); err != nil {
-		t.Fatalf("base SyncToDB: %v", err)
+	// Install-closure order: schema sync then data sync per module.
+	for _, name := range []string{"base", "currency", "uom"} {
+		addon, ok := discovered[name]
+		if !ok {
+			t.Fatalf("addon %s not discovered", name)
+		}
+		if err := orm.SyncRegistrySchemaForModule(name); err != nil {
+			t.Fatalf("%s schema sync: %v", name, err)
+		}
+		if err := addon.SyncToDB(ctx); err != nil {
+			t.Fatalf("%s SyncToDB: %v", name, err)
+		}
 	}
 
 	counts := map[string]struct {
@@ -140,7 +146,12 @@ func TestBaseAddonSyncToDBLoadsCurrencyUomData(t *testing.T) {
 			t.Fatalf("sys.action.window %q missing: %v", name, err)
 		}
 	}
-	menus := []string{"Currencies & Units", "Currencies", "Currency Rates", "UoM Categories", "Units of Measure"}
+	// Section menus live in their own module (currency / uom) under the base
+	// Settings root.
+	menus := []string{
+		"Currencies", "All Currencies", "Currency Rates",
+		"Units of Measure", "UoM Categories", "UoM Units",
+	}
 	for _, menu := range menus {
 		if _, err := orm.SearchOne(ctx, "sys.menu", map[string]interface{}{"name": menu}); err != nil {
 			t.Fatalf("menu %q missing: %v", menu, err)
