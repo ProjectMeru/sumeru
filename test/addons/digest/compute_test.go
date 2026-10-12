@@ -2,24 +2,25 @@ package digest_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"sumeru/addons/digest"
 )
 
-func TestComputeKPIUnknownCode(t *testing.T) {
-	_, err := digest.ComputeKPI(context.Background(), "missing.code")
-	if err == nil {
-		t.Fatal("expected error for unknown compute code")
+func TestComputeKPI_unknownCode(t *testing.T) {
+	_, err := digest.ComputeKPI(context.Background(), "not.registered")
+	if err == nil || !strings.Contains(err.Error(), "unknown compute code") {
+		t.Fatalf("expected unknown code error, got %v", err)
 	}
 }
 
-func TestComputeKPIMissingModelReturnsZero(t *testing.T) {
-	v, err := digest.ComputeKPI(context.Background(), "crm.lead_count")
+func TestComputeKPI_missingModelReturnsZero(t *testing.T) {
+	val, err := digest.ComputeKPI(context.Background(), "crm.lead_count")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if v != 0 {
-		t.Fatalf("expected 0 when crm.lead absent, got %v", v)
+	if val != 0 {
+		t.Fatalf("got %v want 0 without crm module", val)
 	}
 }

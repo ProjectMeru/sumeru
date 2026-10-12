@@ -257,9 +257,6 @@ export function mountDebugEnvironment(boot: SwcBootstrap): void {
   enablePicker();
 }
 
-/** @deprecated Use mountDebugEnvironment */
-export const mountDebugPanel = mountDebugEnvironment;
-
 export async function refreshDebugDrawer(): Promise<void> {
   if (lastBoot) await updateDebugDrawer(lastBoot, lastWorkspace);
 }
@@ -400,9 +397,6 @@ export async function updateDebugDrawer(
   }
   body.append(section("Tools", toolsBody));
 }
-
-/** @deprecated Use updateDebugDrawer */
-export const updateDebugPanel = updateDebugDrawer;
 
 export function logWorkspacePayload(label: string, payload: unknown): void {
   if (!isDebugMode()) return;
