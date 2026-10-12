@@ -26,3 +26,21 @@ export function emptyActivityContext(): ActivityContextPayload {
     recordLogEligible: false,
   };
 }
+
+/** Open the activity board, filtered to the current record when one is open. */
+export function activityBoardHref(ctx: ActivityContextPayload): string {
+  const params = new URLSearchParams({
+    action: "mail.action_mail_activity",
+    view_type: "activity",
+  });
+  if (ctx.model && ctx.recordId > 0) {
+    params.set(
+      "domain",
+      JSON.stringify([
+        ["model", "=", ctx.model],
+        ["res_id", "=", ctx.recordId],
+      ]),
+    );
+  }
+  return `/web?${params.toString()}`;
+}

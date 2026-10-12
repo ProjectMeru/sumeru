@@ -7,6 +7,14 @@ import { recordDisplayLabel } from "../shared/field-display.js";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+/** Day key shared by the calendar grid and the activity month mode. */
+export function calendarDayKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 /** Calendar view — month grid with events keyed by arch date_start. */
 export class CalendarView extends CollectionView {
   protected readonly collectionViewType = VIEW_CALENDAR;
@@ -61,10 +69,7 @@ export class CalendarView extends CollectionView {
   }
 
   private iso(d: Date): string {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`;
+    return calendarDayKey(d);
   }
 
   override template() {

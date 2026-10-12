@@ -1,0 +1,23 @@
+{
+  "name": "mail",
+  "display_name": "Mail",
+  "version": "1.0.0",
+  "author": "Sumeru",
+  "description": "Record messages and activities. Outbound transport stays in core/mail.",
+  "depends": ["base", "platform"],
+  "application": false,
+  "data": [
+    "security/security.xml",
+    "security/sys.access.csv",
+    "data/mail_activity_type_data.xml",
+    "views/actions.xml",
+    "views/mail_activity_type_list_views.xml",
+    "views/mail_activity_type_form_views.xml",
+    "views/mail_activity_list_views.xml",
+    "views/mail_activity_form_views.xml",
+    "views/mail_activity_activity_views.xml",
+    "views/mail_message_list_views.xml",
+    "views/mail_message_form_views.xml",
+    "views/menus.xml"
+  ]
+}

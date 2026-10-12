@@ -520,14 +520,6 @@
   }
 }
 
-/* Legacy card classes (unused in dock UI; kept for compatibility) */
-.sum-msg-card {
-  border-radius: var(--sum-radius-sm);
-  padding: 0.55rem 0.65rem;
-  background: var(--sum-surface);
-  border: 1px solid var(--sum-line);
-}
-
 .sum-msg-author {
   font-size: var(--sum-font-size-sm);
   font-weight: var(--sum-font-weight-semibold);
@@ -538,13 +530,4 @@
   font-size: 0.6875rem;
   color: var(--sum-muted);
   white-space: nowrap;
-}
-
-.sum-msg-card--out {
-  margin-left: 1.25rem;
-  background: var(--sum-header-tint-08);
-}
-
-.sum-msg-card--pending {
-  opacity: 0.75;
 }

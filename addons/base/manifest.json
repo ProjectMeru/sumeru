@@ -7,6 +7,7 @@
   "application": true,
   "data": [
     "data/core_company_data.xml",
+    "data/partner_property_definition_data.xml",
     "views/core_company_actions.xml",
     "views/core_users_actions.xml",
     "views/platform_actions.xml",
@@ -34,6 +35,8 @@
     "views/sys_rule_form_views.xml",
     "views/sys_field_access_list_views.xml",
     "views/sys_field_access_form_views.xml",
+    "views/sys_property_definition_list_views.xml",
+    "views/sys_property_definition_form_views.xml",
     "views/menus.xml"
   ]
 }

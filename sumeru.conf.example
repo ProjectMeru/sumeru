@@ -57,6 +57,12 @@ log_rolling = false
 # db_conn_max_lifetime_minutes = 30
 # db_read_replica_dsn = host=replica dbname=sumeru user=postgres password=postgres sslmode=disable
 
+# Shell session: optional logout when all browser tabs are closed (POST /web/logout, never GET).
+# Requires SWC shell; portal pages are not tracked. Default false.
+# close_session_on_last_tab = false
+# session_browser_ping_seconds = 30
+# session_browser_grace_seconds = 90
+
 # Rate limiting (requests per minute per client IP on /api/rpc and /web/login).
 # When dev_mode=false and this is unset/0, the server defaults to 120.
 rate_limit_rpm = 120

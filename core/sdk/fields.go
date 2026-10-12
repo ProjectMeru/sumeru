@@ -27,6 +27,7 @@ type (
 	DateTime          = modelmeta.DateTime
 	Duration          = modelmeta.Duration
 	Json              = modelmeta.Json
+	Properties        = modelmeta.Properties
 	Binary            = modelmeta.Binary
 	Image             = modelmeta.Image
 	Reference         = modelmeta.Reference

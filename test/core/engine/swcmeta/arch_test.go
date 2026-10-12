@@ -169,6 +169,31 @@ func TestSerializeFieldListSubview(t *testing.T) {
 	}
 }
 
+func TestEnrichFieldMonetaryCurrencyOption(t *testing.T) {
+	const model = "test.swcmeta.money"
+	orm.Registry[model] = stubMoneyModel{}
+	t.Cleanup(func() { delete(orm.Registry, model) })
+
+	got := swcmeta.EnrichFieldForTest(model, swcmeta.ArchField{Name: "amount"})
+	if got.Widget != "monetary" {
+		t.Fatalf("widget = %q, want monetary", got.Widget)
+	}
+	if got.Options["currency_field"] != "currency_id" {
+		t.Fatalf("currency_field = %q", got.Options["currency_field"])
+	}
+}
+
+type stubMoneyModel struct{}
+
+func (stubMoneyModel) Fields() []orm.FieldDefinition {
+	return []orm.FieldDefinition{
+		{Name: "currency_id", Type: orm.Many2One, Relation: "core.currency"},
+		{Name: "amount", Type: orm.Numeric, Widget: "monetary", Currency: "currency_id"},
+	}
+}
+
+func (stubMoneyModel) ModelName() string { return "test.swcmeta.money" }
+
 func TestSerializeModifierExpressions(t *testing.T) {
 	fields := swcmeta.SerializeFieldsForTest(context.Background(), []parser.Field{
 		{Name: "amount", Invisible: "state == 'done'", Readonly: "true"},

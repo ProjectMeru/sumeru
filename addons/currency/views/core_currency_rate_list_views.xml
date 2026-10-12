@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_core.currency.rate_list" model="core.currency.rate" type="list">
+            <field name="currency_id" string="Currency"/>
+            <field name="rate" string="Rate"/>
+            <field name="date_from" string="Date From"/>
+            <field name="active" string="Active"/>
+        </view>
+    </data>
+</sumeru>

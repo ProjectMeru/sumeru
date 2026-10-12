@@ -3,7 +3,7 @@
   "display_name": "Regional data",
   "version": "1.0.0",
   "author": "Sumeru",
-  "description": "Countries, states, cities, and currencies.",
+  "description": "Countries, states, and cities.",
   "depends": ["base"],
   "auto_install": true,
   "application": false,

@@ -10,51 +10,54 @@ import (
 )
 
 type Config struct {
-	DbHost             string
-	DbPort             string
-	DbUser             string
-	DbPass             string
-	DbName             string
-	DbSslMode          string
-	HttpPort           string
-	HttpInterface      string   // optional bind address; empty = all interfaces (:port); ignored during setup when setup_localhost_only=true
-	AddonsPath         string   // raw from file: comma-separated addon directory roots (see AddonPaths after AbsPaths)
-	AddonPaths         []string // absolute addon roots from addons_path; filled by AbsPaths()
-	SumeruHome         string   // optional: directory of standard sumeru repo (go.mod); used for default assets/templates if set
-	AssetsPath         string   // static files (CSS/JS); default core/engine/assets
-	TemplatesPath      string   // HTML templates; default core/engine/templates
-	BrandCSS           string   // optional path to extra CSS (served as /static/brand.css)
-	LogoPath           string   // optional image path (served as /static/app-logo)
-	FilestorePath      string   // attachment blob directory; default data/filestore under INI dir
-	CompanyDisplayName string   // optional header label; else first core.company when module installed
-	UserDisplayName    string   // optional header label; else first core.user when module installed
-	LogFile            string   // optional log file path (absolutized in AbsPaths); see log_stdout / log_rolling
-	LogStdout          bool     // when true, emit JSON logs to stdout (typical for Kubernetes)
-	LogRolling         bool     // when true and log_file set, use size-based rotation (lumberjack); false for append-only or external rotation
-	LogMaxSizeMB       int      // max megabytes per log file before rotation (default 100 when log_rolling)
-	LogMaxBackups      int      // retained rotated files (0 = lumberjack default)
-	LogMaxAgeDays      int      // delete rolled files older than N days (0 = no age limit)
-	LogEnabled         bool     // log_enabled: when false, no slog sinks and L(ctx) is no-op; stdlib log discarded
-	LogTimezone        string   // log_timezone: UTC, Local (default), or IANA (e.g. Asia/Kolkata) for timestamps
-	DevMode            bool     // dev_mode INI key; parseBoolKey(..., false) — debug slog level and dev-only server paths
-	DevFeatures        string   // dev_features INI: comma-separated sql, access, xml
-	SetupToken         string   // secret for POST /setup/init; required when setup_localhost_only is false (startup fails if empty)
-	SetupLocalhostOnly bool     // when true (default), setup binds 127.0.0.1 only and ignores http_interface; false requires setup_token
-	DbMaxOpenConns     int      // db_max_open_conns; 0 = Go default
-	DbMaxIdleConns     int      // db_max_idle_conns; 0 = Go default
-	DbConnMaxLifetimeMin int    // db_conn_max_lifetime_minutes; 0 = no limit
-	DbReadReplicaDSN   string   // optional libpq DSN for read replica (search/read_group RPC)
-	RateLimitRPM       int      // rate_limit_rpm per client IP on /api/rpc and login; 0 = disabled
-	TrustedProxies     string   // trusted_proxies: comma-separated CIDRs/IPs allowed to set X-Forwarded-For; empty = never trust XFF
-	CSRFSecret         string   // csrf_secret: shared HMAC key for multi-instance; empty = ephemeral per process
-	ForceSecureCookies           bool // force_secure_cookies: set Secure on session/flash cookies even when dev_mode=true
-	SessionCookieStrictSameSite  bool // session_cookie_strict_samesite: use SameSite=Strict on session cookie (default Lax)
-	MetricsScrapeToken string   // metrics_scrape_token: Bearer token for unauthenticated /metrics scrape; empty = admin session only
-	SMTPHost           string
-	SMTPPort           int
-	SMTPUser           string
-	SMTPPassword       string
-	SMTPFrom           string
+	DbHost                      string
+	DbPort                      string
+	DbUser                      string
+	DbPass                      string
+	DbName                      string
+	DbSslMode                   string
+	HttpPort                    string
+	HttpInterface               string   // optional bind address; empty = all interfaces (:port); ignored during setup when setup_localhost_only=true
+	AddonsPath                  string   // raw from file: comma-separated addon directory roots (see AddonPaths after AbsPaths)
+	AddonPaths                  []string // absolute addon roots from addons_path; filled by AbsPaths()
+	SumeruHome                  string   // optional: directory of standard sumeru repo (go.mod); used for default assets/templates if set
+	AssetsPath                  string   // static files (CSS/JS); default core/engine/assets
+	TemplatesPath               string   // HTML templates; default core/engine/templates
+	BrandCSS                    string   // optional path to extra CSS (served as /static/brand.css)
+	LogoPath                    string   // optional image path (served as /static/app-logo)
+	FilestorePath               string   // attachment blob directory; default data/filestore under INI dir
+	CompanyDisplayName          string   // optional header label; else first core.company when module installed
+	UserDisplayName             string   // optional header label; else first core.user when module installed
+	LogFile                     string   // optional log file path (absolutized in AbsPaths); see log_stdout / log_rolling
+	LogStdout                   bool     // when true, emit JSON logs to stdout (typical for Kubernetes)
+	LogRolling                  bool     // when true and log_file set, use size-based rotation (lumberjack); false for append-only or external rotation
+	LogMaxSizeMB                int      // max megabytes per log file before rotation (default 100 when log_rolling)
+	LogMaxBackups               int      // retained rotated files (0 = lumberjack default)
+	LogMaxAgeDays               int      // delete rolled files older than N days (0 = no age limit)
+	LogEnabled                  bool     // log_enabled: when false, no slog sinks and L(ctx) is no-op; stdlib log discarded
+	LogTimezone                 string   // log_timezone: UTC, Local (default), or IANA (e.g. Asia/Kolkata) for timestamps
+	DevMode                     bool     // dev_mode INI key; parseBoolKey(..., false) — debug slog level and dev-only server paths
+	DevFeatures                 string   // dev_features INI: comma-separated sql, access, xml
+	SetupToken                  string   // secret for POST /setup/init; required when setup_localhost_only is false (startup fails if empty)
+	SetupLocalhostOnly          bool     // when true (default), setup binds 127.0.0.1 only and ignores http_interface; false requires setup_token
+	DbMaxOpenConns              int      // db_max_open_conns; 0 = Go default
+	DbMaxIdleConns              int      // db_max_idle_conns; 0 = Go default
+	DbConnMaxLifetimeMin        int      // db_conn_max_lifetime_minutes; 0 = no limit
+	DbReadReplicaDSN            string   // optional libpq DSN for read replica (search/read_group RPC)
+	RateLimitRPM                int      // rate_limit_rpm per client IP on /api/rpc and login; 0 = disabled
+	TrustedProxies              string   // trusted_proxies: comma-separated CIDRs/IPs allowed to set X-Forwarded-For; empty = never trust XFF
+	CSRFSecret                  string   // csrf_secret: shared HMAC key for multi-instance; empty = ephemeral per process
+	ForceSecureCookies          bool     // force_secure_cookies: set Secure on session/flash cookies even when dev_mode=true
+	SessionCookieStrictSameSite bool     // session_cookie_strict_samesite: use SameSite=Strict on session cookie (default Lax)
+	CloseSessionOnLastTab       bool     // close_session_on_last_tab: shell tab lease + browser heartbeat (default false)
+	SessionBrowserGraceSeconds  int      // session_browser_grace_seconds: revoke session when browser_seen_at older than this (default 90)
+	SessionBrowserPingSeconds   int      // session_browser_ping_seconds: client touch interval hint (default 30)
+	MetricsScrapeToken          string   // metrics_scrape_token: Bearer token for unauthenticated /metrics scrape; empty = admin session only
+	SMTPHost                    string
+	SMTPPort                    int
+	SMTPUser                    string
+	SMTPPassword                string
+	SMTPFrom                    string
 }
 
 var AppConfig Config
@@ -190,6 +193,16 @@ func LoadConfig(path string) error {
 			AppConfig.ForceSecureCookies = parseBoolKey(val, false)
 		case keySessionCookieStrictSameSite:
 			AppConfig.SessionCookieStrictSameSite = parseBoolKey(val, false)
+		case keyCloseSessionOnLastTab:
+			AppConfig.CloseSessionOnLastTab = parseBoolKey(val, false)
+		case keySessionBrowserGraceSeconds:
+			if n, err := strconv.Atoi(strings.TrimSpace(val)); err == nil && n > 0 {
+				AppConfig.SessionBrowserGraceSeconds = n
+			}
+		case keySessionBrowserPingSeconds:
+			if n, err := strconv.Atoi(strings.TrimSpace(val)); err == nil && n > 0 {
+				AppConfig.SessionBrowserPingSeconds = n
+			}
 		case keyMetricsScrapeToken:
 			AppConfig.MetricsScrapeToken = val
 		case keySMTPHost:

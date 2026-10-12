@@ -3,6 +3,7 @@
 package web_test
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"net/http"
@@ -194,7 +195,7 @@ func moduleRootFromIntegration(t *testing.T) string {
 	}
 }
 
-func TestLogoutGetDestroysSession(t *testing.T) {
+func TestLogoutGetPreservesSession(t *testing.T) {
 	integrationDB(t)
 	userID := existingActiveUserID(t)
 	sid := "test-logout-get-" + time.Now().Format("150405.000000")
@@ -219,19 +220,8 @@ func TestLogoutGetDestroysSession(t *testing.T) {
 	if err != nil {
 		t.Fatalf("count sessions: %v", err)
 	}
-	if count != 0 {
-		t.Fatalf("session row count=%d want 0 after logout", count)
-	}
-	setCookies := rec.Result().Header.Values("Set-Cookie")
-	foundClear := false
-	for _, raw := range setCookies {
-		if strings.Contains(raw, web.TestSessionCookieName+"=") {
-			foundClear = true
-			break
-		}
-	}
-	if !foundClear {
-		t.Fatalf("expected cleared session cookie, got %v", setCookies)
+	if count != 1 {
+		t.Fatalf("session row count=%d want 1 after GET logout (POST destroys)", count)
 	}
 }
 
@@ -311,5 +301,61 @@ func TestInactiveUserSessionRevoked(t *testing.T) {
 	}
 	if !foundClear {
 		t.Fatalf("expected cleared session cookie, got %v", setCookies)
+	}
+}
+
+func TestLinkOAuthUser_linksExistingLoginByEmail(t *testing.T) {
+	integrationDB(t)
+	userID := insertTestUser(t)
+	userTable := orm.MustQuotedTableName("core.user")
+	var login string
+	if err := orm.DB.QueryRow(`SELECT login FROM `+userTable+` WHERE id = $1`, userID).Scan(&login); err != nil {
+		t.Fatalf("login lookup: %v", err)
+	}
+	ctx := orm.AuditedBypass(context.Background(), "test.oauth.link")
+	providerID := 9001
+	subject := "oauth-sub-" + login
+	uid, err := web.LinkOAuthUserForTest(ctx, providerID, subject, login, "deny")
+	if err != nil || uid != userID {
+		t.Fatalf("link by email: uid=%d err=%v want %d", uid, err, userID)
+	}
+	uid2, err := web.LinkOAuthUserForTest(ctx, providerID, subject, login, "deny")
+	if err != nil || uid2 != userID {
+		t.Fatalf("identity reuse: uid=%d err=%v", uid2, err)
+	}
+	t.Cleanup(func() {
+		idTable := orm.MustQuotedTableName("core.user.identity")
+		_, _ = orm.DB.Exec(`DELETE FROM `+idTable+` WHERE provider_id = $1 AND subject = $2`, providerID, subject)
+	})
+}
+
+func TestLinkOAuthUser_jitInternalAndUnknownPolicy(t *testing.T) {
+	integrationDB(t)
+	ctx := orm.AuditedBypass(context.Background(), "test.oauth.jit")
+	providerID := 9002
+	subject := fmt.Sprintf("jit_%d", time.Now().UnixNano())
+	email := subject + "@example.com"
+
+	uid, err := web.LinkOAuthUserForTest(ctx, providerID, subject, email, "jit_internal")
+	if err != nil || uid <= 0 {
+		t.Fatalf("jit_internal: uid=%d err=%v", uid, err)
+	}
+	userTable := orm.MustQuotedTableName("core.user")
+	var userType string
+	if err := orm.DB.QueryRow(`SELECT user_type FROM `+userTable+` WHERE id = $1`, uid).Scan(&userType); err != nil {
+		t.Fatalf("user_type: %v", err)
+	}
+	if userType != "internal" {
+		t.Fatalf("user_type=%q want internal", userType)
+	}
+	t.Cleanup(func() {
+		idTable := orm.MustQuotedTableName("core.user.identity")
+		_, _ = orm.DB.Exec(`DELETE FROM `+idTable+` WHERE user_id = $1`, uid)
+		_, _ = orm.DB.Exec(`DELETE FROM `+userTable+` WHERE id = $1`, uid)
+	})
+
+	_, err = web.LinkOAuthUserForTest(ctx, providerID+1, "deny-sub", "nobody@example.com", "deny")
+	if err == nil || !strings.Contains(err.Error(), "unknown user") {
+		t.Fatalf("deny policy: err=%v", err)
 	}
 }

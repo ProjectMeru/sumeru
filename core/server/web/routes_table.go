@@ -57,6 +57,7 @@ func registerAuthRoutes() {
 	registerPublic(http.MethodPost, loginRoute, LoginPost)
 	registerPublic(http.MethodGet, logoutRoute, LogoutGet)
 	registerSession(http.MethodPost, logoutRoute, LogoutPost)
+	registerSession(http.MethodPost, sessionTouchRoute, SessionTouchPost)
 	registerAPIKeyRevealRoute()
 	registerOAuthRoutes()
 	registerTOTPRoutes()

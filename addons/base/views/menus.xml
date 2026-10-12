@@ -34,6 +34,10 @@
         <menuitem id="menu_sys_field_access" name="Field Access" parent="menu_security_section"
             sequence="30" action="base.action_sys.field.access" groups="base.group_system"
             web_icon="settings" />
+        <menuitem id="menu_sys_property_definition" name="Property definitions"
+            parent="menu_security_section" sequence="32"
+            action="base.action_sys.property.definition" groups="base.group_system"
+            web_icon="settings" />
         <menuitem id="menu_sys_field_access_matrix" name="Field access matrix"
             parent="menu_security_section" sequence="40"
             action="base.action_sys.field.access_matrix" groups="base.group_system"

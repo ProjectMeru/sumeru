@@ -118,6 +118,13 @@ func executeUpdateMutation(ctx context.Context, modelName string, domain [][]int
 		if len(locked) == 0 {
 			return fmt.Errorf("access denied or record not found")
 		}
+		var previous map[string]interface{}
+		if len(locked) == 1 {
+			previous = locked[0]
+		}
+		if err := MergePropertiesWrite(ctx, modelName, previous, prepared); err != nil {
+			return err
+		}
 		if len(locked) == 1 {
 			merged := mergeRecordMap(locked[0], prepared)
 			if err := MergeStoredComputes(ctx, modelName, merged); err != nil {
@@ -236,6 +243,12 @@ func executeDeleteMutation(ctx context.Context, modelName string, domain [][]int
 		}
 		result.RowsAffected = n
 		if shouldEmitSideEffects(ctx, modelName) {
+			if beforeDeleteHook != nil {
+				for _, recordMap := range locked {
+					recordID, _ := CoerceInt64(recordMap["id"])
+					beforeDeleteHook(ctx, modelName, int(recordID), recordMap)
+				}
+			}
 			for _, recordMap := range locked {
 				recordID, _ := CoerceInt64(recordMap["id"])
 				sideRows = append(sideRows, sideEffectRow{

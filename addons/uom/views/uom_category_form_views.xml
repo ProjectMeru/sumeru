@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_uom.category_form" model="uom.category" type="form">
+            <sheet>
+                <group>
+                    <field name="name" string="Category"/>
+                </group>
+            </sheet>
+        </view>
+    </data>
+</sumeru>

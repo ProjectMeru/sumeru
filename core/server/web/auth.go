@@ -180,12 +180,13 @@ func resolveSession(r *http.Request) sessionState {
 
 	var userID int
 	var active bool
+	var browserSeen sql.NullTime
 	err := orm.DB.QueryRowContext(r.Context(),
-		`SELECT s.user_id, u.active FROM `+sessionTbl+` s
+		`SELECT s.user_id, u.active, s.browser_seen_at FROM `+sessionTbl+` s
 		 JOIN `+userTbl+` u ON u.id = s.user_id
 		 WHERE s.sid = $1 AND s.expires_at > NOW()`,
 		sid,
-	).Scan(&userID, &active)
+	).Scan(&userID, &active, &browserSeen)
 	if err != nil {
 		if err != sql.ErrNoRows {
 			applog.WarnCode(r.Context(), errcode.InternalError, "session lookup failed", applog.Event{
@@ -197,6 +198,15 @@ func resolveSession(r *http.Request) sessionState {
 		}
 		deleteSession(r.Context(), sid)
 		return sessionState{clearCookie: true}
+	}
+	now := time.Now().UTC()
+	if sessionBrowserPresenceEnabled() {
+		if !browserSeen.Valid {
+			touchBrowserSeen(r.Context(), sid)
+		} else if browserSeenExpired(browserSeen, now) {
+			deleteSession(r.Context(), sid)
+			return sessionState{clearCookie: true}
+		}
 	}
 	if !active || userID <= 0 {
 		deleteSession(r.Context(), sid)
@@ -252,7 +262,13 @@ func CreateSession(w http.ResponseWriter, userID int) error {
 	sessionID := hex.EncodeToString(sessionBytes)
 	expiresAt := time.Now().UTC().Add(sessionDuration)
 	sessionTbl := orm.MustQuotedTableName("sys.session")
-	if _, err := orm.DB.Exec(`INSERT INTO `+sessionTbl+` (sid, user_id, expires_at) VALUES ($1, $2, $3)`, sessionID, userID, expiresAt); err != nil {
+	var err error
+	if sessionBrowserPresenceEnabled() {
+		_, err = orm.DB.Exec(`INSERT INTO `+sessionTbl+` (sid, user_id, expires_at, browser_seen_at) VALUES ($1, $2, $3, NOW())`, sessionID, userID, expiresAt)
+	} else {
+		_, err = orm.DB.Exec(`INSERT INTO `+sessionTbl+` (sid, user_id, expires_at) VALUES ($1, $2, $3)`, sessionID, userID, expiresAt)
+	}
+	if err != nil {
 		return err
 	}
 	setSessionCookie(w, sessionID, false)

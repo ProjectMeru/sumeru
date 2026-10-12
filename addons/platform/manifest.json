@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "author": "Sumeru",
   "description": "Attachments, sequences, system parameters, reports, and bulk import templates.",
-  "depends": ["base"],
+  "depends": ["base", "currency"],
   "auto_install": true,
   "application": false,
   "data": [
@@ -24,6 +24,9 @@
     "views/sys_bulk_import_form_views.xml",
     "views/sys_import_template_list_views.xml",
     "views/sys_import_template_form_views.xml",
+    "views/platform_pricing_sample_actions.xml",
+    "views/platform_pricing_sample_list_views.xml",
+    "views/platform_pricing_sample_form_views.xml",
     "views/menus.xml"
   ]
 }

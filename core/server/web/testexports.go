@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"net/http"
 	"time"
@@ -488,6 +489,11 @@ func OAuthCallbackForTest(w http.ResponseWriter, r *http.Request) { OAuthCallbac
 // OAuthStartForTest exposes the OAuth start handler for tests.
 func OAuthStartForTest(w http.ResponseWriter, r *http.Request) { OAuthStartHandler(w, r) }
 
+// LinkOAuthUserForTest exposes OAuth account linking and JIT provisioning for tests.
+func LinkOAuthUserForTest(ctx context.Context, providerID int, subject, email, policy string) (int, error) {
+	return linkOAuthUser(ctx, providerID, subject, email, policy)
+}
+
 // AuthLocalEnabledForTest reports whether password login is shown on the login page.
 func AuthLocalEnabledForTest(ctx context.Context) bool { return authLocalEnabled(ctx) }
 
@@ -556,6 +562,21 @@ func LogoutGetForTest(w http.ResponseWriter, r *http.Request) { LogoutGet(w, r) 
 
 // LogoutPostForTest exposes the logout POST handler for tests.
 func LogoutPostForTest(w http.ResponseWriter, r *http.Request) { LogoutPost(w, r) }
+
+// TestSessionTouchRoute is POST /web/session/touch for browser presence.
+const TestSessionTouchRoute = sessionTouchRoute
+
+// SessionTouchPostForTest exposes the session touch handler for tests.
+func SessionTouchPostForTest(w http.ResponseWriter, r *http.Request) { SessionTouchPost(w, r) }
+
+// BrowserSeenExpiredForTest reports whether browser_seen_at is past configured grace.
+func BrowserSeenExpiredForTest(seenValid bool, seenUnix int64) bool {
+	var seen sql.NullTime
+	if seenValid {
+		seen = sql.NullTime{Time: time.Unix(seenUnix, 0).UTC(), Valid: true}
+	}
+	return browserSeenExpired(seen, time.Now().UTC())
+}
 
 // CSRFTokenForRequestForTest exposes the session-bound CSRF token for tests.
 func CSRFTokenForRequestForTest(r *http.Request) string { return CSRFTokenForRequest(r) }

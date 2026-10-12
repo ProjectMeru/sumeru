@@ -29,6 +29,17 @@ export function formatFieldValue(row: Record<string, unknown>, field: SwcArchFie
     return match?.[1] ?? key;
   }
 
+  if (field.widget === "monetary") {
+    const amount = row[field.name];
+    if (amount == null || amount === "") return "";
+    const currencyField = field.options?.currency_field?.trim();
+    const symbol =
+      field.options?.currency_symbol?.trim() ||
+      (currencyField ? String(row[`${currencyField}_name`] ?? row[`${currencyField}_symbol`] ?? "") : "");
+    const text = String(amount);
+    return symbol ? `${symbol} ${text}` : text;
+  }
+
   const raw = row[`${field.name}_name`] ?? row[field.name];
   if (raw == null || raw === false) return "";
   return String(raw);

@@ -15,5 +15,8 @@
         <menuitem id="menu_sys_import_template" name="Import Templates"
             parent="menu_platform_section" sequence="45" action="platform.action_sys.import.template"
             groups="base.group_system" web_icon="settings" />
+        <menuitem id="menu_platform_pricing_sample" name="Pricing samples"
+            parent="menu_platform_section" sequence="50" action="platform.action_platform.pricing.sample"
+            groups="base.group_system" web_icon="settings" />
     </data>
 </sumeru>

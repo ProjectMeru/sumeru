@@ -138,8 +138,3 @@ export function parseSumDocument(source: string): SumDocument {
   }
   return { templates, main };
 }
-
-/** @deprecated Use parseSumDocument; returns main template only. */
-export function parseSumXml(source: string): SumElement {
-  return parseSumDocument(source).main;
-}

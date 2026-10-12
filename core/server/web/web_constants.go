@@ -4,28 +4,29 @@ import "sumeru/core/engine/render"
 
 // Shared routes used across web handlers.
 const (
-	rootRoute          = "/"
-	loginRoute         = "/web/login"
-	logoutRoute        = "/web/logout"
-	homeRoute             = "/web/home"
-	portalRoutePrefix     = "/portal"
-	portalHomeRoute       = "/portal/home"
-	portalRecordRoute     = "/portal/record"
+	rootRoute              = "/"
+	loginRoute             = "/web/login"
+	logoutRoute            = "/web/logout"
+	sessionTouchRoute      = "/web/session/touch"
+	homeRoute              = "/web/home"
+	portalRoutePrefix      = "/portal"
+	portalHomeRoute        = "/portal/home"
+	portalRecordRoute      = "/portal/record"
 	portalShareRoutePrefix = "/portal/share/"
-	companySwitchRoute = "/web/company/switch"
-	kanbanMoveRoute    = "/web/kanban/move"
-	moduleActionRoute  = "/web/module/action"
-	resetPasswordRoute = "/web/action/reset_password"
-	createAPIKeyRoute  = "/web/action/create_api_key"
-	pinnedAppsRoute    = "/web/user/pinned-apps"
-	settingsRoute      = "/web/settings"
-	appLogsRoute       = "/web/settings/app-logs"
-	apiHealthRoute     = "/api/health"
-	apiReadyRoute      = "/api/ready"
-	apiRPCRoute        = "/api/rpc"
-	metricsRoute       = "/metrics"
-	setupRoute         = "/setup"
-	setupInitRoute     = "/setup/init"
+	companySwitchRoute     = "/web/company/switch"
+	kanbanMoveRoute        = "/web/kanban/move"
+	moduleActionRoute      = "/web/module/action"
+	resetPasswordRoute     = "/web/action/reset_password"
+	createAPIKeyRoute      = "/web/action/create_api_key"
+	pinnedAppsRoute        = "/web/user/pinned-apps"
+	settingsRoute          = "/web/settings"
+	appLogsRoute           = "/web/settings/app-logs"
+	apiHealthRoute         = "/api/health"
+	apiReadyRoute          = "/api/ready"
+	apiRPCRoute            = "/api/rpc"
+	metricsRoute           = "/metrics"
+	setupRoute             = "/setup"
+	setupInitRoute         = "/setup/init"
 )
 
 // Setup wizard limits and templates.
@@ -147,16 +148,16 @@ const (
 
 // Settings hub page identifiers.
 const (
-	settingsRootMenuXMLID      = "base.menu_settings_root"
-	settingsHubMenuXMLID       = render.MenuGeneralSettingsXMLID
-	settingsHubInnerTemplate   = render.TemplatePagesSettingsHub
-	settingsHubPageTitle       = "Settings"
-	settingsHubStylesheetURL   = "/static/css/sumeru-settings-hub.css"
-	settingsHubBodyClass         = " sum-body--settings-hub"
+	settingsRootMenuXMLID         = "base.menu_settings_root"
+	settingsHubMenuXMLID          = render.MenuGeneralSettingsXMLID
+	settingsHubInnerTemplate      = render.TemplatePagesSettingsHub
+	settingsHubPageTitle          = "Settings"
+	settingsHubStylesheetURL      = "/static/css/sumeru-settings-hub.css"
+	settingsHubBodyClass          = " sum-body--settings-hub"
 	settingsAccountInnerTemplate  = render.TemplatePagesSettingsAccount
 	settingsFieldACLInnerTemplate = render.TemplatePagesSettingsFieldACL
 	settingsModelACLInnerTemplate = render.TemplatePagesSettingsModelACL
-	groupUserXML                 = "base.group_user"
+	groupUserXML                  = "base.group_user"
 )
 
 // Apps module action form fields (POST apps_*).
@@ -220,21 +221,21 @@ const (
 
 // Workspace view modes and row limits.
 const (
-	workspaceViewModeList     = render.ViewModeList
-	workspaceViewModeForm     = render.ViewModeForm
-	workspaceViewModeKanban   = render.ViewModeKanban
-	workspaceViewModePivot    = render.ViewModePivot
-	workspaceViewModeGraph    = render.ViewModeGraph
-	workspaceViewModeCalendar = render.ViewModeCalendar
-	workspaceViewModeGantt    = render.ViewModeGantt
-	workspaceViewModeMap      = render.ViewModeMap
-	workspaceViewModeCohort   = render.ViewModeCohort
+	workspaceViewModeList      = render.ViewModeList
+	workspaceViewModeForm      = render.ViewModeForm
+	workspaceViewModeKanban    = render.ViewModeKanban
+	workspaceViewModePivot     = render.ViewModePivot
+	workspaceViewModeGraph     = render.ViewModeGraph
+	workspaceViewModeCalendar  = render.ViewModeCalendar
+	workspaceViewModeGantt     = render.ViewModeGantt
+	workspaceViewModeMap       = render.ViewModeMap
+	workspaceViewModeCohort    = render.ViewModeCohort
 	workspaceViewModeHierarchy = render.ViewModeHierarchy
 	workspaceViewModeActivity  = render.ViewModeActivity
 	workspaceViewModeIframe    = render.ViewModeIframe
-	maxWorkspaceListRows      = 500
-	maxWorkspaceKanbanRows    = 200
-	workspaceListPageSize     = 40
+	maxWorkspaceListRows       = 500
+	maxWorkspaceKanbanRows     = 200
+	workspaceListPageSize      = 40
 )
 
 // ORM models used by workspace handlers.
@@ -263,29 +264,29 @@ const (
 
 // CSV import route, limits, and multipart form fields.
 const (
-	importCSVRoute      = "/web/import/csv"
-	exportCSVRoute      = "/web/export/csv"
-	exportPDFRoute         = "/web/export/pdf"
-	exportXLSXRoute        = "/web/export/xlsx"
-	templatePDFRoute       = "/web/report/template-pdf"
-	bulkTemplateRoute   = "/web/bulk/template"
-	bulkUploadRoute     = "/web/bulk/upload"
-	bulkConfirmRoute    = "/web/bulk/confirm"
-	bulkCancelRoute     = "/web/bulk/cancel"
-	bulkPreviewRoute    = "/web/bulk/preview"
+	importCSVRoute        = "/web/import/csv"
+	exportCSVRoute        = "/web/export/csv"
+	exportPDFRoute        = "/web/export/pdf"
+	exportXLSXRoute       = "/web/export/xlsx"
+	templatePDFRoute      = "/web/report/template-pdf"
+	bulkTemplateRoute     = "/web/bulk/template"
+	bulkUploadRoute       = "/web/bulk/upload"
+	bulkConfirmRoute      = "/web/bulk/confirm"
+	bulkCancelRoute       = "/web/bulk/cancel"
+	bulkPreviewRoute      = "/web/bulk/preview"
 	bulkDryRunRoute       = "/web/bulk/dry-run"
 	bulkSaveTemplateRoute = "/web/bulk/save-template"
-	exportAsyncRoute    = "/web/export/async"
-	bulkStatusRoute     = "/web/bulk/status"
-	importWizardRoute   = "/web/import"
-	swcImportRoute      = "/web/swc/import"
-	maxImportBodyBytes  = 8 << 20
-	importModelField    = "model"
-	importFileField     = "file"
-	reportFieldsParam   = "fields"
-	reportPageSizeParam = "page_size"
-	importModeField     = "import_mode"
-	actionIDField       = "action"
+	exportAsyncRoute      = "/web/export/async"
+	bulkStatusRoute       = "/web/bulk/status"
+	importWizardRoute     = "/web/import"
+	swcImportRoute        = "/web/swc/import"
+	maxImportBodyBytes    = 8 << 20
+	importModelField      = "model"
+	importFileField       = "file"
+	reportFieldsParam     = "fields"
+	reportPageSizeParam   = "page_size"
+	importModeField       = "import_mode"
+	actionIDField         = "action"
 )
 
 const recordModelField = "model"

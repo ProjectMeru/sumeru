@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <menuitem id="menu_currency_section" name="Currencies" parent="base.menu_settings_root"
+            sequence="25" web_icon="settings" groups="base.group_system" />
+        <menuitem id="menu_core_currency" name="All Currencies" parent="menu_currency_section"
+            sequence="10" action="currency.action_core.currency" web_icon="settings"
+            groups="base.group_system" />
+        <menuitem id="menu_core_currency_rate" name="Currency Rates"
+            parent="menu_currency_section" sequence="20" action="currency.action_core.currency.rate"
+            web_icon="settings" groups="base.group_system" />
+    </data>
+</sumeru>

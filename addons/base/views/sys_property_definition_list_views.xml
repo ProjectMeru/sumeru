@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_sys.property.definition_list" model="sys.property.definition" type="list">
+            <field name="model" string="Model"/>
+            <field name="field_name" string="Field"/>
+            <field name="key" string="Key"/>
+            <field name="label" string="Label"/>
+            <field name="value_type" string="Type"/>
+            <field name="required" string="Required"/>
+            <field name="sequence" string="Sequence"/>
+        </view>
+    </data>
+</sumeru>

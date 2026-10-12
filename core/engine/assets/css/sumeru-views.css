@@ -3363,3 +3363,36 @@ body.sum-debug--field-inspector.sum-debug--active .sum-field-widget[data-sum-deb
   max-height: 60vh;
   overflow: auto;
 }
+
+.sum-properties {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sum-properties-row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 30%) 1fr;
+  gap: 0.5rem 1rem;
+  align-items: center;
+}
+
+.sum-properties-empty {
+  color: var(--sum-muted);
+  font-size: 0.875rem;
+}
+
+.sum-activity-type {
+  margin: 0.75rem 0 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--sum-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sum-activity-user h3 {
+  margin: 0.35rem 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+}

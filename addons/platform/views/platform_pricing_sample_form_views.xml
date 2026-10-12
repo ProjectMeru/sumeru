@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_platform.pricing.sample_form" model="platform.pricing.sample" type="form">
+            <sheet>
+                <group>
+                    <field name="name" string="Label"/>
+                    <field name="currency_id" string="Currency"/>
+                    <field name="amount" string="Amount"/>
+                </group>
+            </sheet>
+        </view>
+    </data>
+</sumeru>

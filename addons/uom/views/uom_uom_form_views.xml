@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_uom.uom_form" model="uom.uom" type="form">
+            <sheet>
+                <group>
+                    <field name="name" string="Unit of Measure"/>
+                    <field name="category_id" string="Category"/>
+                    <field name="factor" string="Ratio"/>
+                    <field name="rounding" string="Rounding Precision"/>
+                    <field name="active" string="Active"/>
+                </group>
+            </sheet>
+        </view>
+    </data>
+</sumeru>

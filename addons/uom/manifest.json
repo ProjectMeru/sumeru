@@ -1,0 +1,19 @@
+{
+  "name": "uom",
+  "display_name": "Units of Measure",
+  "version": "1.0.0",
+  "author": "Sumeru",
+  "description": "Units of measure with categories and conversion factors.",
+  "depends": ["base"],
+  "auto_install": true,
+  "application": false,
+  "data": [
+    "data/uom_data.xml",
+    "views/uom_actions.xml",
+    "views/uom_category_list_views.xml",
+    "views/uom_category_form_views.xml",
+    "views/uom_uom_list_views.xml",
+    "views/uom_uom_form_views.xml",
+    "views/menus.xml"
+  ]
+}

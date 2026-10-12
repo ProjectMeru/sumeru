@@ -215,6 +215,15 @@ func coerceFieldValue(fieldDef FieldDefinition, v interface{}) (interface{}, err
 			return nil, newFieldValidationError(fieldDef, "")
 		}
 		return AsString(v), nil
+	case Properties:
+		canonical, err := coerceProperties(v)
+		if err != nil {
+			return nil, err
+		}
+		if canonical == "" && fieldDef.Required {
+			return nil, newFieldValidationError(fieldDef, "")
+		}
+		return canonical, nil
 	case Date, DateTime:
 		s := strings.TrimSpace(AsString(v))
 		if s == "" {
