@@ -33,6 +33,16 @@ func buildSearchWhereClause(modelName string, domain [][]interface{}) (string, [
 			return "", nil, fmt.Errorf("domain field name")
 		}
 		op := strings.TrimSpace(strings.ToLower(fmt.Sprint(clause[1])))
+		if strings.Contains(field, ".") {
+			frag, fragArgs, next, err := propertiesDomainClause(modelName, field, op, clause[2], placeholderIndex)
+			if err != nil {
+				return "", nil, err
+			}
+			parts = append(parts, frag)
+			args = append(args, fragArgs...)
+			placeholderIndex = next
+			continue
+		}
 		if frag, handled, err := buildFalsyDomainClause(modelName, field, op, clause[2]); handled {
 			if err != nil {
 				return "", nil, err

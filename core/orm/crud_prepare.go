@@ -30,6 +30,9 @@ func prepareCreateWrite(ctx context.Context, model Model, values map[string]inte
 	if err := applySpecialDefaults(ctx, fieldDefs, prepared); err != nil {
 		return nil, 0, err
 	}
+	if err := MergePropertiesWrite(ctx, model.ModelName(), nil, prepared); err != nil {
+		return nil, 0, err
+	}
 	working := mergeRecordMap(map[string]interface{}{}, prepared)
 	if err := MergeStoredComputes(ctx, model.ModelName(), working); err != nil {
 		return nil, 0, err

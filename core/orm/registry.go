@@ -99,7 +99,7 @@ func ColumnTypeSQL(f FieldDefinition) (string, bool) {
 		return "TIMESTAMPTZ", true
 	case Selection:
 		return "VARCHAR(50)", true
-	case Json:
+	case Json, Properties:
 		return "JSONB", true
 	case Many2One:
 		return "BIGINT", true

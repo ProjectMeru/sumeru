@@ -28,6 +28,7 @@ type (
 	DateTime          struct{}
 	Duration          struct{}
 	Json              struct{}
+	Properties        struct{}
 	Binary            struct{}
 	Image             struct{}
 	Reference         struct{}

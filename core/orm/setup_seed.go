@@ -268,6 +268,7 @@ func ensureBootstrapACLs(ctx context.Context, adminGID, userGID int) {
 		{"core.group", "access_core_group_user_read"},
 		{"sys.access", "access_sys_access_user_read"},
 		{"sys.rule", "access_sys_rule_user_read"},
+		{"sys.property.definition", "access_sys_property_definition_user"},
 	} {
 		_, _ = Upsert(ctx, RegistryModel("sys.access"), map[string]interface{}{
 			"name":        pair.name,
