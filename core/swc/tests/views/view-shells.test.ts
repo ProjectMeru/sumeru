@@ -38,39 +38,56 @@ describe("view shells", () => {
     view.destroy();
   });
 
-  it("ActivityView renders list table rows", () => {
+  it("ActivityView renders overdue, today, and later columns", () => {
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, "0");
+    const d = String(today.getDate()).padStart(2, "0");
+    const due = `${y}-${m}-${d}`;
     const view = new ActivityView(
       {
-        payload: viewPayload(
-          { type: "activity", fields: [{ name: "name" }, { name: "summary" }] },
-          [{ id: 1, name: "Call", summary: "Follow up" }],
-        ),
+        payload: viewPayload({ type: "activity", fields: [{ name: "summary" }] }, [
+          { id: 1, summary: "Late", date_deadline: "2000-01-01", user_id: 2, user_id_name: "Ada", model: "crm.lead", res_id: 9 },
+          { id: 2, summary: "Now", date_deadline: due, user_id: 2, user_id_name: "Ada", model: "crm.lead", res_id: 9 },
+        ]),
       },
       collectionEnv(),
     );
     view.callSetup();
     const el = view.render();
-    expect(el.querySelector(".sum-list-table")).toBeTruthy();
-    expect(el.textContent).toContain("Call");
+    expect(el.querySelector('[data-activity-column="overdue"]')?.textContent).toContain("Late");
+    expect(el.querySelector('[data-activity-column="today"]')?.textContent).toContain("Now");
+    expect(el.textContent).toContain("Ada");
     view.destroy();
   });
 
-  it("ActivityView row click opens record", () => {
-    const openRecord = vi.fn();
-    const env = collectionEnv({ action: { openRecord, navigate: vi.fn() } });
+  it("ActivityView card opens the parent record", () => {
+    const navigate = vi.fn();
+    const env = collectionEnv({ action: { openRecord: vi.fn(), navigate } });
     const view = new ActivityView(
       {
-        payload: viewPayload(
-          { type: "activity", fields: [{ name: "name" }] },
-          [{ id: 1, name: "Task" }],
-        ),
+        payload: viewPayload({ type: "activity", fields: [{ name: "summary" }] }, [
+          { id: 1, summary: "Call", model: "crm.lead", res_id: 9, user_id_name: "Ada" },
+        ]),
       },
       env,
     );
     view.callSetup();
-    const row = view.render().querySelector(".sum-list-row") as HTMLElement;
-    row.click();
-    expect(openRecord).toHaveBeenCalled();
+    const card = view.render().querySelector(".sum-kanban-card") as HTMLElement;
+    card.click();
+    expect(navigate).toHaveBeenCalledWith("/web?model=crm.lead&view_type=form&id=9");
+    view.destroy();
+  });
+
+  it("ActivityView empty board has no fake row", () => {
+    const view = new ActivityView(
+      { payload: viewPayload({ type: "activity", fields: [{ name: "summary" }] }, []) },
+      collectionEnv(),
+    );
+    view.callSetup();
+    const el = view.render();
+    expect(el.textContent).toContain("No activities");
+    expect(el.querySelector(".sum-kanban-card")).toBeNull();
     view.destroy();
   });
 

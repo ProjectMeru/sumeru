@@ -12,5 +12,6 @@ import (
 	_ "sumeru/addons/digest"
 	_ "sumeru/addons/platform"
 	_ "sumeru/addons/audit"
+	_ "sumeru/addons/mail"
 	_ "sumeru/addons/automation"
 )

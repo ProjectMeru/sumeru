@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_mail_activity_type_form" model="mail.activity.type" type="form">
+            <sheet>
+                <group>
+                    <field name="name" string="Name"/>
+                    <field name="delay_count" string="Delay (days)"/>
+                    <field name="icon" string="Icon"/>
+                </group>
+            </sheet>
+        </view>
+    </data>
+</sumeru>
