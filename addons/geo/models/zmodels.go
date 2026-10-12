@@ -9,6 +9,5 @@ func init() {
 		&CoreCity{},
 		&CoreCountry{},
 		&CoreCountryState{},
-		&CoreCurrency{},
 	)
 }

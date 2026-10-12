@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_core.currency.rate_form" model="core.currency.rate" type="form">
+            <sheet>
+                <group>
+                    <field name="currency_id" string="Currency"/>
+                    <field name="rate" string="Rate"/>
+                    <field name="date_from" string="Date From"/>
+                    <field name="active" string="Active"/>
+                </group>
+            </sheet>
+        </view>
+    </data>
+</sumeru>

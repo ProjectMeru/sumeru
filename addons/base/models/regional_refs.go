@@ -6,4 +6,3 @@ import geomodels "sumeru/addons/geo/models"
 type CoreCountry = geomodels.CoreCountry
 type CoreCountryState = geomodels.CoreCountryState
 type CoreCity = geomodels.CoreCity
-type CoreCurrency = geomodels.CoreCurrency

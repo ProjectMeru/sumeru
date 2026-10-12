@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_core.currency_list" model="core.currency" type="list">
+            <field name="name" string="Currency"/>
+            <field name="symbol" string="Symbol"/>
+            <field name="active" string="Active"/>
+        </view>
+    </data>
+</sumeru>
