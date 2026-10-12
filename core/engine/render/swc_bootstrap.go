@@ -8,6 +8,7 @@ import (
 
 	"sumeru/addons/im"
 	"sumeru/core/orm"
+	"sumeru/core/server/config"
 )
 
 // SWCBootstrapWorkspace is the initial workspace route embedded in bootstrap JSON.
@@ -40,8 +41,11 @@ type swcBootstrap struct {
 	ActivityEnabled           bool   `json:"activityEnabled"`
 	InternalMessagesEnabled   bool   `json:"internalMessagesEnabled"`
 	CompanyFormHref           string `json:"companyFormHref,omitempty"`
-	BusEnabled          bool                   `json:"busEnabled"`
-	DocsURL             string                 `json:"docsUrl"`
+	BusEnabled                 bool `json:"busEnabled"`
+	CloseSessionOnLastTab      bool `json:"closeSessionOnLastTab"`
+	SessionBrowserPingSeconds  int  `json:"sessionBrowserPingSeconds"`
+	SessionBrowserGraceSeconds int  `json:"sessionBrowserGraceSeconds"`
+	DocsURL                    string                 `json:"docsUrl"`
 	ProfileURL          string                 `json:"profileUrl"`
 	Features            map[string]bool        `json:"features,omitempty"`
 	Workspace           *SWCBootstrapWorkspace `json:"workspace,omitempty"`
@@ -105,8 +109,11 @@ func BuildSWCBootstrapJSON(ctx context.Context, page PageData, ws *SWCBootstrapW
 		ActivityEnabled:           shellActivityEnabled(ctx, page),
 		InternalMessagesEnabled:   im.IMEnabled(ctx),
 		CompanyFormHref:           im.CompanySettingsFormHref(ctx, page.ShellActiveCompanyID),
-		BusEnabled:          true,
-		DocsURL:             page.UserDocsHref,
+		BusEnabled:                 true,
+		CloseSessionOnLastTab:      config.AppConfig.CloseSessionOnLastTab,
+		SessionBrowserPingSeconds:  sessionBrowserPingSecondsForBootstrap(),
+		SessionBrowserGraceSeconds: sessionBrowserGraceSecondsForBootstrap(),
+		DocsURL:                    page.UserDocsHref,
 		ProfileURL:          page.UserProfileHref,
 		Features:            buildSWCFeatureFlags(ctx),
 		Workspace:           ws,
@@ -206,6 +213,22 @@ func parseSWCPinnedApps(raw template.JS) []string {
 	var out []string
 	_ = json.Unmarshal([]byte(raw), &out)
 	return out
+}
+
+func sessionBrowserPingSecondsForBootstrap() int {
+	sec := config.AppConfig.SessionBrowserPingSeconds
+	if sec <= 0 {
+		return 30
+	}
+	return sec
+}
+
+func sessionBrowserGraceSecondsForBootstrap() int {
+	sec := config.AppConfig.SessionBrowserGraceSeconds
+	if sec <= 0 {
+		return 90
+	}
+	return sec
 }
 
 func buildSWCFeatureFlags(ctx context.Context) map[string]bool {

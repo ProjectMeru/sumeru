@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data noupdate="true">
+        <record id="partner_prop_tier" model="sys.property.definition">
+            <field name="model">core.partner</field>
+            <field name="field_name">extra_properties</field>
+            <field name="key">tier</field>
+            <field name="label">Tier</field>
+            <field name="value_type">selection</field>
+            <field name="selection">bronze:Bronze,silver:Silver,gold:Gold</field>
+            <field name="sequence">10</field>
+        </record>
+        <record id="partner_prop_score" model="sys.property.definition">
+            <field name="model">core.partner</field>
+            <field name="field_name">extra_properties</field>
+            <field name="key">score</field>
+            <field name="label">Score</field>
+            <field name="value_type">float</field>
+            <field name="sequence">20</field>
+        </record>
+        <record id="partner_prop_vip" model="sys.property.definition">
+            <field name="model">core.partner</field>
+            <field name="field_name">extra_properties</field>
+            <field name="key">vip</field>
+            <field name="label">VIP</field>
+            <field name="value_type">boolean</field>
+            <field name="sequence">30</field>
+        </record>
+    </data>
+</sumeru>

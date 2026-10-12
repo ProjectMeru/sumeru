@@ -1,4 +1,9 @@
 import { SwcError } from "../runtime/error.js";
+import {
+  redirectToLoginIfNeeded,
+  shouldRedirectForHttpStatus,
+  shouldRedirectForRpcError,
+} from "./session-redirect.js";
 
 interface RpcEnvelope<T = unknown> {
   ok?: boolean;
@@ -49,6 +54,9 @@ export class RpcService {
       body: JSON.stringify(body),
     });
     if (!res.ok) {
+      if (shouldRedirectForHttpStatus(res.status)) {
+        redirectToLoginIfNeeded();
+      }
       throw new SwcError(`RPC HTTP ${res.status}`, "rpc_http");
     }
     const raw: unknown = await res.json();
@@ -57,6 +65,9 @@ export class RpcService {
     }
     const data = raw as RpcEnvelope<T>;
     if (data.ok === false || data.error) {
+      if (shouldRedirectForRpcError(data.error?.code)) {
+        redirectToLoginIfNeeded();
+      }
       throw new SwcError(data.error?.message ?? "RPC failed", "rpc_error", data.error);
     }
     return data.result as T;

@@ -146,7 +146,7 @@ func validateWebhookURL(raw string) error {
 		return fmt.Errorf("invalid webhook url: %w", err)
 	}
 	scheme := strings.ToLower(u.Scheme)
-	if scheme != "https" && scheme != "http" {
+	if scheme != "https" {
 		return fmt.Errorf("webhook scheme %q not allowed", u.Scheme)
 	}
 	host := strings.TrimSpace(u.Hostname())

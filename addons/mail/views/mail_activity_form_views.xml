@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_mail_activity_form" model="mail.activity" type="form">
+            <header>
+                <button name="action_done" type="object" string="Mark Done"/>
+                <button name="action_snooze" type="object" string="Snooze"/>
+            </header>
+            <sheet>
+                <group>
+                    <field name="summary" string="Summary"/>
+                    <field name="activity_type_id" string="Type"/>
+                    <field name="user_id" string="Assigned To"/>
+                    <field name="date_deadline" string="Due Date"/>
+                    <field name="state" string="State"/>
+                    <field name="date_done" string="Done On"/>
+                    <field name="model" string="Document Model"/>
+                    <field name="res_id" string="Document"/>
+                </group>
+                <group>
+                    <field name="note" string="Note"/>
+                </group>
+            </sheet>
+        </view>
+    </data>
+</sumeru>

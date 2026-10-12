@@ -7,7 +7,8 @@
                     <field name="name" string="Name"/>
                     <field name="model" string="Model"/>
                     <field name="event_name" string="On Event"/>
-                    <field name="code" string="Code / Notes"/>
+                    <field name="trigger_domain" string="Trigger Domain"/>
+                    <field name="code" string="Code"/>
                     <field name="active" string="Active"/>
                 </group>
             </sheet>

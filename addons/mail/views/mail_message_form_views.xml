@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_mail_message_form" model="mail.message" type="form">
+            <sheet>
+                <group>
+                    <field name="subject" string="Subject"/>
+                    <field name="email_from" string="From"/>
+                    <field name="message_type" string="Type"/>
+                    <field name="state" string="State"/>
+                    <field name="model" string="Document Model"/>
+                    <field name="res_id" string="Document"/>
+                    <field name="message_id" string="Message-ID"/>
+                    <field name="in_reply_to" string="In-Reply-To"/>
+                </group>
+                <group>
+                    <field name="body" string="Body"/>
+                </group>
+            </sheet>
+        </view>
+    </data>
+</sumeru>

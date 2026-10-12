@@ -2,34 +2,34 @@ package swcmeta
 
 // WorkspacePayload is the JSON body for GET /web/swc/workspace.
 type WorkspacePayload struct {
-	ActionID      int                      `json:"actionId"`
-	MenuID        string                   `json:"menuId"`
-	ViewType      string                   `json:"viewType"`
-	Model         string                   `json:"model"`
-	RecordID      int                      `json:"recordId"`
-	FormEdit      bool                     `json:"formEdit"`
-	CSRFToken     string                   `json:"csrfToken"`
-	Arch          ViewArch                 `json:"arch"`
-	Record        map[string]interface{}   `json:"record,omitempty"`
-	Records       []map[string]interface{} `json:"records,omitempty"`
-	ViewTabs      []ViewTab                `json:"viewTabs"`
-	Breadcrumbs   []Breadcrumb             `json:"breadcrumbs"`
-	ListSearch    string                   `json:"listSearch,omitempty"`
-	ListSearchURL string                   `json:"listSearchUrl,omitempty"`
-	ListTotal     int                      `json:"listTotal,omitempty"`
-	ListSort      string                   `json:"listSort,omitempty"`
-	ListOffset    int                      `json:"listOffset,omitempty"`
-	ListFilter    string                   `json:"listFilter,omitempty"`
-	ListDomain    string                   `json:"listDomain,omitempty"`
-	ListGroupBy   string                   `json:"listGroupBy,omitempty"`
-	ListSections  []ListSectionMeta        `json:"listSections,omitempty"`
-	Favorites     []SavedSearchMeta        `json:"favorites,omitempty"`
-	FormBaseQuery string                   `json:"formBaseQuery,omitempty"`
-	Defaults      map[string]interface{}   `json:"defaults,omitempty"`
-	IframeURL     string                   `json:"iframeUrl,omitempty"`
-	UserSecurity            *UserSecurityPayload `json:"userSecurity,omitempty"`
-	RecordMessagesEligible  bool                 `json:"recordMessagesEligible,omitempty"`
-	RecordLogEligible       bool                 `json:"recordLogEligible,omitempty"`
+	ActionID               int                      `json:"actionId"`
+	MenuID                 string                   `json:"menuId"`
+	ViewType               string                   `json:"viewType"`
+	Model                  string                   `json:"model"`
+	RecordID               int                      `json:"recordId"`
+	FormEdit               bool                     `json:"formEdit"`
+	CSRFToken              string                   `json:"csrfToken"`
+	Arch                   ViewArch                 `json:"arch"`
+	Record                 map[string]interface{}   `json:"record,omitempty"`
+	Records                []map[string]interface{} `json:"records,omitempty"`
+	ViewTabs               []ViewTab                `json:"viewTabs"`
+	Breadcrumbs            []Breadcrumb             `json:"breadcrumbs"`
+	ListSearch             string                   `json:"listSearch,omitempty"`
+	ListSearchURL          string                   `json:"listSearchUrl,omitempty"`
+	ListTotal              int                      `json:"listTotal,omitempty"`
+	ListSort               string                   `json:"listSort,omitempty"`
+	ListOffset             int                      `json:"listOffset,omitempty"`
+	ListFilter             string                   `json:"listFilter,omitempty"`
+	ListDomain             string                   `json:"listDomain,omitempty"`
+	ListGroupBy            string                   `json:"listGroupBy,omitempty"`
+	ListSections           []ListSectionMeta        `json:"listSections,omitempty"`
+	Favorites              []SavedSearchMeta        `json:"favorites,omitempty"`
+	FormBaseQuery          string                   `json:"formBaseQuery,omitempty"`
+	Defaults               map[string]interface{}   `json:"defaults,omitempty"`
+	IframeURL              string                   `json:"iframeUrl,omitempty"`
+	UserSecurity           *UserSecurityPayload     `json:"userSecurity,omitempty"`
+	RecordMessagesEligible bool                     `json:"recordMessagesEligible,omitempty"`
+	RecordLogEligible      bool                     `json:"recordLogEligible,omitempty"`
 }
 
 type ViewTab struct {
@@ -52,25 +52,26 @@ type ListSectionMeta struct {
 }
 
 type ViewArch struct {
-	Type       string        `json:"type"`
-	Model      string        `json:"model"`
-	Title      string        `json:"title,omitempty"`
-	HasChatter bool          `json:"hasChatter,omitempty"`
-	Fields     []ArchField   `json:"fields"`
-	Header     *ArchHeader   `json:"header,omitempty"`
-	Footer     *ArchFooter   `json:"footer,omitempty"`
-	Sheet      *ArchSheet    `json:"sheet,omitempty"`
-	FormMeta   *FormMeta     `json:"formMeta,omitempty"`
-	Kanban     *KanbanMeta   `json:"kanban,omitempty"`
-	Pivot      *PivotMeta    `json:"pivot,omitempty"`
-	Search     *SearchMeta   `json:"search,omitempty"`
-	Graph      *GraphMeta    `json:"graph,omitempty"`
-	Calendar   *CalendarMeta `json:"calendar,omitempty"`
-	Gantt      *GanttMeta    `json:"gantt,omitempty"`
-	Map        *MapMeta      `json:"map,omitempty"`
-	Cohort     *CohortMeta   `json:"cohort,omitempty"`
+	Type       string         `json:"type"`
+	Model      string         `json:"model"`
+	Title      string         `json:"title,omitempty"`
+	HasChatter bool           `json:"hasChatter,omitempty"`
+	Fields     []ArchField    `json:"fields"`
+	Header     *ArchHeader    `json:"header,omitempty"`
+	Footer     *ArchFooter    `json:"footer,omitempty"`
+	Sheet      *ArchSheet     `json:"sheet,omitempty"`
+	FormMeta   *FormMeta      `json:"formMeta,omitempty"`
+	Kanban     *KanbanMeta    `json:"kanban,omitempty"`
+	Pivot      *PivotMeta     `json:"pivot,omitempty"`
+	Search     *SearchMeta    `json:"search,omitempty"`
+	Graph      *GraphMeta     `json:"graph,omitempty"`
+	Activity   *ActivityMeta  `json:"activity,omitempty"`
+	Calendar   *CalendarMeta  `json:"calendar,omitempty"`
+	Gantt      *GanttMeta     `json:"gantt,omitempty"`
+	Map        *MapMeta       `json:"map,omitempty"`
+	Cohort     *CohortMeta    `json:"cohort,omitempty"`
 	Hierarchy  *HierarchyMeta `json:"hierarchy,omitempty"`
-	Report     *ReportMeta   `json:"report,omitempty"`
+	Report     *ReportMeta    `json:"report,omitempty"`
 }
 
 type FormMeta struct {
@@ -115,13 +116,13 @@ type ArchListSubview struct {
 }
 
 type ArchButton struct {
-	Name           string `json:"name"`
-	String         string `json:"string"`
-	Type           string `json:"type"`
-	Class          string `json:"class,omitempty"`
-	Invisible      bool   `json:"invisible,omitempty"`
-	InvisibleExpr  string `json:"invisible_expr,omitempty"`
-	Confirm        string `json:"confirm,omitempty"`
+	Name          string `json:"name"`
+	String        string `json:"string"`
+	Type          string `json:"type"`
+	Class         string `json:"class,omitempty"`
+	Invisible     bool   `json:"invisible,omitempty"`
+	InvisibleExpr string `json:"invisible_expr,omitempty"`
+	Confirm       string `json:"confirm,omitempty"`
 }
 
 type ArchHeader struct {
@@ -223,6 +224,8 @@ type SavedSearchMeta struct {
 type GraphMeta struct {
 	Chart string `json:"chart,omitempty"`
 }
+
+type ActivityMeta struct{}
 
 type CalendarMeta struct {
 	DateStart string `json:"dateStart,omitempty"`

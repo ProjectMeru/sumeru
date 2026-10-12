@@ -57,6 +57,11 @@ func SerializeViewForUser(ctx context.Context, view *parser.View) ViewArch {
 		arch.Graph = &GraphMeta{Chart: view.GraphChart()}
 	}
 	switch strings.ToLower(strings.TrimSpace(view.Type)) {
+	case "activity":
+		arch.Activity = &ActivityMeta{}
+		if ds := strings.TrimSpace(view.DateStart); ds != "" {
+			arch.Calendar = &CalendarMeta{DateStart: ds}
+		}
 	case "calendar":
 		arch.Calendar = &CalendarMeta{
 			DateStart: strings.TrimSpace(view.DateStart),
@@ -168,6 +173,17 @@ func enrichField(model string, f ArchField) ArchField {
 	}
 	if f.Widget == "" && fd.Widget != "" {
 		f.Widget = fd.Widget
+	}
+	if fd.Widget == "monetary" || fd.Currency != "" {
+		if f.Widget == "" {
+			f.Widget = "monetary"
+		}
+		if f.Options == nil {
+			f.Options = map[string]string{}
+		}
+		if fd.Currency != "" {
+			f.Options["currency_field"] = fd.Currency
+		}
 	}
 	if f.Options == nil && fd.Domain != "" {
 		f.Options = map[string]string{"domain": fd.Domain}
@@ -341,10 +357,10 @@ func serializeButtons(buttons []parser.Button) []ArchButton {
 	out := make([]ArchButton, 0, len(buttons))
 	for _, b := range buttons {
 		ab := ArchButton{
-			Name:   strings.TrimSpace(b.Name),
-			String: strings.TrimSpace(b.String),
-			Type:   strings.TrimSpace(b.Type),
-			Class:  strings.TrimSpace(b.Class),
+			Name:    strings.TrimSpace(b.Name),
+			String:  strings.TrimSpace(b.String),
+			Type:    strings.TrimSpace(b.Type),
+			Class:   strings.TrimSpace(b.Class),
 			Confirm: strings.TrimSpace(b.Confirm),
 		}
 		if lit, truthy, expr, err := parser.ParseModifierAttr("invisible", b.Invisible); err == nil && lit {

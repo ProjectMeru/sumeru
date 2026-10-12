@@ -8,6 +8,7 @@ func init() {
 	sdk.MustRegister("automation",
 		&SysCron{},
 		&SysServerAction{},
+		&SysServerActionLog{},
 		&SysWorkflowTransition{},
 	)
 }

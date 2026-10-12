@@ -6,7 +6,40 @@ import (
 	"time"
 )
 
-// SearchInterceptor allows addons to intercept and modify search domains.
+// SearchResultFilter drops or rewrites rows after a search. Addons use it for parent-record checks.
+type SearchResultFilter func(ctx context.Context, model string, rows []map[string]interface{}) []map[string]interface{}
+
+// SearchResultFilters is applied at the end of every search.
+var SearchResultFilters []SearchResultFilter
+
+// RegisterSearchResultFilter adds a post-search filter.
+func RegisterSearchResultFilter(fn SearchResultFilter) {
+	SearchResultFilters = append(SearchResultFilters, fn)
+}
+
+func applySearchResultFilters(ctx context.Context, model string, rows []map[string]interface{}) []map[string]interface{} {
+	for _, fn := range SearchResultFilters {
+		if fn == nil {
+			continue
+		}
+		rows = fn(ctx, model, rows)
+	}
+	if rows == nil {
+		return []map[string]interface{}{}
+	}
+	return rows
+}
+
+// BeforeDeleteFunc sees each row before it is removed. The payload of the public event stays model and id.
+type BeforeDeleteFunc func(ctx context.Context, model string, id int, before map[string]interface{})
+
+var beforeDeleteHook BeforeDeleteFunc
+
+// RegisterBeforeDelete sets the single pre-delete hook. Automation uses it for domain checks.
+func RegisterBeforeDelete(fn BeforeDeleteFunc) {
+	beforeDeleteHook = fn
+}
+
 type SearchInterceptor func(ctx context.Context, model string, domain [][]interface{}) ([][]interface{}, error)
 
 var (
@@ -60,6 +93,7 @@ func execSearchQuery(ctx context.Context, modelName string, domain [][]interface
 		return nil, err
 	}
 	enrichRecordsForRead(ctx, uid, modelName, results)
+	results = applySearchResultFilters(ctx, modelName, results)
 	return results, nil
 }
 

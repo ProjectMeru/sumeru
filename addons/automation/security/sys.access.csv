@@ -5,3 +5,4 @@ access_sys_workflow_user,access_sys_workflow_user,sys.workflow.transition,base.g
 access_sys_workflow_manager,access_sys_workflow_manager,sys.workflow.transition,automation.group_automation_manager,1,1,1,1
 access_sys_server_action_user,access_sys_server_action_user,sys.server.action,base.group_user,1,0,0,0
 access_sys_server_action_manager,access_sys_server_action_manager,sys.server.action,automation.group_automation_manager,1,1,1,1
+access_sys_server_action_log_manager,access_sys_server_action_log_manager,sys.server.action.log,automation.group_automation_manager,1,0,0,0

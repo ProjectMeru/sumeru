@@ -17,5 +17,6 @@ func init() {
 		&ResConfigSettings{},
 		&SysAuthProvider{},
 		&SysFieldAccess{},
+		&SysPropertyDefinition{},
 	)
 }

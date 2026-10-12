@@ -1,9 +1,11 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { RpcService } from "../../src/services/rpc.js";
 import { SwcError } from "../../src/runtime/error.js";
+import { resetSessionRedirectForTests } from "../../src/services/session-redirect.js";
 
 describe("RpcService", () => {
   beforeEach(() => {
+    resetSessionRedirectForTests();
     vi.stubGlobal("fetch", vi.fn());
   });
 
@@ -47,6 +49,15 @@ describe("RpcService", () => {
     vi.mocked(fetch).mockResolvedValue({ ok: false, status: 502 } as Response);
     const rpc = new RpcService("/web/swc/rpc", "tok");
     await expect(rpc.read("m", [1])).rejects.toBeInstanceOf(SwcError);
+  });
+
+  it("redirects to login on HTTP 401", async () => {
+    const assign = vi.fn();
+    vi.stubGlobal("location", { pathname: "/web/home", search: "", assign });
+    vi.mocked(fetch).mockResolvedValue({ ok: false, status: 401 } as Response);
+    const rpc = new RpcService("/web/swc/rpc", "tok");
+    await expect(rpc.read("m", [1])).rejects.toBeInstanceOf(SwcError);
+    expect(assign).toHaveBeenCalledWith("/web/login?next=%2Fweb%2Fhome");
   });
 
   it("create and unlink call dispatch", async () => {

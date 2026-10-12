@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_sys.property.definition_form" model="sys.property.definition" type="form">
+            <sheet>
+                <group>
+                    <field name="model" string="Model"/>
+                    <field name="field_name" string="Field"/>
+                    <field name="key" string="Key"/>
+                    <field name="label" string="Label"/>
+                    <field name="value_type" string="Type"/>
+                    <field name="selection" string="Selection"/>
+                    <field name="relation" string="Relation"/>
+                    <field name="required" string="Required"/>
+                    <field name="sequence" string="Sequence"/>
+                </group>
+            </sheet>
+        </view>
+    </data>
+</sumeru>

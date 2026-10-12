@@ -8,7 +8,7 @@ require (
 	github.com/gpdf-dev/gpdf v1.0.13
 	github.com/lib/pq v1.12.3
 	github.com/piglig/go-qr v1.1.0
-	golang.org/x/crypto v0.57.0
+	golang.org/x/crypto v0.58.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 

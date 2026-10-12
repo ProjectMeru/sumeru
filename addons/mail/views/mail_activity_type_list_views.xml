@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_mail_activity_type_list" model="mail.activity.type" type="list">
+            <field name="name" string="Name"/>
+            <field name="delay_count" string="Delay (days)"/>
+        </view>
+    </data>
+</sumeru>

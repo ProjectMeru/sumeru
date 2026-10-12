@@ -14,6 +14,10 @@ func ExecuteServerActionForTest(ctx context.Context, row map[string]interface{},
 	return executeServerAction(ctx, row, ev)
 }
 
+func WithAutomationDepthForTest(ctx context.Context, n int) context.Context {
+	return withDepth(ctx, n)
+}
+
 func RunServerActionsForEventForTest(ctx context.Context, ev event.Event) error {
 	return runServerActionsForEvent(ctx, ev)
 }

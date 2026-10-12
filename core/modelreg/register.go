@@ -272,6 +272,7 @@ var markerTypeByName = map[string]markerType{
 	"DateTime":          {orm.DateTime, "datetime"},
 	"Duration":          {orm.Numeric, "duration"},
 	"Json":              {orm.Json, "json"},
+	"Properties":        {orm.Properties, "properties"},
 	"Binary":            {orm.Text, "binary"},
 	"Image":             {orm.Text, "image"},
 	"Reference":         {orm.Char, "reference"},

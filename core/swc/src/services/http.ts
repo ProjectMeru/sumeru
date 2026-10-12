@@ -1,4 +1,5 @@
 import { SwcError } from "../runtime/error.js";
+import { redirectToLoginIfNeeded, shouldRedirectForHttpStatus } from "./session-redirect.js";
 
 export class HttpService {
   private readonly csrfToken: string;
@@ -17,6 +18,9 @@ export class HttpService {
       headers: { Accept: "application/json" },
     });
     if (!res.ok) {
+      if (shouldRedirectForHttpStatus(res.status)) {
+        redirectToLoginIfNeeded();
+      }
       throw new SwcError(`GET ${url} failed: ${res.status}`, "http_get");
     }
     return (await res.json()) as T;
@@ -84,6 +88,9 @@ export class HttpService {
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
+      if (shouldRedirectForHttpStatus(res.status)) {
+        redirectToLoginIfNeeded();
+      }
       throw new SwcError(`POST ${url} failed: ${res.status}`, "http_post");
     }
     return (await res.json()) as T;
@@ -99,6 +106,9 @@ export class HttpService {
       },
     });
     if (!res.ok) {
+      if (shouldRedirectForHttpStatus(res.status)) {
+        redirectToLoginIfNeeded();
+      }
       throw new SwcError(`DELETE ${url} failed: ${res.status}`, "http_delete");
     }
   }

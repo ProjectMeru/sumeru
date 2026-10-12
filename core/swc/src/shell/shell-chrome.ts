@@ -7,7 +7,7 @@ import { initActivityMessages } from "./activity-messages.js";
 import { initActivityLog } from "./activity-log.js";
 import { initInternalMessagesBanner } from "./activity-im-banner.js";
 import { initMessagesUnreadPoll } from "./messages-unread.js";
-import { ACTIVITY_CONTEXT, emptyActivityContext } from "./activity-context.js";
+import { ACTIVITY_CONTEXT, activityBoardHref, emptyActivityContext, type ActivityContextPayload } from "./activity-context.js";
 import { initHomeDashboard } from "./home-dashboard.js";
 import { initPinnedApps } from "./pinned-apps.js";
 import { initSidebar } from "./sidebar.js";
@@ -30,6 +30,7 @@ export function initShellChrome(boot: SwcBootstrap, http: HttpService, bus?: Bus
   if (boot.activityEnabled) {
     initActivityPanel(shell);
     if (env) {
+      initActivityBoardLink(env);
       initActivityMessages(env);
       initActivityLog(env);
       initMessagesUnreadPoll(http, boot.swcApiBase);
@@ -46,4 +47,16 @@ export function initShellChrome(boot: SwcBootstrap, http: HttpService, bus?: Bus
   }
 
   new NotificationService().bootstrap(boot.toasts);
+}
+
+function initActivityBoardLink(env: SwcEnv): void {
+  const link = document.getElementById("sum-activity-board");
+  if (!link) return;
+  const paint = (ctx: ActivityContextPayload): void => {
+    link.setAttribute("href", activityBoardHref(ctx));
+  };
+  paint(emptyActivityContext());
+  env.services.bus.subscribe(ACTIVITY_CONTEXT, (payload) => {
+    paint(payload as ActivityContextPayload);
+  });
 }

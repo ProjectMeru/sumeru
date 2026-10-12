@@ -1,2 +1,3 @@
 id,name,model,group_id,perm_read,perm_write,perm_create,perm_unlink
 access_sys_import_template_user,access_sys_import_template_user,sys.import.template,base.group_user,1,1,1,1
+access_platform_pricing_sample_user,access_platform_pricing_sample_user,platform.pricing.sample,base.group_user,1,1,1,1

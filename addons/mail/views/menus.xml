@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <menuitem id="menu_mail_root" name="Activities" sequence="15" web_icon="apps"/>
+        <menuitem id="menu_mail_activity" name="My Activities" parent="menu_mail_root" sequence="10" action="mail.action_mail_activity"/>
+        <menuitem id="menu_mail_message" name="Messages" parent="menu_mail_root" sequence="20" action="mail.action_mail_message"/>
+        <menuitem id="menu_mail_activity_type" name="Activity Types" parent="menu_mail_root" sequence="30" action="mail.action_mail_activity_type"/>
+    </data>
+</sumeru>

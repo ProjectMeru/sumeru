@@ -25,6 +25,7 @@ import {
   ProgressField,
   HandleField,
 } from "./extra-fields.js";
+import { PropertiesField } from "./PropertiesField.js";
 
 const FIELD_CONSTRUCTORS = {
   default: DefaultField,
@@ -36,6 +37,7 @@ const FIELD_CONSTRUCTORS = {
   date: DateField,
   datetime: DateTimeField,
   json: TextareaField,
+  properties: PropertiesField,
   many2one: Many2OneField,
   one2many: One2ManyField,
   many2many: Many2ManyTagsField,
@@ -83,6 +85,7 @@ const TYPE_MAP = {
   integer: "integer",
   float: "float",
   numeric: "numeric",
+  properties: "properties",
 } satisfies Record<string, string>;
 
 export function resolveFieldWidget(field: SwcArchField): string {

@@ -16,7 +16,8 @@ const (
 	Many2One  FieldType = "many2one"
 	Many2Many FieldType = "many2many"
 	One2Many  FieldType = "one2many"
-	Json      FieldType = "json"
+	Json       FieldType = "json"
+	Properties FieldType = "properties"
 )
 
 type FieldDefinition struct {
