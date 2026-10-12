@@ -3,9 +3,9 @@
 **Modular open-source ERP/CRM platform** - Go backend, PostgreSQL, installable apps, and a TypeScript workspace client for enterprise operations.
 
 [![CI](https://github.com/ProjectMeru/sumeru/actions/workflows/ci.yml/badge.svg)](https://github.com/ProjectMeru/sumeru/actions/workflows/ci.yml)
-[![Go](https://img.shields.io/badge/Go-1.26.6+-00ADD8?logo=go&logoColor=white)](https://go.dev/dl/)
+[![Go](https://img.shields.io/badge/Go-1.26.9+-00ADD8?logo=go&logoColor=white)](https://go.dev/dl/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Pre-Alpha](https://img.shields.io/badge/Status-Pre--Alpha-critical)](https://github.com/ProjectMeru/sumeru)
+[![Alpha](<https://img.shields.io/badge/Status-Alpha%20(platform%20kernel)-orange>)](https://github.com/ProjectMeru/sumeru)
 [![Docs](https://img.shields.io/badge/Docs-projectmeru.github.io-informational)](https://projectmeru.github.io/sumeru/docs/)
 
 ## Table of contents
@@ -13,6 +13,7 @@
 - [Sumeru](#sumeru)
   - [Table of contents](#table-of-contents)
   - [Overview](#overview)
+  - [Platform maturity](#platform-maturity)
   - [Features](#features)
   - [Preview](#preview)
   - [Architecture](#architecture)
@@ -31,26 +32,47 @@
 
 Sumeru is a **modular ERP and CRM engine** for teams that want a single deployable stack: **PostgreSQL** for data, **XML views** for screens and menus, **Go models** for business logic, and a **SWC** web workspace for list, form, kanban, and analysis work. Install **apps** (addons) from disk; extend behavior through manifests and the **`sumeru/core/sdk`** surface instead of forking core.
 
-This repository (`module sumeru`) is the **kernel**: ORM, HTTP/RPC, rendering shell, and base apps (`base`, `mail`, …). Standard CRM/ERP apps ship in **[sumeru_addons](https://github.com/ProjectMeru/sumeru_addons)**. Most integrators run the server from **[sumeru_custom_addons](https://github.com/ProjectMeru/sumeru_custom_addons)** (paths, config, generated imports).
+This repository (`module sumeru`) is the **kernel**: ORM, HTTP/JSON-RPC, rendering shell, and platform apps (`base`, `platform`, `mail`, `currency`, …). Standard CRM/ERP apps ship in **[sumeru_addons](https://github.com/ProjectMeru/sumeru_addons)**. Most integrators run the server from **[sumeru_custom_addons](https://github.com/ProjectMeru/sumeru_custom_addons)** (paths, config, generated imports).
 
 > [!CAUTION]
 >
-> **Pre-alpha software** — not for production or regulated workloads.
+> **Alpha — platform kernel** — not for production or regulated workloads.
 >
-> - APIs, schemas, and UX may change without notice.
-> - Use for local development, evaluation, and feedback only.
+> - The **platform layer** (ORM, security, workspace, mail/bus, automation) is usable for **development, demos, and custom modules**.
+> - Schemas, RPC payloads, and UX may still change between releases.
+> - Business app depth and operational hardening live in sibling repos and your deployment process.
+
+## Platform maturity
+
+Status reflects **this repository only** (engine + kernel addons), not full ERP product parity in **sumeru_addons**.
+
+| Area                      | Status      | Notes                                                                                                            |
+| ------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------- |
+| Modules & ORM             | **Ready**   | Manifests, install/update, compute, domains, multi-company, elevated context                                     |
+| Security                  | **Ready**   | Groups, record rules, model ACL, field ACL UI                                                                    |
+| Views & SWC               | **Ready**   | List, form, kanban, graph, pivot, calendar, gantt, map, cohort, hierarchy, activity; view inherit                |
+| JSON-RPC                  | **Ready**   | `POST /api/rpc` with session or API key — **the supported integration surface** (no separate REST layer planned) |
+| Reports, import/export    | **Ready**   | Document reports; import wizard; async export / bulk jobs                                                        |
+| Mail & activities         | **Partial** | Messages, followers, notifications, outbound mail queue, activity board; no inbound IMAP gateway                 |
+| Realtime                  | **Ready**   | Bus channels, durable events, client reconnect                                                                   |
+| Portal                    | **Partial** | Portal shell and share links; not a full customer portal product                                                 |
+| Auth                      | **Ready**   | Password login, OAuth/OIDC providers, TOTP, trusted device                                                       |
+| Automation                | **Ready**   | Cron, server actions, workflow hooks (`automation` addon)                                                        |
+| Currency, UoM, properties | **Ready**   | Dedicated addons; monetary fields; JSONB properties + definition admin                                           |
+
+Integrations should use **JSON-RPC** (`/api/rpc`) and documented HTTP routes (content, export, health). A resource-oriented REST API is **not** on the roadmap.
 
 ## Features
 
-| Area               | Capabilities                                                                       |
-| ------------------ | ---------------------------------------------------------------------------------- |
-| **Apps & modules** | Manifests, dependency order, install/update from `addons_path`; XML data and views |
-| **Data layer**     | PostgreSQL ORM, model sync on startup, record rules, multi-company                 |
-| **Workspace**      | List, form, kanban, graph, pivot, calendar, gantt, map, cohort                     |
-| **Collection UX**  | Search, filters, group-by, custom domains, saved-search favorites                  |
-| **Integrations**   | `POST /api/rpc` (session or API key); mail/chatter; export/import hooks            |
-| **Client**         | TypeScript SWC in `core/swc/`; server-rendered shell + SPA workspace               |
-| **Extensibility**  | Prefer **`sumeru/core/sdk`** for addons; `sum-*` design tokens in CSS              |
+| Area               | Capabilities                                                                             |
+| ------------------ | ---------------------------------------------------------------------------------------- |
+| **Apps & modules** | Manifests, dependency order, install/update from `addons_path`; XML data and views       |
+| **Data layer**     | PostgreSQL ORM, model sync on startup, record rules, multi-company                       |
+| **Workspace**      | List, form, kanban, graph, pivot, calendar, gantt, map, cohort, hierarchy, activity      |
+| **Collection UX**  | Search, filters, group-by, custom domains, saved-search favorites, command palette       |
+| **Integrations**   | **JSON-RPC** `POST /api/rpc` (session or API key); mail and notifications; import/export |
+| **Client**         | TypeScript SWC in `core/swc/`; server-rendered shell + SPA workspace                     |
+| **Extensibility**  | Prefer **`sumeru/core/sdk`** for addons; `sum-*` design tokens in CSS                    |
 
 ## Preview
 
@@ -94,7 +116,7 @@ Full layer diagram and request flow: **[docs/architecture-layers.md](docs/archit
 
 ### Prerequisites
 
-- [Go 1.26.6+](https://go.dev/dl/)
+- [Go 1.26.9+](https://go.dev/dl/)
 - [Node.js](https://nodejs.org/) (npm — builds SWC bundles; not committed to git)
 - [PostgreSQL](https://www.postgresql.org/)
 - Git
