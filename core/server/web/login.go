@@ -485,8 +485,7 @@ func LoginPost(w http.ResponseWriter, r *http.Request) {
 }
 
 func LogoutGet(w http.ResponseWriter, r *http.Request) {
-	DestroySession(w, r)
-	clearLoginNextCookie(w)
+	// GET must not destroy the session (prefetch, keepalive, bookmarks). Use LogoutPost.
 	http.Redirect(w, r, loginRoute, http.StatusFound)
 }
 

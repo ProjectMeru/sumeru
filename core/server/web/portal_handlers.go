@@ -20,6 +20,7 @@ type portalHomeData struct {
 	AppName     string
 	LogoURL     string
 	Stylesheets []string
+	CSRFToken   string
 	Records     []portalRecordRow
 	Error       string
 }
@@ -57,6 +58,7 @@ func PortalHomeHandler(w http.ResponseWriter, r *http.Request) {
 		AppName:     render.AppDisplayName,
 		LogoURL:     render.ShellLogoURL(),
 		Stylesheets: assets.PortalStylesheetURLs(),
+		CSRFToken:   CSRFTokenForRequest(r),
 	}
 	if !orm.PortalAllowsModel(portalHomeModel, "read") {
 		data.Error = "Portal access not configured"

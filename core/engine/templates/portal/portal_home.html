@@ -12,7 +12,10 @@
 <header class="sum-portal-header">
     {{if .LogoURL}}<img src="{{.LogoURL}}" alt="" class="sum-portal-logo" width="32" height="32">{{end}}
     <span class="sum-portal-title">{{.AppName}} Portal</span>
-    <a class="sum-portal-logout" href="/web/logout">Sign out</a>
+    <form method="post" action="/web/logout" class="sum-portal-logout-form">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <button type="submit" class="sum-portal-logout">Sign out</button>
+    </form>
 </header>
 <main class="sum-portal-main">
     {{if .Error}}<p class="sum-portal-error">{{.Error}}</p>{{end}}
