@@ -6,5 +6,6 @@ import (
 	_ "sumeru/addons/base"
 	_ "sumeru/addons/im"
 	_ "sumeru/addons/audit"
+	_ "sumeru/addons/mail"
 	_ "sumeru/addons/automation/models"
 )
