@@ -1,30 +1,28 @@
 # Schema sync and DDL policy
 
-Sumeru materializes the ORM registry into PostgreSQL with **additive** schema sync (`core/orm/schema_sync.go`):
+The ORM materializes registered models into PostgreSQL with **additive** sync in `core/orm/schema_sync.go`:
 
 - Creates missing tables and columns
 - Ensures indexes, unique indexes, and foreign keys (best-effort)
 - Does **not** drop or rename columns/tables automatically
 
+Module install/update runs scoped sync via `SyncRegistrySchemaForModule` for models owned or extended by that module.
+
 ## Environments
 
 | Environment | Policy |
 |-------------|--------|
-| Fresh setup / CI | `SyncRegistrySchema` / module install sync is the source of truth |
-| Shared staging / production | Treat sync as **forward-only**. Destructive changes require a reviewed SQL migration run book and backup |
+| Fresh DB / CI | Install (`-i`) and startup sync are source of truth |
+| Shared staging / production | **Forward-only** additive changes; destructive DDL is a manual, reviewed migration |
 
 ## Production rules
 
-1. **Backup** before any manual DDL or module upgrade that alters schema.
-2. Prefer **additive** model changes (new columns nullable or with Go-side defaults).
-3. For renames/drops: ship a documented SQL script, apply in a maintenance window, then update Go models to match. Do not rely on sync to reverse changes.
-4. Module install/update (`-i` / `-u`) still runs scoped sync; review module diffs before production update.
-5. Keep `db_sslmode` and pool settings production-appropriate (`sumeru.conf.example`).
+1. **Backup** before module `-u` or manual DDL.
+2. Prefer **additive** model changes (new nullable columns or defaults applied in Go).
+3. **Renames/drops:** ship explicit SQL, apply in a maintenance window, then align Go models. Do not expect sync to remove old columns.
+4. Review manifest and model diffs before `-u` on production.
+5. Use production `db_sslmode`, pool limits, and secrets from `sumeru.conf.example`.
 
 ## Rollback
 
-Schema sync has no automatic rollback. Rollback = restore from backup (or reverse SQL you authored). Application binary rollback alone may fail if the DB already has newer columns (usually safe) or if you manually dropped required columns (unsafe).
-
-## Future
-
-A recorded migration ledger (versioned SQL + apply tracking) may replace ad-hoc scripts; until then this document is the operational contract.
+There is no automatic schema rollback. Restore from backup or run reverse SQL you authored. Rolling back the binary alone is usually safe if only new columns were added; it is unsafe if required columns were dropped manually.
