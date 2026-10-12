@@ -32,6 +32,27 @@ describe("PropertiesField", () => {
     expect(el.querySelectorAll("input").length).toBe(2);
   });
 
+  it("renders selection and float inputs", () => {
+    const field: SwcArchField = {
+      name: "props",
+      string: "Properties",
+      type: "properties",
+      widget: "properties",
+      options: {
+        schema: JSON.stringify([
+          { key: "tier", label: "Tier", value_type: "selection", selection: "gold:Gold,silver:Silver" },
+          { key: "score", label: "Score", value_type: "float" },
+        ]),
+      },
+    };
+    const record = new SwcRecord("core.partner", 1, { props: { tier: "gold", score: 9.5 } });
+    const comp = new PropertiesField({ field, record, readonly: false }, env());
+    comp.callSetup();
+    const el = comp.render();
+    expect(el.querySelector("select")).toBeTruthy();
+    expect(el.querySelector('input[type="number"][step="any"]')).toBeTruthy();
+  });
+
   it("shows an empty state when no definitions exist", () => {
     const field: SwcArchField = {
       name: "props",

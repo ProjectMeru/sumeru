@@ -3,7 +3,7 @@ import { html } from "../template/html.js";
 import { SWC_API_BASE, VIEW_FORM } from "../constants/routes.js";
 import { SwcError } from "../runtime/error.js";
 import { inputValueFromEvent } from "../widgets/field-events.js";
-import { ACTIVITY_CONTEXT, type ActivityContextPayload } from "./activity-context.js";
+import { ACTIVITY_CONTEXT, activityBoardHref, type ActivityContextPayload } from "./activity-context.js";
 import { setMessagesUnreadBadge } from "./activity-panel.js";
 import { rankByFuzzy } from "../util/fuzzy.js";
 import { formatRelativeTime } from "../util/format-relative-time.js";
@@ -73,6 +73,7 @@ export class InternalMessagesPanel extends SwcComponent {
   private banner = "";
   private linkModel = "";
   private linkRecordId = 0;
+  private activityCtx: ActivityContextPayload = { model: "", recordId: 0, recordMessagesEligible: false, recordLogEligible: false };
   private pickerIndex = 0;
   private pickerOpen = false;
   private scrollThreadEnd = false;
@@ -92,6 +93,7 @@ export class InternalMessagesPanel extends SwcComponent {
     }
     this.unsubActivity = this.env.services.bus.subscribe(ACTIVITY_CONTEXT, (payload) => {
       const ctx = payload as ActivityContextPayload;
+      this.activityCtx = ctx;
       if (ctx.recordId > 0 && ctx.model) {
         this.linkModel = ctx.model;
         this.linkRecordId = ctx.recordId;
@@ -99,6 +101,7 @@ export class InternalMessagesPanel extends SwcComponent {
         this.linkModel = "";
         this.linkRecordId = 0;
       }
+      this.rerender();
     });
     void this.bootstrapPanel();
   }
@@ -416,8 +419,11 @@ export class InternalMessagesPanel extends SwcComponent {
   }
 
   private composerHint(): ReturnType<typeof html> {
-    if (this.linkModel && this.linkRecordId > 0) {
-      return html`<p class="sum-msg-form-hint">Linked to open record · Enter to send</p>`;
+    if (this.activityCtx.recordId > 0 && this.activityCtx.model) {
+      return html`<p class="sum-msg-form-hint">
+        Linked to open record · Enter to send ·
+        <a class="sum-chatter-attachment-link" href=${activityBoardHref(this.activityCtx)}>Activities for this record</a>
+      </p>`;
     }
     return html`<p class="sum-msg-form-hint">Enter to send · Shift+Enter for new line</p>`;
   }

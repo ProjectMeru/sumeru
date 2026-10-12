@@ -174,6 +174,17 @@ func enrichField(model string, f ArchField) ArchField {
 	if f.Widget == "" && fd.Widget != "" {
 		f.Widget = fd.Widget
 	}
+	if fd.Widget == "monetary" || fd.Currency != "" {
+		if f.Widget == "" {
+			f.Widget = "monetary"
+		}
+		if f.Options == nil {
+			f.Options = map[string]string{}
+		}
+		if fd.Currency != "" {
+			f.Options["currency_field"] = fd.Currency
+		}
+	}
 	if f.Options == nil && fd.Domain != "" {
 		f.Options = map[string]string{"domain": fd.Domain}
 	}

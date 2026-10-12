@@ -6,6 +6,7 @@ import "sumeru/core/sdk"
 
 func init() {
 	sdk.MustRegister("platform",
+		&PlatformPricingSample{},
 		&SysAttachment{},
 		&SysBulkImport{},
 		&SysConfigParameter{},

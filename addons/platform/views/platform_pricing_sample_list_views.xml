@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <view id="view_platform.pricing.sample_list" model="platform.pricing.sample" type="list">
+            <field name="name" string="Label"/>
+            <field name="currency_id" string="Currency"/>
+            <field name="amount" string="Amount" widget="monetary"/>
+        </view>
+    </data>
+</sumeru>

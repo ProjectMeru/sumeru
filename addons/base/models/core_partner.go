@@ -22,4 +22,5 @@ type CorePartner struct {
 	PropertyAccountPayableID    sdk.Many2One[sdk.Any]          `sumeru:"string=Payable Account,comodel=account.account"`
 	Color                       sdk.Integer                    `sumeru:"string=Color Index"`
 	Gender                      sdk.String                     `sumeru:"string=Gender,selection=male:Male,female:Female,other:Other"`
+	ExtraProperties             sdk.Properties                 `sumeru:"string=Extra Properties"`
 }

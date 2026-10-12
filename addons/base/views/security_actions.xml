@@ -6,6 +6,7 @@
         <action id="access_action_sys.access" type="window" model="sys.access" name="Access Rights" view_mode="list,form"/>
         <action id="access_action_sys.rule" type="window" model="sys.rule" name="Record Rules" view_mode="list,form"/>
         <action id="action_sys.field.access" type="window" model="sys.field.access" name="Field Access" view_mode="list,form"/>
+        <action id="action_sys.property.definition" type="window" model="sys.property.definition" name="Property definitions" view_mode="list,form"/>
         <action id="action_sys.field.access_matrix" type="url" name="Field access matrix" url="/web/settings/field-acl"/>
         <action id="action_sys.access_matrix" type="url" name="Model access matrix" url="/web/settings/model-acl"/>
     </data>

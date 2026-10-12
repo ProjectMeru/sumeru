@@ -4,10 +4,14 @@ package models
 
 import (
 	basemodels "sumeru/addons/base/models"
+	currencymodels "sumeru/addons/currency/models"
 )
 
 // CoreCompany → core.company
 type CoreCompany = basemodels.CoreCompany
+
+// CoreCurrency → core.currency
+type CoreCurrency = currencymodels.CoreCurrency
 
 // CoreUser → core.user
 type CoreUser = basemodels.CoreUser

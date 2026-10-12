@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <record id="view_core_partner_form_properties_inherit" model="sys.view">
+            <field name="inherit_id" ref="contacts.view_core_partner_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//page[@name='notes']" position="inside">
+                    <field name="extra_properties" string="Extra properties" widget="properties"/>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</sumeru>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data>
+        <action id="action_platform.pricing.sample" type="window" model="platform.pricing.sample"
+            name="Pricing samples" view_mode="list,form"/>
+    </data>
+</sumeru>

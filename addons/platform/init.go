@@ -4,5 +4,6 @@ package platform
 
 import (
 	_ "sumeru/addons/base"
+	_ "sumeru/addons/currency"
 	_ "sumeru/addons/platform/models"
 )

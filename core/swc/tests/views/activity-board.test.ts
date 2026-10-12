@@ -63,6 +63,40 @@ describe("activity board actions", () => {
     view.destroy();
   });
 
+  it("groups cards by activity type within each column", () => {
+    const view = new ActivityView(
+      {
+        payload: viewPayload({ type: "activity", fields: [{ name: "summary" }] }, [
+          {
+            id: 1,
+            summary: "A",
+            date_deadline: "",
+            user_id_name: "Ada",
+            activity_type_id_name: "Call",
+            model: "crm.lead",
+            res_id: 1,
+          },
+          {
+            id: 2,
+            summary: "B",
+            date_deadline: "",
+            user_id_name: "Ada",
+            activity_type_id_name: "Email",
+            model: "crm.lead",
+            res_id: 2,
+          },
+        ]),
+      },
+      collectionEnv(),
+    );
+    view.callSetup();
+    const el = view.render();
+    expect(el.querySelectorAll(".sum-activity-type").length).toBe(2);
+    expect(el.textContent).toContain("Call");
+    expect(el.textContent).toContain("Email");
+    view.destroy();
+  });
+
   it("opens the unfiltered board when no record is selected", () => {
     expect(activityBoardHref({ model: "", recordId: 0, recordMessagesEligible: false, recordLogEligible: false })).toBe(
       "/web?action=mail.action_mail_activity&view_type=activity",

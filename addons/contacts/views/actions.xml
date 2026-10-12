@@ -2,6 +2,9 @@
 <sumeru>
     <data>
         <!-- Window Action for core.partner -->
+        <action id="action_contacts_gold_tier" type="window" model="core.partner" name="Gold tier contacts"
+            view_mode="list,form,kanban"
+            domain='[["extra_properties.tier","=","gold"]]'/>
         <action id="action_contacts" type="window" model="core.partner" name="Contacts" view_mode="list,form,kanban">
             <help>
                 <p class="sum-view-nocontent-smiling-face">

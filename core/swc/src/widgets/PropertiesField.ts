@@ -101,6 +101,12 @@ export class PropertiesField extends SwcComponent<FieldWidgetProps> {
         this.setKey(def.key, target.checked);
       }} />`;
     }
+    if (def.value_type === "float") {
+      return html`<input id=${id} type="number" step="any" class="sum-field-input" .value=${value == null ? "" : String(value)} @change=${(event: Event) => {
+        const target = event.target as HTMLInputElement;
+        this.setKey(def.key, target.value === "" ? null : Number(target.value));
+      }} />`;
+    }
     if (def.value_type === "integer" || def.value_type === "many2one") {
       return html`<input id=${id} type="number" class="sum-field-input" .value=${value == null ? "" : String(value)} @change=${(event: Event) => {
         const target = event.target as HTMLInputElement;

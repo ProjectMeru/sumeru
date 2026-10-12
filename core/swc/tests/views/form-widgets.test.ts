@@ -129,6 +129,16 @@ describe("form field widgets", () => {
         .textContent,
     ).toContain("$ 10");
 
+    const monetaryCur = new SwcRecord("m", 1, { amount: "99", currency_id_name: "USD" });
+    expect(
+      renderField(
+        env,
+        field({ name: "amount", widget: "monetary", options: { currency_field: "currency_id" } }),
+        monetaryCur,
+        true,
+      ).textContent,
+    ).toContain("USD 99");
+
     const htmlRec = new SwcRecord("m", 1, { body: "<b>Hi</b>" });
     expect(renderField(env, field({ name: "body", widget: "html" }), htmlRec, true).textContent).toContain("Hi");
 

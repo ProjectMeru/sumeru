@@ -6,10 +6,23 @@ import type { FieldWidgetProps } from "./field-props.js";
 import { stringFromUnknown } from "./field-value.js";
 import { isFieldReadonly } from "../model/modifiers.js";
 
+function monetarySymbol(field: FieldWidgetProps["field"], record: FieldWidgetProps["record"]): string {
+  const staticSymbol = field.options?.currency_symbol?.trim();
+  if (staticSymbol) return staticSymbol;
+  const currencyField = field.options?.currency_field?.trim();
+  if (currencyField) {
+    const named = record.get(`${currencyField}_name`);
+    if (named != null && named !== "") return String(named);
+    const sym = record.get(`${currencyField}_symbol`);
+    if (sym != null && sym !== "") return String(sym);
+  }
+  return "¤";
+}
+
 export class MonetaryField extends DefaultField {
   override template() {
     const { field, record, readonly } = this.props;
-    const symbol = field.options?.currency_symbol ?? "¤";
+    const symbol = monetarySymbol(field, record);
     const fieldValue = stringFromUnknown(record.get(field.name));
     if (isFieldReadonly(field, record, readonly)) {
       return renderFieldShell(

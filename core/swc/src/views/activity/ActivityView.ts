@@ -117,15 +117,37 @@ export class ActivityView extends CollectionView {
       return html`<p class="sum-activity-empty">No activities</p>`;
     }
     return html`<div class="sum-kanban-board">
-      ${COLUMNS.map((column) => html`<section class="sum-kanban-column" data-activity-column=${column.key}>
+      ${COLUMNS.map((column) => {
+        const byUser = grouped.get(column.key) ?? new Map();
+        const byType = new Map<string, Map<string, Record<string, unknown>[]>>();
+        for (const [user, rows] of byUser.entries()) {
+          for (const row of rows) {
+            const typeName = this.typeName(row);
+            let users = byType.get(typeName);
+            if (!users) {
+              users = new Map();
+              byType.set(typeName, users);
+            }
+            const list = users.get(user) ?? [];
+            list.push(row);
+            users.set(user, list);
+          }
+        }
+        return html`<section class="sum-kanban-column" data-activity-column=${column.key}>
         <h2 class="sum-kanban-column-title">${column.label}</h2>
-        ${[...(grouped.get(column.key)?.entries() ?? [])].map(
-          ([user, rows]) => html`<div class="sum-activity-user">
-            <h3>${user}</h3>
-            ${rows.map((row) => this.card(row))}
+        ${[...(byType.entries())].map(
+          ([typeName, users]) => html`<div class="sum-activity-type-block">
+            <h3 class="sum-activity-type">${typeName}</h3>
+            ${[...(users.entries())].map(
+              ([user, rows]) => html`<div class="sum-activity-user">
+                <h3>${user}</h3>
+                ${rows.map((row) => this.card(row))}
+              </div>`,
+            )}
           </div>`,
         )}
-      </section>`)}
+      </section>`;
+      })}
     </div>`;
   }
 
