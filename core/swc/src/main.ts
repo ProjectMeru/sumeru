@@ -17,6 +17,7 @@ import type { SwcBootstrap } from "./types/bootstrap.js";
 import { registerCoreServices } from "./services/service-registry.js";
 import { ShellLayout } from "./shell/ShellLayout.js";
 import { initShellChrome } from "./shell/shell-chrome.js";
+import { initShellTabPresence } from "./shell/shell-tab-presence.js";
 import { initAppLauncher } from "./shell/app-launcher.js";
 import { registerDefaultWidgets } from "./widgets/registry.js";
 import { registry, type ViewConstructor, type MainComponentConstructor } from "./runtime/registry.js";
@@ -126,6 +127,7 @@ function bootstrap(): void {
   initDebugManager(boot, { dialog: env.services.dialog, notification: env.services.notification });
   mountDebugEnvironment(boot);
   void updateDebugDrawer(boot);
+  initShellTabPresence(boot);
   initShellChrome(boot, env.services.http, env.services.bus, env);
   initAppLauncher(boot, env.services.action, env.services.command);
 

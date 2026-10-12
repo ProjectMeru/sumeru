@@ -59,6 +59,9 @@ export interface SwcBootstrap {
   internalMessagesEnabled?: boolean;
   companyFormHref?: string;
   busEnabled?: boolean;
+  closeSessionOnLastTab?: boolean;
+  sessionBrowserPingSeconds?: number;
+  sessionBrowserGraceSeconds?: number;
   docsUrl: string;
   profileUrl: string;
   /** e.g. studio, debugMenu (system admin developer tools in top bar) */
