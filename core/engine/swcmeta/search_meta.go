@@ -111,6 +111,7 @@ func BuildSearchMeta(ctx context.Context, model string, searchView *parser.View)
 	if len(meta.Filters) == 0 && len(meta.FilterFields) == 0 && len(meta.GroupByFields) == 0 && len(meta.SearchFields) == 0 {
 		return nil
 	}
+	translateSearch(ctx, orm.UserLang(ctx), meta)
 	return meta
 }
 

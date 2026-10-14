@@ -75,14 +75,7 @@ func fetchShellMenus(ctx context.Context) []parser.MenuItem {
 	}
 	defer rows.Close()
 
-	lang := "en_US"
-	if uid := orm.UIDFromContext(ctx); uid > 0 {
-		if u, err := orm.SearchOne(ctx, "core.user", map[string]interface{}{"id": uid}); err == nil {
-			if l := strings.TrimSpace(orm.AsString(u["lang"])); l != "" {
-				lang = l
-			}
-		}
-	}
+	lang := orm.UserLang(ctx)
 
 	urlActionHrefs := loadURLActionHrefs(ctx)
 

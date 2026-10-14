@@ -102,6 +102,7 @@ func SerializeViewForUser(ctx context.Context, view *parser.View) ViewArch {
 			BulkModes: strings.Join(caps.BulkModes, ","),
 		}
 	}
+	translateArch(ctx, orm.UserLang(ctx), &arch)
 	return arch
 }
 
@@ -455,6 +456,124 @@ func serializeSeparators(items []parser.Separator) []ArchSeparator {
 		out = append(out, ArchSeparator{String: strings.TrimSpace(s.String)})
 	}
 	return out
+}
+
+func translateArch(ctx context.Context, lang string, arch *ViewArch) {
+	if arch == nil || lang == "" || lang == "en_US" {
+		return
+	}
+	arch.Title = orm.Translate(ctx, lang, arch.Title)
+	arch.Fields = translateArchFields(ctx, lang, arch.Fields)
+	if arch.Header != nil {
+		arch.Header.Buttons = translateButtons(ctx, lang, arch.Header.Buttons)
+		arch.Header.Fields = translateArchFields(ctx, lang, arch.Header.Fields)
+	}
+	if arch.Footer != nil {
+		arch.Footer.Buttons = translateButtons(ctx, lang, arch.Footer.Buttons)
+	}
+	if arch.Sheet != nil {
+		translateSheet(ctx, lang, arch.Sheet)
+	}
+	translateSearch(ctx, lang, arch.Search)
+}
+
+func translateSheet(ctx context.Context, lang string, sheet *ArchSheet) {
+	sheet.Fields = translateArchFields(ctx, lang, sheet.Fields)
+	sheet.Groups = translateGroups(ctx, lang, sheet.Groups)
+	sheet.Divs = translateDivs(ctx, lang, sheet.Divs)
+	sheet.Separators = translateSeparators(ctx, lang, sheet.Separators)
+	sheet.Labels = translateLabels(ctx, lang, sheet.Labels)
+	for i := range sheet.Notebook {
+		for j := range sheet.Notebook[i].Pages {
+			page := &sheet.Notebook[i].Pages[j]
+			page.Title = orm.Translate(ctx, lang, page.Title)
+			page.Fields = translateArchFields(ctx, lang, page.Fields)
+			page.Groups = translateGroups(ctx, lang, page.Groups)
+			page.Separators = translateSeparators(ctx, lang, page.Separators)
+			page.Labels = translateLabels(ctx, lang, page.Labels)
+		}
+	}
+}
+
+func translateGroups(ctx context.Context, lang string, groups []ArchGroup) []ArchGroup {
+	for i := range groups {
+		groups[i].String = orm.Translate(ctx, lang, groups[i].String)
+		groups[i].Fields = translateArchFields(ctx, lang, groups[i].Fields)
+		groups[i].Groups = translateGroups(ctx, lang, groups[i].Groups)
+		groups[i].Separators = translateSeparators(ctx, lang, groups[i].Separators)
+		groups[i].Labels = translateLabels(ctx, lang, groups[i].Labels)
+	}
+	return groups
+}
+
+func translateDivs(ctx context.Context, lang string, divs []ArchDiv) []ArchDiv {
+	for i := range divs {
+		divs[i].Fields = translateArchFields(ctx, lang, divs[i].Fields)
+		divs[i].H1Fields = translateArchFields(ctx, lang, divs[i].H1Fields)
+		divs[i].Buttons = translateButtons(ctx, lang, divs[i].Buttons)
+		divs[i].Divs = translateDivs(ctx, lang, divs[i].Divs)
+	}
+	return divs
+}
+
+func translateArchFields(ctx context.Context, lang string, fields []ArchField) []ArchField {
+	for i := range fields {
+		fields[i].String = orm.Translate(ctx, lang, fields[i].String)
+		fields[i].Placeholder = orm.Translate(ctx, lang, fields[i].Placeholder)
+		fields[i].Selection = translateSelection(ctx, lang, fields[i].Selection)
+		if fields[i].Subview != nil {
+			fields[i].Subview.Fields = translateArchFields(ctx, lang, fields[i].Subview.Fields)
+		}
+	}
+	return fields
+}
+
+func translateButtons(ctx context.Context, lang string, buttons []ArchButton) []ArchButton {
+	for i := range buttons {
+		buttons[i].String = orm.Translate(ctx, lang, buttons[i].String)
+	}
+	return buttons
+}
+
+func translateSeparators(ctx context.Context, lang string, items []ArchSeparator) []ArchSeparator {
+	for i := range items {
+		items[i].String = orm.Translate(ctx, lang, items[i].String)
+	}
+	return items
+}
+
+func translateLabels(ctx context.Context, lang string, items []ArchLabel) []ArchLabel {
+	for i := range items {
+		items[i].String = orm.Translate(ctx, lang, items[i].String)
+	}
+	return items
+}
+
+func translateSelection(ctx context.Context, lang string, selection [][]string) [][]string {
+	if len(selection) == 0 {
+		return selection
+	}
+	out := make([][]string, len(selection))
+	for i, pair := range selection {
+		cp := append([]string(nil), pair...)
+		if len(cp) >= 2 {
+			cp[1] = orm.Translate(ctx, lang, cp[1])
+		}
+		out[i] = cp
+	}
+	return out
+}
+
+func translateSearch(ctx context.Context, lang string, meta *SearchMeta) {
+	if meta == nil || lang == "" || lang == "en_US" {
+		return
+	}
+	for i := range meta.Filters {
+		meta.Filters[i].String = orm.Translate(ctx, lang, meta.Filters[i].String)
+	}
+	meta.SearchFields = translateArchFields(ctx, lang, meta.SearchFields)
+	meta.FilterFields = translateArchFields(ctx, lang, meta.FilterFields)
+	meta.GroupByFields = translateArchFields(ctx, lang, meta.GroupByFields)
 }
 
 func serializeLabels(items []parser.Label) []ArchLabel {

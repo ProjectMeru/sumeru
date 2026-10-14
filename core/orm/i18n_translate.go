@@ -40,8 +40,21 @@ func TranslateFieldLabel(ctx context.Context, modelName, fieldName, defaultLabel
 	return defaultLabel
 }
 
-// UserLang returns the active language code for ctx, defaulting to en_US.
+// UserLang returns core.user.lang for the user on ctx, or en_US when unset.
 func UserLang(ctx context.Context) string {
-	_ = ctx
+	if DB == nil {
+		return "en_US"
+	}
+	uid := UIDFromContext(ctx)
+	if uid <= 0 {
+		return "en_US"
+	}
+	user, err := SearchOne(ctx, "core.user", map[string]interface{}{"id": uid})
+	if err != nil {
+		return "en_US"
+	}
+	if lang := strings.TrimSpace(AsString(user["lang"])); lang != "" {
+		return lang
+	}
 	return "en_US"
 }

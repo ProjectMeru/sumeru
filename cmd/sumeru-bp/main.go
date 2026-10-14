@@ -5,69 +5,63 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"sumeru/core/module"
 )
 
 func main() {
-	namePtr := flag.String("name", "", "technical module name (folder + manifest name)")
-	bpPtr := flag.String("bp", "", "alias for -name")
-
-	outDir := flag.String("out", "", "parent directory for the new module (default: detected workspace addons/)")
+	nameFlag := flag.String("name", "", "technical module name (folder and manifest name)")
+	bpFlag := flag.String("bp", "", "alias for -name")
+	parentFlag := flag.String("out", "", "parent directory for the new module (default: addons/)")
 	flag.Parse()
 
-	name := *namePtr
-	if name == "" {
-		name = *bpPtr
+	moduleName := strings.TrimSpace(*nameFlag)
+	if moduleName == "" {
+		moduleName = strings.TrimSpace(*bpFlag)
 	}
-
-	if strings.TrimSpace(name) == "" {
+	if moduleName == "" {
 		fmt.Fprintln(os.Stderr, "usage: sumeru-bp -name <my_module> [-out <path>]")
 		fmt.Fprintln(os.Stderr, "alias: -bp")
 		os.Exit(2)
 	}
-	if !module.ModuleNamePattern.MatchString(name) {
-		fmt.Fprintf(os.Stderr, "invalid module name %q (must match %s)\n", name, module.ModuleNamePattern.String())
+	if !module.ModuleNamePattern.MatchString(moduleName) {
+		fmt.Fprintf(os.Stderr, "sumeru-bp: invalid module name %q (must match %s)\n", moduleName, module.ModuleNamePattern.String())
 		os.Exit(2)
 	}
 
-	cwd, err := os.Getwd()
+	workingDir, err := os.Getwd()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintf(os.Stderr, "sumeru-bp: %v\n", err)
 		os.Exit(1)
 	}
-
-	// Try to find the repo root
-	repoRoot, err := module.FindRepoRoot(cwd)
+	repoRoot, err := module.FindRepoRoot(workingDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "sumeru-bp: %v\n", err)
+		os.Exit(1)
+	}
+	goModule, err := module.ReadModulePath(repoRoot)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "sumeru-bp: %v\n", err)
 		os.Exit(1)
 	}
 
-	modPath, err := module.ReadModulePath(repoRoot)
+	parentDir := strings.TrimSpace(*parentFlag)
+	if parentDir == "" {
+		parentDir = "addons"
+	}
+	err = scaffoldModule(moduleScaffold{
+		ModuleName:   moduleName,
+		DisplayName:  displayName(moduleName),
+		StructName:   goStructName(moduleName),
+		ModelName:    strings.ReplaceAll(moduleName, "_", "."),
+		ModelsImport: modelsImportPath(goModule, repoRoot, parentDir, moduleName),
+		ParentDir:    parentDir,
+		RepoRoot:     repoRoot,
+		GoModule:     goModule,
+	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "sumeru-bp: %v\n", err)
 		os.Exit(1)
 	}
-
-	// Workspace detection and outDir defaulting
-	resolvedOut := *outDir
-	if resolvedOut == "" {
-		resolvedOut = "addons"
-	}
-
-	cfg := &ScaffoldConfig{
-		Name:        name,
-		HumanTitle:  humanTitle(name),
-		TypeName:    typeName(name),
-		ModelDotted: strings.ReplaceAll(name, "_", "."),
-		ModelImport: modPath + "/" + filepath.ToSlash(filepath.Join(resolvedOut, name, "models")),
-		OutDir:      resolvedOut,
-		RepoRoot:    repoRoot,
-		ModPath:     modPath,
-	}
-
-	RunScaffold(cfg)
 }
