@@ -6,7 +6,6 @@
   "description": "The kernel of Sumeru, providing core identities (Users, Companies, Partners) and system metadata (Views, Rules, Models).",
   "application": true,
   "data": [
-    "data/core_company_data.xml",
     "data/partner_property_definition_data.xml",
     "views/core_company_actions.xml",
     "views/core_users_actions.xml",

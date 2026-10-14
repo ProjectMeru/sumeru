@@ -114,6 +114,20 @@ func UserCompanyIDsForUser(ctx context.Context, userID int) ([]int, error) {
 	return out, rows.Err()
 }
 
+// addCompanyForCreator adds companyID to the signed-in user's allowed companies.
+// No user on the context (install, setup) leaves membership unchanged.
+func addCompanyForCreator(ctx context.Context, companyID int) error {
+	uid := SecurityUID(ctx)
+	if uid <= 0 || companyID <= 0 {
+		return nil
+	}
+	ids, err := UserCompanyIDsForUser(ctx, uid)
+	if err != nil {
+		return err
+	}
+	return SetUserCompanyLinks(ctx, uid, append(ids, companyID))
+}
+
 // SetUserCompanyLinks replaces allowed-company membership for a user.
 func SetUserCompanyLinks(ctx context.Context, userID int, companyIDs []int) error {
 	if DB == nil {

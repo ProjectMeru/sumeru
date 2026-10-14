@@ -195,7 +195,12 @@ func ensureBootstrapSecurity(ctx context.Context, first *SetupAdminParams) error
 	if _, err := DB.ExecContext(ctx, `INSERT INTO `+MustQuotedTableName(tableGroupUserRel)+` (user_id, group_id) VALUES ($1, $2) ON CONFLICT (user_id, group_id) DO NOTHING`, adminUID, userGID); err != nil {
 		return err
 	}
-	_, _ = DB.ExecContext(ctx, `UPDATE `+userTbl+` SET company_id = $1 WHERE id = $2`, compID, adminUID)
+	if _, err := DB.ExecContext(ctx, `UPDATE `+userTbl+` SET company_id = $1 WHERE id = $2`, compID, adminUID); err != nil {
+		return fmt.Errorf("set administrator company: %w", err)
+	}
+	if err := SetUserCompanyLinks(ctx, adminUID, []int{compID}); err != nil {
+		return err
+	}
 
 	ensureBootstrapACLs(ctx, adminGID, userGID)
 	ensurePlatformDefaults(ctx)

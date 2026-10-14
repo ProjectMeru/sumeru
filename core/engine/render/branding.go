@@ -132,11 +132,20 @@ func (d *PageData) appendShellHooks(ctx context.Context) {
 }
 
 func loadShellCompanies(ctx context.Context) []ShellCompanyOption {
-	if orm.DB == nil {
+	uid := orm.UIDFromContext(ctx)
+	if uid <= 0 || orm.DB == nil {
 		return nil
 	}
 	if _, ok := orm.Registry["core.company"]; !ok {
 		return nil
+	}
+	allowed, err := orm.UserCompanyIDs(ctx, uid)
+	if err != nil || len(allowed) == 0 {
+		return nil
+	}
+	allowedSet := make(map[int64]struct{}, len(allowed))
+	for _, id := range allowed {
+		allowedSet[id] = struct{}{}
 	}
 	tn := orm.MustQuotedTableName("core.company")
 	rows, err := orm.DB.QueryContext(ctx, `SELECT id, name FROM `+tn+` ORDER BY id ASC`)
@@ -152,9 +161,10 @@ func loadShellCompanies(ctx context.Context) []ShellCompanyOption {
 			continue
 		}
 		name = strings.TrimSpace(name)
-		if id > 0 && name != "" {
-			out = append(out, ShellCompanyOption{ID: id, Name: name})
+		if _, ok := allowedSet[int64(id)]; !ok || id <= 0 || name == "" {
+			continue
 		}
+		out = append(out, ShellCompanyOption{ID: id, Name: name})
 	}
 	return out
 }
@@ -172,4 +182,3 @@ func shellCompanyNameFromOptions(opts []ShellCompanyOption, preferID int) string
 	}
 	return ""
 }
-

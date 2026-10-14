@@ -15,6 +15,12 @@ func Create(ctx context.Context, model Model, values map[string]interface{}) (id
 		logORMOperation(ctx, start, "create", model.ModelName(), err, map[string]interface{}{"resource_id": id})
 	}()
 	res, err := executeCreateMutation(ctx, model, values)
+	if err != nil {
+		return res.ID, err
+	}
+	if res.ID > 0 && model.ModelName() == "core.company" {
+		err = addCompanyForCreator(ctx, res.ID)
+	}
 	return res.ID, err
 }
 
