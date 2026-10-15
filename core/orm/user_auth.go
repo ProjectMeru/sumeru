@@ -32,7 +32,8 @@ func mustLoginDummyBcryptHash() string {
 	return string(h)
 }
 
-// AuthenticateLocalUser verifies login/password via ORM read on core.user.
+// AuthenticateLocalUser checks login and active state, then bcrypt-compares the stored password hash.
+// Search redacts password, so the hash written at setup is read directly.
 func AuthenticateLocalUser(ctx context.Context, login, password string) (uid int, username, name string, err error) {
 	login = strings.TrimSpace(login)
 	if login == "" || password == "" {
@@ -69,7 +70,11 @@ func AuthenticateLocalUser(ctx context.Context, login, password string) (uid int
 		comparePasswordHash("", password)
 		return 0, "", "", ErrInvalidCredentials
 	}
-	hash, _ := match["password"].(string)
+	var hash string
+	userTbl := MustQuotedTableName("core.user")
+	if err := DB.QueryRowContext(ctx, `SELECT COALESCE(password, '') FROM `+userTbl+` WHERE id = $1`, id).Scan(&hash); err != nil {
+		return 0, "", "", err
+	}
 	if !comparePasswordHash(hash, password) {
 		return 0, "", "", ErrInvalidCredentials
 	}
@@ -150,4 +155,3 @@ func comparePasswordHash(storedHash, plain string) bool {
 	}
 	return bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(plain)) == nil
 }
-
