@@ -33,7 +33,7 @@ func ContentHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		rec, err = orm.ResolveContentAttachment(ctx, 0, spec.resModel, spec.resField, spec.resID)
 	}
-	if err != nil || len(rec) == 0 {
+	if err != nil || 0 == len(rec) {
 		http.NotFound(w, r)
 		return
 	}
@@ -57,7 +57,7 @@ func ContentHandler(w http.ResponseWriter, r *http.Request) {
 		if decErr != nil {
 			data = []byte(raw)
 		}
-		if len(data) == 0 {
+		if 0 == len(data) {
 			http.NotFound(w, r)
 			return
 		}
@@ -102,7 +102,7 @@ func parseContentPath(path string) (contentPathSpec, bool) {
 	switch len(parts) {
 	case 1:
 		id, err := strconv.Atoi(strings.TrimSpace(parts[0]))
-		if err != nil || id <= 0 {
+		if err != nil || 0 >= id {
 			return contentPathSpec{}, false
 		}
 		return contentPathSpec{attachmentID: id}, true
@@ -113,7 +113,7 @@ func parseContentPath(path string) (contentPathSpec, bool) {
 		resModel := strings.TrimSpace(parts[0])
 		resField := strings.TrimSpace(parts[1])
 		resID, err := strconv.Atoi(strings.TrimSpace(parts[2]))
-		if resModel == "" || resField == "" || err != nil || resID <= 0 {
+		if resModel == "" || resField == "" || err != nil || 0 >= resID {
 			return contentPathSpec{}, false
 		}
 		return contentPathSpec{resModel: resModel, resField: resField, resID: resID}, true
@@ -123,7 +123,10 @@ func parseContentPath(path string) (contentPathSpec, bool) {
 }
 
 func contentInlineAllowed(mimeType string) bool {
-	m := strings.ToLower(strings.TrimSpace(mimeType))
+	m := strings.ToLower(strings.TrimSpace(strings.Split(mimeType, ";")[0]))
+	if m == "image/svg+xml" {
+		return false
+	}
 	if strings.HasPrefix(m, "image/") {
 		return true
 	}

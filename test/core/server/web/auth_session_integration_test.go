@@ -48,7 +48,7 @@ func existingActiveUserID(t *testing.T) int {
 	userTable := orm.MustQuotedTableName("core.user")
 	var userID int
 	err := orm.DB.QueryRow(
-		`SELECT id FROM `+userTable+` WHERE active = true ORDER BY id LIMIT 1`,
+		`SELECT id FROM ` + userTable + ` WHERE active = true ORDER BY id LIMIT 1`,
 	).Scan(&userID)
 	if err != nil || userID <= 0 {
 		t.Fatalf("need at least one active core.user: %v", err)
@@ -315,11 +315,11 @@ func TestLinkOAuthUser_linksExistingLoginByEmail(t *testing.T) {
 	ctx := orm.AuditedBypass(context.Background(), "test.oauth.link")
 	providerID := 9001
 	subject := "oauth-sub-" + login
-	uid, err := web.LinkOAuthUserForTest(ctx, providerID, subject, login, "deny")
+	uid, err := web.LinkOAuthUserForTest(ctx, providerID, subject, login, true, "deny")
 	if err != nil || uid != userID {
 		t.Fatalf("link by email: uid=%d err=%v want %d", uid, err, userID)
 	}
-	uid2, err := web.LinkOAuthUserForTest(ctx, providerID, subject, login, "deny")
+	uid2, err := web.LinkOAuthUserForTest(ctx, providerID, subject, login, false, "deny")
 	if err != nil || uid2 != userID {
 		t.Fatalf("identity reuse: uid=%d err=%v", uid2, err)
 	}
@@ -329,6 +329,21 @@ func TestLinkOAuthUser_linksExistingLoginByEmail(t *testing.T) {
 	})
 }
 
+func TestLinkOAuthUser_doesNotLinkUnverifiedEmail(t *testing.T) {
+	integrationDB(t)
+	userID := insertTestUser(t)
+	userTable := orm.MustQuotedTableName("core.user")
+	var login string
+	if err := orm.DB.QueryRow(`SELECT login FROM `+userTable+` WHERE id = $1`, userID).Scan(&login); err != nil {
+		t.Fatalf("login lookup: %v", err)
+	}
+	ctx := orm.AuditedBypass(context.Background(), "test.oauth.unverified")
+	_, err := web.LinkOAuthUserForTest(ctx, 9003, "unverified-"+login, login, false, "deny")
+	if err == nil || !strings.Contains(err.Error(), "unknown user") {
+		t.Fatalf("unverified email link: err=%v", err)
+	}
+}
+
 func TestLinkOAuthUser_jitInternalAndUnknownPolicy(t *testing.T) {
 	integrationDB(t)
 	ctx := orm.AuditedBypass(context.Background(), "test.oauth.jit")
@@ -336,7 +351,7 @@ func TestLinkOAuthUser_jitInternalAndUnknownPolicy(t *testing.T) {
 	subject := fmt.Sprintf("jit_%d", time.Now().UnixNano())
 	email := subject + "@example.com"
 
-	uid, err := web.LinkOAuthUserForTest(ctx, providerID, subject, email, "jit_internal")
+	uid, err := web.LinkOAuthUserForTest(ctx, providerID, subject, email, false, "jit_internal")
 	if err != nil || uid <= 0 {
 		t.Fatalf("jit_internal: uid=%d err=%v", uid, err)
 	}
@@ -354,7 +369,7 @@ func TestLinkOAuthUser_jitInternalAndUnknownPolicy(t *testing.T) {
 		_, _ = orm.DB.Exec(`DELETE FROM `+userTable+` WHERE id = $1`, uid)
 	})
 
-	_, err = web.LinkOAuthUserForTest(ctx, providerID+1, "deny-sub", "nobody@example.com", "deny")
+	_, err = web.LinkOAuthUserForTest(ctx, providerID+1, "deny-sub", "nobody@example.com", true, "deny")
 	if err == nil || !strings.Contains(err.Error(), "unknown user") {
 		t.Fatalf("deny policy: err=%v", err)
 	}

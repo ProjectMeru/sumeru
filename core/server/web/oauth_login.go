@@ -31,7 +31,7 @@ func registerOAuthRoutes() {
 
 func OAuthStartHandler(w http.ResponseWriter, r *http.Request) {
 	providerID := parsePositiveInt(r.URL.Query().Get("provider"))
-	if providerID <= 0 {
+	if 0 >= providerID {
 		http.Error(w, "provider required", http.StatusBadRequest)
 		return
 	}
@@ -52,7 +52,12 @@ func OAuthStartHandler(w http.ResponseWriter, r *http.Request) {
 	q := url.Values{}
 	q.Set("response_type", "code")
 	q.Set("client_id", oauthRowString(prov, "client_id"))
-	q.Set("redirect_uri", oauthRedirectURI(r))
+	redirectURI, err := oauthRedirectURI(r)
+	if err != nil {
+		redirectLoginOAuthError(w, r)
+		return
+	}
+	q.Set("redirect_uri", redirectURI)
 	q.Set("scope", defaultScope(oauthRowString(prov, "scopes")))
 	q.Set("state", state)
 	q.Set("code_challenge", challenge)
@@ -83,12 +88,17 @@ func OAuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	if tokenURL == "" {
 		tokenURL = strings.TrimRight(strings.TrimSpace(oauthRowString(prov, "issuer_url")), "/") + "/token"
 	}
-	tok, err := exchangeOAuthCode(r, tokenURL, oauthRowString(prov, "client_id"), oauthRowString(prov, "client_secret"), code, verifier, oauthRedirectURI(r))
+	redirectURI, err := oauthRedirectURI(r)
 	if err != nil {
 		redirectLoginOAuthError(w, r)
 		return
 	}
-	email, sub, err := resolveOAuthIdentity(r.Context(), prov, tok)
+	tok, err := exchangeOAuthCode(r, tokenURL, oauthRowString(prov, "client_id"), oauthRowString(prov, "client_secret"), code, verifier, redirectURI)
+	if err != nil {
+		redirectLoginOAuthError(w, r)
+		return
+	}
+	email, sub, emailVerified, err := resolveOAuthIdentity(r.Context(), prov, tok)
 	if err != nil {
 		redirectLoginOAuthError(w, r)
 		return
@@ -97,8 +107,8 @@ func OAuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
 		redirectLoginOAuthError(w, r)
 		return
 	}
-	userID, err := linkOAuthUser(ctx, providerID, sub, email, oauthRowString(prov, "link_policy"))
-	if err != nil || userID <= 0 {
+	userID, err := linkOAuthUser(ctx, providerID, sub, email, emailVerified, oauthRowString(prov, "link_policy"))
+	if err != nil || 0 >= userID {
 		redirectLoginOAuthError(w, r)
 		return
 	}
@@ -140,7 +150,7 @@ func exchangeOAuthCode(r *http.Request, tokenURL, clientID, clientSecret, code, 
 	return out, nil
 }
 
-func linkOAuthUser(ctx context.Context, providerID int, subject, email, policy string) (int, error) {
+func linkOAuthUser(ctx context.Context, providerID int, subject, email string, emailVerified bool, policy string) (int, error) {
 	subject = strings.TrimSpace(subject)
 	if subject == "" {
 		return 0, fmt.Errorf("missing subject")
@@ -152,7 +162,7 @@ func linkOAuthUser(ctx context.Context, providerID int, subject, email, policy s
 		return int(oauthRowInt(rec, "user_id")), nil
 	}
 	email = strings.TrimSpace(strings.ToLower(email))
-	if email != "" {
+	if email != "" && emailVerified {
 		if user, err := orm.SearchOne(ctx, "core.user", map[string]interface{}{"login": email}); err == nil && user != nil {
 			uid := int(oauthRowInt(user, "id"))
 			_ = upsertIdentity(ctx, providerID, subject, uid)
@@ -210,22 +220,28 @@ func validateOAuthIdentityClaims(prov map[string]interface{}, tok map[string]int
 	return nil
 }
 
-func resolveOAuthIdentity(ctx context.Context, prov map[string]interface{}, tok map[string]interface{}) (email, sub string, err error) {
+func resolveOAuthIdentity(ctx context.Context, prov map[string]interface{}, tok map[string]interface{}) (email, sub string, emailVerified bool, err error) {
 	idTok, _ := tok["id_token"].(string)
 	jwksURL := strings.TrimSpace(oauthRowString(prov, "jwks_url"))
 	issuer := strings.TrimSpace(oauthRowString(prov, "issuer_url"))
 	clientID := strings.TrimSpace(oauthRowString(prov, "client_id"))
-	if strings.TrimSpace(idTok) != "" && jwksURL != "" {
+	idTok = strings.TrimSpace(idTok)
+	if idTok != "" && jwksURL != "" {
 		claims, verr := auth.VerifyIDToken(ctx, idTok, issuer, clientID, jwksURL)
 		if verr != nil {
-			return "", "", verr
+			return "", "", false, verr
 		}
 		email, _ = claims["email"].(string)
 		sub, _ = claims["sub"].(string)
-		return email, sub, nil
+		return email, sub, oauthEmailVerified(claims), nil
 	}
-	if strings.TrimSpace(idTok) != "" {
-		email, sub, _ = auth.ParseIDTokenClaimsUnsafe(idTok)
+	if !config.AppConfig.DevMode && (idTok != "" || jwksURL != "") {
+		return "", "", false, fmt.Errorf("oidc verification required")
+	}
+	var claims map[string]interface{}
+	if idTok != "" {
+		email, sub, claims = auth.ParseIDTokenClaimsUnsafe(idTok)
+		emailVerified = oauthEmailVerified(claims)
 	}
 	if sub == "" {
 		sub, _ = tok["sub"].(string)
@@ -239,9 +255,23 @@ func resolveOAuthIdentity(ctx context.Context, prov map[string]interface{}, tok 
 		}
 	}
 	if sub == "" {
-		return "", "", fmt.Errorf("missing subject")
+		return "", "", false, fmt.Errorf("missing subject")
 	}
-	return email, sub, nil
+	return email, sub, emailVerified, nil
+}
+
+func oauthEmailVerified(claims map[string]interface{}) bool {
+	if claims == nil {
+		return false
+	}
+	switch v := claims["email_verified"].(type) {
+	case bool:
+		return v
+	case string:
+		return strings.EqualFold(strings.TrimSpace(v), "true")
+	default:
+		return false
+	}
 }
 
 func fetchOAuthUserInfo(ctx context.Context, accessToken, issuer string) (email, sub string) {
@@ -284,13 +314,17 @@ type loginAuthProvider struct {
 func listEnabledAuthProviders(ctx context.Context) []loginAuthProvider {
 	ctx = orm.AuditedBypass(ctx, "login.providers")
 	rows, err := orm.Search(ctx, "sys.auth.provider", [][]interface{}{{"enabled", "=", true}})
-	if err != nil || len(rows) == 0 {
+	if err != nil {
 		return nil
 	}
+	if 0 == len(rows) {
+		return nil
+	}
+
 	out := make([]loginAuthProvider, 0, len(rows))
 	for _, row := range rows {
 		id := int(oauthRowInt(row, "id"))
-		if id <= 0 {
+		if 0 >= id {
 			continue
 		}
 		label := strings.TrimSpace(oauthRowString(row, "button_label"))
@@ -310,7 +344,7 @@ func authLocalEnabled(ctx context.Context) bool {
 	switch raw {
 	case "0", "false", "no", "off":
 		providers := listEnabledAuthProviders(ctx)
-		return len(providers) == 0
+		return 0 == len(providers)
 	default:
 		return true
 	}
@@ -319,9 +353,13 @@ func authLocalEnabled(ctx context.Context) bool {
 func loginPageCompanyName(ctx context.Context) string {
 	ctx = orm.AuditedBypass(ctx, "login.brand")
 	rows, err := orm.SearchLimit(ctx, "core.company", nil, 1)
-	if err != nil || len(rows) == 0 {
+	if err != nil {
 		return ""
 	}
+	if 0 == len(rows) {
+		return ""
+	}
+
 	return strings.TrimSpace(oauthRowString(rows[0], "name"))
 }
 
@@ -334,14 +372,6 @@ func randomURLSafe(n int) string {
 	b := make([]byte, n)
 	_, _ = rand.Read(b)
 	return base64.RawURLEncoding.EncodeToString(b)
-}
-
-func oauthRedirectURI(r *http.Request) string {
-	scheme := "http"
-	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
-		scheme = "https"
-	}
-	return scheme + "://" + r.Host + oauthCallbackRoute
 }
 
 func defaultScope(s string) string {

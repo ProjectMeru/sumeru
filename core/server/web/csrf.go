@@ -33,7 +33,7 @@ func csrfKey() []byte {
 
 	csrfSecretMu.Lock()
 	defer csrfSecretMu.Unlock()
-	if len(csrfSecret) == 0 {
+	if 0 == len(csrfSecret) {
 		if configured := strings.TrimSpace(config.AppConfig.CSRFSecret); configured != "" {
 			csrfSecret = []byte(configured)
 		} else {
@@ -72,7 +72,7 @@ func CSRFTokenForRequest(r *http.Request) string {
 	return hex.EncodeToString(mac.Sum(nil)[:16])
 }
 
-// ValidateCSRF checks csrf_token (form, header, or query on GET/HEAD) against the session-bound token.
+// ValidateCSRF checks csrf_token (form or header) against the session-bound token.
 func ValidateCSRF(r *http.Request) bool {
 	expected := CSRFTokenForRequest(r)
 	if expected == "" {
@@ -81,9 +81,6 @@ func ValidateCSRF(r *http.Request) bool {
 	got := r.PostFormValue(csrfFormField)
 	if got == "" {
 		got = r.Header.Get(csrfHeaderName)
-	}
-	if got == "" && (r.Method == http.MethodGet || r.Method == http.MethodHead) {
-		got = strings.TrimSpace(r.URL.Query().Get(csrfFormField))
 	}
 	return got != "" && hmac.Equal([]byte(got), []byte(expected))
 }

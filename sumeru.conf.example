@@ -67,6 +67,10 @@ log_rolling = false
 # When dev_mode=false and this is unset/0, the server defaults to 120.
 rate_limit_rpm = 120
 
+# Public URL for OAuth redirect_uri (e.g. https://erp.example.com). Required in production
+# when the app is not reached via localhost or a trusted_proxies peer.
+# web_base_url = https://erp.example.com
+
 # Comma-separated CIDRs/IPs of reverse proxies allowed to set X-Forwarded-For.
 # Empty (default) = never trust XFF; client IP is always RemoteAddr for login/RPC rate limits.
 # Does not affect setup wizard auth (setup always uses direct RemoteAddr).

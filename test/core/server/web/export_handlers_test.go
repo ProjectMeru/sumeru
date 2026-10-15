@@ -29,18 +29,33 @@ func TestResolveExportRequestMissingModel(t *testing.T) {
 	}
 }
 
-func TestResolveExportRequestMissingModelWithCSRFQuery(t *testing.T) {
+func TestResolveExportRequestMissingModelWithCSRFHeader(t *testing.T) {
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/web/export/csv?fields=name", nil)
 	req.AddCookie(&http.Cookie{Name: web.TestSessionCookieName, Value: "export-resolve-sid"})
 	token := web.CSRFTokenForRequestForTest(req)
-	req.URL.RawQuery = "fields=name&csrf_token=" + token
+	req.Header.Set("X-CSRF-Token", token)
 	_, ok := web.ResolveExportRequestForTest(rr, req)
 	if ok {
 		t.Fatal("expected resolve export request to fail without model")
 	}
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want %d after CSRF passes", rr.Code, http.StatusBadRequest)
+	}
+}
+
+func TestResolveExportRequestRejectsCSRFQueryOnGET(t *testing.T) {
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/web/export/csv?fields=name", nil)
+	req.AddCookie(&http.Cookie{Name: web.TestSessionCookieName, Value: "export-query-sid"})
+	token := web.CSRFTokenForRequestForTest(req)
+	req.URL.RawQuery = "fields=name&csrf_token=" + token
+	_, ok := web.ResolveExportRequestForTest(rr, req)
+	if ok {
+		t.Fatal("expected resolve export request to fail without model")
+	}
+	if rr.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want %d when CSRF is only in query", rr.Code, http.StatusForbidden)
 	}
 }
 

@@ -8,6 +8,7 @@ import (
 
 var blockedAttachmentMIMEPrefixes = []string{
 	"text/html",
+	"image/svg+xml",
 	"application/javascript",
 	"application/x-javascript",
 	"text/javascript",
@@ -58,7 +59,7 @@ func normalizeAttachmentMIME(declaredMIME string, data []byte) string {
 	if declaredMIME != "" {
 		return declaredMIME
 	}
-	if len(data) == 0 {
+	if 0 == len(data) {
 		return ""
 	}
 	sniffLen := len(data)

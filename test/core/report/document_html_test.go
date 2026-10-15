@@ -23,6 +23,22 @@ func TestRenderHTMLTemplate(t *testing.T) {
 	}
 }
 
+func TestPreviewHTMLFromTemplateEscapesRecordText(t *testing.T) {
+	report.RegisterHTMLTemplate("test_report_escape", `<p>{{.Record.name}}</p>`)
+	out, err := report.PreviewHTMLFromTemplate("test_report_escape", report.DocumentRenderContext{
+		Record: map[string]interface{}{"name": `<script>alert(1)</script>`},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out, "<script>") {
+		t.Fatalf("record text was not escaped: %s", out)
+	}
+	if !strings.Contains(out, "&lt;script&gt;") {
+		t.Fatalf("escaped text missing: %s", out)
+	}
+}
+
 func TestRenderHTMLTemplate_missing(t *testing.T) {
 	_, err := report.RenderHTMLTemplate("missing_template_xyz", report.DocumentRenderContext{})
 	if err == nil || !strings.Contains(err.Error(), "not found") {

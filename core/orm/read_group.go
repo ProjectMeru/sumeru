@@ -78,7 +78,10 @@ func ReadGroupDirect(ctx context.Context, modelName string, domain [][]interface
 	if err := CheckModelAccess(ctx, uid, modelName, "read"); err != nil {
 		return nil, err
 	}
-	if len(spec.GroupBy) == 0 {
+	if err := CheckFieldReadAccess(ctx, uid, modelName, readGroupFields(spec)); err != nil {
+		return nil, err
+	}
+	if 0 == len(spec.GroupBy) {
 		return nil, fmt.Errorf("groupby required")
 	}
 
@@ -154,4 +157,21 @@ func ReadGroupDirect(ctx context.Context, modelName string, domain [][]interface
 		out = append(out, row)
 	}
 	return out, rows.Err()
+}
+
+func readGroupFields(spec ReadGroupSpec) []string {
+	fields := make([]string, 0, len(spec.GroupBy)+len(spec.Fields))
+	for _, name := range spec.GroupBy {
+		name = strings.TrimSpace(name)
+		if name != "" {
+			fields = append(fields, name)
+		}
+	}
+	for _, f := range spec.Fields {
+		name := strings.TrimSpace(f.Field)
+		if name != "" {
+			fields = append(fields, name)
+		}
+	}
+	return fields
 }

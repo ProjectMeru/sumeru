@@ -44,6 +44,7 @@ const (
 	keyDbReadReplicaDSN            = "db_read_replica_dsn"
 	keyRateLimitRPM                = "rate_limit_rpm"
 	keyTrustedProxies              = "trusted_proxies"
+	keyWebBaseURL                  = "web_base_url"
 	keyCSRFSecret                  = "csrf_secret"
 	keyForceSecureCookies          = "force_secure_cookies"
 	keySessionCookieStrictSameSite = "session_cookie_strict_samesite"

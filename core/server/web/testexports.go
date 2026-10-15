@@ -15,14 +15,14 @@ import (
 
 // Type aliases for external tests in core/server/web (web_test package).
 type (
-	ShellPageOpts      = shellPageOpts
-	SetupInitRequest   = setupInitRequest
-	AppsBrowseState    = appsBrowseState
-	ModuleRow          = moduleRow
-	PinnedAppsRequest  = pinnedAppsRequest
-	WorkspaceRequest   = workspaceRequest
-	AppsModule         = appsModule
-	AppsModuleGroup    = appsModuleGroup
+	ShellPageOpts     = shellPageOpts
+	SetupInitRequest  = setupInitRequest
+	AppsBrowseState   = appsBrowseState
+	ModuleRow         = moduleRow
+	PinnedAppsRequest = pinnedAppsRequest
+	WorkspaceRequest  = workspaceRequest
+	AppsModule        = appsModule
+	AppsModuleGroup   = appsModuleGroup
 )
 
 // Route and query constants for external tests.
@@ -401,7 +401,9 @@ func ParseContentPathForTest(path string) (field string, id int, ok bool) {
 
 func ContentInlineAllowedForTest(mime string) bool { return contentInlineAllowed(mime) }
 
-func SafeContentDispositionInlineForTest(name string) string { return safeContentDispositionInline(name) }
+func SafeContentDispositionInlineForTest(name string) string {
+	return safeContentDispositionInline(name)
+}
 
 func BulkPreviewHandlerForTest(w http.ResponseWriter, r *http.Request) {
 	BulkPreviewHandler(w, r)
@@ -490,9 +492,27 @@ func OAuthCallbackForTest(w http.ResponseWriter, r *http.Request) { OAuthCallbac
 func OAuthStartForTest(w http.ResponseWriter, r *http.Request) { OAuthStartHandler(w, r) }
 
 // LinkOAuthUserForTest exposes OAuth account linking and JIT provisioning for tests.
-func LinkOAuthUserForTest(ctx context.Context, providerID int, subject, email, policy string) (int, error) {
-	return linkOAuthUser(ctx, providerID, subject, email, policy)
+func LinkOAuthUserForTest(ctx context.Context, providerID int, subject, email string, emailVerified bool, policy string) (int, error) {
+	return linkOAuthUser(ctx, providerID, subject, email, emailVerified, policy)
 }
+
+// ResolveOAuthIdentityForTest exposes OIDC identity resolution for tests.
+func ResolveOAuthIdentityForTest(ctx context.Context, prov map[string]interface{}, tok map[string]interface{}) (email, sub string, emailVerified bool, err error) {
+	return resolveOAuthIdentity(ctx, prov, tok)
+}
+
+// PublicBaseURLForTest exposes canonical public origin resolution for tests.
+func PublicBaseURLForTest(r *http.Request) (string, error) {
+	return publicBaseURL(r)
+}
+
+// ValidateSetupCSRFForTest exposes setup wizard CSRF validation for tests.
+func ValidateSetupCSRFForTest(r *http.Request, tokenFromBody string) bool {
+	return validateSetupCSRF(r, tokenFromBody)
+}
+
+// TestSetupCSRFCookie is the HttpOnly setup CSRF cookie name.
+const TestSetupCSRFCookie = setupCSRFCookie
 
 // AuthLocalEnabledForTest reports whether password login is shown on the login page.
 func AuthLocalEnabledForTest(ctx context.Context) bool { return authLocalEnabled(ctx) }

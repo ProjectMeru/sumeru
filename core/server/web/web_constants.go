@@ -65,6 +65,7 @@ const (
 	totpLoginTemplateFile   = render.TemplateAuthTOTP
 	totpLoginRoute          = "/web/login/totp"
 	loginCSRFCookie         = "sumeru_login_csrf"
+	setupCSRFCookie         = "sumeru_setup_csrf"
 	loginNextCookie         = "sumeru_login_next"
 	pendingMFACookie        = "sumeru_pending_mfa"
 	trustedDeviceCookie     = "sumeru_trusted_device"
