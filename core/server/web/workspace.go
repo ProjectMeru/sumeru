@@ -111,7 +111,7 @@ func redirectIfNoWindowAction(w http.ResponseWriter, r *http.Request, actionQuer
 		return false
 	}
 
-	if actionID == 0 && redirectURL == appsRoute {
+	if 0 == actionID && redirectURL == appsRoute {
 		WebLogf(r.Context(), workspaceRoute, "no action for query action=%q menu_id=%q; redirecting to apps", actionQuery, menuQuery)
 	}
 	http.Redirect(w, r, redirectURL, http.StatusFound)

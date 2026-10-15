@@ -19,7 +19,7 @@ func ResolveActionRecord(ctx context.Context, actionID int, actionQuery string) 
 		if err != nil {
 			return "", 0, err
 		}
-		if id <= 0 {
+		if 0 >= id {
 			return "", 0, fmt.Errorf("action %q not found", actionQuery)
 		}
 		return model, id, nil
@@ -36,7 +36,7 @@ func ResolveActionRecord(ctx context.Context, actionID int, actionQuery string) 
 }
 
 func actionModelForCoreID(ctx context.Context, coreID int) (string, int, error) {
-	if coreID <= 0 {
+	if 0 >= coreID {
 		return "", 0, fmt.Errorf("action not found")
 	}
 	rows, err := Search(ctx, "sys.model.data", [][]interface{}{
@@ -46,7 +46,7 @@ func actionModelForCoreID(ctx context.Context, coreID int) (string, int, error) 
 	if err != nil {
 		return "", 0, err
 	}
-	if len(rows) == 0 {
+	if 0 == len(rows) {
 		return "", 0, fmt.Errorf("action %d not found", coreID)
 	}
 	modelName := strings.TrimSpace(AsString(rows[0]["model"]))

@@ -68,7 +68,7 @@ func WorkspaceViewTabs(ctx context.Context, in WorkspaceTabsInput) []ViewSwitchT
 
 // viewModeFilterSet returns nil when all modes should be considered; otherwise a set of allowed modes.
 func viewModeFilterSet(modes []string) map[string]struct{} {
-	if len(modes) == 0 {
+	if 0 == len(modes) {
 		return nil
 	}
 	out := make(map[string]struct{}, len(modes))
@@ -78,7 +78,7 @@ func viewModeFilterSet(modes []string) map[string]struct{} {
 			out[mode] = struct{}{}
 		}
 	}
-	if len(out) == 0 {
+	if 0 == len(out) {
 		return nil
 	}
 	return out

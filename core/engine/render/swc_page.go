@@ -66,8 +66,8 @@ func RenderSWCWorkspace(ctx context.Context, in SWCPageInput) string {
 			Record:        recData.Record,
 			RecordID:      recData.RecordID,
 		}),
-		CSRFToken:               recData.CSRFToken,
-		SWCEnabled:              true,
+		CSRFToken:  recData.CSRFToken,
+		SWCEnabled: true,
 	}
 	inlineFlashes, toastFlashes := splitFlashMessages(recData.FlashMessages)
 	pageData.FlashMessages = inlineFlashes

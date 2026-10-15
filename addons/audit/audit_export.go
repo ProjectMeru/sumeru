@@ -90,7 +90,7 @@ func sha256Hex(data []byte) string {
 }
 
 func auditPeriodBounds(rows []auditExportRow) (from, to string) {
-	if len(rows) == 0 {
+	if 0 == len(rows) {
 		return "", ""
 	}
 	dates := make([]string, len(rows))
@@ -102,7 +102,7 @@ func auditPeriodBounds(rows []auditExportRow) (from, to string) {
 }
 
 func auditMinMaxID(rows []auditExportRow) (minID, maxID int64) {
-	if len(rows) == 0 {
+	if 0 == len(rows) {
 		return 0, 0
 	}
 	minID = rows[0].ID

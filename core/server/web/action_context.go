@@ -38,7 +38,7 @@ func actionSearchViewIDFromContext(actionData map[string]interface{}) string {
 // actionDefaultFieldValues extracts default_* keys from action context for new-record forms.
 func actionDefaultFieldValues(actionData map[string]interface{}) map[string]interface{} {
 	ctx := parseActionContext(actionData)
-	if len(ctx) == 0 {
+	if 0 == len(ctx) {
 		return nil
 	}
 	out := make(map[string]interface{})
@@ -52,7 +52,7 @@ func actionDefaultFieldValues(actionData map[string]interface{}) map[string]inte
 		}
 		out[fieldName] = value
 	}
-	if len(out) == 0 {
+	if 0 == len(out) {
 		return nil
 	}
 	return out

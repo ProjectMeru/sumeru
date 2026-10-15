@@ -305,7 +305,7 @@ func TOTPLoginPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	uid := pendingMFAUserID(r)
-	if uid <= 0 {
+	if 0 >= uid {
 		http.Error(w, "session expired", http.StatusUnauthorized)
 		return
 	}

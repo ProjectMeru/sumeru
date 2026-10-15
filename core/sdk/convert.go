@@ -50,7 +50,7 @@ func currencyRate(ctx context.Context, currencyID int, date time.Time) (float64,
 	if err != nil {
 		return 0, fmt.Errorf("sdk: lookup currency rate for currency %d: %w", currencyID, err)
 	}
-	if len(rows) == 0 {
+	if 0 == len(rows) {
 		return 0, fmt.Errorf("sdk: no active core.currency.rate for currency %d on %s or earlier",
 			currencyID, date.Format(dateLayout))
 	}
@@ -66,7 +66,7 @@ func currencyRate(ctx context.Context, currencyID int, date time.Time) (float64,
 	if !ok {
 		return 0, fmt.Errorf("sdk: non-numeric rate %v on core.currency.rate row %v", best["rate"], best["id"])
 	}
-	if rate <= 0 {
+	if 0 >= rate {
 		return 0, fmt.Errorf("sdk: invalid non-positive rate %v for currency %d", rate, currencyID)
 	}
 	return rate, nil
@@ -110,11 +110,11 @@ func ConvertUom(ctx context.Context, amount float64, fromUomID, toUomID int) (fl
 			fromUomID, fromCat, toUomID, toCat)
 	}
 	factorFrom, ok := asFloat(from["factor"])
-	if !ok || factorFrom <= 0 {
+	if !ok || 0 >= factorFrom {
 		return 0, fmt.Errorf("sdk: invalid factor on uom %d", fromUomID)
 	}
 	factorTo, ok := asFloat(to["factor"])
-	if !ok || factorTo <= 0 {
+	if !ok || 0 >= factorTo {
 		return 0, fmt.Errorf("sdk: invalid factor on uom %d", toUomID)
 	}
 	rounding, _ := asFloat(to["rounding"])
@@ -123,7 +123,7 @@ func ConvertUom(ctx context.Context, amount float64, fromUomID, toUomID int) (fl
 
 // ConvertUomByFactor applies the pure factor math of uom conversion:
 // amount * factorFrom / factorTo, rounded to multiples of rounding (no-op
-// when rounding <= 0). Exported so conversions can be unit-tested without a
+// when 0 >= rounding). Exported so conversions can be unit-tested without a
 // database and reused by verticals on preloaded records.
 func ConvertUomByFactor(amount, factorFrom, factorTo, rounding float64) float64 {
 	out := amount * factorFrom / factorTo
@@ -158,7 +158,7 @@ func ConvertMoneyField(ctx context.Context, modelName, fieldName string, rec map
 		return 0, fmt.Errorf("sdk: field %s.%s is not tagged currency=", modelName, fieldName)
 	}
 	fromID, ok := asInt(rec[def.Currency])
-	if !ok || fromID == 0 {
+	if !ok || 0 == fromID {
 		return 0, fmt.Errorf("sdk: record has no %q value for %s.%s", def.Currency, modelName, fieldName)
 	}
 	amount, ok := asFloat(rec[fieldName])

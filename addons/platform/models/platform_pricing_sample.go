@@ -8,7 +8,7 @@ import (
 type PlatformPricingSample struct {
 	sdk.Model `sumeru:"model=platform.pricing.sample"`
 
-	Name       sdk.String               `sumeru:"required,string=Label"`
+	Name       sdk.String                 `sumeru:"required,string=Label"`
 	CurrencyID sdk.Many2One[CoreCurrency] `sumeru:"required,index,string=Currency"`
-	Amount     sdk.Money                `sumeru:"required,string=Amount,currency=currency_id"`
+	Amount     sdk.Money                  `sumeru:"required,string=Amount,currency=currency_id"`
 }

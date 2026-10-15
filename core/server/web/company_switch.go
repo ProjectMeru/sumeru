@@ -19,7 +19,7 @@ func SwitchCompanyPost(w http.ResponseWriter, r *http.Request) {
 
 	form := parseCompanySwitchForm(r)
 	userID := SessionUserID(r)
-	if userID <= 0 {
+	if 0 >= userID {
 		http.Redirect(w, r, loginRoute, http.StatusSeeOther)
 		return
 	}
@@ -42,7 +42,7 @@ func parseCompanySwitchForm(r *http.Request) companySwitchForm {
 }
 
 func switchActiveCompany(ctx context.Context, userID, companyID int) {
-	if companyID <= 0 || !companyRecordExists(ctx, companyID) {
+	if 0 >= companyID || !companyRecordExists(ctx, companyID) {
 		auditCompanySwitchDeny(ctx, userID, companyID, "invalid company")
 		return
 	}

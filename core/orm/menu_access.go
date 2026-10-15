@@ -13,7 +13,7 @@ func UserHasAnyAccessGroup(ctx context.Context, uid int, accessGroupsCSV string)
 		return true
 	}
 	ids := NormalizeAccessGroupList(accessGroupsCSV)
-	if len(ids) == 0 {
+	if 0 == len(ids) {
 		return true
 	}
 	return userMatchesAnyGroupXML(ctx, uid, ids)
@@ -26,7 +26,7 @@ func UserMayAccessMenu(ctx context.Context, uid int, accessGroupsCSV string) boo
 		return true
 	}
 	ids := NormalizeAccessGroupList(accessGroupsCSV)
-	if len(ids) == 0 {
+	if 0 == len(ids) {
 		return UserHasGroupXML(ctx, uid, "base.group_system")
 	}
 	return userMatchesAnyGroupXML(ctx, uid, ids)
@@ -38,23 +38,27 @@ func UserHasGroupXML(ctx context.Context, uid int, xmlID string) bool {
 		return true
 	}
 	xmlID = strings.TrimSpace(xmlID)
-	if xmlID == "" || uid <= 0 {
+	if xmlID == "" || 0 >= uid {
 		return false
 	}
 	return userMatchesAnyGroupXML(ctx, uid, []string{xmlID})
 }
 
 func userMatchesAnyGroupXML(ctx context.Context, uid int, xmlIDs []string) bool {
-	if uid <= 0 {
+	if 0 >= uid {
 		return false
 	}
 	eff, err := EffectiveGroupIDs(ctx, uid)
-	if err != nil || len(eff) == 0 {
+	if err != nil {
 		return false
 	}
+	if 0 == len(eff) {
+		return false
+	}
+
 	for _, xmlID := range xmlIDs {
 		gid, _, err := ResolveXmlId(ctx, xmlID)
-		if err != nil || gid == 0 {
+		if err != nil || 0 == gid {
 			continue
 		}
 		if intSliceContains(eff, gid) {
@@ -76,7 +80,7 @@ func SetUserGroupLinks(ctx context.Context, userID int, groupIDs []int) error {
 		return err
 	}
 	for _, gid := range groupIDs {
-		if gid <= 0 {
+		if 0 >= gid {
 			continue
 		}
 		if _, err := DB.ExecContext(ctx, `INSERT INTO `+tbl+` (user_id, group_id) VALUES ($1, $2) ON CONFLICT (user_id, group_id) DO NOTHING`, userID, gid); err != nil {
@@ -100,7 +104,7 @@ func normalizeUserTypeGroupIDs(ctx context.Context, groupIDs []int) []int {
 	var out []int
 	seen := map[int]struct{}{}
 	for _, gid := range groupIDs {
-		if gid <= 0 {
+		if 0 >= gid {
 			continue
 		}
 		if x, ok := typeIDs[gid]; ok {

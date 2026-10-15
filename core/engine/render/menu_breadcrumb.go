@@ -79,7 +79,7 @@ func collectMenuAncestors(ctx context.Context, leafID int) []menuCrumb {
 
 // splitModuleMenuChain separates the application root menu from descendant menu folders/items.
 func splitModuleMenuChain(chain []menuCrumb) (module menuCrumb, menus []menuCrumb, ok bool) {
-	if len(chain) == 0 {
+	if 0 == len(chain) {
 		return menuCrumb{}, nil, false
 	}
 	return chain[0], chain[1:], true
@@ -98,7 +98,7 @@ type BreadcrumbInput struct {
 // Labels come from sys.menu names, generic view-mode names, and record/model metadata — never addon-specific maps in core.
 func BuildWorkspaceBreadcrumbs(ctx context.Context, in BreadcrumbInput) []BreadcrumbItem {
 	mid, err := strconv.Atoi(strings.TrimSpace(in.ActiveMenuID))
-	if err != nil || mid <= 0 {
+	if err != nil || 0 >= mid {
 		if label := workspaceRecordBreadcrumbLabel(in); label != "" {
 			return []BreadcrumbItem{{Label: label, Href: ""}}
 		}
@@ -142,14 +142,14 @@ func BuildWorkspaceBreadcrumbs(ctx context.Context, in BreadcrumbInput) []Breadc
 
 	// View (non-primary modes such as graph/pivot; list/kanban/form omit when menu names the screen).
 	if viewLabel := workspaceViewBreadcrumbLabel(in.ViewType); viewLabel != "" {
-		if len(items) == 0 || items[len(items)-1].Label != viewLabel {
+		if 0 == len(items) || items[len(items)-1].Label != viewLabel {
 			items = append(items, BreadcrumbItem{Label: viewLabel, Href: ""})
 		}
 	}
 
 	// Record (existing row name, or new-form model label from generic UIModelName fallback).
 	if recordLabel := workspaceRecordBreadcrumbLabel(in); recordLabel != "" {
-		if len(items) == 0 || items[len(items)-1].Label != recordLabel {
+		if 0 == len(items) || items[len(items)-1].Label != recordLabel {
 			items = append(items, BreadcrumbItem{Label: recordLabel, Href: ""})
 		}
 	}
@@ -162,7 +162,7 @@ func settingsRootMenuID(ctx context.Context, activeMenuID string) int {
 		return 0
 	}
 	rid, _, err := orm.ResolveXmlId(ctx, "base.menu_settings_root")
-	if err != nil || rid <= 0 {
+	if err != nil || 0 >= rid {
 		return 0
 	}
 	return rid
@@ -250,7 +250,7 @@ func BuildAppLogsBreadcrumbs(ctx context.Context, appLogsMenuID int) []Breadcrum
 	items := []BreadcrumbItem{
 		{Label: "Home", Href: HomeWebURL()},
 	}
-	if appLogsMenuID <= 0 {
+	if 0 >= appLogsMenuID {
 		return items
 	}
 	chain := collectMenuAncestors(ctx, appLogsMenuID)

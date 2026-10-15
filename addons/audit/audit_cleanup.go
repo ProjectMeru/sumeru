@@ -18,7 +18,7 @@ func init() {
 }
 
 func purgeAuditLog(ctx context.Context, model string, id int, _ map[string]string) (string, error) {
-	if model != auditCleanupModel || id <= 0 {
+	if model != auditCleanupModel || 0 >= id {
 		return "", fmt.Errorf("invalid cleanup record")
 	}
 	if !orm.UserHasGroupXML(ctx, orm.SecurityUID(ctx), "base.group_system") {
@@ -85,7 +85,7 @@ func retentionDaysFromRecord(rec map[string]interface{}) (int, error) {
 		return 30, nil
 	case "custom":
 		d, ok := orm.CoerceInt64(rec["retention_days"])
-		if !ok || d <= 0 {
+		if !ok || 0 >= d {
 			return 0, fmt.Errorf("custom retention requires days greater than zero")
 		}
 		if d > 3650 {

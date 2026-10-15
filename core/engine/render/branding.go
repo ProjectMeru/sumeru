@@ -45,10 +45,10 @@ func EnrichShellPageData(ctx context.Context, d *PageData) {
 	if strings.TrimSpace(d.HomeNavHref) == "" {
 		d.HomeNavHref = d.BrandLockupHref
 	}
-	if len(d.AppLauncherJSON) == 0 {
+	if 0 == len(d.AppLauncherJSON) {
 		d.AppLauncherJSON = BuildAppLauncherJSON(ctx)
 	}
-	if len(d.PinnedAppsJSON) == 0 {
+	if 0 == len(d.PinnedAppsJSON) {
 		d.PinnedAppsJSON = BuildPinnedAppsJSON(ctx)
 	}
 	if strings.TrimSpace(d.UserProfileHref) == "" {
@@ -111,10 +111,10 @@ func EnrichShellPageData(ctx context.Context, d *PageData) {
 
 	// Activity dock (Messages + Log) stays visible for logged-in users; IM APIs gate chat separately.
 	d.ActivityEnabled = orm.SecurityUID(ctx) > 0
-	if len(d.ExtraScriptURLs) == 0 {
+	if 0 == len(d.ExtraScriptURLs) {
 		d.ExtraScriptURLs = ExtraScriptURLs
 	}
-	if d.SWCEnabled && len(d.SwcAddonEntriesJSON) == 0 {
+	if d.SWCEnabled && 0 == len(d.SwcAddonEntriesJSON) {
 		d.SwcAddonEntriesJSON = BuildSwcAddonEntriesJSON()
 	}
 	if d.SuppressActivityDock {
@@ -133,16 +133,20 @@ func (d *PageData) appendShellHooks(ctx context.Context) {
 
 func loadShellCompanies(ctx context.Context) []ShellCompanyOption {
 	uid := orm.UIDFromContext(ctx)
-	if uid <= 0 || orm.DB == nil {
+	if 0 >= uid || orm.DB == nil {
 		return nil
 	}
 	if _, ok := orm.Registry["core.company"]; !ok {
 		return nil
 	}
 	allowed, err := orm.UserCompanyIDs(ctx, uid)
-	if err != nil || len(allowed) == 0 {
+	if err != nil {
 		return nil
 	}
+	if 0 == len(allowed) {
+		return nil
+	}
+
 	allowedSet := make(map[int64]struct{}, len(allowed))
 	for _, id := range allowed {
 		allowedSet[id] = struct{}{}
@@ -161,7 +165,7 @@ func loadShellCompanies(ctx context.Context) []ShellCompanyOption {
 			continue
 		}
 		name = strings.TrimSpace(name)
-		if _, ok := allowedSet[int64(id)]; !ok || id <= 0 || name == "" {
+		if _, ok := allowedSet[int64(id)]; !ok || 0 >= id || name == "" {
 			continue
 		}
 		out = append(out, ShellCompanyOption{ID: id, Name: name})

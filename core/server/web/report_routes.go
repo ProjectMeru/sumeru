@@ -10,10 +10,10 @@ import (
 )
 
 const (
-	reportPrintRoute    = "/web/report/print"
-	reportPreviewRoute  = "/web/report/preview"
-	exportPivotRoute    = "/web/export/pivot"
-	exportGraphRoute    = "/web/export/graph"
+	reportPrintRoute   = "/web/report/print"
+	reportPreviewRoute = "/web/report/preview"
+	exportPivotRoute   = "/web/export/pivot"
+	exportGraphRoute   = "/web/export/graph"
 )
 
 func registerReportRoutes() {
@@ -95,7 +95,7 @@ func ExportPivotHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	groupFields := report.ParseFieldsParam(r.URL.Query().Get("group_by"))
 	measures := report.ParseFieldsParam(r.URL.Query().Get("measures"))
-	if len(groupFields) == 0 || len(measures) == 0 {
+	if 0 == len(groupFields) || 0 == len(measures) {
 		http.Error(w, "group_by and measures required", http.StatusBadRequest)
 		return
 	}

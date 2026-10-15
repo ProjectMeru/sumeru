@@ -12,7 +12,7 @@ func splitDomainORPrefix(domain [][]interface{}) (orCount int, leaves [][]interf
 		}
 		break
 	}
-	if orCount == 0 {
+	if 0 == orCount {
 		return 0, nil, true
 	}
 	leaves = domain[orCount:]

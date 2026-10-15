@@ -58,9 +58,9 @@ func writeMinimalXLSX(header []string, rows [][]string) ([]byte, error) {
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)
 	files := map[string]string{
-		"[Content_Types].xml": contentTypesXML,
-		"_rels/.rels":         rootRelsXML,
-		"xl/workbook.xml":     workbookXML,
+		"[Content_Types].xml":        contentTypesXML,
+		"_rels/.rels":                rootRelsXML,
+		"xl/workbook.xml":            workbookXML,
 		"xl/_rels/workbook.xml.rels": workbookRelsXML,
 		"xl/worksheets/sheet1.xml":   sheetXML(header, rows),
 	}

@@ -226,7 +226,7 @@ func checkPropertyValue(def PropertyDef, value interface{}) (interface{}, error)
 		if !ok {
 			return nil, fmt.Errorf("property %q must be an integer", def.Key)
 		}
-		if def.ValueType == "many2one" && n <= 0 {
+		if def.ValueType == "many2one" && 0 >= n {
 			return nil, fmt.Errorf("property %q must be a positive integer", def.Key)
 		}
 		return n, nil

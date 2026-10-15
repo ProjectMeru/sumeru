@@ -83,13 +83,13 @@ func parseDomainList(raw string) ([][]interface{}, bool, error) {
 	for i, ch := range inner {
 		switch ch {
 		case '(':
-			if depth == 0 {
+			if 0 == depth {
 				start = i
 			}
 			depth++
 		case ')':
 			depth--
-			if depth == 0 && start >= 0 {
+			if 0 == depth && start >= 0 {
 				triple, err := parseDomainTriple(inner[start : i+1])
 				if err != nil {
 					return nil, true, err
@@ -99,7 +99,7 @@ func parseDomainList(raw string) ([][]interface{}, bool, error) {
 			}
 		}
 	}
-	if len(domain) == 0 {
+	if 0 == len(domain) {
 		return nil, false, nil
 	}
 	return domain, true, nil
@@ -160,7 +160,7 @@ func splitEvalList(s string) []string {
 		case ')', ']', '}':
 			depth--
 		case ',':
-			if depth == 0 {
+			if 0 == depth {
 				parts = append(parts, s[start:i])
 				start = i + 1
 			}

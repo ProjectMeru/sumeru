@@ -63,7 +63,7 @@ func Upsert(ctx context.Context, model Model, values map[string]interface{}, con
 			}
 		}
 	}
-	if len(prepared) == 0 {
+	if 0 == len(prepared) {
 		return 0, fmt.Errorf("upsert requires at least one column")
 	}
 
@@ -91,7 +91,7 @@ func Upsert(ctx context.Context, model Model, values map[string]interface{}, con
 		}
 		updates = append(updates, fmt.Sprintf("%s = EXCLUDED.%s", qcol, qcol))
 	}
-	if len(updates) == 0 {
+	if 0 == len(updates) {
 		updates = append(updates, fmt.Sprintf("%s = EXCLUDED.%s", conflictQuoted, conflictQuoted))
 	}
 

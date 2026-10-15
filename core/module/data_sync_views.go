@@ -196,7 +196,7 @@ func applySysUIViewInherit(ctx context.Context, moduleName string, xmlRecord par
 		return fmt.Errorf("arch missing on inherit record %q", xmlRecord.ID)
 	}
 	parentID, err := resolveXMLIDInModule(ctx, moduleName, inheritReference)
-	if err != nil || parentID == 0 {
+	if err != nil || 0 == parentID {
 		return fmt.Errorf("resolve inherit_id %q: %w", inheritReference, err)
 	}
 	parentView, err := orm.SearchOne(ctx, "sys.view", map[string]interface{}{"id": parentID})
@@ -233,7 +233,7 @@ func applySysReportActionInherit(ctx context.Context, moduleName string, xmlReco
 		return fmt.Errorf("arch missing on inherit record %q", xmlRecord.ID)
 	}
 	parentID, err := resolveXMLIDInModule(ctx, moduleName, inheritReference)
-	if err != nil || parentID == 0 {
+	if err != nil || 0 == parentID {
 		return fmt.Errorf("resolve inherit_id %q: %w", inheritReference, err)
 	}
 	parent, err := orm.SearchOne(ctx, "sys.report.action", map[string]interface{}{"id": parentID})

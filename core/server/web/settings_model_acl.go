@@ -114,7 +114,7 @@ func modelACLRedirectURL(model string, form map[string][]string) string {
 }
 
 func modelACLMatrixRowName(model string, groupID int) string {
-	if groupID <= 0 {
+	if 0 >= groupID {
 		return "matrix." + model + ".global"
 	}
 	return fmt.Sprintf("matrix.%s.g%d", model, groupID)

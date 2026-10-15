@@ -208,7 +208,7 @@ func resolveSession(r *http.Request) sessionState {
 			return sessionState{clearCookie: true}
 		}
 	}
-	if !active || userID <= 0 {
+	if !active || 0 >= userID {
 		deleteSession(r.Context(), sid)
 		applog.WarnCode(r.Context(), errcode.AccessDenied, "session revoked for inactive user", applog.Event{
 			Component: "web",
@@ -322,7 +322,7 @@ func AuthenticatedUserID(r *http.Request) int {
 
 func requireLogin(w http.ResponseWriter, r *http.Request) bool {
 	uid := SessionUserID(r)
-	if uid <= 0 {
+	if 0 >= uid {
 		redirectToLogin(w, r, r.URL.RequestURI())
 		return false
 	}
@@ -351,7 +351,7 @@ func enrichRequestContext(r *http.Request, requestID string, session sessionStat
 	ctx := applog.ContextWithRequestID(r.Context(), requestID)
 	ctx = withSessionState(ctx, session)
 	userID := session.userID
-	if userID <= 0 {
+	if 0 >= userID {
 		userID = APIKeyUserID(r)
 	}
 	ctx = orm.ContextWithUID(ctx, userID)
@@ -367,8 +367,12 @@ func sessionActiveCompanyID(ctx context.Context, userID int) int64 {
 		return companyID
 	}
 	ids, err := orm.UserCompanyIDs(ctx, userID)
-	if err != nil || len(ids) == 0 {
+	if err != nil {
 		return 0
 	}
+	if 0 == len(ids) {
+		return 0
+	}
+
 	return ids[0]
 }

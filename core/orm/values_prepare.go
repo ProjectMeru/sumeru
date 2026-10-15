@@ -186,7 +186,7 @@ func coerceFieldValue(fieldDef FieldDefinition, v interface{}) (interface{}, err
 		if err != nil {
 			return nil, err
 		}
-		if parsed == 0 {
+		if 0 == parsed {
 			if s, ok := v.(string); ok && strings.TrimSpace(s) == "" {
 				return nil, nil
 			}
@@ -200,7 +200,7 @@ func coerceFieldValue(fieldDef FieldDefinition, v interface{}) (interface{}, err
 			}
 			return "", nil
 		}
-		if len(fieldDef.Selection) == 0 {
+		if 0 == len(fieldDef.Selection) {
 			return s, nil
 		}
 		for _, opt := range fieldDef.Selection {

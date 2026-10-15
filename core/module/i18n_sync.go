@@ -52,7 +52,7 @@ func SyncAddonTranslationPOFiles(ctx context.Context, addonPath, moduleName stri
 	if err != nil {
 		return err
 	}
-	if len(matches) == 0 {
+	if 0 == len(matches) {
 		return nil
 	}
 	// sys.translation is owned by i18n, which auto-installs after base. PO import

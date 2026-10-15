@@ -8,14 +8,14 @@ import (
 )
 
 func parseDomainArg(raw json.RawMessage) ([][]interface{}, error) {
-	if len(raw) == 0 || string(raw) == "null" {
+	if 0 == len(raw) || string(raw) == "null" {
 		return nil, nil
 	}
 	return orm.ParseDomainJSON(string(raw))
 }
 
 func normArgs(raw json.RawMessage) json.RawMessage {
-	if len(raw) == 0 || string(raw) == "null" {
+	if 0 == len(raw) || string(raw) == "null" {
 		return []byte("[]")
 	}
 	return raw
@@ -23,7 +23,7 @@ func normArgs(raw json.RawMessage) json.RawMessage {
 
 func parseLimitOffset(kwargs json.RawMessage) (limit int, offset int) {
 	limit, offset = 500, 0
-	if len(kwargs) == 0 || string(kwargs) == "null" {
+	if 0 == len(kwargs) || string(kwargs) == "null" {
 		return limit, offset
 	}
 	var m map[string]interface{}
@@ -40,7 +40,7 @@ func parseLimitOffset(kwargs json.RawMessage) (limit int, offset int) {
 			offset = int(f)
 		}
 	}
-	if limit <= 0 {
+	if 0 >= limit {
 		limit = 500
 	}
 	return limit, offset

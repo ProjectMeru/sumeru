@@ -41,7 +41,7 @@ func parseLoginLogoDataURL(raw string) (mime string, data []byte, ok bool) {
 	}
 	rest := strings.TrimPrefix(raw, "data:")
 	semi := strings.Index(rest, ";")
-	if semi <= 0 {
+	if 0 >= semi {
 		return "", nil, false
 	}
 	mime = strings.TrimSpace(rest[:semi])
@@ -56,7 +56,7 @@ func parseLoginLogoDataURL(raw string) (mime string, data []byte, ok bool) {
 	if err != nil {
 		return "", nil, false
 	}
-	if len(decoded) == 0 {
+	if 0 == len(decoded) {
 		return "", nil, false
 	}
 	return mime, decoded, true

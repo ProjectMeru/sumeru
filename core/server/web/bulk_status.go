@@ -15,13 +15,13 @@ func BulkStatusHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id, _ := strconv.Atoi(strings.TrimSpace(r.URL.Query().Get("id")))
-	if id <= 0 {
+	if 0 >= id {
 		http.Error(w, "id required", http.StatusBadRequest)
 		return
 	}
 	uid := AuthenticatedUserID(r)
 	batch, err := orm.SearchOne(r.Context(), report.BulkModelName, map[string]interface{}{"id": id})
-	if err != nil || len(batch) == 0 {
+	if err != nil || 0 == len(batch) {
 		http.NotFound(w, r)
 		return
 	}

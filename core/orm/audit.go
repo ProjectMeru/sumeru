@@ -96,7 +96,7 @@ func RecordAuditLogAvailable(ctx context.Context) bool {
 	if err != nil {
 		return true
 	}
-	if len(installed) == 0 {
+	if 0 == len(installed) {
 		return true
 	}
 	_, ok := installed["audit"]
@@ -106,13 +106,13 @@ func RecordAuditLogAvailable(ctx context.Context) bool {
 // SearchRecordAuditLog returns audit rows for one record. Caller must verify model read access.
 func SearchRecordAuditLog(ctx context.Context, model string, resID int, limit, offset int) ([]map[string]interface{}, error) {
 	model = strings.TrimSpace(model)
-	if model == "" || resID <= 0 {
+	if model == "" || 0 >= resID {
 		return nil, fmt.Errorf("invalid record")
 	}
 	if !RecordAuditLogAvailable(ctx) {
 		return nil, nil
 	}
-	if limit <= 0 || limit > recordAuditLogMax {
+	if 0 >= limit || limit > recordAuditLogMax {
 		limit = recordAuditLogMax
 	}
 	if offset < 0 {

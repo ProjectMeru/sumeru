@@ -9,11 +9,11 @@ import (
 
 // CompanySettingsFormHref returns a workspace URL to edit company IM settings when the user may read core.company.
 func CompanySettingsFormHref(ctx context.Context, companyID int) string {
-	if companyID <= 0 {
+	if 0 >= companyID {
 		return ""
 	}
 	uid := orm.SecurityUID(ctx)
-	if uid <= 0 {
+	if 0 >= uid {
 		return ""
 	}
 	if err := orm.CheckModelAccess(ctx, uid, "core.company", "read"); err != nil {

@@ -13,7 +13,7 @@ func sensitiveReadFields(model string) map[string]bool {
 
 // CheckFieldReadAccess errors if any requested field is read-denied by sys.field.access.
 func CheckFieldReadAccess(ctx context.Context, uid int, model string, fields []string) error {
-	if SecurityBypass(ctx) || uid == superuserUID || len(fields) == 0 {
+	if SecurityBypass(ctx) || uid == superuserUID || 0 == len(fields) {
 		return nil
 	}
 	denied, err := fieldAccessDenied(ctx, uid, model, "read")

@@ -33,7 +33,7 @@ func writeJSONResponse(w http.ResponseWriter, v interface{}) {
 // resolveRequestUID returns SecurityUID from context, falling back to the session cookie.
 func resolveRequestUID(r *http.Request) int {
 	uid := orm.SecurityUID(r.Context())
-	if uid <= 0 {
+	if 0 >= uid {
 		uid = SessionUserID(r)
 	}
 	return uid

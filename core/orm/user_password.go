@@ -25,7 +25,7 @@ func passwordHashWriteAllowed(ctx context.Context) bool {
 
 // SetOwnUserPassword lets a user change their own password (no current-password check yet).
 func SetOwnUserPassword(ctx context.Context, actor, userID int, plain string) error {
-	if userID <= 0 || actor <= 0 {
+	if 0 >= userID || 0 >= actor {
 		return fmt.Errorf("unauthenticated")
 	}
 	if actor != userID && !UserHasGroupXML(ctx, actor, "base.group_system") {
@@ -50,10 +50,10 @@ func SetOwnUserPassword(ctx context.Context, actor, userID int, plain string) er
 
 // SetUserPassword hashes plain under policy and stores it. Requires system admin.
 func SetUserPassword(ctx context.Context, actor, userID int, plain string) error {
-	if userID <= 0 {
+	if 0 >= userID {
 		return fmt.Errorf("invalid user id")
 	}
-	if actor <= 0 {
+	if 0 >= actor {
 		return fmt.Errorf("unauthenticated")
 	}
 	if !UserHasGroupXML(ctx, actor, "base.group_system") {
@@ -77,7 +77,7 @@ func SetUserPassword(ctx context.Context, actor, userID int, plain string) error
 
 // SetUserPasswordHash stores a pre-computed bcrypt hash (internal / trusted callers only).
 func SetUserPasswordHash(ctx context.Context, userID int, hash string) error {
-	if userID <= 0 {
+	if 0 >= userID {
 		return fmt.Errorf("invalid user id")
 	}
 	hash = strings.TrimSpace(hash)
@@ -93,7 +93,7 @@ func SetUserPasswordHash(ctx context.Context, userID int, hash string) error {
 }
 
 func DestroySessionsForUser(ctx context.Context, userID int) {
-	if DB == nil || userID <= 0 {
+	if DB == nil || 0 >= userID {
 		return
 	}
 	tbl := MustQuotedTableName("sys.session")

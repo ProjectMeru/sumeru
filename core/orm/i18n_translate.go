@@ -46,7 +46,7 @@ func UserLang(ctx context.Context) string {
 		return "en_US"
 	}
 	uid := UIDFromContext(ctx)
-	if uid <= 0 {
+	if 0 >= uid {
 		return "en_US"
 	}
 	user, err := SearchOne(ctx, "core.user", map[string]interface{}{"id": uid})

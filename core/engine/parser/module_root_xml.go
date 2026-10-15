@@ -24,18 +24,18 @@ type actionHelp struct {
 
 // Action represents a simplified <action> tag for actions like sys.action.window.
 type Action struct {
-	XMLName  xml.Name   `xml:"action"`
-	ID       string     `xml:"id,attr"`
-	Type     string     `xml:"type,attr"`
-	Model    string     `xml:"model,attr"`
-	Name     string     `xml:"name,attr"`
-	ViewMode     string `xml:"view_mode,attr"`
-	ViewID       string `xml:"view_id,attr"`
-	SearchViewID string `xml:"search_view_id,attr"`
-	Context      string `xml:"context,attr"`
-	Domain   string     `xml:"domain,attr"`
-	URL      string     `xml:"url,attr"`
-	Help     actionHelp `xml:"help"`
+	XMLName      xml.Name   `xml:"action"`
+	ID           string     `xml:"id,attr"`
+	Type         string     `xml:"type,attr"`
+	Model        string     `xml:"model,attr"`
+	Name         string     `xml:"name,attr"`
+	ViewMode     string     `xml:"view_mode,attr"`
+	ViewID       string     `xml:"view_id,attr"`
+	SearchViewID string     `xml:"search_view_id,attr"`
+	Context      string     `xml:"context,attr"`
+	Domain       string     `xml:"domain,attr"`
+	URL          string     `xml:"url,attr"`
+	Help         actionHelp `xml:"help"`
 }
 
 // ToRecord converts an Action to a Record for backward compatibility.

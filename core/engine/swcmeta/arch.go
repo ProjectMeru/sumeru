@@ -126,7 +126,7 @@ func formMetaForModel(model string) *FormMeta {
 }
 
 func enrichFields(model string, fields []ArchField) []ArchField {
-	if model == "" || len(fields) == 0 {
+	if model == "" || 0 == len(fields) {
 		return fields
 	}
 	out := make([]ArchField, len(fields))
@@ -163,7 +163,7 @@ func enrichField(model string, f ArchField) ArchField {
 	if f.Relation == "" {
 		f.Relation = fd.Relation
 	}
-	if len(f.Selection) == 0 && len(fd.Selection) > 0 {
+	if 0 == len(f.Selection) && len(fd.Selection) > 0 {
 		f.Selection = fd.Selection
 	}
 	if fd.Required {
@@ -316,7 +316,7 @@ func parseArchInt(raw string) int {
 }
 
 func serializeDivs(ctx context.Context, model string, s *parser.Sheet) []ArchDiv {
-	if s == nil || len(s.Div) == 0 {
+	if s == nil || 0 == len(s.Div) {
 		return nil
 	}
 	out := make([]ArchDiv, 0, len(s.Div))
@@ -326,7 +326,7 @@ func serializeDivs(ctx context.Context, model string, s *parser.Sheet) []ArchDiv
 			out = append(out, div)
 		}
 	}
-	if len(out) == 0 {
+	if 0 == len(out) {
 		return nil
 	}
 	return out
@@ -441,14 +441,14 @@ func parseFieldOptions(raw string) map[string]string {
 			out[strings.TrimSpace(kv[0])] = strings.TrimSpace(kv[1])
 		}
 	}
-	if len(out) == 0 {
+	if 0 == len(out) {
 		return nil
 	}
 	return out
 }
 
 func serializeSeparators(items []parser.Separator) []ArchSeparator {
-	if len(items) == 0 {
+	if 0 == len(items) {
 		return nil
 	}
 	out := make([]ArchSeparator, 0, len(items))
@@ -550,7 +550,7 @@ func translateLabels(ctx context.Context, lang string, items []ArchLabel) []Arch
 }
 
 func translateSelection(ctx context.Context, lang string, selection [][]string) [][]string {
-	if len(selection) == 0 {
+	if 0 == len(selection) {
 		return selection
 	}
 	out := make([][]string, len(selection))
@@ -577,7 +577,7 @@ func translateSearch(ctx context.Context, lang string, meta *SearchMeta) {
 }
 
 func serializeLabels(items []parser.Label) []ArchLabel {
-	if len(items) == 0 {
+	if 0 == len(items) {
 		return nil
 	}
 	out := make([]ArchLabel, 0, len(items))

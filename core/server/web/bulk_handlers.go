@@ -31,7 +31,7 @@ func BulkUploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer upload.Close()
 	content, err := io.ReadAll(upload)
-	if err != nil || len(content) == 0 {
+	if err != nil || 0 == len(content) {
 		http.Error(w, "empty file", http.StatusBadRequest)
 		return
 	}
@@ -120,7 +120,7 @@ func BulkSaveImportTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	batch, err := orm.SearchOne(r.Context(), report.BulkModelName, map[string]interface{}{"id": body.BatchID})
-	if err != nil || len(batch) == 0 {
+	if err != nil || 0 == len(batch) {
 		http.NotFound(w, r)
 		return
 	}
@@ -129,7 +129,7 @@ func BulkSaveImportTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	mapping := body.Mapping
-	if len(mapping) == 0 {
+	if 0 == len(mapping) {
 		mapping, err = report.ParseMappingJSON(orm.AsString(batch["column_mapping"]))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -189,7 +189,7 @@ func BulkConfirmHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	batchID := report.ParseActionIDParam(r.FormValue("id"))
-	if batchID <= 0 {
+	if 0 >= batchID {
 		http.Error(w, "id required", http.StatusBadRequest)
 		return
 	}
@@ -223,7 +223,7 @@ func BulkCancelHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = r.ParseForm()
 	batchID := report.ParseActionIDParam(r.FormValue("id"))
-	if batchID <= 0 {
+	if 0 >= batchID {
 		http.Error(w, "id required", http.StatusBadRequest)
 		return
 	}

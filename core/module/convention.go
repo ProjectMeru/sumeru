@@ -79,7 +79,7 @@ func addonGoModuleContext(addonPath string) (repositoryRoot, moduleImportPath, r
 // Each addon is validated against the Go module root that contains it (supports multiple
 // addon roots, e.g. standard sumeru plus a sibling workspace module).
 func ValidateDiscoveredAddons(discoveredAddons map[string]*Addon) error {
-	if len(discoveredAddons) == 0 {
+	if 0 == len(discoveredAddons) {
 		return nil
 	}
 	if err := ValidateDiscoveredDepends(discoveredAddons); err != nil {

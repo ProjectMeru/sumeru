@@ -14,7 +14,7 @@ func IMEnabled(ctx context.Context) bool {
 		return true
 	}
 	companyID := orm.CompanyIDFromContext(ctx)
-	if companyID <= 0 {
+	if 0 >= companyID {
 		companyID = orm.ActiveCompanyIDForUser(ctx, orm.SecurityUID(ctx))
 	}
 	if enabled, ok := readIMEnabledColumn(ctx, int(companyID)); ok {

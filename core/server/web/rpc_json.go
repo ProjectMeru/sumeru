@@ -52,7 +52,7 @@ func RPCJSONHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID := AuthenticatedUserID(r)
-	if userID <= 0 {
+	if 0 >= userID {
 		api.WriteResponse(w, http.StatusUnauthorized, api.Fail(api.CodeUnauthorized, "Unauthorized", nil))
 		return
 	}

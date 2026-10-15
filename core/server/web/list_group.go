@@ -41,7 +41,7 @@ func groupSectionLabel(key string, displayFromRow string) string {
 
 // partitionListSections groups flat list rows by the first group-by field value.
 func partitionListSections(rows []map[string]interface{}, groupField string) []render.ListSection {
-	if groupField == "" || len(rows) == 0 {
+	if groupField == "" || 0 == len(rows) {
 		return nil
 	}
 	buckets := map[string][]map[string]interface{}{}

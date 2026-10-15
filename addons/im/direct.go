@@ -26,7 +26,7 @@ func SearchInternalUsers(ctx context.Context, uid int, query string, limit int) 
 		return nil, err
 	}
 	q := strings.TrimSpace(query)
-	if limit <= 0 {
+	if 0 >= limit {
 		if q == "" {
 			limit = directUserDirectoryLimit
 		} else {
@@ -72,7 +72,7 @@ func ListDirectConversations(ctx context.Context, uid int, limit int) ([]map[str
 	if err := orm.CheckModelAccess(ctx, uid, MessageModel, "read"); err != nil {
 		return nil, err
 	}
-	if limit <= 0 || limit > 50 {
+	if 0 >= limit || limit > 50 {
 		limit = 30
 	}
 	domain := [][]interface{}{
@@ -102,7 +102,7 @@ func ListDirectConversations(ctx context.Context, uid int, limit int) ([]map[str
 		default:
 			continue
 		}
-		if peer <= 0 || peer == uid {
+		if 0 >= peer || peer == uid {
 			continue
 		}
 		if _, ok := seen[peer]; ok {
@@ -148,7 +148,7 @@ func directUnreadBySender(ctx context.Context, uid int) map[int]int {
 	}
 	for _, row := range rows {
 		sid, _ := orm.CoerceInt64(row["sender_id"])
-		if sid <= 0 {
+		if 0 >= sid {
 			continue
 		}
 		out[int(sid)]++
@@ -158,7 +158,7 @@ func directUnreadBySender(ctx context.Context, uid int) map[int]int {
 
 // ListDirectThread returns messages between uid and peerID oldest first.
 func ListDirectThread(ctx context.Context, uid, peerID int) ([]map[string]interface{}, error) {
-	if peerID <= 0 || peerID == uid {
+	if 0 >= peerID || peerID == uid {
 		return nil, fmt.Errorf("invalid peer")
 	}
 	if orm.DB == nil {
@@ -206,7 +206,7 @@ func ListDirectThread(ctx context.Context, uid, peerID int) ([]map[string]interf
 }
 
 func listMessageAttachments(ctx context.Context, uid, messageID int) []map[string]interface{} {
-	if messageID <= 0 {
+	if 0 >= messageID {
 		return nil
 	}
 	if err := orm.CheckModelAccess(ctx, uid, "sys.attachment", "read"); err != nil {

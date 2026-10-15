@@ -36,7 +36,7 @@ func RejectSmuggledUserBypass(ctx context.Context) error {
 		return nil
 	}
 	uid := UIDFromContext(ctx)
-	if uid <= 0 || uid == superuserUID {
+	if 0 >= uid || uid == superuserUID {
 		return nil
 	}
 	return &SmuggledBypassError{UID: uid}

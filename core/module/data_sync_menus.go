@@ -62,7 +62,7 @@ func syncMenusFromItems(ctx context.Context, moduleName string, menus []parser.M
 		for _, menu := range pending {
 			pid := strings.TrimSpace(menu.ParentID)
 			parentID, err := resolveXMLIDInModule(ctx, moduleName, pid)
-			if err != nil || parentID == 0 {
+			if err != nil || 0 == parentID {
 				next = append(next, menu)
 				continue
 			}
@@ -76,7 +76,7 @@ func syncMenusFromItems(ctx context.Context, moduleName string, menus []parser.M
 			progress++
 		}
 		pending = next
-		if progress == 0 {
+		if 0 == progress {
 			break
 		}
 	}
@@ -115,7 +115,7 @@ func menuRowID(ctx context.Context, moduleName, xmlID string) (int, error) {
 		return 0, err
 	}
 	cid, ok := orm.CoerceInt64(md["core_id"])
-	if !ok || cid <= 0 {
+	if !ok || 0 >= cid {
 		return 0, fmt.Errorf("no core_id")
 	}
 	return int(cid), nil

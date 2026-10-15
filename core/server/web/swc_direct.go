@@ -38,7 +38,7 @@ func SwcDirectStatusHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	uid := AuthenticatedUserID(r)
 	companyID := int(orm.CompanyIDFromContext(ctx))
-	if companyID <= 0 {
+	if 0 >= companyID {
 		companyID = int(orm.ActiveCompanyIDForUser(ctx, uid))
 	}
 	unread := 0
@@ -155,7 +155,7 @@ func SwcDirectUploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	msgID, _ := strconv.Atoi(strings.TrimSpace(r.FormValue("message_id")))
-	if msgID <= 0 {
+	if 0 >= msgID {
 		http.Error(w, "message_id required", http.StatusBadRequest)
 		return
 	}
@@ -183,7 +183,7 @@ func SwcDirectUploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer upload.Close()
 	content, err := io.ReadAll(upload)
-	if err != nil || len(content) == 0 {
+	if err != nil || 0 == len(content) {
 		http.Error(w, "empty file", http.StatusBadRequest)
 		return
 	}

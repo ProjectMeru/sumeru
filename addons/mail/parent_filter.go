@@ -19,7 +19,7 @@ func filterParentReadable(ctx context.Context, model string, rows []map[string]i
 	for _, row := range rows {
 		parent := strings.TrimSpace(orm.AsString(row["model"]))
 		parentID := recordID(row["res_id"])
-		if parent == "" || parentID <= 0 || parent == "mail.message" || parent == "mail.activity" {
+		if parent == "" || 0 >= parentID || parent == "mail.message" || parent == "mail.activity" {
 			if model == "mail.message" && strings.TrimSpace(orm.AsString(row["state"])) == "quarantine" && manager {
 				out = append(out, row)
 			}

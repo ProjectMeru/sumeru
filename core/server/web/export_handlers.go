@@ -25,7 +25,7 @@ func resolveExportRequest(w http.ResponseWriter, r *http.Request) (report.Export
 		return report.ExportCSVInput{}, false
 	}
 	fields := report.ParseFieldsParam(r.URL.Query().Get(reportFieldsParam))
-	if len(fields) == 0 {
+	if 0 == len(fields) {
 		http.Error(w, "fields required", http.StatusBadRequest)
 		return report.ExportCSVInput{}, false
 	}

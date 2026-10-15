@@ -11,14 +11,14 @@ import (
 
 // Master-data models always expose Reports import/export in workspace chrome.
 var masterDataReportModels = map[string]struct{}{
-	"core.user":         {},
-	"core.company":      {},
-	"core.group":        {},
-	"core.lang":         {},
-	"core.country":      {},
+	"core.user":          {},
+	"core.company":       {},
+	"core.group":         {},
+	"core.lang":          {},
+	"core.country":       {},
 	"core.country.state": {},
-	"core.city":         {},
-	"core.user.apikey":  {},
+	"core.city":          {},
+	"core.user.apikey":   {},
 }
 
 // ApplyReportToArch sets arch.Report from the active view, sibling action views, or master-data defaults.
@@ -109,10 +109,10 @@ func appendUniqueStrings(list []string, items ...string) []string {
 }
 
 func normalizeReportCapabilities(caps *report.Capabilities) {
-	if caps.BulkUpload && len(caps.BulkModes) == 0 {
+	if caps.BulkUpload && 0 == len(caps.BulkModes) {
 		caps.BulkModes = []string{report.ImportModeCreate, report.ImportModeUpsert}
 	}
-	if caps.HasDownload() && len(caps.PDFSizes) == 0 {
+	if caps.HasDownload() && 0 == len(caps.PDFSizes) {
 		caps.PDFSizes = []string{report.PageSizeA4, report.PageSizeLegal, report.PageSizeLetter}
 	}
 }

@@ -134,7 +134,7 @@ func StartOutboxDrain(parent context.Context, every time.Duration) {
 	if outboxCancel != nil {
 		return
 	}
-	if every <= 0 {
+	if 0 >= every {
 		every = 5 * time.Second
 	}
 	ctx, cancel := context.WithCancel(parent)

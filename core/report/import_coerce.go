@@ -120,12 +120,12 @@ func resolveMany2One(ctx context.Context, relation string, raw interface{}) (int
 	}
 	switch v := raw.(type) {
 	case int64:
-		if v <= 0 {
+		if 0 >= v {
 			return nil, fmt.Errorf("invalid reference")
 		}
 		return v, nil
 	case int:
-		if v <= 0 {
+		if 0 >= v {
 			return nil, fmt.Errorf("invalid reference")
 		}
 		return int64(v), nil
@@ -138,9 +138,13 @@ func resolveMany2One(ctx context.Context, relation string, raw interface{}) (int
 			return id, nil
 		}
 		row, err := orm.SearchOne(ctx, relation, map[string]interface{}{"name": s})
-		if err != nil || len(row) == 0 {
+		if err != nil {
 			return nil, fmt.Errorf("no %s named %q", relation, s)
 		}
+		if 0 == len(row) {
+			return nil, fmt.Errorf("no %s named %q", relation, s)
+		}
+
 		id, _ := orm.CoerceInt64(row["id"])
 		return id, nil
 	}

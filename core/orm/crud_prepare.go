@@ -51,7 +51,7 @@ func prepareCreateWrite(ctx context.Context, model Model, values map[string]inte
 	if err := runConstraints(ctx, model.ModelName(), mergeRecordMap(map[string]interface{}{}, prepared)); err != nil {
 		return nil, 0, err
 	}
-	if len(prepared) == 0 {
+	if 0 == len(prepared) {
 		return nil, 0, fmt.Errorf("create requires at least one column")
 	}
 	return prepared, uid, nil

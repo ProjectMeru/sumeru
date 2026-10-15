@@ -30,7 +30,7 @@ func importAliasForPath(importPath string) string {
 }
 
 func renderZRefs(refs []exportedRef) string {
-	if len(refs) == 0 {
+	if 0 == len(refs) {
 		return ""
 	}
 
@@ -79,4 +79,3 @@ func renderZRefs(refs []exportedRef) string {
 	}
 	return b.String()
 }
-

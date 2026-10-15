@@ -35,7 +35,7 @@ func rpcRead(ctx context.Context, model string, args json.RawMessage) (interface
 			return nil, err
 		}
 	}
-	if len(ids) == 0 {
+	if 0 == len(ids) {
 		return []map[string]interface{}{}, nil
 	}
 	idValues := make([]interface{}, len(ids))

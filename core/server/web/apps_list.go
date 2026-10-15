@@ -165,7 +165,7 @@ func buildAppsModuleList(moduleRows []map[string]interface{}) []appsModule {
 }
 
 func enrichAppsModules(ctx context.Context, modules []appsModule, browse appsBrowseState) []appsModule {
-	if len(modules) == 0 {
+	if 0 == len(modules) {
 		return modules
 	}
 	out := make([]appsModule, len(modules))

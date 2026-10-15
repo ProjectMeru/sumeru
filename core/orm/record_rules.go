@@ -50,7 +50,7 @@ func loadRuleDomainParts(ctx context.Context, uid int, model string, op string) 
 	if SecurityBypass(ctx) || uid == superuserUID {
 		return empty, nil
 	}
-	if uid <= 0 {
+	if 0 >= uid {
 		return empty, nil
 	}
 	groups, err := EffectiveGroupIDs(ctx, uid)
@@ -144,7 +144,7 @@ func loadRuleDomainsFromDB(ctx context.Context, model, op string, groups []int, 
 		}
 		dom = SubstituteDomainContext(dom, dc)
 		gids := groupsByRule[r.id]
-		if len(gids) == 0 {
+		if 0 == len(gids) {
 			if len(dom) > 0 {
 				out.globals = append(out.globals, dom)
 			}
@@ -160,7 +160,7 @@ func loadRuleDomainsFromDB(ctx context.Context, model, op string, groups []int, 
 		if !match {
 			continue
 		}
-		if len(dom) == 0 {
+		if 0 == len(dom) {
 			out.allowAllGroups = true
 			continue
 		}
@@ -182,11 +182,11 @@ func BuildWhereWithRecordRules(ctx context.Context, uid int, model, op string, b
 			Operation: "dev_access_rules",
 			Status:    "success",
 			Context: map[string]interface{}{
-				"resource":        model,
-				"op":              op,
-				"uid":             uid,
-				"global_rules":    len(parts.globals),
-				"group_rules":     len(parts.groups),
+				"resource":         model,
+				"op":               op,
+				"uid":              uid,
+				"global_rules":     len(parts.globals),
+				"group_rules":      len(parts.groups),
 				"allow_all_groups": parts.allowAllGroups,
 			},
 		})
@@ -210,10 +210,10 @@ func BuildWhereWithRecordRules(ctx context.Context, uid int, model, op string, b
 			if err != nil {
 				return "", nil, err
 			}
-			if andSQL == "1=1" && len(clauses) == 0 {
+			if andSQL == "1=1" && 0 == len(clauses) {
 				return orSQL, orArgs, nil
 			}
-			if len(clauses) == 0 {
+			if 0 == len(clauses) {
 				return orSQL, orArgs, nil
 			}
 			shifted := shiftPlaceholders(orSQL, len(andArgs)+1)
@@ -232,7 +232,7 @@ func CheckRecordRules(ctx context.Context, uid int, model string, op string, rec
 	if SecurityBypass(ctx) || uid == superuserUID {
 		return nil
 	}
-	if uid <= 0 {
+	if 0 >= uid {
 		return &AccessDeniedError{Model: model, Operation: op}
 	}
 	parts, err := loadRuleDomainParts(ctx, uid, model, op)
@@ -247,7 +247,7 @@ func CheckRecordRules(ctx context.Context, uid int, model string, op string, rec
 	if parts.allowAllGroups {
 		return nil
 	}
-	if len(parts.groups) == 0 {
+	if 0 == len(parts.groups) {
 		return nil
 	}
 	for _, dom := range parts.groups {

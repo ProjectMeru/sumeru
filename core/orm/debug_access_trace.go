@@ -12,7 +12,7 @@ const debugRuleDomainMax = 512
 // BuildDebugAccessTrace returns ACL/rule summary for the current user (support UI only).
 func BuildDebugAccessTrace(ctx context.Context, uid int, model string) (map[string]interface{}, error) {
 	model = strings.TrimSpace(model)
-	if uid <= 0 {
+	if 0 >= uid {
 		return nil, fmt.Errorf("login required")
 	}
 	if UserIsPortalOnly(ctx, uid) {
@@ -67,14 +67,14 @@ func BuildDebugAccessTrace(ctx context.Context, uid int, model string) (map[stri
 	ruleSummary, truncated := summarizeRuleParts(parts)
 
 	out := map[string]interface{}{
-		"uid":              uid,
-		"model":            model,
-		"company_id":       dc.CompanyID,
+		"uid":               uid,
+		"model":             model,
+		"company_id":        dc.CompanyID,
 		"allowed_companies": dc.CompanyIDs,
-		"group_ids":        groups,
-		"model_read_ok":    true,
-		"fields":           fields,
-		"rule_domain":      ruleSummary,
+		"group_ids":         groups,
+		"model_read_ok":     true,
+		"fields":            fields,
+		"rule_domain":       ruleSummary,
 	}
 	if truncated {
 		out["rule_domain_truncated"] = true

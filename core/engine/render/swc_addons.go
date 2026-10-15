@@ -14,7 +14,7 @@ import (
 // BuildSwcAddonEntriesJSON returns JSON array of SWC entry script URLs for installed addons.
 func BuildSwcAddonEntriesJSON() template.JS {
 	urls := collectInstalledSwcEntryURLs()
-	if len(urls) == 0 {
+	if 0 == len(urls) {
 		return template.JS("[]")
 	}
 	raw, err := json.Marshal(urls)

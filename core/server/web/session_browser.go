@@ -17,7 +17,7 @@ func sessionBrowserPresenceEnabled() bool {
 
 func sessionBrowserGrace() time.Duration {
 	sec := config.AppConfig.SessionBrowserGraceSeconds
-	if sec <= 0 {
+	if 0 >= sec {
 		sec = defaultSessionBrowserGraceSeconds
 	}
 	return time.Duration(sec) * time.Second

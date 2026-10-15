@@ -25,19 +25,19 @@ const (
 
 // Workspace view_type values.
 const (
-	ViewModeList     = "list"
-	ViewModeForm     = "form"
-	ViewModeKanban   = "kanban"
-	ViewModePivot    = "pivot"
-	ViewModeGraph    = "graph"
-	ViewModeCalendar = "calendar"
-	ViewModeGantt    = "gantt"
-	ViewModeMap      = "map"
-	ViewModeCohort   = "cohort"
+	ViewModeList      = "list"
+	ViewModeForm      = "form"
+	ViewModeKanban    = "kanban"
+	ViewModePivot     = "pivot"
+	ViewModeGraph     = "graph"
+	ViewModeCalendar  = "calendar"
+	ViewModeGantt     = "gantt"
+	ViewModeMap       = "map"
+	ViewModeCohort    = "cohort"
 	ViewModeHierarchy = "hierarchy"
 	ViewModeActivity  = "activity"
-	ViewModeSearch   = "search"
-	ViewModeIframe   = "iframe"
+	ViewModeSearch    = "search"
+	ViewModeIframe    = "iframe"
 )
 
 // WorkspaceQuery is the /web workspace query (empty fields are omitted).

@@ -18,7 +18,7 @@ func CheckModelAccess(ctx context.Context, uid int, model string, op string) err
 	if _, ok := Registry[model]; !ok {
 		return fmt.Errorf("unknown model %q", model)
 	}
-	if uid <= 0 {
+	if 0 >= uid {
 		LogAccessDeny(ctx, model, op, "not authenticated")
 		return &AccessDeniedError{Model: model, Operation: op}
 	}

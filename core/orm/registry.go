@@ -49,7 +49,7 @@ func SyncModels() error {
 	}
 	for _, model := range Registry {
 		name := model.ModelName()
-		if len(installed) == 0 {
+		if 0 == len(installed) {
 			owner := DeclaringModule(name)
 			if owner != "" && !IsPlatformModule(owner) {
 				continue
@@ -70,7 +70,7 @@ func ColumnTypeSQL(f FieldDefinition) (string, bool) {
 	switch f.Type {
 	case Char:
 		size := f.Size
-		if size <= 0 {
+		if 0 >= size {
 			size = 255
 		}
 		return fmt.Sprintf("VARCHAR(%d)", size), true
@@ -84,7 +84,7 @@ func ColumnTypeSQL(f FieldDefinition) (string, bool) {
 		return "DOUBLE PRECISION", true
 	case Numeric:
 		prec, scale := f.Precision, f.Scale
-		if prec <= 0 {
+		if 0 >= prec {
 			prec = 16
 		}
 		if scale < 0 {

@@ -25,7 +25,7 @@ func UserSecurityPostHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	actor := orm.SecurityUID(ctx)
 	userID, _ := strconv.Atoi(r.PostForm.Get("user_id"))
-	if userID <= 0 {
+	if 0 >= userID {
 		http.Error(w, "user_id required", http.StatusBadRequest)
 		return
 	}

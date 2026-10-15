@@ -45,7 +45,7 @@ func ApplyInheritArch(parentArch, inheritFragment string) (string, error) {
 	arch := parentArch
 	frag := stripDataWrapper(inheritFragment)
 	ops := parseXPaths(frag)
-	if len(ops) == 0 && strings.TrimSpace(frag) != "" {
+	if 0 == len(ops) && strings.TrimSpace(frag) != "" {
 		return arch, fmt.Errorf("no <xpath> blocks found in inherit arch")
 	}
 	for _, op := range ops {
@@ -81,7 +81,7 @@ func parseXPathIndex(raw string) (int, error) {
 		return 0, nil
 	}
 	n, err := strconv.Atoi(raw)
-	if err != nil || n <= 0 {
+	if err != nil || 0 >= n {
 		return 0, fmt.Errorf("xpath index must be a positive integer, got %q", raw)
 	}
 	return n, nil
@@ -154,7 +154,7 @@ func findAllElementSpans(arch string, target xpathTarget) []elementSpan {
 
 func resolveElementSpan(arch string, target xpathTarget, expr string) (elementSpan, error) {
 	spans := findAllElementSpans(arch, target)
-	if len(spans) == 0 {
+	if 0 == len(spans) {
 		return elementSpan{}, fmt.Errorf("inherit xpath: %s not found", expr)
 	}
 	if target.Index == 0 {
@@ -221,12 +221,12 @@ func parseXMLAttrs(openTag string) map[string]string {
 	rest = strings.TrimSuffix(rest, "/")
 	for len(rest) > 0 {
 		eq := strings.IndexByte(rest, '=')
-		if eq <= 0 {
+		if 0 >= eq {
 			break
 		}
 		name := strings.TrimSpace(rest[:eq])
 		valPart := strings.TrimSpace(rest[eq+1:])
-		if len(valPart) == 0 {
+		if 0 == len(valPart) {
 			break
 		}
 		quote := valPart[0]
@@ -276,7 +276,7 @@ func findMatchingCloseTag(arch string, openEnd int, tag string) (closeStart int,
 		}
 		absClose := pos + nextClose
 		depth--
-		if depth == 0 {
+		if 0 == depth {
 			return absClose, true
 		}
 		pos = absClose + len(closeNeedle)
@@ -359,7 +359,7 @@ func applyAttributes(arch string, target xpathTarget, inner, expr string) (strin
 	}
 	old := arch[span.start:span.openEnd]
 	attrs := parseAttributeOps(inner)
-	if len(attrs) == 0 {
+	if 0 == len(attrs) {
 		return arch, fmt.Errorf("inherit xpath: no <attribute> elements for position=attributes")
 	}
 	next := old

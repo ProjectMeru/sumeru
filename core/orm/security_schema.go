@@ -42,7 +42,7 @@ func EnsureSecurityJoinIndexes() error {
 
 // NullableGroupIDForAccess returns SQL argument for sys.access.group_id (NULL if 0).
 func NullableGroupIDForAccess(groupID int) interface{} {
-	if groupID <= 0 {
+	if 0 >= groupID {
 		return nil
 	}
 	return int64(groupID)

@@ -15,7 +15,7 @@ func LoadSavedSearches(ctx context.Context, actionID int, model string) []SavedS
 		return nil
 	}
 	uid := orm.UIDFromContext(ctx)
-	if uid <= 0 {
+	if 0 >= uid {
 		return nil
 	}
 	seen := map[int]struct{}{}
@@ -30,7 +30,7 @@ func LoadSavedSearches(ctx context.Context, actionID int, model string) []SavedS
 		}
 		for _, row := range rows {
 			id, _ := orm.CoerceInt64(row["id"])
-			if id <= 0 {
+			if 0 >= id {
 				continue
 			}
 			if _, ok := seen[int(id)]; ok {
@@ -81,31 +81,31 @@ func SaveSavedSearch(ctx context.Context, in SavedSearchInput) (int, error) {
 		return 0, fmt.Errorf("model and name required")
 	}
 	uid := orm.UIDFromContext(ctx)
-	if uid <= 0 {
+	if 0 >= uid {
 		return 0, fmt.Errorf("login required")
 	}
 	vals := map[string]interface{}{
-		"name":          name,
-		"user_id":       int64(uid),
-		"model":         model,
-		"action_id":     int64(in.ActionID),
-		"search_query":  strings.TrimSpace(in.Search),
-		"filter_csv":    strings.TrimSpace(in.Filter),
-		"domain_json":   strings.TrimSpace(in.Domain),
-		"group_by":      strings.TrimSpace(in.GroupBy),
-		"is_default":    in.IsDefault,
-		"is_shared":     in.IsShared,
+		"name":         name,
+		"user_id":      int64(uid),
+		"model":        model,
+		"action_id":    int64(in.ActionID),
+		"search_query": strings.TrimSpace(in.Search),
+		"filter_csv":   strings.TrimSpace(in.Filter),
+		"domain_json":  strings.TrimSpace(in.Domain),
+		"group_by":     strings.TrimSpace(in.GroupBy),
+		"is_default":   in.IsDefault,
+		"is_shared":    in.IsShared,
 	}
 	return orm.Create(ctx, orm.RegistryModel("swc.saved.search"), vals)
 }
 
 // DeleteSavedSearch removes a saved search owned by the current user.
 func DeleteSavedSearch(ctx context.Context, id int) error {
-	if id <= 0 {
+	if 0 >= id {
 		return fmt.Errorf("invalid id")
 	}
 	uid := orm.UIDFromContext(ctx)
-	if uid <= 0 {
+	if 0 >= uid {
 		return fmt.Errorf("login required")
 	}
 	row, err := orm.SearchOne(ctx, "swc.saved.search", map[string]interface{}{"id": id})

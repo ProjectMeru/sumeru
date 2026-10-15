@@ -12,18 +12,18 @@ import (
 
 // PublicMethods is the allowlist of model methods callable via RPC.
 var PublicMethods = map[string]bool{
-	"search":       true,
-	"search_read":  true,
-	"read":         true,
-	"create":       true,
-	"write":        true,
-	"unlink":       true,
-	"create_many":  true,
-	"write_many":   true,
-	"unlink_many":  true,
-	"read_group":   true,
-	"onchange":     true,
-	"call":         true,
+	"search":      true,
+	"search_read": true,
+	"read":        true,
+	"create":      true,
+	"write":       true,
+	"unlink":      true,
+	"create_many": true,
+	"write_many":  true,
+	"unlink_many": true,
+	"read_group":  true,
+	"onchange":    true,
+	"call":        true,
 }
 
 // rpcRequest is the JSON body for POST /api/rpc.
@@ -38,7 +38,7 @@ type rpcRequest struct {
 
 // dispatchRPC executes a model method call with the same security context as the web UI (uid in ctx).
 func dispatchRPC(ctx context.Context, body []byte) (interface{}, error) {
-	if len(body) == 0 {
+	if 0 == len(body) {
 		return nil, newRPCError(CodeInvalidJSON, "empty body", nil)
 	}
 	var in rpcRequest
@@ -105,7 +105,7 @@ func dispatchRPC(ctx context.Context, body []byte) (interface{}, error) {
 }
 
 func validateKwargs(raw json.RawMessage) error {
-	if len(raw) == 0 || string(raw) == "null" {
+	if 0 == len(raw) || string(raw) == "null" {
 		return nil
 	}
 	var probe interface{}

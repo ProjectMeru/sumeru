@@ -97,7 +97,7 @@ func executeUpdateMutation(ctx context.Context, modelName string, domain [][]int
 	if err := CheckFieldWriteAccess(ctx, uid, modelName, prepared); err != nil {
 		return result, err
 	}
-	if len(prepared) == 0 {
+	if 0 == len(prepared) {
 		return result, nil
 	}
 	table, err := QuotedTableForModel(modelName)
@@ -115,7 +115,7 @@ func executeUpdateMutation(ctx context.Context, modelName string, domain [][]int
 		if err != nil {
 			return err
 		}
-		if len(locked) == 0 {
+		if 0 == len(locked) {
 			return fmt.Errorf("access denied or record not found")
 		}
 		var previous map[string]interface{}
@@ -176,7 +176,7 @@ func executeUpdateMutation(ctx context.Context, modelName string, domain [][]int
 			return err
 		}
 		n, _ := res.RowsAffected()
-		if n == 0 {
+		if 0 == n {
 			return fmt.Errorf("access denied or record not found")
 		}
 		result.RowsAffected = n
@@ -238,7 +238,7 @@ func executeDeleteMutation(ctx context.Context, modelName string, domain [][]int
 			return err
 		}
 		n, _ := res.RowsAffected()
-		if n == 0 {
+		if 0 == n {
 			return fmt.Errorf("access denied or record not found")
 		}
 		result.RowsAffected = n

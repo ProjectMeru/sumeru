@@ -174,7 +174,7 @@ func ensureBootstrapSecurity(ctx context.Context, first *SetupAdminParams) error
 	if err != nil {
 		return fmt.Errorf("bootstrap administrator: %w", err)
 	}
-	if adminUID == 0 {
+	if 0 == adminUID {
 		return fmt.Errorf("bootstrap administrator user id")
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(first.Password), bcrypt.DefaultCost)

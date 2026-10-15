@@ -22,16 +22,20 @@ func ApplyImportTemplateMapping(ctx context.Context, targetModel string, headers
 		domain = append(domain, []interface{}{"user_id", "=", uid})
 	}
 	rows, err := orm.SearchPage(ctx, importTemplateModel, domain, 5, 0, "id DESC")
-	if err != nil || len(rows) == 0 {
+	if err != nil || 0 == len(rows) {
 		domain = [][]interface{}{{"target_model", "=", targetModel}, {"shared", "=", true}}
 		rows, err = orm.SearchPage(ctx, importTemplateModel, domain, 5, 0, "id DESC")
 	}
-	if err != nil || len(rows) == 0 {
+	if err != nil {
 		return nil
 	}
+	if 0 == len(rows) {
+		return nil
+	}
+
 	var mapping map[string]string
 	_ = json.Unmarshal([]byte(orm.AsString(rows[0]["column_mapping"])), &mapping)
-	if len(mapping) == 0 {
+	if 0 == len(mapping) {
 		return nil
 	}
 	out := map[string]string{}

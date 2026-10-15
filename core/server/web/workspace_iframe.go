@@ -40,7 +40,7 @@ func buildIframeSwcPayload(ctx context.Context, actionID int, menuID, iframeURL 
 }
 
 func urlActionTitle(ctx context.Context, actionID int) string {
-	if actionID <= 0 {
+	if 0 >= actionID {
 		return "Report"
 	}
 	row, err := orm.SearchOne(ctx, sysActionURLModel, map[string]interface{}{"id": actionID})

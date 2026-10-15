@@ -19,14 +19,14 @@ const (
 
 // RetentionOptions configures one retention pass.
 type RetentionOptions struct {
-	RetentionDays      int
-	FilterModel        string
-	DryRun             bool
-	LegalHold          bool
-	DeleteAfterExport  bool
-	Compress           bool
-	BatchSize          int
-	MaxRowsPerRun int
+	RetentionDays     int
+	FilterModel       string
+	DryRun            bool
+	LegalHold         bool
+	DeleteAfterExport bool
+	Compress          bool
+	BatchSize         int
+	MaxRowsPerRun     int
 }
 
 // RetentionResult aggregates one run.
@@ -56,7 +56,7 @@ func runAuditRetentionCron(ctx context.Context, _ map[string]interface{}) error 
 }
 
 func runRetentionFromPolicy(ctx context.Context, model string, id int, _ map[string]string) (string, error) {
-	if model != auditRetentionPolicyModel || id <= 0 {
+	if model != auditRetentionPolicyModel || 0 >= id {
 		return "", fmt.Errorf("invalid policy record")
 	}
 	if !orm.UserHasGroupXML(ctx, orm.SecurityUID(ctx), "base.group_system") {
@@ -107,7 +107,7 @@ func loadRetentionPolicy(ctx context.Context) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(rows) == 0 {
+	if 0 == len(rows) {
 		return nil, fmt.Errorf("audit retention policy not configured")
 	}
 	return rows[0], nil
@@ -115,14 +115,14 @@ func loadRetentionPolicy(ctx context.Context) (map[string]interface{}, error) {
 
 func retentionOptionsFromPolicy(policy map[string]interface{}, forceDryRun bool) RetentionOptions {
 	days, _ := orm.CoerceInt64(policy["hot_retention_days"])
-	if days <= 0 {
+	if 0 >= days {
 		if raw := strings.TrimSpace(orm.GetConfigParam(context.Background(), "audit.default_retention_days", "")); raw != "" {
 			if d, ok := orm.CoerceInt64(raw); ok && d > 0 {
 				days = d
 			}
 		}
 	}
-	if days <= 0 {
+	if 0 >= days {
 		days = 90
 	}
 	batch, _ := orm.CoerceInt64(policy["batch_size"])
@@ -175,7 +175,7 @@ func runAuditRetention(ctx context.Context, opts RetentionOptions) (RetentionRes
 		if err != nil {
 			return out, err
 		}
-		if len(rows) == 0 {
+		if 0 == len(rows) {
 			break
 		}
 		if err := processAuditBatch(ctx, opts, rows, &out); err != nil {
@@ -215,7 +215,7 @@ func processAuditBatch(ctx context.Context, opts RetentionOptions, rows []map[st
 			ids = append(ids, id)
 		}
 	}
-	if len(exportRows) == 0 {
+	if 0 == len(exportRows) {
 		return nil
 	}
 
@@ -287,7 +287,7 @@ func processAuditBatch(ctx context.Context, opts RetentionOptions, rows []map[st
 
 func unlinkAuditIDs(ctx context.Context, ids []int64) error {
 	for _, id := range ids {
-		if id <= 0 {
+		if 0 >= id {
 			continue
 		}
 		if err := orm.Unlink(ctx, auditModel, int(id)); err != nil {

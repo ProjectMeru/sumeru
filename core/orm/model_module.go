@@ -9,7 +9,7 @@ import (
 // PlatformModules materialize on a fresh DB and cannot be uninstalled.
 var PlatformModules = map[string]bool{
 	"base": true,
-	"im": true,
+	"im":   true,
 }
 
 // IsPlatformModule reports whether name is part of the always-on platform spine.

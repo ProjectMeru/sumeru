@@ -35,7 +35,7 @@ func actionApplies(ctx context.Context, row map[string]interface{}, ev event.Eve
 		return true
 	}
 	resID, ok := orm.CoerceInt64(ev.Payload["id"])
-	if evModel == "" || !ok || resID <= 0 {
+	if evModel == "" || !ok || 0 >= resID {
 		return false
 	}
 	var domain [][]interface{}
@@ -107,7 +107,7 @@ func executeServerAction(ctx context.Context, row map[string]interface{}, ev eve
 		}
 		modelName := strings.TrimSpace(orm.AsString(ev.Payload["model"]))
 		resID, ok := orm.CoerceInt64(ev.Payload["id"])
-		if modelName == "" || !ok || resID <= 0 {
+		if modelName == "" || !ok || 0 >= resID {
 			return nil
 		}
 		if err := rejectUnsafeWrite(modelName, vals); err != nil {
@@ -140,14 +140,14 @@ func createActivity(ctx context.Context, spec string, ev event.Event) error {
 	summary = strings.TrimSpace(summary)
 	modelName := strings.TrimSpace(orm.AsString(ev.Payload["model"]))
 	resID, ok := orm.CoerceInt64(ev.Payload["id"])
-	if xmlid == "" || modelName == "" || !ok || resID <= 0 {
+	if xmlid == "" || modelName == "" || !ok || 0 >= resID {
 		return fmt.Errorf("activity action requires type, model, and id")
 	}
 	if _, registered := orm.Registry["mail.activity"]; !registered {
 		return fmt.Errorf("mail.activity is not installed")
 	}
 	typeID, typeModel, err := orm.ResolveXmlId(ctx, xmlid)
-	if err != nil || typeModel != "mail.activity.type" || typeID <= 0 {
+	if err != nil || typeModel != "mail.activity.type" || 0 >= typeID {
 		return fmt.Errorf("unknown activity type %q", xmlid)
 	}
 	if summary == "" {
