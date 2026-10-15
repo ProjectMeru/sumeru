@@ -421,6 +421,11 @@ func BulkStatusHandlerForTest(w http.ResponseWriter, r *http.Request) {
 	BulkStatusHandler(w, r)
 }
 
+// BulkBatchOwnedByForTest exposes bulk batch ownership checks for tests.
+func BulkBatchOwnedByForTest(batch map[string]interface{}, uid int) bool {
+	return bulkBatchOwnedBy(batch, uid)
+}
+
 func SwcImportHandlerForTest(w http.ResponseWriter, r *http.Request) {
 	SwcImportHandler(w, r)
 }

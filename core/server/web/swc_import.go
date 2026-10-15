@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"sumeru/core/orm"
-	"sumeru/core/report"
 )
 
 func registerSwcImportRoute() {
@@ -24,9 +23,8 @@ func SwcImportHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "batch required", http.StatusBadRequest)
 		return
 	}
-	batch, err := orm.SearchOne(r.Context(), report.BulkModelName, map[string]interface{}{"id": batchID})
-	if err != nil || 0 == len(batch) {
-		http.NotFound(w, r)
+	batch, ok := loadOwnedBulkBatch(w, r, batchID)
+	if !ok {
 		return
 	}
 	targetModel := orm.AsString(batch["target_model"])
