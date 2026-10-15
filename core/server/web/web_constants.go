@@ -98,6 +98,7 @@ const (
 
 // ACL group XML ids.
 const groupSystemXML = "base.group_system"
+const groupModuleManagerXML = "base.group_module_manager"
 
 // Common HTTP response messages.
 const (
@@ -156,6 +157,8 @@ const (
 	settingsHubStylesheetURL      = "/static/css/sumeru-settings-hub.css"
 	settingsHubBodyClass          = " sum-body--settings-hub"
 	settingsAccountInnerTemplate  = render.TemplatePagesSettingsAccount
+	settingsAuthInnerTemplate     = render.TemplatePagesSettingsAuth
+	settingsMailInnerTemplate     = render.TemplatePagesSettingsMail
 	settingsFieldACLInnerTemplate = render.TemplatePagesSettingsFieldACL
 	settingsModelACLInnerTemplate = render.TemplatePagesSettingsModelACL
 	groupUserXML                  = "base.group_user"

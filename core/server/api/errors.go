@@ -19,6 +19,7 @@ const (
 	CodePayloadTooLarge      = "PAYLOAD_TOO_LARGE"
 	CodeUnsupportedMediaType = "UNSUPPORTED_MEDIA_TYPE"
 	CodeInternalError        = "INTERNAL_ERROR" // errcode.InternalError
+	CodeRateLimited          = "RATE_LIMITED"
 )
 
 type codedError struct {

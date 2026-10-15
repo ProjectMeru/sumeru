@@ -72,6 +72,8 @@ func statusForCode(code string) int {
 		return http.StatusUnsupportedMediaType
 	case CodePayloadTooLarge:
 		return http.StatusRequestEntityTooLarge
+	case CodeRateLimited:
+		return http.StatusTooManyRequests
 	case CodeMethodNotAllowed, CodeAccessDenied:
 		return http.StatusForbidden
 	case CodeModelNotFound, CodeNotFound:

@@ -63,7 +63,7 @@ func AppsHandler(w http.ResponseWriter, r *http.Request) {
 	if !requireLogin(w, r) {
 		return
 	}
-	if !requireSystemAdmin(w, r, true) {
+	if !requireModuleManagerOrSystem(w, r, true) {
 		return
 	}
 

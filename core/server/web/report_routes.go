@@ -93,6 +93,9 @@ func ExportPivotHandler(w http.ResponseWriter, r *http.Request) {
 	if !requireModelAccess(w, r, modelName, "read") {
 		return
 	}
+	if !requireExportEntitlement(w, r, modelName, nil, "csv") {
+		return
+	}
 	groupFields := report.ParseFieldsParam(r.URL.Query().Get("group_by"))
 	measures := report.ParseFieldsParam(r.URL.Query().Get("measures"))
 	if 0 == len(groupFields) || 0 == len(measures) {
@@ -129,6 +132,9 @@ func ExportGraphHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !requireModelAccess(w, r, modelName, "read") {
+		return
+	}
+	if !requireExportEntitlement(w, r, modelName, nil, "csv") {
 		return
 	}
 	groupField := strings.TrimSpace(r.URL.Query().Get("group_by"))

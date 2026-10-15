@@ -21,6 +21,8 @@ type SWCBootstrapWorkspace struct {
 	ListSearch string `json:"listSearch"`
 }
 
+// swcBootstrap JSON is embedded in the shell for the SWC client. It may include the per-session
+// CSRF token and public navigation metadata only — never API keys, raw session ids, or csrf_secret.
 type swcBootstrap struct {
 	CSRFToken                  string                 `json:"csrfToken"`
 	RPCURL                     string                 `json:"rpcUrl"`

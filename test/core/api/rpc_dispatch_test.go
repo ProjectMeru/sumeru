@@ -194,6 +194,18 @@ func TestDispatch_readEmptyIDs(t *testing.T) {
 	}
 }
 
+func TestDispatch_writeUnlinkTooManyIDs(t *testing.T) {
+	ids := make([]string, 0, 501)
+	for i := 1; i <= 501; i++ {
+		ids = append(ids, "1")
+	}
+	idJSON := "[" + strings.Join(ids, ",") + "]"
+	writeBody := `{"model":"sys.session","method":"write","args":[` + idJSON + `,{"sid":"x"}]}`
+	assertDispatch(t, authCtx(), writeBody, http.StatusBadRequest, api.CodeInvalidArgs)
+	unlinkBody := `{"model":"sys.session","method":"unlink","args":[` + idJSON + `]}`
+	assertDispatch(t, authCtx(), unlinkBody, http.StatusBadRequest, api.CodeInvalidArgs)
+}
+
 func TestDispatch_readTooManyIDs(t *testing.T) {
 	ids := make([]string, 0, 501)
 	for i := 1; i <= 501; i++ {

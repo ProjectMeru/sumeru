@@ -88,12 +88,7 @@ func companyRecordExists(ctx context.Context, companyID int) bool {
 }
 
 func updateUserActiveCompany(ctx context.Context, userID, companyID int) error {
-	userTable := orm.MustQuotedTableName(coreUserModel)
-	_, err := orm.DB.ExecContext(ctx,
-		`UPDATE `+userTable+` SET company_id = $1 WHERE id = $2`,
-		companyID, userID,
-	)
-	return err
+	return orm.SetUserActiveCompany(ctx, userID, companyID)
 }
 
 func redirectToWebNext(w http.ResponseWriter, r *http.Request, rawNext string) {

@@ -48,6 +48,20 @@ func ApplyReportToArch(
 	}
 }
 
+// ExportEntitlementsForModel merges report download/upload capabilities from action view modes,
+// including master-data defaults used in workspace chrome.
+func ExportEntitlementsForModel(ctx context.Context, model string, actionViewModes []string) report.Capabilities {
+	caps := mergeReportFromSiblingViews(ctx, model, actionViewModes)
+	if caps.HasDownload() || caps.BulkUpload {
+		return caps
+	}
+	if _, ok := masterDataReportModels[strings.TrimSpace(model)]; ok {
+		mergeDefaultMasterDataCaps(&caps)
+		normalizeReportCapabilities(&caps)
+	}
+	return caps
+}
+
 func mergeReportFromSiblingViews(ctx context.Context, model string, modes []string) report.Capabilities {
 	model = strings.TrimSpace(model)
 	if model == "" {

@@ -2,7 +2,6 @@ package web
 
 import (
 	"context"
-	"database/sql"
 	"strconv"
 	"strings"
 
@@ -167,27 +166,17 @@ func menuIDForWindowAction(ctx context.Context, parentMenuID, actionID int) int 
 
 // walkMenuChildren DFS-walks sys.menu children (sequence, id) and returns the first match from visit.
 func walkMenuChildren(ctx context.Context, parentMenuID int, visit func(childMenuID, childActionID int) (int, bool)) int {
-	menuTable := orm.MustQuotedTableName(sysMenuModel)
-	rows, err := orm.DB.QueryContext(ctx,
-		`SELECT id, action_id FROM `+menuTable+` WHERE parent_id = $1 ORDER BY sequence ASC, id ASC`,
-		parentMenuID,
-	)
+	rows, err := orm.SearchPage(ctx, sysMenuModel, [][]interface{}{{"parent_id", "=", parentMenuID}}, 500, 0, "sequence asc, id asc")
 	if err != nil {
 		return 0
 	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var childMenuID int
-		var childActionID sql.NullInt64
-		if err := rows.Scan(&childMenuID, &childActionID); err != nil {
+	for _, row := range rows {
+		childMenuID, _ := orm.CoerceInt64(row["id"])
+		if childMenuID <= 0 {
 			continue
 		}
-		aid := 0
-		if childActionID.Valid {
-			aid = int(childActionID.Int64)
-		}
-		if result, ok := visit(childMenuID, aid); ok {
+		aid, _ := orm.CoerceInt64(row["action_id"])
+		if result, ok := visit(int(childMenuID), int(aid)); ok {
 			return result
 		}
 	}

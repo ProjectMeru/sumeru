@@ -53,6 +53,20 @@ func requireSystemAdmin(w http.ResponseWriter, r *http.Request, redirectOnDeny b
 	return false
 }
 
+func requireModuleManagerOrSystem(w http.ResponseWriter, r *http.Request, redirectOnDeny bool) bool {
+	ctx := r.Context()
+	uid := resolveRequestUID(r)
+	if orm.UserHasGroupXML(ctx, uid, groupSystemXML) || orm.UserHasGroupXML(ctx, uid, groupModuleManagerXML) {
+		return true
+	}
+	if redirectOnDeny {
+		http.Redirect(w, r, homeRoute, http.StatusFound)
+	} else {
+		http.Error(w, forbiddenMessage, http.StatusForbidden)
+	}
+	return false
+}
+
 func requireModelAccess(w http.ResponseWriter, r *http.Request, model, perm string) bool {
 	if err := orm.CheckModelAccess(r.Context(), orm.SecurityUID(r.Context()), model, perm); err != nil {
 		WebLogEvent(r.Context(), WebLogInput{

@@ -61,6 +61,12 @@ func FlashFromQueryMessage(msg string) (render.FlashMessage, bool) {
 		return render.FlashMessage{Kind: "error", Title: "Password required", Body: "Enter a new password."}, true
 	case "password_failed":
 		return render.FlashMessage{Kind: "error", Title: "Could not update password", Body: "Check policy requirements and try again."}, true
+	case "auth_settings_saved":
+		return render.FlashMessage{Kind: "success", Title: "Authentication settings saved", Body: "System parameters were updated."}, true
+	case "auth_settings_invalid":
+		return render.FlashMessage{Kind: "error", Title: "Invalid settings", Body: "Check password minimum length (6–72) and try again."}, true
+	case "auth_settings_failed":
+		return render.FlashMessage{Kind: "error", Title: "Could not save settings", Body: "Try again or contact your administrator."}, true
 	case "field_acl_saved":
 		return render.FlashMessage{Kind: "success", Title: "Field access saved", Body: "Matrix rules were updated."}, true
 	case "field_acl_failed":

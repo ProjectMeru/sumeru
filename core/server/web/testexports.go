@@ -274,6 +274,11 @@ func ImportCSVFlashMessage(createdCount int) string { return importCSVFlashMessa
 
 func ParseCompanySwitchForm(r *http.Request) companySwitchForm { return parseCompanySwitchForm(r) }
 
+// SwitchActiveCompanyForTest exercises active company switching without HTTP.
+func SwitchActiveCompanyForTest(ctx context.Context, userID, companyID int) {
+	switchActiveCompany(ctx, userID, companyID)
+}
+
 // LoginURLWithReturn returns the login path (return target is stored in a cookie by redirectToLogin).
 func LoginURLWithReturn(_ string) string { return loginRoute }
 
@@ -632,6 +637,11 @@ func ComparePasswordConstantTimeForTest(storedHash, plain string) bool {
 // RequireSystemAdminForTest exposes requireSystemAdmin for handler tests.
 func RequireSystemAdminForTest(w http.ResponseWriter, r *http.Request, redirectOnDeny bool) bool {
 	return requireSystemAdmin(w, r, redirectOnDeny)
+}
+
+// RequireModuleManagerOrSystemForTest exposes requireModuleManagerOrSystem for handler tests.
+func RequireModuleManagerOrSystemForTest(w http.ResponseWriter, r *http.Request, redirectOnDeny bool) bool {
+	return requireModuleManagerOrSystem(w, r, redirectOnDeny)
 }
 
 // RequireModelAccessForTest exposes requireModelAccess for handler tests.

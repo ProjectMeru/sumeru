@@ -9,6 +9,7 @@ import (
 
 	"sumeru/core/orm"
 	"sumeru/core/report"
+	"sumeru/core/server/api"
 )
 
 // BulkUploadHandler POST /web/bulk/upload — stage CSV and open mapping view.
@@ -85,7 +86,7 @@ func BulkPreviewHandler(w http.ResponseWriter, r *http.Request) {
 		Mapping map[string]string `json:"column_mapping"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.BatchID <= 0 {
-		http.Error(w, "invalid body", http.StatusBadRequest)
+		writeWebJSONError(w, http.StatusBadRequest, api.CodeInvalidBody, "invalid body", nil)
 		return
 	}
 	if _, ok := loadOwnedBulkBatch(w, r, body.BatchID); !ok {
@@ -96,7 +97,7 @@ func BulkPreviewHandler(w http.ResponseWriter, r *http.Request) {
 		Mapping: body.Mapping,
 	})
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeWebJSONError(w, http.StatusBadRequest, api.CodeValidationError, err.Error(), nil)
 		return
 	}
 	writeJSONResponse(w, out)
@@ -114,12 +115,12 @@ func BulkSaveImportTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		Shared  bool              `json:"shared"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.BatchID <= 0 {
-		http.Error(w, "invalid body", http.StatusBadRequest)
+		writeWebJSONError(w, http.StatusBadRequest, api.CodeInvalidBody, "invalid body", nil)
 		return
 	}
 	name := strings.TrimSpace(body.Name)
 	if name == "" {
-		http.Error(w, "name required", http.StatusBadRequest)
+		writeWebJSONError(w, http.StatusBadRequest, api.CodeValidationError, "name required", nil)
 		return
 	}
 	batch, ok := loadOwnedBulkBatch(w, r, body.BatchID)
@@ -135,13 +136,13 @@ func BulkSaveImportTemplateHandler(w http.ResponseWriter, r *http.Request) {
 		var parseErr error
 		mapping, parseErr = report.ParseMappingJSON(orm.AsString(batch["column_mapping"]))
 		if parseErr != nil {
-			http.Error(w, parseErr.Error(), http.StatusBadRequest)
+			writeWebJSONError(w, http.StatusBadRequest, api.CodeValidationError, parseErr.Error(), nil)
 			return
 		}
 	}
 	mappingJSON, err := json.Marshal(mapping)
 	if err != nil {
-		http.Error(w, "mapping encode failed", http.StatusBadRequest)
+		writeWebJSONError(w, http.StatusBadRequest, api.CodeInternalError, "mapping encode failed", nil)
 		return
 	}
 	selected := orm.AsString(batch["selected_fields"])
@@ -149,7 +150,7 @@ func BulkSaveImportTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	uid := AuthenticatedUserID(r)
 	templateID, err := report.SaveImportTemplate(r.Context(), name, targetModel, importMode, selected, string(mappingJSON), uid, body.Shared)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeWebJSONError(w, http.StatusBadRequest, api.CodeValidationError, err.Error(), nil)
 		return
 	}
 	writeJSONResponse(w, map[string]interface{}{"template_id": templateID})
@@ -165,7 +166,7 @@ func BulkDryRunHandler(w http.ResponseWriter, r *http.Request) {
 		Mapping map[string]string `json:"column_mapping"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.BatchID <= 0 {
-		http.Error(w, "invalid body", http.StatusBadRequest)
+		writeWebJSONError(w, http.StatusBadRequest, api.CodeInvalidBody, "invalid body", nil)
 		return
 	}
 	if _, ok := loadOwnedBulkBatch(w, r, body.BatchID); !ok {
@@ -176,7 +177,7 @@ func BulkDryRunHandler(w http.ResponseWriter, r *http.Request) {
 		Mapping: body.Mapping,
 	})
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeWebJSONError(w, http.StatusBadRequest, api.CodeValidationError, err.Error(), nil)
 		return
 	}
 	writeJSONResponse(w, map[string]interface{}{"preview": preview, "messages": messages})

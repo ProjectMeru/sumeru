@@ -37,7 +37,8 @@ func EnrichShellPageData(ctx context.Context, d *PageData) {
 	d.AppName = AppDisplayName
 	d.LogoURL = shell.LogoURL
 	uidShell := orm.UIDFromContext(ctx)
-	d.AppsNavAllowed = orm.UserHasGroupXML(ctx, uidShell, "base.group_system")
+	d.AppsNavAllowed = orm.UserHasGroupXML(ctx, uidShell, "base.group_system") ||
+		orm.UserHasGroupXML(ctx, uidShell, "base.group_module_manager")
 	d.SettingsNavAllowed = orm.UserHasGroupXML(ctx, uidShell, "base.group_user")
 	if strings.TrimSpace(d.BrandLockupHref) == "" {
 		d.BrandLockupHref = HomeWebURL()

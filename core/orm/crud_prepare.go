@@ -30,6 +30,7 @@ func prepareCreateWrite(ctx context.Context, model Model, values map[string]inte
 	if err := applySpecialDefaults(ctx, fieldDefs, prepared); err != nil {
 		return nil, 0, err
 	}
+	stampActiveCompanyOnCreate(ctx, model.ModelName(), prepared)
 	if err := MergePropertiesWrite(ctx, model.ModelName(), nil, prepared); err != nil {
 		return nil, 0, err
 	}

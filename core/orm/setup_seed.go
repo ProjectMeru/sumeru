@@ -114,7 +114,45 @@ func ensureDefaultKernelGroups(ctx context.Context) (adminGID int, userGID int, 
 	if _, err := DB.ExecContext(ctx, `INSERT INTO `+MustQuotedTableName(tableGroupImplied)+` (group_id, implied_group_id) VALUES ($1, $2) ON CONFLICT (group_id, implied_group_id) DO NOTHING`, adminGID, userGID); err != nil {
 		return 0, 0, fmt.Errorf("bootstrap group imply: %w", err)
 	}
+
+	moduleManagerGID, err := Upsert(ctx, groupModel, map[string]interface{}{
+		"name":        "Administration / Apps",
+		"category_id": catAdminID,
+		"sequence":    5,
+	}, "name")
+	if err != nil {
+		return 0, 0, fmt.Errorf("bootstrap core.group module manager: %w", err)
+	}
+	if err := seedXmlID(ctx, "base", "group_module_manager", "core.group", moduleManagerGID); err != nil {
+		return 0, 0, err
+	}
+	if _, err := DB.ExecContext(ctx, `INSERT INTO `+MustQuotedTableName(tableGroupImplied)+` (group_id, implied_group_id) VALUES ($1, $2) ON CONFLICT (group_id, implied_group_id) DO NOTHING`, moduleManagerGID, userGID); err != nil {
+		return 0, 0, fmt.Errorf("bootstrap module manager imply user: %w", err)
+	}
+	if err := ensureModuleManagerACL(ctx, moduleManagerGID); err != nil {
+		return 0, 0, err
+	}
+
 	return adminGID, userGID, nil
+}
+
+func ensureModuleManagerACL(ctx context.Context, moduleManagerGID int) error {
+	if moduleManagerGID <= 0 {
+		return nil
+	}
+	_, err := Upsert(ctx, RegistryModel("sys.access"), map[string]interface{}{
+		"name":        "access_sys_module_module_manager",
+		"model":       "sys.module",
+		"group_id":    NullableGroupIDForAccess(moduleManagerGID),
+		"perm_read":   true,
+		"perm_write":  true,
+		"perm_create": false,
+		"perm_unlink": false,
+	}, "name")
+	if err != nil {
+		return fmt.Errorf("bootstrap sys.module ACL for module manager: %w", err)
+	}
+	return nil
 }
 
 func ensureBootstrapSecurity(ctx context.Context, first *SetupAdminParams) error {

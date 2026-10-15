@@ -112,6 +112,29 @@ func PrepareValues(model Model, values map[string]interface{}, op WriteOp, opts 
 	return out, nil
 }
 
+// stampActiveCompanyOnCreate sets company_id from the active company when the model has that column and the client omitted it.
+func stampActiveCompanyOnCreate(ctx context.Context, modelName string, prepared map[string]interface{}) {
+	if !ModelHasCompanyID(modelName) {
+		return
+	}
+	if v, ok := prepared["company_id"]; ok && v != nil {
+		if id, ok := CoerceInt64(v); ok && id > 0 {
+			return
+		}
+	}
+	uid := SecurityUID(ctx)
+	if uid <= 0 {
+		return
+	}
+	companyID := CompanyIDFromContext(ctx)
+	if companyID <= 0 {
+		companyID = ActiveCompanyIDForUser(ctx, uid)
+	}
+	if companyID > 0 {
+		prepared["company_id"] = int(companyID)
+	}
+}
+
 func parseFloatFieldValue(raw interface{}) (float64, error) {
 	switch typed := raw.(type) {
 	case float64:

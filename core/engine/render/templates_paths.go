@@ -24,6 +24,8 @@ const (
 	TemplatePagesAppLogs          = "pages/app_logs.html"
 	TemplatePagesSettingsHub      = "pages/settings_hub.html"
 	TemplatePagesSettingsAccount  = "pages/settings_account.html"
+	TemplatePagesSettingsAuth     = "pages/settings_auth.html"
+	TemplatePagesSettingsMail     = "pages/settings_mail.html"
 	TemplatePagesSettingsFieldACL = "pages/settings_field_acl.html"
 	TemplatePagesSettingsModelACL = "pages/settings_model_acl.html"
 	TemplatePagesImportWizard     = "pages/import_wizard.html"

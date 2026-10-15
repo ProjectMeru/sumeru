@@ -29,6 +29,10 @@ func resolveExportRequest(w http.ResponseWriter, r *http.Request) (report.Export
 		http.Error(w, "fields required", http.StatusBadRequest)
 		return report.ExportCSVInput{}, false
 	}
+	exportFormat := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/web/export/"), "/")
+	if !requireExportEntitlement(w, r, modelName, fields, exportFormat) {
+		return report.ExportCSVInput{}, false
+	}
 	domain := listExportDomain(r.Context(), r, modelName)
 	recordID, _ := strconv.Atoi(strings.TrimSpace(r.URL.Query().Get(workspaceRecordIDParam)))
 	return report.ExportCSVInput{

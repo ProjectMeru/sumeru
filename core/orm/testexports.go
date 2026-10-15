@@ -18,6 +18,11 @@ func NewStubModelForTest(name string, fields []FieldDefinition) StubModelForTest
 }
 
 // RegisterStubModelForTest registers a minimal model for external tests.
+// StampActiveCompanyOnCreateForTest applies create-time company_id defaulting for tests.
+func StampActiveCompanyOnCreateForTest(ctx context.Context, modelName string, prepared map[string]interface{}) {
+	stampActiveCompanyOnCreate(ctx, modelName, prepared)
+}
+
 func RegisterStubModelForTest(t *testing.T, name string, fields []FieldDefinition) StubModelForTest {
 	t.Helper()
 	m := StubModelForTest{name: name, fields: fields}
