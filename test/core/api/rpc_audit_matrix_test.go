@@ -12,15 +12,16 @@ import (
 
 func TestRPCJSONHandler_unauthenticatedEnvelope(t *testing.T) {
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/api/rpc", strings.NewReader(`{"model":"core.user","method":"search","args":[[]]}`))
+	req := httptest.NewRequest(http.MethodPost, web.TestRPCURLForTest("core.user", "search"), strings.NewReader(`{"domain":[]}`))
 	req.Header.Set("Content-Type", "application/json")
+	web.ApplyDefaultRPCHeadersForTest(req)
 	web.RPCJSONHandler(rr, req)
 
 	if rr.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d; want 401", rr.Code)
 	}
 	env := decodeRPCEnvelope(t, rr)
-	if env.OK || env.Error == nil || env.Error.Code != api.CodeUnauthorized {
+	if env.Success || env.Error == nil || env.Error.Code != api.CodeUnauthorized {
 		t.Fatalf("env = %+v", env)
 	}
 	if env.Error.Message == "" {
@@ -28,9 +29,10 @@ func TestRPCJSONHandler_unauthenticatedEnvelope(t *testing.T) {
 	}
 }
 
-func rpcSessionRequest(body string) *http.Request {
-	req := httptest.NewRequest(http.MethodPost, "/api/rpc", strings.NewReader(body))
+func rpcSessionRequest(model, method, body string) *http.Request {
+	req := httptest.NewRequest(http.MethodPost, web.TestRPCURLForTest(model, method), strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+	web.ApplyDefaultRPCHeadersForTest(req)
 	req.AddCookie(&http.Cookie{Name: web.TestSessionCookieName, Value: "rpc-audit-test-sid"})
 	req.Header.Set("X-CSRF-Token", web.CSRFTokenForRequestForTest(req))
 	return req
@@ -41,11 +43,10 @@ func TestRPCJSONHandler_methodNotAllowedEnvelope(t *testing.T) {
 	t.Cleanup(web.ResetTestSessionUserIDForTest)
 
 	rr := httptest.NewRecorder()
-	body := `{"model":"core.user","method":"drop_database","args":[]}`
-	web.RPCJSONHandler(rr, rpcSessionRequest(body))
+	web.RPCJSONHandler(rr, rpcSessionRequest("core.user", "drop_database", `{"domain":[]}`))
 
-	if rr.Code != http.StatusForbidden {
-		t.Fatalf("status = %d; want 403", rr.Code)
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("status = %d; want 404", rr.Code)
 	}
 	env := decodeRPCEnvelope(t, rr)
 	if env.Error == nil || env.Error.Code != api.CodeMethodNotAllowed {
@@ -58,8 +59,7 @@ func TestRPCJSONHandler_unknownModelEnvelope(t *testing.T) {
 	t.Cleanup(web.ResetTestSessionUserIDForTest)
 
 	rr := httptest.NewRecorder()
-	body := `{"model":"evil.model","method":"search","args":[[]]}`
-	web.RPCJSONHandler(rr, rpcSessionRequest(body))
+	web.RPCJSONHandler(rr, rpcSessionRequest("evil.model", "search", `{"domain":[]}`))
 
 	if rr.Code != http.StatusNotFound {
 		t.Fatalf("status = %d; want 404", rr.Code)

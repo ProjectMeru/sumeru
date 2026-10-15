@@ -15,16 +15,17 @@ func TestRPCJSONHandler_sessionRequiresCSRF(t *testing.T) {
 	t.Cleanup(web.ResetTestSessionUserIDForTest)
 
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/api/rpc", strings.NewReader(`{"model":"core.user","method":"search","args":[]}`))
+	req := httptest.NewRequest(http.MethodPost, web.TestRPCURLForTest("core.user", "search"), strings.NewReader(`{"domain":[]}`))
 	req.Header.Set("Content-Type", "application/json")
+	web.ApplyDefaultRPCHeadersForTest(req)
 	web.RPCJSONHandler(rr, req)
 
 	if rr.Code != http.StatusForbidden {
 		t.Fatalf("status = %d; want %d", rr.Code, http.StatusForbidden)
 	}
 	env := decodeRPCEnvelope(t, rr)
-	if env.OK {
-		t.Fatal("ok = true; want false")
+	if env.Success {
+		t.Fatal("success = true; want false")
 	}
 	if env.Error == nil || env.Error.Code != api.CodeAccessDenied {
 		t.Fatalf("error = %+v; want ACCESS_DENIED", env.Error)

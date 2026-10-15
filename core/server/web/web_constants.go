@@ -24,6 +24,7 @@ const (
 	apiHealthRoute         = "/api/health"
 	apiReadyRoute          = "/api/ready"
 	apiRPCRoute            = "/api/rpc"
+	apiRPCRoutePrefix      = "/api/rpc/"
 	metricsRoute           = "/metrics"
 	setupRoute             = "/setup"
 	setupInitRoute         = "/setup/init"

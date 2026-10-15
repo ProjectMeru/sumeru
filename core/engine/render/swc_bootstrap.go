@@ -26,6 +26,7 @@ type SWCBootstrapWorkspace struct {
 type swcBootstrap struct {
 	CSRFToken                  string                 `json:"csrfToken"`
 	RPCURL                     string                 `json:"rpcUrl"`
+	APIDatabase                string                 `json:"apiDatabase"`
 	SwcAPIBase                 string                 `json:"swcApiBase"`
 	User                       swcBootstrapUser       `json:"user"`
 	Company                    swcBootstrapCompany    `json:"company"`
@@ -103,6 +104,7 @@ func BuildSWCBootstrapJSON(ctx context.Context, page PageData, ws *SWCBootstrapW
 	b := swcBootstrap{
 		CSRFToken:                  page.CSRFToken,
 		RPCURL:                     "/api/rpc",
+		APIDatabase:                config.AppConfig.DbName,
 		SwcAPIBase:                 "/web/swc",
 		ActiveModuleID:             activeModuleID,
 		ActiveMenuID:               page.ActiveMenuID,

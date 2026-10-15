@@ -4,7 +4,7 @@ Sumeru separates **business data access** from **infrastructure SQL**.
 
 ## Tier A — RPC and business mutations (ORM only)
 
-All [`POST /api/rpc`](/api/rpc) model operations go through [`core/server/api`](../core/server/api/) into [`core/orm`](../core/orm/) (`Search`, `Create`, `UpdateRecordByID`, `Unlink`, `ReadGroup`, etc.). Record rules, model ACL, and field ACL apply.
+All [`POST /api/rpc/{model}/{method}`](../core/server/web/rpc_json.go) model operations go through [`core/server/api`](../core/server/api/) into [`core/orm`](../core/orm/) (`Search`, `Create`, `UpdateRecordByID`, `Unlink`, `ReadGroup`, etc.). Record rules, model ACL, and field ACL apply. [`POST /api/rpc/auth.login`](../core/server/web/rpc_auth.go) uses ORM helpers in [`user_auth.go`](../core/orm/user_auth.go).
 
 ## Tier B — Web handlers on business models
 
@@ -21,7 +21,7 @@ These paths may use parameterized SQL via `orm.DB` with [`MustQuotedTableName`](
 | Area | Files | Reason |
 |------|-------|--------|
 | Sessions | `core/server/web/auth.go`, `session_browser.go` | Cookie session store |
-| Login | `core/server/web/login.go` | Pre-auth credential lookup |
+| Login | — | Credential verify via `orm.AuthenticateLocalUser` (ORM read on `core.user`) |
 | Health | `core/server/web/rpc_json.go` | `Ping()` only |
 | Tests | `core/server/web/testexports.go` | Test session fixtures |
 | ORM kernel | `core/orm/*` | Query builder implementation |

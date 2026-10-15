@@ -5,12 +5,14 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"sumeru/core/engine/render"
 	"sumeru/core/engine/swcmeta"
 	"sumeru/core/orm"
 	"sumeru/core/report"
+	"sumeru/core/server/config"
 )
 
 // Type aliases for external tests in core/server/web (web_test package).
@@ -40,6 +42,7 @@ const (
 	TestCompanySwitchRoute     = companySwitchRoute
 	TestModuleActionRoute      = moduleActionRoute
 	TestAPIRPCRoute            = apiRPCRoute
+	TestAPIRPCRoutePrefix      = apiRPCRoutePrefix
 	TestWorkspaceActionParam   = workspaceActionParam
 	TestWorkspaceMenuIDParam   = workspaceMenuIDParam
 	TestWorkspaceViewTypeParam = workspaceViewTypeParam
@@ -481,6 +484,27 @@ func AuthViaSessionForTest(r *http.Request) bool { return AuthViaSession(r) }
 
 // RPCJSONHandlerForTest exposes the JSON RPC handler for external tests.
 func RPCJSONHandlerForTest(w http.ResponseWriter, r *http.Request) { RPCJSONHandler(w, r) }
+
+// ApplyDefaultRPCHeadersForTest sets required RPC headers for handler tests.
+func ApplyDefaultRPCHeadersForTest(r *http.Request) {
+	if strings.TrimSpace(config.AppConfig.DbName) == "" {
+		config.AppConfig.DbName = "test_db"
+	}
+	r.Header.Set(sumeruDatabaseHeader, config.AppConfig.DbName)
+	if strings.TrimSpace(r.Header.Get(sumeruTenantHeader)) == "" {
+		r.Header.Set(sumeruTenantHeader, "1")
+	}
+}
+
+// TestRPCURLForTest builds a path-based RPC URL for tests.
+func TestRPCURLForTest(model, method string) string {
+	return apiRPCRoutePrefix + model + "/" + method
+}
+
+// TestAuthLoginURLForTest is POST /api/rpc/auth.login.
+func TestAuthLoginURLForTest() string {
+	return apiRPCRoutePrefix + rpcAuthLoginSegment
+}
 
 // BuildSessionCookieForTest exposes session cookie construction for tests.
 func BuildSessionCookieForTest(value string, deleteCookie bool) *http.Cookie {

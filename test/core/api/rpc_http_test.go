@@ -6,15 +6,15 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
 	"sumeru/core/server/api"
 	"sumeru/core/server/web"
 )
 
-
 type rpcEnvelope struct {
-	OK     bool            `json:"ok"`
-	Result json.RawMessage `json:"result"`
-	Error  *api.RPCError   `json:"error"`
+	Success bool            `json:"success"`
+	Data    json.RawMessage `json:"data"`
+	Error   *api.APIError   `json:"error"`
 }
 
 func decodeRPCEnvelope(t *testing.T, rr *httptest.ResponseRecorder) rpcEnvelope {
@@ -32,33 +32,32 @@ func decodeRPCEnvelope(t *testing.T, rr *httptest.ResponseRecorder) rpcEnvelope 
 
 func TestRPCJSONHandler_unauthenticatedJSONEnvelope(t *testing.T) {
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/api/rpc", strings.NewReader(`{"model":"core.user","method":"search","args":[]}`))
+	req := httptest.NewRequest(http.MethodPost, web.TestRPCURLForTest("core.user", "search"), strings.NewReader(`{"domain":[]}`))
 	req.Header.Set("Content-Type", "application/json")
+	web.ApplyDefaultRPCHeadersForTest(req)
 	web.RPCJSONHandler(rr, req)
 
 	if rr.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d; want %d", rr.Code, http.StatusUnauthorized)
 	}
 	env := decodeRPCEnvelope(t, rr)
-	if env.OK {
-		t.Fatal("ok = true; want false")
-	}
-	if env.Error == nil || env.Error.Code != api.CodeUnauthorized {
+	if env.Success || env.Error == nil || env.Error.Code != api.CodeUnauthorized {
 		t.Fatalf("error = %+v; want UNAUTHORIZED", env.Error)
 	}
 }
 
 func TestRPCJSONHandler_nonPostJSONEnvelope(t *testing.T) {
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/rpc", nil)
+	req := httptest.NewRequest(http.MethodGet, web.TestRPCURLForTest("core.user", "search"), nil)
+	web.ApplyDefaultRPCHeadersForTest(req)
 	web.RPCJSONHandler(rr, req)
 
 	if rr.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("status = %d; want %d", rr.Code, http.StatusMethodNotAllowed)
 	}
 	env := decodeRPCEnvelope(t, rr)
-	if env.OK {
-		t.Fatal("ok = true; want false")
+	if env.Success {
+		t.Fatal("success = true; want false")
 	}
 	if env.Error == nil || env.Error.Code != api.CodeMethodNotAllowed {
 		t.Fatalf("error = %+v; want METHOD_NOT_ALLOWED", env.Error)
@@ -66,10 +65,10 @@ func TestRPCJSONHandler_nonPostJSONEnvelope(t *testing.T) {
 }
 
 func TestRPCJSONHandler_unsupportedMediaType(t *testing.T) {
-	// Handler checks auth before Content-Type; unauthenticated requests still get 401 first.
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/api/rpc", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, web.TestRPCURLForTest("core.user", "search"), strings.NewReader(`{}`))
 	req.Header.Set("Content-Type", "text/plain")
+	web.ApplyDefaultRPCHeadersForTest(req)
 	web.RPCJSONHandler(rr, req)
 	if rr.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d; want 401 before media type check without auth", rr.Code)
@@ -77,10 +76,10 @@ func TestRPCJSONHandler_unsupportedMediaType(t *testing.T) {
 }
 
 func TestRPCJSONHandler_emptyBody(t *testing.T) {
-	// Without auth, empty body still yields 401 (auth runs before dispatch).
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/api/rpc", strings.NewReader(""))
+	req := httptest.NewRequest(http.MethodPost, web.TestRPCURLForTest("core.user", "search"), strings.NewReader(""))
 	req.Header.Set("Content-Type", "application/json")
+	web.ApplyDefaultRPCHeadersForTest(req)
 	web.RPCJSONHandler(rr, req)
 	if rr.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d; want %d", rr.Code, http.StatusUnauthorized)

@@ -57,6 +57,8 @@ const (
 	keySMTPUser                    = "smtp_user"
 	keySMTPPassword                = "smtp_password"
 	keySMTPFrom                    = "smtp_from"
+	keyTLSCertFile                 = "tls_cert_file"
+	keyTLSKeyFile                  = "tls_key_file"
 )
 
 const (

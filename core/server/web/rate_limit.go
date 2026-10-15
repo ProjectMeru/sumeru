@@ -31,8 +31,11 @@ func InitRateLimit() {
 }
 
 func rateLimitedPath(path string) bool {
+	if strings.HasPrefix(path, apiRPCRoutePrefix) {
+		return true
+	}
 	switch path {
-	case apiRPCRoute, loginRoute, totpLoginRoute, oauthStartRoute, oauthCallbackRoute:
+	case loginRoute, totpLoginRoute, oauthStartRoute, oauthCallbackRoute:
 		return true
 	default:
 		return false
@@ -73,7 +76,7 @@ func allowRate(clientIP string, uid int) bool {
 }
 
 func writeRateLimitResponse(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path == apiRPCRoute {
+	if strings.HasPrefix(r.URL.Path, apiRPCRoutePrefix) {
 		api.WriteResponse(w, http.StatusTooManyRequests, api.Fail(api.CodeRateLimited, "Too many requests", nil))
 		return
 	}

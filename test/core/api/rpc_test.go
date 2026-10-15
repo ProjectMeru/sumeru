@@ -130,8 +130,8 @@ func TestDispatch_inputValidation(t *testing.T) {
 			if status != tt.wantStatus {
 				t.Fatalf("status = %d; want %d", status, tt.wantStatus)
 			}
-			if resp.OK != tt.wantOK {
-				t.Fatalf("ok = %v; want %v", resp.OK, tt.wantOK)
+			if resp.Success != tt.wantOK {
+				t.Fatalf("success = %v; want %v", resp.Success, tt.wantOK)
 			}
 			if tt.wantOK {
 				if resp.Error != nil {
@@ -145,8 +145,8 @@ func TestDispatch_inputValidation(t *testing.T) {
 			if resp.Error.Code != tt.wantCode {
 				t.Fatalf("error.code = %q; want %q (msg=%q)", resp.Error.Code, tt.wantCode, resp.Error.Message)
 			}
-			if resp.Result != nil {
-				t.Fatalf("result = %v; want nil on failure", resp.Result)
+			if resp.Data != nil {
+				t.Fatalf("data = %v; want nil on failure", resp.Data)
 			}
 		})
 	}
@@ -158,7 +158,7 @@ func TestDispatch_paramsWrapper(t *testing.T) {
 	if status != http.StatusNotFound {
 		t.Fatalf("status = %d; want %d", status, http.StatusNotFound)
 	}
-	if resp.OK || resp.Error == nil || resp.Error.Code != api.CodeModelNotFound {
+	if resp.Success || resp.Error == nil || resp.Error.Code != api.CodeModelNotFound {
 		t.Fatalf("resp = %+v", resp)
 	}
 }
@@ -174,8 +174,8 @@ func TestDispatch_successEnvelope(t *testing.T) {
 	if err := json.Unmarshal(raw, &m); err != nil {
 		t.Fatal(err)
 	}
-	if m["ok"] != true {
-		t.Fatalf("ok = %v", m["ok"])
+	if m["success"] != true {
+		t.Fatalf("success = %v", m["success"])
 	}
 	if m["error"] != nil {
 		t.Fatalf("error = %v; want null", m["error"])

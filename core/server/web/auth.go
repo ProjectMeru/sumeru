@@ -3,9 +3,7 @@ package web
 import (
 	"bufio"
 	"context"
-	"crypto/rand"
 	"database/sql"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"net"
@@ -20,7 +18,6 @@ import (
 )
 
 const sessionCookieName = "sumeru_session"
-const sessionDuration = 24 * time.Hour
 const sessionSlidingTTL = 8 * time.Hour
 
 var testSessionUserIDOverride int
@@ -251,23 +248,16 @@ func deleteSession(ctx context.Context, sid string) {
 	}
 }
 
-func CreateSession(w http.ResponseWriter, userID int) error {
+func CreateSession(w http.ResponseWriter, ctx context.Context, userID int) error {
 	if orm.DB == nil {
 		return fmt.Errorf("no database")
 	}
-	sessionBytes := make([]byte, 24)
-	if _, err := rand.Read(sessionBytes); err != nil {
-		return err
+	if ctx == nil {
+		ctx = context.Background()
 	}
-	sessionID := hex.EncodeToString(sessionBytes)
-	expiresAt := time.Now().UTC().Add(sessionDuration)
-	sessionTbl := orm.MustQuotedTableName("sys.session")
-	var err error
-	if sessionBrowserPresenceEnabled() {
-		_, err = orm.DB.Exec(`INSERT INTO `+sessionTbl+` (sid, user_id, expires_at, browser_seen_at) VALUES ($1, $2, $3, NOW())`, sessionID, userID, expiresAt)
-	} else {
-		_, err = orm.DB.Exec(`INSERT INTO `+sessionTbl+` (sid, user_id, expires_at) VALUES ($1, $2, $3)`, sessionID, userID, expiresAt)
-	}
+	sessionID, err := orm.CreateUserSession(ctx, userID, orm.SessionCreateOpts{
+		StampBrowserSeen: sessionBrowserPresenceEnabled(),
+	})
 	if err != nil {
 		return err
 	}

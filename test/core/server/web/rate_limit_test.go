@@ -19,11 +19,12 @@ func TestEnforceRateLimit_RPCReturnsJSONEnvelope(t *testing.T) {
 		web.SetRateLimitRPMForTest(0)
 	})
 
-	body := `{"model":"core.user","method":"search","args":[[]]}`
+	body := `{"domain":[]}`
 	for i := 0; i < 2; i++ {
 		rr := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodPost, web.TestAPIRPCRoute, strings.NewReader(body))
+		req := httptest.NewRequest(http.MethodPost, web.TestRPCURLForTest("core.user", "search"), strings.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
+		web.ApplyDefaultRPCHeadersForTest(req)
 		req.RemoteAddr = "203.0.113.10:1234"
 		if !web.EnforceRateLimitForTest(rr, req) {
 			if rr.Code != http.StatusTooManyRequests {
@@ -33,13 +34,13 @@ func TestEnforceRateLimit_RPCReturnsJSONEnvelope(t *testing.T) {
 				t.Fatal("first request should not be rate limited")
 			}
 			var env struct {
-				OK    bool        `json:"ok"`
-				Error *api.RPCError `json:"error"`
+				Success bool          `json:"success"`
+				Error   *api.APIError `json:"error"`
 			}
 			if err := json.Unmarshal(rr.Body.Bytes(), &env); err != nil {
 				t.Fatalf("decode: %v body=%q", err, rr.Body.String())
 			}
-			if env.OK || env.Error == nil || env.Error.Code != api.CodeRateLimited {
+			if env.Success || env.Error == nil || env.Error.Code != api.CodeRateLimited {
 				t.Fatalf("body = %s", rr.Body.String())
 			}
 			return

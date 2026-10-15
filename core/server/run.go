@@ -231,6 +231,12 @@ func newHTTPServer(addr string, handler http.Handler) *http.Server {
 func serveUntilSignal(ctx context.Context, srv *http.Server) error {
 	errCh := make(chan error, 1)
 	go func() {
+		cert := strings.TrimSpace(config.AppConfig.TLSCertFile)
+		key := strings.TrimSpace(config.AppConfig.TLSKeyFile)
+		if cert != "" && key != "" {
+			errCh <- srv.ListenAndServeTLS(cert, key)
+			return
+		}
 		errCh <- srv.ListenAndServe()
 	}()
 	select {

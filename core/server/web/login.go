@@ -13,8 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/crypto/bcrypt"
-
 	"sumeru/core/applog"
 	"sumeru/core/engine/assets"
 	"sumeru/core/engine/render"
@@ -59,19 +57,10 @@ type loginFinishOpts struct {
 var (
 	loginLockoutMu    sync.Mutex
 	loginFailures     = map[string][]time.Time{}
-	dummyPasswordHash = mustDummyBcryptHash()
 	authTemplateMu    sync.Mutex
 	authTemplateCache = map[string]*template.Template{}
 	authTemplateErrs  = map[string]error{}
 )
-
-func mustDummyBcryptHash() string {
-	h, err := bcrypt.GenerateFromPassword([]byte("sumeru-timing-dummy-password"), bcrypt.DefaultCost)
-	if err != nil {
-		panic("login lockout: dummy bcrypt: " + err.Error())
-	}
-	return string(h)
-}
 
 func setLoginCSRFCookie(w http.ResponseWriter) string {
 	token := newLoginCSRFToken()
@@ -185,12 +174,7 @@ func resetLoginLockoutState() {
 }
 
 func comparePasswordConstantTime(storedHash, plain string) bool {
-	storedHash = strings.TrimSpace(storedHash)
-	if storedHash == "" {
-		_ = bcrypt.CompareHashAndPassword([]byte(dummyPasswordHash), []byte(plain))
-		return false
-	}
-	return bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(plain)) == nil
+	return auth.ComparePasswordHash(storedHash, plain)
 }
 
 func parsePositiveInt(s string) int {
@@ -397,7 +381,7 @@ func finishTOTPSession(w http.ResponseWriter, r *http.Request, uid int, nextFrom
 }
 
 func establishSessionAndRedirect(w http.ResponseWriter, r *http.Request, userID int, next, logRoute string) {
-	if err := CreateSession(w, userID); err != nil {
+	if err := CreateSession(w, r.Context(), userID); err != nil {
 		WebLogEvent(r.Context(), WebLogInput{
 			Route:     logRoute,
 			Message:   "Could not start session",
@@ -518,22 +502,9 @@ func parseLoginCredentials(r *http.Request) loginCredentials {
 }
 
 func verifyLoginCredentials(ctx context.Context, credentials loginCredentials, clientIP string) (int, bool) {
-	var userID int
-	var passwordHash string
-	var active bool
-	userTbl := orm.MustQuotedTableName(coreUserModel)
-	err := orm.DB.QueryRowContext(ctx,
-		`SELECT id, COALESCE(password, ''), active FROM `+userTbl+` WHERE LOWER(TRIM(login)) = LOWER(TRIM($1)) LIMIT 1`,
-		credentials.Login,
-	).Scan(&userID, &passwordHash, &active)
-	if err != nil || !active {
-		comparePasswordConstantTime("", credentials.Password)
+	userID, _, _, err := orm.AuthenticateLocalUser(ctx, credentials.Login, credentials.Password)
+	if err != nil {
 		recordFailedLogin(ctx, 0, clientIP, "login="+credentials.Login)
-		recordLoginFailure(credentials.Login)
-		return 0, false
-	}
-	if !comparePasswordConstantTime(passwordHash, credentials.Password) {
-		recordFailedLogin(ctx, userID, clientIP, "bad password")
 		recordLoginFailure(credentials.Login)
 		return 0, false
 	}

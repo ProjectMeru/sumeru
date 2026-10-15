@@ -189,7 +189,7 @@ func TestDispatch_methodValidation(t *testing.T) {
 func TestDispatch_readEmptyIDs(t *testing.T) {
 	body := `{"model":"sys.session","method":"read","args":[[]]}`
 	resp, status := api.Dispatch(authCtx(), []byte(body))
-	if status != http.StatusOK || !resp.OK {
+	if status != http.StatusOK || !resp.Success {
 		t.Fatalf("status=%d resp=%+v", status, resp)
 	}
 }
@@ -221,7 +221,7 @@ func TestDispatch_writeUnlinkEmptyIDs(t *testing.T) {
 		`{"model":"sys.session","method":"unlink","args":[[]]}`,
 	} {
 		resp, status := api.Dispatch(authCtx(), []byte(body))
-		if status != http.StatusOK || !resp.OK || resp.Result != true {
+		if status != http.StatusOK || !resp.Success || resp.Data != true {
 			t.Fatalf("body=%s status=%d resp=%+v", body, status, resp)
 		}
 	}
@@ -233,7 +233,7 @@ func TestDispatch_writeManyEmptyIDs(t *testing.T) {
 	if status != http.StatusOK {
 		t.Fatalf("status = %d; want 200 for empty id list", status)
 	}
-	if !resp.OK || resp.Result != true {
+	if !resp.Success || resp.Data != true {
 		t.Fatalf("resp = %+v", resp)
 	}
 }
@@ -244,7 +244,7 @@ func TestDispatch_unlinkManyEmptyIDs(t *testing.T) {
 	if status != http.StatusOK {
 		t.Fatalf("status = %d; want 200 for empty id list", status)
 	}
-	if !resp.OK || resp.Result != true {
+	if !resp.Success || resp.Data != true {
 		t.Fatalf("resp = %+v", resp)
 	}
 }

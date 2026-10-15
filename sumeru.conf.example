@@ -63,6 +63,10 @@ log_rolling = false
 # session_browser_ping_seconds = 30
 # session_browser_grace_seconds = 90
 
+# TLS (optional): enable HTTPS + HTTP/2 (ALPN) for RPC and web on this listener.
+# tls_cert_file = /path/to/fullchain.pem
+# tls_key_file = /path/to/privkey.pem
+
 # Rate limiting (requests per minute per client IP on /api/rpc and /web/login).
 # When dev_mode=false and this is unset/0, the server defaults to 120.
 rate_limit_rpm = 120

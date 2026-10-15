@@ -59,6 +59,8 @@ type Config struct {
 	SMTPUser                    string
 	SMTPPassword                string
 	SMTPFrom                    string
+	TLSCertFile                 string // tls_cert_file: enable HTTPS + HTTP/2 via ALPN when set with tls_key_file
+	TLSKeyFile                  string // tls_key_file
 }
 
 var AppConfig Config
@@ -220,6 +222,10 @@ func LoadConfig(path string) error {
 			AppConfig.SMTPPassword = val
 		case keySMTPFrom:
 			AppConfig.SMTPFrom = val
+		case keyTLSCertFile:
+			AppConfig.TLSCertFile = val
+		case keyTLSKeyFile:
+			AppConfig.TLSKeyFile = val
 		}
 	}
 

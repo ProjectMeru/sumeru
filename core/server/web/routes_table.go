@@ -40,6 +40,7 @@ func RegisterAppRoutes(mux *http.ServeMux) {
 	registerAppAliases(serveMux)
 	registerContentPrefixRoute(serveMux)
 	registerPortalSharePrefixRoute(serveMux)
+	registerAPIRPCPrefixRoute(serveMux)
 }
 
 func registerContentPrefixRoute(mux *http.ServeMux) {
@@ -115,7 +116,10 @@ func registerSettingsRoutes() {
 func registerAPIRoutes() {
 	registerPublic(http.MethodGet, apiHealthRoute, APIHealthHandler)
 	registerPublic(http.MethodGet, apiReadyRoute, APIReadyHandler)
-	registerPublic(http.MethodPost, apiRPCRoute, RPCJSONHandler)
+}
+
+func registerAPIRPCPrefixRoute(mux *http.ServeMux) {
+	mux.HandleFunc(apiRPCRoutePrefix, RPCPrefixHandler)
 }
 
 func registerPortalRoutes() {
