@@ -371,6 +371,10 @@ func FindAppsModule(modules []AppsModule, moduleName string) (AppsModule, bool) 
 
 func APIKeyTargetUserID(r *http.Request) int { return apiKeyTargetUserID(r) }
 
+func APIKeyExpiresAtFromFormForTest(r *http.Request) (time.Time, string, error) {
+	return apiKeyExpiresAtFromForm(r)
+}
+
 func ParseModuleRow(values map[string]interface{}) (ModuleRow, bool) { return parseModuleRow(values) }
 
 func ModuleDisplayName(moduleName, displayName string) string {

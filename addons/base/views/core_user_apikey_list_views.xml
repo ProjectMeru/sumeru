@@ -5,6 +5,8 @@
             <field name="name" string="Name"/>
             <field name="user_id" string="User"/>
             <field name="key_prefix" string="Prefix"/>
+            <field name="expires_at" string="Expires"/>
+            <field name="last_used_at" string="Last used"/>
             <field name="active" string="Active"/>
             <field name="create_date" string="Created"/>
         </view>

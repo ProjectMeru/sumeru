@@ -2,7 +2,7 @@
     <header class="sum-settings-hub-head">
         <div class="sum-settings-hub-head-text">
             <h1 class="sum-settings-hub-title">Account security</h1>
-            <p class="sum-settings-hub-lead">Manage your password and two-factor authentication.</p>
+            <p class="sum-settings-hub-lead">Manage your password, API keys, and two-factor authentication.</p>
         </div>
         <a href="/web/settings" class="sum-settings-hub-cta">Back to Settings</a>
     </header>
@@ -21,6 +21,61 @@
                 </div>
             </div>
             <button type="submit" class="sum-btn sum-btn--primary">Update password</button>
+        </form>
+    </section>
+
+    <section class="sum-settings-account-section">
+        <h2 class="sum-settings-section-title">API keys</h2>
+        <p class="sum-settings-hub-lead">Create keys for programmatic access. Each key is shown once; choose an expiration up to {{.MaxKeyDurationDays}} days.</p>
+        {{if .APIKeys}}
+        <table class="sum-settings-apikey-table">
+            <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Prefix</th>
+                    <th scope="col">Expires</th>
+                    <th scope="col">Last used</th>
+                    <th scope="col">Status</th>
+                    <th scope="col"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .APIKeys}}
+                <tr>
+                    <td>{{.Name}}</td>
+                    <td><code>{{.Prefix}}</code></td>
+                    <td>{{.ExpiresAt}}</td>
+                    <td>{{.LastUsedAt}}</td>
+                    <td>{{if .Active}}Active{{else}}Revoked{{end}}</td>
+                    <td>
+                        {{if .Active}}
+                        <form method="post" action="/web/settings/account" class="sum-inline-form">
+                            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}"/>
+                            <input type="hidden" name="action" value="revoke_api_key"/>
+                            <input type="hidden" name="key_id" value="{{.ID}}"/>
+                            <button type="submit" class="sum-btn sum-btn--secondary sum-btn--sm">Revoke</button>
+                        </form>
+                        {{end}}
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+        {{else}}
+        <p class="sum-settings-hub-lead">You have no API keys yet.</p>
+        {{end}}
+        <form class="sum-settings-account-form" method="post" action="/web/settings/account">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}"/>
+            <input type="hidden" name="action" value="create_api_key"/>
+            <div class="sum-form-group-outer sum-field-region--sheet">
+                <div class="sum-form-group-grid">
+                    <label class="sum-field-label" for="api_key_name">Description</label>
+                    <input id="api_key_name" name="api_key_name" type="text" maxlength="128" placeholder="e.g. CI pipeline" class="sum-field-input"/>
+                    <label class="sum-field-label" for="duration_days">Valid for (days)</label>
+                    <input id="duration_days" name="duration_days" type="number" min="1" max="{{.MaxKeyDurationDays}}" required class="sum-field-input"/>
+                </div>
+            </div>
+            <button type="submit" class="sum-btn sum-btn--primary">Generate API key</button>
         </form>
     </section>
 

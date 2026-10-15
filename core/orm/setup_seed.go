@@ -305,22 +305,26 @@ func ensureBootstrapACLs(ctx context.Context, adminGID, userGID int) {
 		}, "name")
 	}
 
-	for _, pair := range []struct{ model, name string }{
-		{"core.company", "access_core_company_user"},
-		{"core.user", "access_core_user_user"},
-		{"core.group", "access_core_group_user_read"},
-		{"sys.access", "access_sys_access_user_read"},
-		{"sys.rule", "access_sys_rule_user_read"},
-		{"sys.property.definition", "access_sys_property_definition_user"},
+	for _, pair := range []struct {
+		model, name                 string
+		read, write, create, unlink bool
+	}{
+		{"core.company", "access_core_company_user", true, false, false, false},
+		{"core.user", "access_core_user_user", true, false, false, false},
+		{"core.user.apikey", "access_core_user_apikey_user", true, true, true, false},
+		{"core.group", "access_core_group_user_read", true, false, false, false},
+		{"sys.access", "access_sys_access_user_read", true, false, false, false},
+		{"sys.rule", "access_sys_rule_user_read", true, false, false, false},
+		{"sys.property.definition", "access_sys_property_definition_user", true, false, false, false},
 	} {
 		_, _ = Upsert(ctx, RegistryModel("sys.access"), map[string]interface{}{
 			"name":        pair.name,
 			"model":       pair.model,
 			"group_id":    NullableGroupIDForAccess(userGID),
-			"perm_read":   true,
-			"perm_write":  false,
-			"perm_create": false,
-			"perm_unlink": false,
+			"perm_read":   pair.read,
+			"perm_write":  pair.write,
+			"perm_create": pair.create,
+			"perm_unlink": pair.unlink,
 		}, "name")
 	}
 }
