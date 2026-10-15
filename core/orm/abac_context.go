@@ -16,13 +16,13 @@ func queryUserCompanyID(ctx context.Context, uid int) (sql.NullInt64, error) {
 
 // UserCompanyIDs returns allowed company ids for uid (M2M + current company_id).
 func UserCompanyIDs(ctx context.Context, uid int) ([]int64, error) {
-	if uid <= 0 || DB == nil {
+	if 0 >= uid || DB == nil {
 		return nil, nil
 	}
 	seen := map[int64]struct{}{}
 	var out []int64
 	add := func(id int64) {
-		if id <= 0 {
+		if 0 >= id {
 			return
 		}
 		if _, ok := seen[id]; ok {
@@ -57,14 +57,14 @@ func UserAllowedCompany(ctx context.Context, uid int, cid int64) bool {
 	if uid == superuserUID {
 		return true
 	}
-	if cid <= 0 {
+	if 0 >= cid {
 		return false
 	}
 	ids, err := UserCompanyIDs(ctx, uid)
 	if err != nil {
 		return false
 	}
-	if len(ids) == 0 {
+	if 0 == len(ids) {
 		active := ActiveCompanyIDForUser(ctx, uid)
 		return active > 0 && cid == active
 	}
@@ -78,7 +78,7 @@ func UserAllowedCompany(ctx context.Context, uid int, cid int64) bool {
 
 // ActiveCompanyIDForUser reads core.user.company_id directly (no ORM Search/log path).
 func ActiveCompanyIDForUser(ctx context.Context, uid int) int64 {
-	if uid <= 0 || DB == nil {
+	if 0 >= uid || DB == nil {
 		return 0
 	}
 	companyID, _ := queryUserCompanyID(ctx, uid)
@@ -92,7 +92,7 @@ func ActiveCompanyIDForUser(ctx context.Context, uid int) int64 {
 
 // UserCompanyIDsForUser returns allowed company ids from core.user.company.rel.
 func UserCompanyIDsForUser(ctx context.Context, userID int) ([]int, error) {
-	if userID <= 0 || DB == nil {
+	if 0 >= userID || DB == nil {
 		return nil, nil
 	}
 	table := MustQuotedTableName("core.user.company.rel")
@@ -114,12 +114,26 @@ func UserCompanyIDsForUser(ctx context.Context, userID int) ([]int, error) {
 	return out, rows.Err()
 }
 
+// addCompanyForCreator adds companyID to the signed-in user's allowed companies.
+// No user on the context (install, setup) leaves membership unchanged.
+func addCompanyForCreator(ctx context.Context, companyID int) error {
+	uid := SecurityUID(ctx)
+	if 0 >= uid || 0 >= companyID {
+		return nil
+	}
+	ids, err := UserCompanyIDsForUser(ctx, uid)
+	if err != nil {
+		return err
+	}
+	return SetUserCompanyLinks(ctx, uid, append(ids, companyID))
+}
+
 // SetUserCompanyLinks replaces allowed-company membership for a user.
 func SetUserCompanyLinks(ctx context.Context, userID int, companyIDs []int) error {
 	if DB == nil {
 		return fmt.Errorf("no database")
 	}
-	if userID <= 0 {
+	if 0 >= userID {
 		return fmt.Errorf("invalid user id")
 	}
 	table := MustQuotedTableName("core.user.company.rel")
@@ -128,7 +142,7 @@ func SetUserCompanyLinks(ctx context.Context, userID int, companyIDs []int) erro
 	}
 	seen := map[int]struct{}{}
 	for _, companyID := range companyIDs {
-		if companyID <= 0 {
+		if 0 >= companyID {
 			continue
 		}
 		if _, ok := seen[companyID]; ok {

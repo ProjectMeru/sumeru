@@ -163,7 +163,7 @@ func SearchPage(ctx context.Context, modelName string, domain [][]interface{}, l
 		}
 		logORMOperation(ctx, start, "search_page", modelName, err, map[string]interface{}{"rows": n, "limit": limit, "offset": offset})
 	}()
-	if limit <= 0 || limit > maxSearchLimit {
+	if 0 >= limit || limit > maxSearchLimit {
 		limit = maxSearchLimit
 	}
 	if offset < 0 {

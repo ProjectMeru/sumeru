@@ -13,7 +13,7 @@ const maxBusSubscriptions = 64
 
 // AuthorizeSwcBusChannel checks whether uid may subscribe to channel.
 func AuthorizeSwcBusChannel(ctx context.Context, uid int, channel string) bool {
-	if uid <= 0 || channel == "" {
+	if 0 >= uid || channel == "" {
 		return false
 	}
 	channel = strings.TrimSpace(channel)
@@ -37,7 +37,7 @@ func AuthorizeSwcBusChannel(ctx context.Context, uid int, channel string) bool {
 		}
 		model := parts[1]
 		rid, err := strconv.Atoi(parts[2])
-		if err != nil || rid <= 0 {
+		if err != nil || 0 >= rid {
 			return false
 		}
 		if err := orm.CheckModelAccess(ctx, uid, model, "read"); err != nil {
@@ -55,7 +55,7 @@ func AuthorizeSwcBusChannel(ctx context.Context, uid int, channel string) bool {
 			return false
 		}
 		cid, err := strconv.Atoi(parts[1])
-		if err != nil || cid <= 0 {
+		if err != nil || 0 >= cid {
 			return false
 		}
 		return orm.UserAllowedCompany(ctx, uid, int64(cid))
@@ -67,7 +67,7 @@ func AuthorizeSwcBusChannel(ctx context.Context, uid int, channel string) bool {
 // RecordBusChannel builds the standard record mutation channel name.
 func RecordBusChannel(model string, id int) string {
 	model = strings.TrimSpace(model)
-	if model == "" || id <= 0 {
+	if model == "" || 0 >= id {
 		return ""
 	}
 	return fmt.Sprintf("record/%s/%d", model, id)

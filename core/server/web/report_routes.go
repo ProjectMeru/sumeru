@@ -10,10 +10,10 @@ import (
 )
 
 const (
-	reportPrintRoute    = "/web/report/print"
-	reportPreviewRoute  = "/web/report/preview"
-	exportPivotRoute    = "/web/export/pivot"
-	exportGraphRoute    = "/web/export/graph"
+	reportPrintRoute   = "/web/report/print"
+	reportPreviewRoute = "/web/report/preview"
+	exportPivotRoute   = "/web/export/pivot"
+	exportGraphRoute   = "/web/export/graph"
 )
 
 func registerReportRoutes() {
@@ -93,9 +93,12 @@ func ExportPivotHandler(w http.ResponseWriter, r *http.Request) {
 	if !requireModelAccess(w, r, modelName, "read") {
 		return
 	}
+	if !requireExportEntitlement(w, r, modelName, nil, "csv") {
+		return
+	}
 	groupFields := report.ParseFieldsParam(r.URL.Query().Get("group_by"))
 	measures := report.ParseFieldsParam(r.URL.Query().Get("measures"))
-	if len(groupFields) == 0 || len(measures) == 0 {
+	if 0 == len(groupFields) || 0 == len(measures) {
 		http.Error(w, "group_by and measures required", http.StatusBadRequest)
 		return
 	}
@@ -129,6 +132,9 @@ func ExportGraphHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !requireModelAccess(w, r, modelName, "read") {
+		return
+	}
+	if !requireExportEntitlement(w, r, modelName, nil, "csv") {
 		return
 	}
 	groupField := strings.TrimSpace(r.URL.Query().Get("group_by"))

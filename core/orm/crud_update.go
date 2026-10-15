@@ -12,7 +12,7 @@ func UpdateRecordByID(ctx context.Context, modelName string, id int, values map[
 	defer func() {
 		logORMOperation(ctx, start, "write", modelName, err, map[string]interface{}{"resource_id": id})
 	}()
-	if id <= 0 {
+	if 0 >= id {
 		return fmt.Errorf("invalid id")
 	}
 	_, err = Update(ctx, modelName, [][]interface{}{{"id", "=", id}}, values)

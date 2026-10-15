@@ -2,7 +2,6 @@ package web
 
 import (
 	"context"
-	"database/sql"
 	"strconv"
 	"strings"
 
@@ -53,7 +52,7 @@ func windowActionIDFromMenu(ctx context.Context, menuID int) int {
 
 func menuRecordActionID(menuRecord map[string]interface{}) (actionID int, ok bool) {
 	actionID64, hasAction := orm.CoerceInt64(menuRecord["action_id"])
-	if !hasAction || actionID64 == 0 {
+	if !hasAction || 0 == actionID64 {
 		return 0, false
 	}
 	return int(actionID64), true
@@ -112,7 +111,7 @@ func menuIsUnderXMLRoot(ctx context.Context, menuQuery, rootMenuXMLID string) bo
 
 func resolvedMenuIDFromXML(ctx context.Context, menuXMLID string) (menuID int, ok bool) {
 	menuID, _, err := orm.ResolveXmlId(ctx, menuXMLID)
-	if err != nil || menuID <= 0 {
+	if err != nil || 0 >= menuID {
 		return 0, false
 	}
 	return menuID, true
@@ -120,7 +119,7 @@ func resolvedMenuIDFromXML(ctx context.Context, menuXMLID string) (menuID int, o
 
 func parseMenuIDString(menuQuery string) (menuID int, ok bool) {
 	menuID, err := strconv.Atoi(strings.TrimSpace(menuQuery))
-	if err != nil || menuID <= 0 {
+	if err != nil || 0 >= menuID {
 		return 0, false
 	}
 	return menuID, true
@@ -134,7 +133,7 @@ func actionWindowTargetModel(actionData map[string]interface{}) string {
 // CanonicalMenuID rewrites folder/root menu_id to the leaf menu that owns actionID.
 func CanonicalMenuID(ctx context.Context, menuQuery string, actionID int) string {
 	menuID, ok := parseMenuIDString(menuQuery)
-	if !ok || actionID == 0 {
+	if !ok || 0 == actionID {
 		return menuQuery
 	}
 	menuRecord, err := orm.SearchOne(ctx, sysMenuModel, map[string]interface{}{"id": menuID})
@@ -151,7 +150,7 @@ func CanonicalMenuID(ctx context.Context, menuQuery string, actionID int) string
 }
 
 func menuIDForWindowAction(ctx context.Context, parentMenuID, actionID int) int {
-	if parentMenuID <= 0 || actionID == 0 {
+	if 0 >= parentMenuID || 0 == actionID {
 		return 0
 	}
 	return walkMenuChildren(ctx, parentMenuID, func(childMenuID int, childActionID int) (int, bool) {
@@ -167,27 +166,17 @@ func menuIDForWindowAction(ctx context.Context, parentMenuID, actionID int) int 
 
 // walkMenuChildren DFS-walks sys.menu children (sequence, id) and returns the first match from visit.
 func walkMenuChildren(ctx context.Context, parentMenuID int, visit func(childMenuID, childActionID int) (int, bool)) int {
-	menuTable := orm.MustQuotedTableName(sysMenuModel)
-	rows, err := orm.DB.QueryContext(ctx,
-		`SELECT id, action_id FROM `+menuTable+` WHERE parent_id = $1 ORDER BY sequence ASC, id ASC`,
-		parentMenuID,
-	)
+	rows, err := orm.SearchPage(ctx, sysMenuModel, [][]interface{}{{"parent_id", "=", parentMenuID}}, 500, 0, "sequence asc, id asc")
 	if err != nil {
 		return 0
 	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var childMenuID int
-		var childActionID sql.NullInt64
-		if err := rows.Scan(&childMenuID, &childActionID); err != nil {
+	for _, row := range rows {
+		childMenuID, _ := orm.CoerceInt64(row["id"])
+		if childMenuID <= 0 {
 			continue
 		}
-		aid := 0
-		if childActionID.Valid {
-			aid = int(childActionID.Int64)
-		}
-		if result, ok := visit(childMenuID, aid); ok {
+		aid, _ := orm.CoerceInt64(row["action_id"])
+		if result, ok := visit(int(childMenuID), int(aid)); ok {
 			return result
 		}
 	}

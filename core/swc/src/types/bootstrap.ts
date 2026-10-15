@@ -41,6 +41,7 @@ export interface SwcBootstrapApp {
 export interface SwcBootstrap {
   csrfToken: string;
   rpcUrl: string;
+  apiDatabase: string;
   swcApiBase: string;
   user: SwcBootstrapUser;
   company: SwcBootstrapCompany;

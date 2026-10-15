@@ -51,9 +51,13 @@ func BuildKanbanColumns(ctx context.Context, view *parser.View, rows []map[strin
 	}
 
 	cols, err := defaultMany2OneKanbanColumns(ctx, view.Model, groupField, rows)
-	if err != nil || len(cols) == 0 {
+	if err != nil {
 		return nil, groupField, view.KanbanDraggable()
 	}
+	if 0 == len(cols) {
+		return nil, groupField, view.KanbanDraggable()
+	}
+
 	return cols, groupField, view.KanbanDraggable()
 }
 
@@ -73,7 +77,7 @@ func defaultMany2OneKanbanColumns(ctx context.Context, model, groupField string,
 	index := map[int64]int{}
 	for _, cr := range comodelRows {
 		id, ok := orm.CoerceInt64(cr["id"])
-		if !ok || id <= 0 {
+		if !ok || 0 >= id {
 			continue
 		}
 		fold := asBoolRow(cr["fold"])
@@ -92,7 +96,7 @@ func defaultMany2OneKanbanColumns(ctx context.Context, model, groupField string,
 
 	for _, row := range rows {
 		gv, _ := orm.CoerceInt64(row[groupField])
-		if gv <= 0 {
+		if 0 >= gv {
 			continue
 		}
 		if ix, ok := index[gv]; ok {
@@ -110,7 +114,7 @@ func defaultMany2OneKanbanColumns(ctx context.Context, model, groupField string,
 	var unassigned []map[string]interface{}
 	for _, row := range rows {
 		gv, _ := orm.CoerceInt64(row[groupField])
-		if gv <= 0 {
+		if 0 >= gv {
 			unassigned = append(unassigned, row)
 		}
 	}

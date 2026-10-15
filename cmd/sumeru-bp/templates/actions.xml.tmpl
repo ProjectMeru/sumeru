@@ -2,13 +2,13 @@
 <sumeru>
     <data>
         <!-- Window Action -->
-        <record id="action_{{.Name}}" model="sys.action.window">
-            <field name="name">{{.HumanTitle}}</field>
-            <field name="core_model">{{.ModelDotted}}</field>
+        <record id="action_{{.ModuleName}}" model="sys.action.window">
+            <field name="name">{{.DisplayName}}</field>
+            <field name="core_model">{{.ModelName}}</field>
             <field name="view_mode">list,form,kanban</field>
             <field name="help" type="html">
                 <p class="sum-view-nocontent-smiling-face">
-                    Create your first {{.HumanTitle}}!
+                    Create your first {{.DisplayName}}!
                 </p>
             </field>
         </record>

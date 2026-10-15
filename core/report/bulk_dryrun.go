@@ -31,7 +31,7 @@ func DryRunBulkImport(ctx context.Context, in PreviewBulkImportInput) (PreviewRe
 		return PreviewResult{}, nil, err
 	}
 	mapping := in.Mapping
-	if len(mapping) == 0 {
+	if 0 == len(mapping) {
 		_ = json.Unmarshal([]byte(orm.AsString(batch["column_mapping"])), &mapping)
 	}
 	mode := orm.AsString(batch["import_mode"])
@@ -42,7 +42,7 @@ func DryRunBulkImport(ctx context.Context, in PreviewBulkImportInput) (PreviewRe
 
 	for i, record := range rows {
 		vals := rowValuesFromMapping(headers, record, mapping)
-		if len(vals) == 0 {
+		if 0 == len(vals) {
 			continue
 		}
 		coerced, coerceErrs := coerceImportValues(ctx, modelInst, vals)

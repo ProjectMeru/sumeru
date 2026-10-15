@@ -31,7 +31,7 @@ func RenderReportActionPDF(ctx context.Context, reportID, recordID int, opts Rep
 }
 
 func loadReportAction(ctx context.Context, reportID int) (map[string]interface{}, error) {
-	if reportID <= 0 {
+	if 0 >= reportID {
 		return nil, fmt.Errorf("report id required")
 	}
 	row, err := orm.SearchOne(ctx, "sys.report.action", map[string]interface{}{"id": reportID})

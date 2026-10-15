@@ -248,8 +248,18 @@ async function postJSON(url: string, payload: Record<string, unknown>, csrf: str
     },
     body: JSON.stringify({ ...payload, csrf_token: csrf }),
   });
+  const text = await res.text();
   if (!res.ok) {
-    throw new Error(await res.text());
+    let message = text;
+    try {
+      const errBody = JSON.parse(text) as { error?: { message?: string } };
+      if (errBody.error?.message) {
+        message = errBody.error.message;
+      }
+    } catch {
+      // plain-text error body
+    }
+    throw new Error(message || `HTTP ${res.status}`);
   }
-  return res.json();
+  return JSON.parse(text) as unknown;
 }

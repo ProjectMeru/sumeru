@@ -38,6 +38,7 @@ standards: check-sql check-logs check-test-layout
 
 check-sql:
 	@bash scripts/check_sql_safety.sh
+	@bash scripts/check_sql_allowlist.sh
 
 check-logs:
 	@bash scripts/check_no_stdlog.sh

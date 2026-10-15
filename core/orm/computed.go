@@ -43,7 +43,7 @@ func ApplyComputes(ctx context.Context, model string, rec map[string]interface{}
 		return nil
 	}
 	specs := snapshotComputeSpecs(model)
-	if len(specs) == 0 {
+	if 0 == len(specs) {
 		return nil
 	}
 	for field, spec := range specs {

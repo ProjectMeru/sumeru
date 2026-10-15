@@ -16,7 +16,7 @@ func init() {
 }
 
 func actionDone(ctx context.Context, model string, id int, _ map[string]string) (string, error) {
-	if model != "mail.activity" || id <= 0 {
+	if model != "mail.activity" || 0 >= id {
 		return "", fmt.Errorf("record not found")
 	}
 	rec, err := orm.SearchOne(ctx, "mail.activity", map[string]interface{}{"id": id})
@@ -36,7 +36,7 @@ func actionDone(ctx context.Context, model string, id int, _ map[string]string) 
 }
 
 func actionSnooze(ctx context.Context, model string, id int, _ map[string]string) (string, error) {
-	if model != "mail.activity" || id <= 0 {
+	if model != "mail.activity" || 0 >= id {
 		return "", fmt.Errorf("record not found")
 	}
 	rec, err := orm.SearchOne(ctx, "mail.activity", map[string]interface{}{"id": id})

@@ -45,7 +45,7 @@ func UIDFromAPIKey(ctx context.Context, raw string) int {
 	err := DB.QueryRowContext(ctx,
 		`SELECT user_id, active, expires_at FROM `+tbl+` WHERE key_hash = $1 LIMIT 1`, hash,
 	).Scan(&uid, &active, &expiresAt)
-	if err == sql.ErrNoRows || err != nil || !active || uid <= 0 {
+	if err == sql.ErrNoRows || err != nil || !active || 0 >= uid {
 		return 0
 	}
 	if expiresAt.Valid && strings.TrimSpace(expiresAt.String) != "" {
@@ -67,7 +67,7 @@ func UIDFromAPIKey(ctx context.Context, raw string) int {
 
 // CreateAPIKeyForUser inserts a new key row. Returns the raw key (caller must show once).
 func CreateAPIKeyForUser(ctx context.Context, userID int, name string) (raw string, err error) {
-	if userID <= 0 {
+	if 0 >= userID {
 		return "", fmt.Errorf("user id required")
 	}
 	inst, ok := Registry["core.user.apikey"]

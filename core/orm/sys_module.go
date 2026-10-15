@@ -14,8 +14,8 @@ type SysModule struct {
 	Description modelmeta.Text
 	Icon        modelmeta.String
 	CategoryID  modelmeta.Many2One[SysModuleCategory] `sumeru:"relation=sys.module.category"`
-	State       modelmeta.String   `sumeru:"required"`
-	Application modelmeta.Boolean `sumeru:"required"`
-	Active      modelmeta.Boolean `sumeru:"required"`
+	State       modelmeta.String                      `sumeru:"required"`
+	Application modelmeta.Boolean                     `sumeru:"required"`
+	Active      modelmeta.Boolean                     `sumeru:"required"`
 	LastError   modelmeta.Text
 }

@@ -368,7 +368,7 @@ func transitiveDependencies(moduleName string) []string {
 	delete(needed, moduleName)
 
 	topo, err := sortAddonsTopo(DiscoveredAddons)
-	if err != nil || len(topo) == 0 {
+	if err != nil || 0 == len(topo) {
 		names := make([]string, 0, len(needed))
 		for n := range needed {
 			names = append(names, n)

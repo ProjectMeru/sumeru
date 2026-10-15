@@ -24,7 +24,7 @@ func ParsePinnedAppsJSON(raw string) []string {
 
 // SanitizePinnedModuleList drops unknown modules and duplicates; stable order.
 func SanitizePinnedModuleList(raw []string, allowed map[string]struct{}) []string {
-	if len(raw) == 0 || len(allowed) == 0 {
+	if 0 == len(raw) || 0 == len(allowed) {
 		return nil
 	}
 	seen := make(map[string]struct{}, len(raw))
@@ -63,7 +63,7 @@ func AllowedPinModuleNames(ctx context.Context) map[string]struct{} {
 // PinnedAppsForUser loads and sanitizes pinned modules for the signed-in user.
 func PinnedAppsForUser(ctx context.Context) ([]string, error) {
 	uid := orm.UIDFromContext(ctx)
-	if uid <= 0 || orm.DB == nil {
+	if 0 >= uid || orm.DB == nil {
 		return nil, nil
 	}
 	row, err := orm.SearchOne(ctx, "core.user", map[string]interface{}{"id": uid})
@@ -78,7 +78,7 @@ func PinnedAppsForUser(ctx context.Context) ([]string, error) {
 // SavePinnedAppsForUser validates and persists pinned modules for the signed-in user.
 func SavePinnedAppsForUser(ctx context.Context, modules []string) ([]string, error) {
 	uid := orm.UIDFromContext(ctx)
-	if uid <= 0 {
+	if 0 >= uid {
 		return nil, fmt.Errorf("not authenticated")
 	}
 	allowed := AllowedPinModuleNames(ctx)
@@ -101,9 +101,13 @@ func SavePinnedAppsForUser(ctx context.Context, modules []string) ([]string, err
 // BuildPinnedAppsJSON returns sanitized pinned modules for shell bootstrap.
 func BuildPinnedAppsJSON(ctx context.Context) template.JS {
 	mods, err := PinnedAppsForUser(ctx)
-	if err != nil || len(mods) == 0 {
+	if err != nil {
 		return template.JS("[]")
 	}
+	if 0 == len(mods) {
+		return template.JS("[]")
+	}
+
 	b, err := json.Marshal(mods)
 	if err != nil {
 		return template.JS("[]")

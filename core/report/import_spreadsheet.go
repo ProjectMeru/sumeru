@@ -45,11 +45,11 @@ func xlsxFirstSheetCSV(content []byte) ([]byte, error) {
 			}
 		}
 	}
-	if len(sheetXML) == 0 {
+	if 0 == len(sheetXML) {
 		return nil, fmt.Errorf("xlsx: sheet1 missing")
 	}
 	rows := parseSheetRows(sheetXML, shared)
-	if len(rows) == 0 {
+	if 0 == len(rows) {
 		return nil, fmt.Errorf("xlsx: empty sheet")
 	}
 	return writeCSV(rows[0], rows[1:])

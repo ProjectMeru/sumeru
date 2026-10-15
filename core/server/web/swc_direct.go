@@ -10,6 +10,7 @@ import (
 
 	"sumeru/addons/im"
 	"sumeru/core/orm"
+	"sumeru/core/server/api"
 )
 
 const (
@@ -38,7 +39,7 @@ func SwcDirectStatusHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	uid := AuthenticatedUserID(r)
 	companyID := int(orm.CompanyIDFromContext(ctx))
-	if companyID <= 0 {
+	if 0 >= companyID {
 		companyID = int(orm.ActiveCompanyIDForUser(ctx, uid))
 	}
 	unread := 0
@@ -109,14 +110,14 @@ func SwcDirectThreadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !im.IMEnabled(r.Context()) {
-		http.Error(w, "messages disabled", http.StatusForbidden)
+		writeWebJSONError(w, http.StatusForbidden, api.CodeAccessDenied, "messages disabled", nil)
 		return
 	}
 	peerID, _ := strconv.Atoi(strings.TrimSpace(r.URL.Query().Get("userId")))
 	uid := AuthenticatedUserID(r)
 	msgs, err := im.ListDirectThread(r.Context(), uid, peerID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeWebJSONError(w, http.StatusBadRequest, api.CodeValidationError, err.Error(), nil)
 		return
 	}
 	writeJSONResponse(w, map[string]interface{}{"messages": msgs})
@@ -127,7 +128,7 @@ func SwcDirectPostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !im.IMEnabled(r.Context()) {
-		http.Error(w, "messages disabled", http.StatusForbidden)
+		writeWebJSONError(w, http.StatusForbidden, api.CodeAccessDenied, "messages disabled", nil)
 		return
 	}
 	if !ParsePostForm(w, r) {
@@ -140,7 +141,7 @@ func SwcDirectPostHandler(w http.ResponseWriter, r *http.Request) {
 	uid := AuthenticatedUserID(r)
 	id, err := im.PostDirectMessageLinked(r.Context(), uid, recipientID, body, resModel, resID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeWebJSONError(w, http.StatusBadRequest, api.CodeValidationError, err.Error(), nil)
 		return
 	}
 	writeJSONResponse(w, map[string]interface{}{"id": id})
@@ -155,7 +156,7 @@ func SwcDirectUploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	msgID, _ := strconv.Atoi(strings.TrimSpace(r.FormValue("message_id")))
-	if msgID <= 0 {
+	if 0 >= msgID {
 		http.Error(w, "message_id required", http.StatusBadRequest)
 		return
 	}
@@ -183,7 +184,7 @@ func SwcDirectUploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer upload.Close()
 	content, err := io.ReadAll(upload)
-	if err != nil || len(content) == 0 {
+	if err != nil || 0 == len(content) {
 		http.Error(w, "empty file", http.StatusBadRequest)
 		return
 	}

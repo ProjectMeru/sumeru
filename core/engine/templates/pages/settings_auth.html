@@ -1,0 +1,24 @@
+<div class="sum-settings-hub sum-settings-account">
+    <header class="sum-settings-hub-head">
+        <div class="sum-settings-hub-head-text">
+            <h1 class="sum-settings-hub-title">Authentication</h1>
+            <p class="sum-settings-hub-lead">Local login and password policy (stored in system parameters).</p>
+        </div>
+        <a href="/web/settings" class="sum-settings-hub-cta">Back to Settings</a>
+    </header>
+
+    <section class="sum-settings-account-section">
+        <form class="sum-settings-account-form" method="post" action="/web/settings/auth">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}"/>
+            <div class="sum-form-group-outer sum-field-region--sheet">
+                <div class="sum-form-group-grid">
+                    <label class="sum-field-label" for="local_login_enabled">Local password login</label>
+                    <input id="local_login_enabled" name="local_login_enabled" type="checkbox" value="1" {{if .LocalLoginEnabled}}checked{{end}} class="sum-field-input"/>
+                    <label class="sum-field-label" for="password_min_length">Minimum password length</label>
+                    <input id="password_min_length" name="password_min_length" type="number" min="6" max="72" required value="{{.PasswordMinLength}}" class="sum-field-input"/>
+                </div>
+            </div>
+            <button type="submit" class="sum-btn sum-btn--primary">Save</button>
+        </form>
+    </section>
+</div>

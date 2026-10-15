@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"sumeru/core/engine/assets"
 	"sumeru/core/engine/render"
@@ -83,34 +84,26 @@ func resolveMenuID(ctx context.Context, menuXMLID string) (menuID int, menuIDStr
 }
 
 func loadAppLogEvents(ctx context.Context) ([]appLogEvent, error) {
-	logTable := orm.MustQuotedTableName(appLogModel)
-	query := `
-		SELECT
-			to_char(create_date, 'YYYY-MM-DD HH24:MI:SS') AS created_at,
-			COALESCE(NULLIF(TRIM(module_name), ''), '') AS module,
-			COALESCE(NULLIF(TRIM(action), ''), '') AS action,
-			COALESCE(NULLIF(TRIM(detail), ''), '') AS detail
-		FROM ` + logTable + `
-		ORDER BY create_date DESC, id DESC
-		LIMIT ` + strconv.Itoa(maxAppLogEvents)
-
-	rows, err := orm.DB.QueryContext(ctx, query)
+	rows, err := orm.SearchPage(ctx, appLogModel, nil, maxAppLogEvents, 0, "create_date desc, id desc")
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	events := make([]appLogEvent, 0, maxAppLogEvents)
-	for rows.Next() {
-		var event appLogEvent
-		if err := rows.Scan(&event.CreatedAt, &event.Module, &event.Action, &event.Detail); err != nil {
-			WebLogEvent(ctx, WebLogInput{
-				Route: appLogsRoute, Message: "App log row scan failed",
-				Operation: "load", Status: "partial", Err: err,
-			})
-			continue
-		}
-		events = append(events, event)
+	events := make([]appLogEvent, 0, len(rows))
+	for _, row := range rows {
+		events = append(events, appLogEvent{
+			CreatedAt: formatAppLogTimestamp(row["create_date"]),
+			Module:    strings.TrimSpace(orm.AsString(row["module_name"])),
+			Action:    strings.TrimSpace(orm.AsString(row["action"])),
+			Detail:    strings.TrimSpace(orm.AsString(row["detail"])),
+		})
 	}
-	return events, rows.Err()
+	return events, nil
+}
+
+func formatAppLogTimestamp(raw interface{}) string {
+	s := strings.TrimSpace(orm.AsString(raw))
+	if len(s) >= 19 {
+		return s[:10] + " " + s[11:19]
+	}
+	return s
 }

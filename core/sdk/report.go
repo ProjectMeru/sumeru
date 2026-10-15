@@ -8,9 +8,9 @@ import (
 
 // Report page size constants (re-exported from core/report).
 const (
-	PageSizeA4     = report.PageSizeA4
-	PageSizeLegal  = report.PageSizeLegal
-	PageSizeLetter = report.PageSizeLetter
+	PageSizeA4       = report.PageSizeA4
+	PageSizeLegal    = report.PageSizeLegal
+	PageSizeLetter   = report.PageSizeLetter
 	ImportModeCreate = report.ImportModeCreate
 	ImportModeUpsert = report.ImportModeUpsert
 )

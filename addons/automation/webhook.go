@@ -130,7 +130,7 @@ func resolveWebhookDialIPs(host string) ([]net.IP, error) {
 		}
 		out = append(out, ip)
 	}
-	if len(out) == 0 {
+	if 0 == len(out) {
 		return nil, fmt.Errorf("webhook host resolved to no addresses")
 	}
 	return out, nil

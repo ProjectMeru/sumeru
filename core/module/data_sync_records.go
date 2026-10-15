@@ -124,7 +124,7 @@ func syncGenericRegistryRecord(ctx context.Context, moduleName string, xmlRecord
 
 func syncRegistryRecordByModel(ctx context.Context, moduleName string, xmlRecord parser.Record, modelInstance orm.Model) {
 	fieldMapStrings := parser.RecordFieldMap(xmlRecord)
-	if len(fieldMapStrings) == 0 {
+	if 0 == len(fieldMapStrings) {
 		return
 	}
 	impliedEval := strings.TrimSpace(fieldMapStrings["implied_ids"])
@@ -242,7 +242,7 @@ func isEmptyRef(value string) bool {
 }
 
 func resolveEvalTuple(ctx context.Context, moduleName string, parts []interface{}) interface{} {
-	if len(parts) == 0 {
+	if 0 == len(parts) {
 		return parts
 	}
 	if cmd, ok := parts[0].(int64); ok && cmd == 4 && len(parts) >= 2 {

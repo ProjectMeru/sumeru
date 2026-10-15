@@ -15,6 +15,7 @@
     <h1 id="stepTitle">Welcome</h1>
 
     <form id="setupForm" class="sum-setup-form" onsubmit="return false;">
+        <input type="hidden" id="setup_csrf" value="{{.CSRFToken}}"/>
         <section class="sum-setup-step" data-step="1">
             <p class="sum-setup-intro">You are about to create your Sumeru workspace. This uses database <strong>{{.DbName}}</strong> from your configuration file. You will define your company, language, and the first administrator — there is no built-in default login.</p>
         </section>
@@ -116,6 +117,7 @@
     const password = document.getElementById('password');
     const password2 = document.getElementById('password2');
     const setupToken = document.getElementById('setup_token');
+    const setupCSRF = document.getElementById('setup_csrf');
     const passwordMatchHint = document.querySelector('[data-password-match-hint]');
 
     const revCompany = document.getElementById('rev_company');
@@ -221,7 +223,8 @@
             lang: lang.value,
             admin_name: adminName.value.trim(),
             email: email.value.trim(),
-            password: password.value
+            password: password.value,
+            csrf_token: setupCSRF ? setupCSRF.value : ''
         };
         if (setupToken) {
             payload.setup_token = setupToken.value;
@@ -229,6 +232,9 @@
 
         try {
             var headers = { 'Content-Type': 'application/json' };
+            if (setupCSRF && setupCSRF.value) {
+                headers['X-CSRF-Token'] = setupCSRF.value;
+            }
             if (setupToken && setupToken.value) {
                 headers['X-Setup-Token'] = setupToken.value;
             }

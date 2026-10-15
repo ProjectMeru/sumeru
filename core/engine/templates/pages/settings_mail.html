@@ -1,0 +1,24 @@
+<div class="sum-settings-hub sum-settings-account">
+    <header class="sum-settings-hub-head">
+        <div class="sum-settings-hub-head-text">
+            <h1 class="sum-settings-hub-title">Mail delivery</h1>
+            <p class="sum-settings-hub-lead">Outbound SMTP is configured in the server config file (<code>sumeru.conf</code>), not in the database.</p>
+        </div>
+        <a href="/web/settings" class="sum-settings-hub-cta">Back to Settings</a>
+    </header>
+
+    <section class="sum-settings-account-section">
+        <h2 class="sum-settings-section-title">SMTP</h2>
+        {{if .Configured}}
+        <p class="sum-settings-hub-lead">Mail sending is <strong>enabled</strong> with the settings below.</p>
+        {{else}}
+        <p class="sum-settings-hub-lead">Mail sending is <strong>not configured</strong>. Set <code>smtp_host</code> and <code>smtp_from</code> in the server config.</p>
+        {{end}}
+        <dl class="sum-settings-kv">
+            <dt>Host</dt><dd>{{if .SMTPHost}}{{.SMTPHost}}{{else}}—{{end}}</dd>
+            <dt>Port</dt><dd>{{.SMTPPort}}</dd>
+            <dt>From</dt><dd>{{if .SMTPFrom}}{{.SMTPFrom}}{{else}}—{{end}}</dd>
+            <dt>Username</dt><dd>{{if .SMTPUser}}{{.SMTPUser}}{{else}}—{{end}}</dd>
+        </dl>
+    </section>
+</div>

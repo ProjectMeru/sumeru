@@ -61,4 +61,10 @@ func TestContentInlineAllowedPDF(t *testing.T) {
 	if web.ContentInlineAllowedForTest("text/html") {
 		t.Fatal("html must not inline")
 	}
+	if web.ContentInlineAllowedForTest("image/svg+xml") {
+		t.Fatal("svg must not inline")
+	}
+	if !web.ContentInlineAllowedForTest("image/png") {
+		t.Fatal("png should allow inline")
+	}
 }

@@ -12,7 +12,7 @@ addons/<module>/i18n/<lang>.po
 
 Examples: `i18n/fr_FR.po`, `i18n/es.po`. Language comes from the PO header `Language:` line or from the filename (normalized to Sumeru codes like `fr_FR`).
 
-On **install** or **`-u <module>`**, the server imports all `i18n/*.po` files into `sys.translation` with `module` set to that addon’s technical name.
+On **server start**, **install**, or **`-u <module>`**, the server imports `i18n/*.po` from every installed module on `addons_path` (kernel, standard, and custom) into `sys.translation`. `module` is that addon’s technical name. `msgid` is the English source (menu name, field label, button label). `en_US` stays the source language; set `core.user.lang` to the catalog language to see translations.
 
 ## CLI
 

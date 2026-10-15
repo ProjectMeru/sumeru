@@ -9,7 +9,7 @@ var selectionByType = map[string][][]string{}
 
 // RegisterSelectionForType records selection options for a Go type.
 func RegisterSelectionForType(rt reflect.Type, options [][]string) {
-	if rt == nil || len(options) == 0 {
+	if rt == nil || 0 == len(options) {
 		return
 	}
 	selectionByType[rt.String()] = options

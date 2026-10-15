@@ -39,7 +39,7 @@ func logSQL(ctx context.Context, op, query string, args []interface{}, err error
 }
 
 func scrubSQLArgs(query string, args []interface{}) interface{} {
-	if len(args) == 0 {
+	if 0 == len(args) {
 		return nil
 	}
 	if applog.TextContainsSecretKeyword(query) {

@@ -32,7 +32,7 @@ type CreateBinaryAttachmentInput struct {
 
 // CreateBinaryAttachment validates MIME, optional scan, filestore write, ORM create.
 func CreateBinaryAttachment(ctx context.Context, in CreateBinaryAttachmentInput) (int, error) {
-	if len(in.Data) == 0 {
+	if 0 == len(in.Data) {
 		return 0, fmt.Errorf("attachment: empty data")
 	}
 	name := strings.TrimSpace(in.Name)

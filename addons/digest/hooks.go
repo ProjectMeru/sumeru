@@ -20,9 +20,13 @@ func runDueDigests(ctx context.Context, _ event.Event) error {
 	}
 	return orm.WithElevated(ctx, "digest.hook", func(bypass context.Context) error {
 		rows, err := orm.Search(bypass, "digest.digest", [][]interface{}{{"active", "=", true}})
-		if err != nil || len(rows) == 0 {
+		if err != nil {
 			return err
 		}
+		if 0 == len(rows) {
+			return err
+		}
+
 		for _, digestRow := range rows {
 			if err := runDigest(bypass, digestRow); err != nil {
 				applog.Warn(ctx, applog.Event{
@@ -40,7 +44,7 @@ func runDueDigests(ctx context.Context, _ event.Event) error {
 
 func runDigest(ctx context.Context, digestRow map[string]interface{}) error {
 	digestID, ok := orm.CoerceInt64(digestRow["id"])
-	if !ok || digestID <= 0 {
+	if !ok || 0 >= digestID {
 		return nil
 	}
 	name := strings.TrimSpace(orm.AsString(digestRow["name"]))
@@ -51,7 +55,7 @@ func runDigest(ctx context.Context, digestRow map[string]interface{}) error {
 	if err != nil {
 		return err
 	}
-	if len(kpiRows) == 0 {
+	if 0 == len(kpiRows) {
 		return nil
 	}
 	var lines []string
@@ -71,7 +75,7 @@ func runDigest(ctx context.Context, digestRow map[string]interface{}) error {
 		}
 		lines = append(lines, fmt.Sprintf("- %s: %.0f", label, value))
 	}
-	if len(lines) == 0 {
+	if 0 == len(lines) {
 		return nil
 	}
 	body := name + "\n" + strings.Join(lines, "\n")

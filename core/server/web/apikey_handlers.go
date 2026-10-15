@@ -54,7 +54,7 @@ func ActionCreateAPIKey(w http.ResponseWriter, r *http.Request) {
 func apiKeyTargetUserID(r *http.Request) int {
 	sessionUID := SessionUserID(r)
 	userID, _ := strconv.Atoi(strings.TrimSpace(r.PostFormValue("user_id")))
-	if userID <= 0 || userID == sessionUID {
+	if 0 >= userID || userID == sessionUID {
 		return sessionUID
 	}
 	if orm.UserHasGroupXML(r.Context(), sessionUID, groupSystemXML) {

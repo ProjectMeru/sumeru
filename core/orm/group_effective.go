@@ -10,7 +10,7 @@ import (
 
 // EffectiveGroupIDs returns all group ids for uid (direct + implied). Superuser gets all group ids.
 func EffectiveGroupIDs(ctx context.Context, uid int) ([]int, error) {
-	if uid <= 0 || DB == nil {
+	if 0 >= uid || DB == nil {
 		return nil, nil
 	}
 	cacheKey := fmt.Sprintf("eff_groups:%d", uid)
@@ -112,7 +112,7 @@ func intSliceContains(haystack []int, needle int) bool {
 
 // InvalidateEffectiveGroups drops the cached effective group set for uid.
 func InvalidateEffectiveGroups(_ context.Context, uid int) {
-	if uid <= 0 {
+	if 0 >= uid {
 		return
 	}
 	cache.Delete(fmt.Sprintf("eff_groups:%d", uid))

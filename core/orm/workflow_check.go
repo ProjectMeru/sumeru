@@ -81,7 +81,7 @@ func checkWorkflowTransitionRows(ctx context.Context, model, fromState, toState 
 			break
 		}
 	}
-	if n == 0 {
+	if 0 == n {
 		return errNoWorkflowRows
 	}
 	if !matchedFrom || !allowed {

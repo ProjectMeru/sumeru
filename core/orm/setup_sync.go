@@ -73,7 +73,7 @@ func SyncRegistrySchemaForNames(modelNames []string) error {
 func ModelsForModuleSchemaSync(moduleName string) ([]string, bool) {
 	owned := ModelsOwnedByModule(moduleName)
 	extended := ModelsExtendedByModule(moduleName)
-	if len(owned) == 0 && len(extended) == 0 {
+	if 0 == len(owned) && 0 == len(extended) {
 		return nil, false
 	}
 	seen := make(map[string]struct{}, len(owned)+len(extended))

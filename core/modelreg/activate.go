@@ -22,7 +22,7 @@ var (
 )
 
 func queueRegistration(moduleName string, models []pendingModel) {
-	if len(models) == 0 {
+	if 0 == len(models) {
 		return
 	}
 	pendingMu.Lock()
@@ -74,7 +74,7 @@ func activateAllLocked(moduleOrder []string) error {
 }
 
 func moduleOrderForActivation(moduleOrder []string) []string {
-	if len(moduleOrder) == 0 {
+	if 0 == len(moduleOrder) {
 		names := make([]string, 0, len(pendingByModule))
 		for name := range pendingByModule {
 			names = append(names, name)

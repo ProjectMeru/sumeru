@@ -12,7 +12,7 @@ func Unlink(ctx context.Context, modelName string, id int) (err error) {
 	defer func() {
 		logORMOperation(ctx, start, "delete", modelName, err, map[string]interface{}{"resource_id": id})
 	}()
-	if id <= 0 {
+	if 0 >= id {
 		return fmt.Errorf("invalid id")
 	}
 	_, err = UnlinkWhere(ctx, modelName, [][]interface{}{{"id", "=", id}})

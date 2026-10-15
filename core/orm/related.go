@@ -28,7 +28,7 @@ func ApplyRelatedFields(ctx context.Context, model string, rec map[string]interf
 
 // ApplyRelatedFieldsBatch resolves related fields for many rows with one Search per relation hop.
 func ApplyRelatedFieldsBatch(ctx context.Context, model string, records []map[string]interface{}) error {
-	if len(records) == 0 {
+	if 0 == len(records) {
 		return nil
 	}
 	inst, ok := Registry[model]
@@ -63,7 +63,7 @@ func ApplyRelatedFieldsBatch(ctx context.Context, model string, records []map[st
 			relation:    relationFieldDef.Relation,
 		})
 	}
-	if len(specs) == 0 {
+	if 0 == len(specs) {
 		return nil
 	}
 
@@ -85,7 +85,7 @@ func ApplyRelatedFieldsBatch(ctx context.Context, model string, records []map[st
 	ctx = ContextSkipRelatedEnrichment(ctx)
 	cacheByRelation := map[string]map[int64]map[string]interface{}{}
 	for relation, idSet := range idsByRelation {
-		if len(idSet) == 0 {
+		if 0 == len(idSet) {
 			continue
 		}
 		values := make([]interface{}, 0, len(idSet))
@@ -110,7 +110,7 @@ func ApplyRelatedFieldsBatch(ctx context.Context, model string, records []map[st
 	for _, rec := range records {
 		for _, spec := range specs {
 			relID, ok := CoerceInt64(rec[spec.relField])
-			if !ok || relID <= 0 {
+			if !ok || 0 >= relID {
 				rec[spec.fieldName] = nil
 				continue
 			}

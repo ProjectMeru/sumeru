@@ -9,7 +9,7 @@ func UserInitialsFromName(name string) string {
 		return "?"
 	}
 	parts := strings.Fields(name)
-	if len(parts) == 0 {
+	if 0 == len(parts) {
 		return "?"
 	}
 	if len(parts) == 1 {
@@ -24,7 +24,7 @@ func UserInitialsFromName(name string) string {
 	}
 	a := []rune(parts[0])
 	b := []rune(parts[len(parts)-1])
-	if len(a) == 0 || len(b) == 0 {
+	if 0 == len(a) || 0 == len(b) {
 		return "?"
 	}
 	return strings.ToUpper(string(a[0]) + string(b[0]))

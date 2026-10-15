@@ -12,7 +12,7 @@ import (
 
 // BuildPivotData aggregates list rows for a pivot view definition.
 func BuildPivotData(view *parser.View, rows []map[string]interface{}) *PivotMeta {
-	if view == nil || len(view.Field) == 0 {
+	if view == nil || 0 == len(view.Field) {
 		return nil
 	}
 	var rowFields, colFields, measureFields []parser.Field
@@ -26,7 +26,7 @@ func BuildPivotData(view *parser.View, rows []map[string]interface{}) *PivotMeta
 			measureFields = append(measureFields, f)
 		}
 	}
-	if len(measureFields) == 0 {
+	if 0 == len(measureFields) {
 		return nil
 	}
 	measure := measureFields[0]
@@ -56,7 +56,7 @@ func BuildPivotData(view *parser.View, rows []map[string]interface{}) *PivotMeta
 		Values:       values,
 		MeasureLabel: measureLabel,
 	}
-	if len(out.RowLabels) == 0 {
+	if 0 == len(out.RowLabels) {
 		out.RowLabels = []string{"Total"}
 	}
 	return out
@@ -70,7 +70,7 @@ func fieldDisplayLabel(f parser.Field) string {
 }
 
 func pivotKey(row map[string]interface{}, fields []parser.Field) string {
-	if len(fields) == 0 {
+	if 0 == len(fields) {
 		return "Total"
 	}
 	parts := make([]string, 0, len(fields))

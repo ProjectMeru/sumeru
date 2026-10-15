@@ -13,10 +13,10 @@ import (
 const MenuGeneralSettingsXMLID = "base.menu_general_settings"
 
 const (
-	SettingsHubPath         = "/web/settings"
-	SettingsAccountPath     = "/web/settings/account"
-	SettingsFieldACLPath    = "/web/settings/field-acl"
-	SettingsModelACLPath    = "/web/settings/model-acl"
+	SettingsHubPath      = "/web/settings"
+	SettingsAccountPath  = "/web/settings/account"
+	SettingsFieldACLPath = "/web/settings/field-acl"
+	SettingsModelACLPath = "/web/settings/model-acl"
 )
 
 // Menu XML ids for settings security matrix pages (active sidebar highlight).
@@ -42,7 +42,7 @@ func menuIDForXMLID(ctx context.Context, xmlID string) string {
 		return ""
 	}
 	id, _, err := orm.ResolveXmlId(ctx, xmlID)
-	if err != nil || id <= 0 {
+	if err != nil || 0 >= id {
 		return ""
 	}
 	return strconv.Itoa(id)

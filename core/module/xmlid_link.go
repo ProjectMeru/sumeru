@@ -34,7 +34,7 @@ func resolveXMLIDInModule(ctx context.Context, moduleName, ref string) (int, err
 
 // linkXMLRecord upserts sys.model.data for a synced XML record and logs failures.
 func linkXMLRecord(ctx context.Context, moduleName, xmlID, model string, coreID int) error {
-	if coreID <= 0 || xmlID == "" {
+	if 0 >= coreID || xmlID == "" {
 		return nil
 	}
 	_, err := orm.Upsert(ctx, orm.RegistryModel("sys.model.data"), map[string]interface{}{

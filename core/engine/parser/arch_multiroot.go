@@ -141,10 +141,10 @@ func promoteNestedForm(v *View) {
 	if v.Chatter == nil {
 		v.Chatter = f.Chatter
 	}
-	if len(v.Field) == 0 {
+	if 0 == len(v.Field) {
 		v.Field = f.Field
 	}
-	if len(v.Group) == 0 {
+	if 0 == len(v.Group) {
 		v.Group = f.Group
 	}
 	v.Form = nil

@@ -13,20 +13,24 @@ func ImportWizardPageHandler(w http.ResponseWriter, r *http.Request) {
 	if !requireLogin(w, r) {
 		return
 	}
-	batchID := strings.TrimSpace(r.URL.Query().Get("batch"))
-	if batchID == "" {
+	batchIDStr := strings.TrimSpace(r.URL.Query().Get("batch"))
+	if batchIDStr == "" {
 		http.Error(w, "batch required", http.StatusBadRequest)
 		return
 	}
-	if _, err := strconv.Atoi(batchID); err != nil {
+	batchID, err := strconv.Atoi(batchIDStr)
+	if err != nil || 0 >= batchID {
 		http.Error(w, "invalid batch", http.StatusBadRequest)
+		return
+	}
+	if _, ok := loadOwnedBulkBatch(w, r, batchID); !ok {
 		return
 	}
 	renderShellPage(w, r, shellPageOpts{
 		Route:         importWizardRoute,
 		InnerTemplate: render.TemplatePagesImportWizard,
 		InnerData: map[string]interface{}{
-			"BatchID":   batchID,
+			"BatchID":   batchIDStr,
 			"CSRFToken": CSRFTokenForRequest(r),
 		},
 		Page: render.PageData{Title: "Import data"},

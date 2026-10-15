@@ -33,7 +33,7 @@ func writeJSONResponse(w http.ResponseWriter, v interface{}) {
 // resolveRequestUID returns SecurityUID from context, falling back to the session cookie.
 func resolveRequestUID(r *http.Request) int {
 	uid := orm.SecurityUID(r.Context())
-	if uid <= 0 {
+	if 0 >= uid {
 		uid = SessionUserID(r)
 	}
 	return uid
@@ -43,6 +43,20 @@ func requireSystemAdmin(w http.ResponseWriter, r *http.Request, redirectOnDeny b
 	ctx := r.Context()
 	uid := resolveRequestUID(r)
 	if orm.UserHasGroupXML(ctx, uid, groupSystemXML) {
+		return true
+	}
+	if redirectOnDeny {
+		http.Redirect(w, r, homeRoute, http.StatusFound)
+	} else {
+		http.Error(w, forbiddenMessage, http.StatusForbidden)
+	}
+	return false
+}
+
+func requireModuleManagerOrSystem(w http.ResponseWriter, r *http.Request, redirectOnDeny bool) bool {
+	ctx := r.Context()
+	uid := resolveRequestUID(r)
+	if orm.UserHasGroupXML(ctx, uid, groupSystemXML) || orm.UserHasGroupXML(ctx, uid, groupModuleManagerXML) {
 		return true
 	}
 	if redirectOnDeny {

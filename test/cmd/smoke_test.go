@@ -4,10 +4,34 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"sumeru/test/harness"
 )
+
+func TestSumeruBpScaffoldsI18n(t *testing.T) {
+	root := harness.RepoRoot(t)
+	out := t.TempDir()
+	cmd := exec.Command("go", "run", "./cmd/sumeru-bp", "-name", "bp_i18n_demo", "-out", out)
+	cmd.Dir = root
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("scaffold: %v\n%s", err, output)
+	}
+	catalog, err := os.ReadFile(filepath.Join(out, "bp_i18n_demo", "i18n", "en_US.po"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(catalog)
+	if !strings.Contains(text, "Language: en_US") || !strings.Contains(text, "Bp I18n Demo") {
+		t.Fatalf("catalog missing source strings:\n%s", text)
+	}
+	again := exec.Command("go", "run", "./cmd/sumeru-bp", "-name", "bp_i18n_demo", "-out", out)
+	again.Dir = root
+	if err := again.Run(); err == nil {
+		t.Fatal("expected non-zero exit when the module directory already exists")
+	}
+}
 
 func TestSumeruModuleUsage(t *testing.T) {
 	root := harness.RepoRoot(t)

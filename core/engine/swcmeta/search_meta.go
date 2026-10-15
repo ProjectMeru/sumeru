@@ -86,7 +86,7 @@ func GroupByFields(model string) []ArchField {
 }
 
 func searchFieldsFromView(ctx context.Context, model string, view *parser.View) []ArchField {
-	if view == nil || len(view.Field) == 0 {
+	if view == nil || 0 == len(view.Field) {
 		return nil
 	}
 	fields := serializeFields(ctx, view.Field)
@@ -108,14 +108,15 @@ func BuildSearchMeta(ctx context.Context, model string, searchView *parser.View)
 			meta.SearchFields = sf
 		}
 	}
-	if len(meta.Filters) == 0 && len(meta.FilterFields) == 0 && len(meta.GroupByFields) == 0 && len(meta.SearchFields) == 0 {
+	if 0 == len(meta.Filters) && 0 == len(meta.FilterFields) && 0 == len(meta.GroupByFields) && 0 == len(meta.SearchFields) {
 		return nil
 	}
+	translateSearch(ctx, orm.UserLang(ctx), meta)
 	return meta
 }
 
 func serializeSearchFilters(view *parser.View) []SearchFilterMeta {
-	if view == nil || len(view.SearchFilter) == 0 {
+	if view == nil || 0 == len(view.SearchFilter) {
 		return nil
 	}
 	out := make([]SearchFilterMeta, 0, len(view.SearchFilter))

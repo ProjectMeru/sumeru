@@ -11,7 +11,7 @@ import (
 )
 
 func buildORMModelsGo(module string, types []string) string {
-	if len(types) == 0 {
+	if 0 == len(types) {
 		return ""
 	}
 	var b strings.Builder
@@ -28,7 +28,7 @@ func buildORMModelsGo(module string, types []string) string {
 }
 
 func buildPackageModelsGo(module string, types []string, packageName string) string {
-	if len(types) == 0 {
+	if 0 == len(types) {
 		return ""
 	}
 	if packageName == "" {
@@ -62,9 +62,13 @@ func writeAddonModelFiles(addonRoot, module string) error {
 	for _, sub := range []string{"models", "wizard"} {
 		dir := filepath.Join(addonRoot, sub)
 		types, err := scanPackageForModels(dir)
-		if err != nil || len(types) == 0 {
+		if err != nil {
 			continue
 		}
+		if 0 == len(types) {
+			continue
+		}
+
 		body := buildPackageModelsGo(module, types, packageNameForDir(dir))
 		dest := filepath.Join(dir, "zmodels.go")
 		if err := os.WriteFile(dest, []byte(body), 0o644); err != nil {
@@ -76,9 +80,13 @@ func writeAddonModelFiles(addonRoot, module string) error {
 
 func writeORMModelsRegistration(ormDir, ormmodelsDir, module string) error {
 	types, err := scanPackageForModels(ormDir)
-	if err != nil || len(types) == 0 {
+	if err != nil {
 		return nil
 	}
+	if 0 == len(types) {
+		return nil
+	}
+
 	body := buildORMModelsGo(module, types)
 	if err := os.MkdirAll(ormmodelsDir, 0o755); err != nil {
 		return err
@@ -114,7 +122,7 @@ func writeORMZRefs(ormDir string) error {
 	sort.Strings(names)
 
 	zrefsPath := filepath.Join(ormDir, "zrefs.go")
-	if len(names) == 0 {
+	if 0 == len(names) {
 		_ = os.Remove(zrefsPath)
 		return nil
 	}

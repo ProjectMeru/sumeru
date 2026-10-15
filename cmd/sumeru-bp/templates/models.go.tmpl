@@ -1,13 +1,13 @@
-// Package models contains the business domain objects for {{.Name}}.
+// Package models contains the business domain objects for {{.ModuleName}}.
 package models
 
 import (
 	"sumeru/core/sdk"
 )
 
-// {{.TypeName}} is the primary record for {{.HumanTitle}}.
-type {{.TypeName}} struct {
-	sdk.Model `sumeru:"model={{.ModelDotted}}"`
+// {{.StructName}} is the primary record for {{.DisplayName}}.
+type {{.StructName}} struct {
+	sdk.Model `sumeru:"model={{.ModelName}}"`
 
 	Name        sdk.String  `sumeru:"required,index,string=Name"`
 	Description sdk.Text    `sumeru:"string=Description"`

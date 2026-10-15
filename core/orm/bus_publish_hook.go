@@ -21,7 +21,7 @@ func PublishBusChannel(ctx context.Context, channel string, payload map[string]i
 
 // UserNotificationsBusChannel returns the inbox channel for uid.
 func UserNotificationsBusChannel(uid int) string {
-	if uid <= 0 {
+	if 0 >= uid {
 		return ""
 	}
 	return "user/" + strconv.Itoa(uid) + "/notifications"

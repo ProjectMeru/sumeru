@@ -110,7 +110,7 @@ func serializeSwcBreadcrumbs(items []render.BreadcrumbItem) []swcmeta.Breadcrumb
 }
 
 func serializeListSections(sections []render.ListSection) []swcmeta.ListSectionMeta {
-	if len(sections) == 0 {
+	if 0 == len(sections) {
 		return nil
 	}
 	out := make([]swcmeta.ListSectionMeta, 0, len(sections))

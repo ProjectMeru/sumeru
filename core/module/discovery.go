@@ -24,12 +24,12 @@ func LoadAddonPaths(rootPaths []string) error {
 			sanitizedRoots = append(sanitizedRoots, strings.TrimSpace(path))
 		}
 	}
-	if len(sanitizedRoots) == 0 {
+	if 0 == len(sanitizedRoots) {
 		return fmt.Errorf("no addon roots configured")
 	}
 
 	discoveredAddons := DiscoveredAddons
-	if len(discoveredAddons) == 0 {
+	if 0 == len(discoveredAddons) {
 		var err error
 		discoveredAddons, err = DiscoverAddonRoots(sanitizedRoots)
 		if err != nil {

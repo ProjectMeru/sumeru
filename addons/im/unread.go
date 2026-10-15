@@ -8,7 +8,7 @@ import (
 
 // UnreadDirectCount returns incoming messages not yet marked read for uid.
 func UnreadDirectCount(ctx context.Context, uid int) (int, error) {
-	if uid <= 0 || orm.DB == nil {
+	if 0 >= uid || orm.DB == nil {
 		return 0, nil
 	}
 	if err := orm.CheckModelAccess(ctx, uid, MessageModel, "read"); err != nil {
@@ -30,7 +30,7 @@ func UnreadDirectCount(ctx context.Context, uid int) (int, error) {
 
 // MarkDirectThreadRead sets is_read on incoming messages in a peer thread.
 func MarkDirectThreadRead(ctx context.Context, uid, peerID int) error {
-	if uid <= 0 || peerID <= 0 {
+	if 0 >= uid || 0 >= peerID {
 		return nil
 	}
 	if err := orm.CheckModelAccess(ctx, uid, MessageModel, "write"); err != nil {
@@ -46,7 +46,7 @@ func MarkDirectThreadRead(ctx context.Context, uid, peerID int) error {
 	}
 	for _, row := range rows {
 		id, _ := orm.CoerceInt64(row["id"])
-		if id <= 0 {
+		if 0 >= id {
 			continue
 		}
 		if _, err := orm.Update(ctx, MessageModel, [][]interface{}{{"id", "=", int(id)}}, map[string]interface{}{"is_read": true}); err != nil {

@@ -71,7 +71,7 @@ func deleteActionMatched(model string, id int, actionID int64) bool {
 }
 
 func matchBeforeDelete(ctx context.Context, model string, id int, before map[string]interface{}) {
-	if orm.DB == nil || id <= 0 || automationSkippedModel(model) {
+	if orm.DB == nil || 0 >= id || automationSkippedModel(model) {
 		return
 	}
 	if _, ok := orm.Registry["sys.server.action"]; !ok {
@@ -121,7 +121,7 @@ func matchBeforeDelete(ctx context.Context, model string, id int, before map[str
 }
 
 func claimRun(ctx context.Context, actionID int64, ev event.Event, model string, resID int64) (bool, error) {
-	if orm.DB == nil || actionID <= 0 {
+	if orm.DB == nil || 0 >= actionID {
 		return true, nil
 	}
 	if _, ok := orm.Registry["sys.server.action.log"]; !ok {

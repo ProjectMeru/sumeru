@@ -75,11 +75,11 @@ func (addon *Addon) syncCSVFieldAccess(ctx context.Context) error {
 		}
 
 		accessValues := map[string]interface{}{
-			"name":        accessName,
-			"model":       modelName,
-			"field_name":  fieldName,
-			"perm_read":   permRead,
-			"perm_write":  permWrite,
+			"name":       accessName,
+			"model":      modelName,
+			"field_name": fieldName,
+			"perm_read":  permRead,
+			"perm_write": permWrite,
 		}
 		if groupId > 0 {
 			accessValues["group_id"] = groupId

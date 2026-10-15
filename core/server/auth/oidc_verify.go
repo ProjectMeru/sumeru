@@ -253,7 +253,7 @@ func fetchJWKS(ctx context.Context, jwksURL string) (map[string]crypto.PublicKey
 			out[kid] = pub
 		}
 	}
-	if len(out) == 0 {
+	if 0 == len(out) {
 		return nil, errors.New("no usable jwks keys")
 	}
 	return out, nil
@@ -272,7 +272,7 @@ func rsaPublicFromJWK(nB64, eB64 string) (*rsa.PublicKey, error) {
 	for _, b := range eBytes {
 		eInt = eInt<<8 + int(b)
 	}
-	if eInt == 0 {
+	if 0 == eInt {
 		eInt = 65537
 	}
 	return &rsa.PublicKey{N: new(big.Int).SetBytes(nBytes), E: eInt}, nil

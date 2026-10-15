@@ -66,8 +66,8 @@ manifest.json data load order (recommended)
 Translation catalogs (gettext PO)
 ---------------------------------
   Optional per-addon folder: i18n/*.po (e.g. i18n/fr_FR.po, i18n/es.po).
-  On module install or -u, the server imports these into sys.translation
-  (module = this addon's technical name). Use cmd/sumeru-i18n for manual
+  On server start, install, or -u, the server imports these into sys.translation
+  for every installed module (module = this addon's technical name). Use cmd/sumeru-i18n for manual
   import-po / export-po. See addons/i18n/README.md.
 
 File and XML id naming

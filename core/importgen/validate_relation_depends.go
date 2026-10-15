@@ -27,7 +27,7 @@ func validateRelationDepends(workspace, sumeruRoot, addonsRoot string, discovere
 		if err != nil {
 			return fmt.Errorf("%s: %w", name, err)
 		}
-		if len(used) == 0 {
+		if 0 == len(used) {
 			continue
 		}
 

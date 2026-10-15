@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	swcNotificationsRoute    = "/web/swc/notifications"
+	swcNotificationsRoute     = "/web/swc/notifications"
 	swcNotificationsReadRoute = "/web/swc/notifications/read"
 )
 

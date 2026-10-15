@@ -23,12 +23,12 @@ type View struct {
 	kanbanQuickCreate bool
 	kanbanDraggable   bool
 	bulkUpload        bool
-	Header        *Header  `xml:"header"`
-	Sheet         *Sheet   `xml:"sheet"`
-	Footer        *Footer  `xml:"footer"`
-	Chatter       *Chatter `xml:"chatter"`
-	Field         []Field  `xml:"field"`
-	Group         []Group  `xml:"group"`
+	Header            *Header  `xml:"header"`
+	Sheet             *Sheet   `xml:"sheet"`
+	Footer            *Footer  `xml:"footer"`
+	Chatter           *Chatter `xml:"chatter"`
+	Field             []Field  `xml:"field"`
+	Group             []Group  `xml:"group"`
 	// Form is a nested <form> under <view>; promoted onto View then cleared.
 	Form *archFormRoot `xml:"form"`
 

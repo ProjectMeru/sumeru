@@ -117,7 +117,7 @@ func runModuleLifecycleAction(ctx context.Context, action, moduleName string) (f
 
 func saveModuleFromForm(r *http.Request, moduleName string) error {
 	recordID, err := strconv.Atoi(strings.TrimSpace(r.FormValue(moduleRowIDField)))
-	if err != nil || recordID <= 0 {
+	if err != nil || 0 >= recordID {
 		return errors.New(moduleMsgInvalidModuleRow)
 	}
 

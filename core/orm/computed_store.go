@@ -15,7 +15,7 @@ func MergeStoredComputes(ctx context.Context, modelName string, rec map[string]i
 		return nil
 	}
 	order := storedComputeOrder(modelName)
-	if len(order) == 0 {
+	if 0 == len(order) {
 		return nil
 	}
 	specs := snapshotComputeSpecs(modelName)
@@ -36,7 +36,7 @@ func MergeStoredComputes(ctx context.Context, modelName string, rec map[string]i
 func storedComputeOrder(modelName string) []string {
 	computeMu.RLock()
 	byField := computes[modelName]
-	if len(byField) == 0 {
+	if 0 == len(byField) {
 		computeMu.RUnlock()
 		return nil
 	}
@@ -97,7 +97,7 @@ func topoSort(fields []string, deps map[string][]string) []string {
 
 // RejectVirtualWrites returns an error if values touch virtual or readonly-compute fields.
 func RejectVirtualWrites(model Model, values map[string]interface{}) error {
-	if model == nil || len(values) == 0 {
+	if model == nil || 0 == len(values) {
 		return nil
 	}
 	byName := fieldDefinitionsByName(model)

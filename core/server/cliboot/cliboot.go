@@ -110,7 +110,7 @@ func InitOptionalDB(configPath string, requireDB bool) (context.Context, error) 
 
 // ContextWithUID returns ctx with security uid set for ORM calls.
 func ContextWithUID(ctx context.Context, uid int) context.Context {
-	if uid <= 0 {
+	if 0 >= uid {
 		uid = 1
 	}
 	return orm.ContextWithUID(ctx, uid)

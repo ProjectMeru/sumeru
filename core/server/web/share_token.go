@@ -29,7 +29,7 @@ func MintShareToken(issuerUID int, model string, resID int64) (string, error) {
 }
 
 func mintShareTokenAt(issuerUID int, model string, resID int64, exp int64) (string, error) {
-	if issuerUID <= 0 || resID <= 0 || strings.TrimSpace(model) == "" || exp <= 0 {
+	if 0 >= issuerUID || 0 >= resID || strings.TrimSpace(model) == "" || 0 >= exp {
 		return "", fmt.Errorf("invalid share token input")
 	}
 	payload := fmt.Sprintf("%d|%s|%d|%d", issuerUID, model, resID, exp)
@@ -72,15 +72,15 @@ func parseShareToken(token string) (parsedShareToken, error) {
 		return out, fmt.Errorf("invalid token payload")
 	}
 	uid, err := strconv.Atoi(segments[0])
-	if err != nil || uid <= 0 {
+	if err != nil || 0 >= uid {
 		return out, fmt.Errorf("invalid issuer")
 	}
 	resID, err := strconv.ParseInt(segments[2], 10, 64)
-	if err != nil || resID <= 0 {
+	if err != nil || 0 >= resID {
 		return out, fmt.Errorf("invalid record id")
 	}
 	exp, err := strconv.ParseInt(segments[3], 10, 64)
-	if err != nil || exp <= 0 {
+	if err != nil || 0 >= exp {
 		return out, fmt.Errorf("invalid expiry")
 	}
 	if time.Now().UTC().Unix() > exp {

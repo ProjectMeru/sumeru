@@ -62,10 +62,10 @@ func DisableOwnTOTP(ctx context.Context, actor, userID int, code string) error {
 
 // DisableUserTOTP clears TOTP for userID (system administrator).
 func DisableUserTOTP(ctx context.Context, actor, userID int) error {
-	if userID <= 0 {
+	if 0 >= userID {
 		return fmt.Errorf("invalid user id")
 	}
-	if actor <= 0 {
+	if 0 >= actor {
 		return fmt.Errorf("unauthenticated")
 	}
 	if !UserHasGroupXML(ctx, actor, "base.group_system") {
@@ -105,7 +105,7 @@ func OwnTOTPEnrollmentPending(ctx context.Context, actor, userID int) (secret st
 }
 
 func assertOwnUser(actor, userID int) error {
-	if userID <= 0 || actor <= 0 {
+	if 0 >= userID || 0 >= actor {
 		return fmt.Errorf("unauthenticated")
 	}
 	if actor != userID {

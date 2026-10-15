@@ -38,7 +38,7 @@ func writeAddonZRefs(workspaceRoot, sumeruRoot, addonsRoot, addonName, modelsDir
 	}
 
 	zrefsPath := filepath.Join(modelsDir, "zrefs.go")
-	if len(used) == 0 {
+	if 0 == len(used) {
 		_ = os.Remove(zrefsPath)
 		return nil
 	}

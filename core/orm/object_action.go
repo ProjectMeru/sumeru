@@ -39,7 +39,7 @@ func RunObjectAction(ctx context.Context, model string, id int, method string, v
 	if model == "" || method == "" {
 		return "", fmt.Errorf("model and method are required")
 	}
-	if id <= 0 {
+	if 0 >= id {
 		return "", fmt.Errorf("invalid record id")
 	}
 	if err := RejectSmuggledUserBypass(ctx); err != nil {

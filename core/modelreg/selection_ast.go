@@ -112,7 +112,7 @@ func scanSelectionConsts(pkgDir, typeName string) [][]string {
 	}
 
 	raw := values[typeName]
-	if len(raw) == 0 {
+	if 0 == len(raw) {
 		return nil
 	}
 	sort.Strings(raw)

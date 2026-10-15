@@ -18,7 +18,7 @@ func ApplyUserSecurityPost(ctx context.Context, actor, userID int, form url.Valu
 
 // ApplyUserSecurityPostErr is like ApplyUserSecurityPost but returns the first hard error.
 func ApplyUserSecurityPostErr(ctx context.Context, actor, userID int, form url.Values) error {
-	if userID <= 0 {
+	if 0 >= userID {
 		return fmt.Errorf("invalid user id")
 	}
 	if err := CheckModelAccess(ctx, actor, "core.user", "write"); err != nil {

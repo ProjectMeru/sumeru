@@ -9,6 +9,8 @@ linters:
     - staticcheck
     - unused
   settings:
+    staticcheck:
+      checks: ["-ST1017"]
     errcheck:
       # Deferred Close errors are rarely actionable; keep errcheck for real ignored returns.
       exclude-functions:

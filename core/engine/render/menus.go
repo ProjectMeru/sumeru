@@ -33,7 +33,7 @@ func sanitizeMenuIcon(s string) string {
 func LoadShellMenus(ctx context.Context, activeMenuID string) (topMenus []parser.MenuItem, sidebarMenus []SidebarMenu, activeModuleID, shellModuleTitle string) {
 	shellModuleTitle = AppDisplayName
 	allMenus := fetchShellMenus(ctx)
-	if len(allMenus) == 0 {
+	if 0 == len(allMenus) {
 		return nil, nil, "", AppDisplayName
 	}
 
@@ -75,14 +75,7 @@ func fetchShellMenus(ctx context.Context) []parser.MenuItem {
 	}
 	defer rows.Close()
 
-	lang := "en_US"
-	if uid := orm.UIDFromContext(ctx); uid > 0 {
-		if u, err := orm.SearchOne(ctx, "core.user", map[string]interface{}{"id": uid}); err == nil {
-			if l := strings.TrimSpace(orm.AsString(u["lang"])); l != "" {
-				lang = l
-			}
-		}
-	}
+	lang := orm.UserLang(ctx)
 
 	urlActionHrefs := loadURLActionHrefs(ctx)
 
@@ -135,7 +128,7 @@ func loadURLActionHrefs(ctx context.Context) map[int]string {
 	}
 	for _, row := range rows {
 		id, ok := orm.CoerceInt64(row["id"])
-		if !ok || id <= 0 {
+		if !ok || 0 >= id {
 			continue
 		}
 		url := strings.TrimSpace(orm.AsString(row["url"]))
@@ -225,7 +218,7 @@ func menuItemHasWindowOrURLAction(mi parser.MenuItem) bool {
 }
 
 func filterSidebarLinks(links []parser.MenuItem) []parser.MenuItem {
-	if len(links) == 0 {
+	if 0 == len(links) {
 		return links
 	}
 	out := links[:0]
@@ -307,7 +300,7 @@ func buildSidebarMenus(allMenus []parser.MenuItem, activeModuleID string, menuAl
 		}
 		sortMenuItemsBySequenceName(links)
 		section.SubMenus = filterSidebarLinks(links)
-		if len(section.SubMenus) == 0 {
+		if 0 == len(section.SubMenus) {
 			continue
 		}
 		sections = append(sections, section)
@@ -335,7 +328,7 @@ func SidebarHasMenus(menus []SidebarMenu) bool {
 // sortTopBarRootMenus orders application root menus by each menuitem's `sequence` (then `name`),
 // matching Sumeru XML.
 func sortTopBarRootMenus(in []parser.MenuItem) []parser.MenuItem {
-	if len(in) == 0 {
+	if 0 == len(in) {
 		return in
 	}
 	out := append([]parser.MenuItem{}, in...)
@@ -372,11 +365,11 @@ func queryInstalledApplicationNames(ctx context.Context) (map[string]struct{}, e
 // IsMenuUnderSettingsRoot reports whether activeMenuID is the Settings root or one of its descendants.
 func IsMenuUnderSettingsRoot(ctx context.Context, activeMenuID string) bool {
 	id64, err := strconv.ParseInt(strings.TrimSpace(activeMenuID), 10, 64)
-	if err != nil || id64 <= 0 || orm.DB == nil {
+	if err != nil || 0 >= id64 || orm.DB == nil {
 		return false
 	}
 	rootID, _, err := orm.ResolveXmlId(ctx, "base.menu_settings_root")
-	if err != nil || rootID == 0 {
+	if err != nil || 0 == rootID {
 		return false
 	}
 	return orm.MenuHasAncestor(ctx, int(id64), rootID)

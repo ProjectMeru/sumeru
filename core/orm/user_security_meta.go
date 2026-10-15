@@ -7,10 +7,10 @@ import (
 
 // UserSecurityGroupRow is one assignable group for the user form security section.
 type UserSecurityGroupRow struct {
-	ID       int    `json:"id"`
-	Name     string `json:"name"`
-	Selected bool   `json:"selected"`
-	IsUserType bool `json:"isUserType"`
+	ID         int    `json:"id"`
+	Name       string `json:"name"`
+	Selected   bool   `json:"selected"`
+	IsUserType bool   `json:"isUserType"`
 }
 
 // UserSecurityCompanyRow is one company checkbox for allowed companies.
@@ -34,7 +34,7 @@ func BuildUserSecurityMeta(ctx context.Context, actor, targetUserID int) (UserSe
 	out := UserSecurityMeta{
 		PasswordLabel: "Change password",
 	}
-	if targetUserID <= 0 {
+	if 0 >= targetUserID {
 		out.IsNew = true
 		out.PasswordLabel = "Set initial password"
 	}
@@ -78,7 +78,7 @@ func BuildUserSecurityMeta(ctx context.Context, actor, targetUserID int) (UserSe
 	}
 	for _, row := range groupRows {
 		id := intFromAny(row["id"])
-		if id <= 0 {
+		if 0 >= id {
 			continue
 		}
 		_, isType := typeIDSet[id]
@@ -108,7 +108,7 @@ func BuildUserSecurityMeta(ctx context.Context, actor, targetUserID int) (UserSe
 	}
 	for _, row := range companyRows {
 		id := intFromAny(row["id"])
-		if id <= 0 {
+		if 0 >= id {
 			continue
 		}
 		_, sel := selectedCompanies[id]

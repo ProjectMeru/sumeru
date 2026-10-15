@@ -21,11 +21,22 @@ func RunBulkJobCronForTest(ctx context.Context) error {
 
 func runBulkJobCron(ctx context.Context, _ map[string]interface{}) error {
 	batch, err := orm.SearchOne(ctx, BulkModelName, map[string]interface{}{"state": BulkStateQueued})
-	if err != nil || len(batch) == 0 {
+	if err != nil {
+		return nil
+	}
+	if 0 == len(batch) {
 		return nil
 	}
 	id, _ := orm.CoerceInt64(batch["id"])
-	if id <= 0 {
+	if 0 >= id {
+		return nil
+	}
+	queuedUserID, _ := orm.CoerceInt64(batch["user_id"])
+	if 0 >= queuedUserID {
+		_ = orm.UpdateRecordByID(ctx, BulkModelName, int(id), map[string]interface{}{
+			"state":          BulkStateFailed,
+			"result_summary": "Missing user for queued job",
+		})
 		return nil
 	}
 	_ = orm.UpdateRecordByID(ctx, BulkModelName, int(id), map[string]interface{}{"state": BulkStateRunning})
@@ -72,17 +83,18 @@ func runExportJob(ctx context.Context, batch map[string]interface{}) error {
 	_ = json.Unmarshal([]byte(orm.AsString(batch["export_domain"])), &domain)
 	fields := ParseFieldsParam(orm.AsString(batch["selected_fields"]))
 	in := ExportCSVInput{Model: modelName, Fields: fields, Domain: domain}
+	queuedUserCtx := bulkActorContext(batch)
 	var data []byte
 	var err error
-	data, err = ExportCSVUnlimited(ctx, in)
+	data, err = ExportCSVUnlimited(queuedUserCtx, in)
 	if format == "xlsx" {
 		fields, _ := ValidateFields(modelName, fields)
-		rows, _ := FetchRowsUnlimited(ctx, modelName, domain, 0)
+		rows, _ := FetchRowsUnlimited(queuedUserCtx, modelName, domain, 0)
 		var table [][]string
 		for _, row := range rows {
 			line := make([]string, len(fields))
 			for i, f := range fields {
-				line[i] = formatCell(ctx, modelName, f, row[f])
+				line[i] = formatCell(queuedUserCtx, modelName, f, row[f])
 			}
 			table = append(table, line)
 		}
@@ -108,6 +120,21 @@ func runExportJob(ctx context.Context, batch map[string]interface{}) error {
 		"attachment_id":  attID,
 		"result_summary": fmt.Sprintf("Export ready (%s)", name),
 	})
+}
+
+// bulkActorContext is the queued user, without the scheduler bypass flag.
+func bulkActorContext(batch map[string]interface{}) context.Context {
+	uid64, _ := orm.CoerceInt64(batch["user_id"])
+	ctx := orm.ContextWithUID(context.Background(), int(uid64))
+	if cid := orm.ActiveCompanyIDForUser(ctx, int(uid64)); cid > 0 {
+		ctx = orm.ContextWithCompanyID(ctx, cid)
+	}
+	return ctx
+}
+
+// BulkJobActorContextForTest exposes the queued-user context for external tests.
+func BulkJobActorContextForTest(batch map[string]interface{}) context.Context {
+	return bulkActorContext(batch)
 }
 
 func exportMime(format string) string {

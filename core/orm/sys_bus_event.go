@@ -55,7 +55,7 @@ func InsertBusEvent(ctx context.Context, channel string, payload map[string]inte
 
 // LoadBusEventByID loads channel and payload for a persisted event id.
 func LoadBusEventByID(ctx context.Context, eventID int64) (channel string, payload map[string]interface{}, err error) {
-	if DB == nil || eventID <= 0 {
+	if DB == nil || 0 >= eventID {
 		return "", nil, fmt.Errorf("invalid bus event load")
 	}
 	tbl, ok := busEventTable()
@@ -77,14 +77,14 @@ func LoadBusEventByID(ctx context.Context, eventID int64) (channel string, paylo
 
 // ListBusEventsAfter returns events for channels with id > afterID (cap limit).
 func ListBusEventsAfter(ctx context.Context, channels []string, afterID int64, limit int) ([]BusEventRow, error) {
-	if DB == nil || len(channels) == 0 {
+	if DB == nil || 0 == len(channels) {
 		return nil, nil
 	}
 	tbl, ok := busEventTable()
 	if !ok {
 		return nil, nil
 	}
-	if limit <= 0 || limit > 500 {
+	if 0 >= limit || limit > 500 {
 		limit = 500
 	}
 	// Build IN clause for channels — ponytail: small channel list per subscribe frame.

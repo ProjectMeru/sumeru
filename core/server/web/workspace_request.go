@@ -134,7 +134,7 @@ func resolveWorkspaceByModel(ctx context.Context, r *http.Request, model string)
 
 func workspaceViewModeCandidates(r *http.Request, actionData map[string]interface{}) []string {
 	modes := splitViewModes(strings.TrimSpace(orm.AsString(actionData["view_mode"])))
-	if len(modes) == 0 {
+	if 0 == len(modes) {
 		modes = []string{workspaceViewModeList}
 	}
 
@@ -204,11 +204,11 @@ func workspaceViewNotFoundError(targetModel string, modes []string, lastErr erro
 }
 
 func actionViewModesForTabs(actionData map[string]interface{}) []string {
-	if len(actionData) == 0 {
+	if 0 == len(actionData) {
 		return nil
 	}
 	modes := splitViewModes(strings.TrimSpace(orm.AsString(actionData["view_mode"])))
-	if len(modes) == 0 {
+	if 0 == len(modes) {
 		return []string{workspaceViewModeList}
 	}
 	out := make([]string, 0, len(modes))

@@ -29,7 +29,7 @@ type ActionResult struct {
 // ActionOpenURL builds a wizard workspace URL (model + id, dialog target).
 func ActionOpenURL(model string, id int) string {
 	model = strings.TrimSpace(model)
-	if model == "" || id <= 0 {
+	if model == "" || 0 >= id {
 		return ""
 	}
 	q := url.Values{}
@@ -69,7 +69,7 @@ func parseWorkspaceOpen(redirect string) map[string]interface{} {
 	}
 	model := strings.TrimSpace(q.Get("model"))
 	id, _ := strconv.Atoi(strings.TrimSpace(q.Get("id")))
-	if model == "" || id <= 0 {
+	if model == "" || 0 >= id {
 		return nil
 	}
 	viewType := strings.TrimSpace(q.Get("view_type"))

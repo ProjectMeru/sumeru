@@ -14,18 +14,18 @@ const (
 	DirectionImport = "import"
 	DirectionExport = "export"
 
-	BulkStateDraft    = "draft"
-	BulkStateQueued   = "queued"
-	BulkStateRunning  = "running"
-	BulkStateDone     = "done"
-	BulkStateFailed   = "failed"
+	BulkStateDraft     = "draft"
+	BulkStateQueued    = "queued"
+	BulkStateRunning   = "running"
+	BulkStateDone      = "done"
+	BulkStateFailed    = "failed"
 	BulkStateCancelled = "cancelled"
 
 	BulkJobCronCode = "platform.bulk_job"
 
-	maxExportRows       = 500
-	maxSyncExportRows   = 500
-	maxPreviewRows      = 50
+	maxExportRows           = 500
+	maxSyncExportRows       = 500
+	maxPreviewRows          = 50
 	asyncImportRowThreshold = 500
 )
 

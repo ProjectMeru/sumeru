@@ -12,9 +12,9 @@ import (
 )
 
 var (
-	mu      sync.Mutex
-	counters = map[string]*uint64{}
-	histSum  = map[string]*uint64{} // microseconds
+	mu        sync.Mutex
+	counters  = map[string]*uint64{}
+	histSum   = map[string]*uint64{} // microseconds
 	histCount = map[string]*uint64{}
 )
 

@@ -50,7 +50,7 @@ func FetchRowsUnlimited(ctx context.Context, modelName string, domain [][]interf
 		if err != nil {
 			return nil, err
 		}
-		if len(chunk) == 0 {
+		if 0 == len(chunk) {
 			break
 		}
 		uid := orm.SecurityUID(ctx)
@@ -82,7 +82,7 @@ func ValidateFields(modelName string, fields []string) ([]string, error) {
 		}
 		out = append(out, f)
 	}
-	if len(out) == 0 {
+	if 0 == len(out) {
 		return nil, fmt.Errorf("no fields selected")
 	}
 	return out, nil

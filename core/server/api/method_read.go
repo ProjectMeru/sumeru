@@ -35,7 +35,7 @@ func rpcRead(ctx context.Context, model string, args json.RawMessage) (interface
 			return nil, err
 		}
 	}
-	if len(ids) == 0 {
+	if 0 == len(ids) {
 		return []map[string]interface{}{}, nil
 	}
 	idValues := make([]interface{}, len(ids))
@@ -56,17 +56,19 @@ func rpcRead(ctx context.Context, model string, args json.RawMessage) (interface
 	}
 	var missing []int
 	out := make([]map[string]interface{}, 0, len(ids))
+	uid := orm.SecurityUID(ctx)
 	for _, id := range ids {
 		rec, ok := byID[id]
 		if !ok {
 			missing = append(missing, id)
 			continue
 		}
+		row := rec
 		if len(fields) > 0 {
-			out = append(out, projectFields([]map[string]interface{}{rec}, fields)[0])
-		} else {
-			out = append(out, rec)
+			row = projectFields([]map[string]interface{}{rec}, fields)[0]
 		}
+		orm.RedactRecordForRead(ctx, uid, model, row)
+		out = append(out, row)
 	}
 	if len(missing) > 0 {
 		return nil, newRPCError(CodeNotFound, "record(s) not found", map[string]interface{}{"missing_ids": missing})

@@ -5,7 +5,7 @@ import "strings"
 // BuildListSearchDomain OR-combines ilike clauses for searchable string fields.
 func BuildListSearchDomain(modelName string, fieldNames []string, query string) [][]interface{} {
 	query = strings.TrimSpace(query)
-	if query == "" || len(fieldNames) == 0 {
+	if query == "" || 0 == len(fieldNames) {
 		return nil
 	}
 	pattern := "%" + query + "%"
@@ -20,7 +20,7 @@ func BuildListSearchDomain(modelName string, fieldNames []string, query string) 
 		}
 		leaves = append(leaves, []interface{}{f, "ilike", pattern})
 	}
-	if len(leaves) == 0 {
+	if 0 == len(leaves) {
 		return nil
 	}
 	if len(leaves) == 1 {
@@ -55,10 +55,10 @@ func fieldSearchable(modelName, field string) bool {
 
 // MergeDomains AND-combines two domains (base action domain + optional search overlay).
 func MergeDomains(base, extra [][]interface{}) [][]interface{} {
-	if len(extra) == 0 {
+	if 0 == len(extra) {
 		return base
 	}
-	if len(base) == 0 {
+	if 0 == len(base) {
 		return extra
 	}
 	out := make([][]interface{}, 0, len(base)+len(extra))

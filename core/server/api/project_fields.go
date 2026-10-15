@@ -3,7 +3,7 @@ package api
 // projectFields returns rows limited to the requested field names.
 // An empty fields list returns rows unchanged.
 func projectFields(rows []map[string]interface{}, fields []string) []map[string]interface{} {
-	if len(fields) == 0 {
+	if 0 == len(fields) {
 		return rows
 	}
 	set := map[string]struct{}{}

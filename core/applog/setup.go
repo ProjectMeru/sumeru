@@ -57,13 +57,13 @@ func SetupFromConfig(c *config.Config) error {
 		Operation: "init",
 		Status:    "success",
 		Context: map[string]interface{}{
-			"log_enabled":     c.LogEnabled,
-			"log_timezone":    logTzName,
-			"log_stdout":      c.LogStdout,
-			"log_rolling":     c.LogRolling,
-			"log_file":        hr.logPath,
-			"log_max_size_mb": hr.maxSize,
-			"log_max_backups": hr.maxBackups,
+			"log_enabled":      c.LogEnabled,
+			"log_timezone":     logTzName,
+			"log_stdout":       c.LogStdout,
+			"log_rolling":      c.LogRolling,
+			"log_file":         hr.logPath,
+			"log_max_size_mb":  hr.maxSize,
+			"log_max_backups":  hr.maxBackups,
 			"log_max_age_days": hr.maxAge,
 		},
 	})
@@ -77,7 +77,7 @@ func buildHandler(c *config.Config, level slog.Level) (handlerResult, error) {
 	}
 
 	maxSize := c.LogMaxSizeMB
-	if maxSize <= 0 {
+	if 0 >= maxSize {
 		maxSize = 100
 	}
 	maxBackups := c.LogMaxBackups
@@ -109,7 +109,7 @@ func buildHandler(c *config.Config, level slog.Level) (handlerResult, error) {
 		}
 		writers = append(writers, w)
 	}
-	if len(writers) == 0 {
+	if 0 == len(writers) {
 		return handlerResult{}, fmt.Errorf("no log sink configured: enable log_stdout and/or set log_file")
 	}
 	var out io.Writer

@@ -49,7 +49,7 @@ func WriteDenyDirectFields(model string) map[string]bool {
 
 func fieldsMatching(model string, pred func(FieldPolicy) bool) map[string]bool {
 	fields := FieldRegistry[model]
-	if len(fields) == 0 {
+	if 0 == len(fields) {
 		return nil
 	}
 	out := make(map[string]bool)

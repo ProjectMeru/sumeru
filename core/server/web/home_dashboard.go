@@ -33,7 +33,7 @@ func HomeDashboardHandler(w http.ResponseWriter, r *http.Request) {
 	tiles = filterHomeTiles(tiles)
 
 	emptyMessage := ""
-	if len(tiles) == 0 {
+	if 0 == len(tiles) {
 		emptyMessage = homeEmptyMessage
 	}
 
@@ -51,8 +51,8 @@ func HomeDashboardHandler(w http.ResponseWriter, r *http.Request) {
 			ViewBreadcrumb:     "Dashboard",
 			ViewStylesheetURLs: []string{homeStylesheetURL},
 			SuppressSidebar:    true,
-			ViewTabs:             render.HomeViewTabs(layout),
-			BreadcrumbItems:      render.BuildHomeDashboardBreadcrumbs(ctx),
+			ViewTabs:           render.HomeViewTabs(layout),
+			BreadcrumbItems:    render.BuildHomeDashboardBreadcrumbs(ctx),
 		},
 	})
 	WebLogNavigation(ctx, r.URL.Path, "module_hub", "Home dashboard opened", map[string]interface{}{

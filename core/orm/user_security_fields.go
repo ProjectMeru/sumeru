@@ -7,7 +7,7 @@ import (
 
 // RejectCoreUserSecurityWrites blocks mass-assignment of security-sensitive core.user columns.
 func RejectCoreUserSecurityWrites(ctx context.Context, uid int, values map[string]interface{}) error {
-	if len(values) == 0 {
+	if 0 == len(values) {
 		return nil
 	}
 	if SecurityBypass(ctx) || uid == superuserUID {

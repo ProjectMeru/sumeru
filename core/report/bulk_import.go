@@ -11,9 +11,9 @@ import (
 
 // ExecuteBulkImportInput runs import after user confirms mapping.
 type ExecuteBulkImportInput struct {
-	BatchID       int
-	Mapping       map[string]string
-	SkipInvalid   bool
+	BatchID         int
+	Mapping         map[string]string
+	SkipInvalid     bool
 	ImportValidOnly bool
 }
 
@@ -30,22 +30,23 @@ func ExecuteBulkImport(ctx context.Context, in ExecuteBulkImportInput) (ImportRe
 		return ImportResult{}, fmt.Errorf("unknown model %q", targetModel)
 	}
 	mapping := in.Mapping
-	if len(mapping) == 0 {
+	if 0 == len(mapping) {
 		mapping = storedMapping
 	}
 	headers, rows, err := parseCSV(data)
 	if err != nil {
 		return ImportResult{}, err
 	}
+	queuedUserCtx := bulkActorContext(batch)
 	allowed := allowedFieldNames(modelInst)
 	var result ImportResult
 	for i, record := range rows {
 		vals := rowValuesFromMapping(headers, record, mapping)
-		if len(vals) == 0 {
+		if 0 == len(vals) {
 			result.Skipped++
 			continue
 		}
-		coerced, coerceErrs := coerceImportValues(ctx, modelInst, vals)
+		coerced, coerceErrs := coerceImportValues(queuedUserCtx, modelInst, vals)
 		vals = coerced
 		errs := append([]string{}, coerceErrs...)
 		errs = append(errs, validateRowValues(modelInst, vals, allowed, mode)...)
@@ -66,7 +67,7 @@ func ExecuteBulkImport(ctx context.Context, in ExecuteBulkImportInput) (ImportRe
 						}
 					}
 					if len(updateVals) > 0 {
-						if err := orm.UpdateRecordByID(ctx, targetModel, int(id), updateVals); err != nil {
+						if err := orm.UpdateRecordByID(queuedUserCtx, targetModel, int(id), updateVals); err != nil {
 							if in.SkipInvalid {
 								result.Skipped++
 								continue
@@ -80,7 +81,7 @@ func ExecuteBulkImport(ctx context.Context, in ExecuteBulkImportInput) (ImportRe
 			}
 		}
 		delete(vals, "id")
-		if _, err := orm.Create(ctx, modelInst, vals); err != nil {
+		if _, err := orm.Create(queuedUserCtx, modelInst, vals); err != nil {
 			if in.SkipInvalid {
 				result.Skipped++
 				continue

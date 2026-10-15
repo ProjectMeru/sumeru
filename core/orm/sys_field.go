@@ -16,5 +16,5 @@ type SysField struct {
 	Required  modelmeta.Boolean
 	Readonly  modelmeta.Boolean
 	Index     modelmeta.Boolean
-	Manual    modelmeta.Boolean             `sumeru:"string=Manual field"`
+	Manual    modelmeta.Boolean `sumeru:"string=Manual field"`
 }

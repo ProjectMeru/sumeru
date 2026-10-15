@@ -2,23 +2,23 @@
 <sumeru>
     <data>
         <!-- Module Category -->
-        <record id="module_category_{{.Name}}" model="sys.module.category">
-            <field name="name">{{.HumanTitle}}</field>
+        <record id="module_category_{{.ModuleName}}" model="sys.module.category">
+            <field name="name">{{.DisplayName}}</field>
             <field name="sequence">100</field>
         </record>
 
         <!-- User group: scoped names per module; implies base.group_user (kernel groups exist before module install). -->
-        <record id="group_{{.Name}}_user" model="core.group">
-            <field name="name">{{.HumanTitle}} / User</field>
-            <field name="category_id" ref="module_category_{{.Name}}"/>
+        <record id="group_{{.ModuleName}}_user" model="core.group">
+            <field name="name">{{.DisplayName}} / User</field>
+            <field name="category_id" ref="module_category_{{.ModuleName}}"/>
             <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
         </record>
 
         <!-- Manager Group -->
-        <record id="group_{{.Name}}_manager" model="core.group">
-            <field name="name">{{.HumanTitle}} / Manager</field>
-            <field name="category_id" ref="module_category_{{.Name}}"/>
-            <field name="implied_ids" eval="[(4, ref('group_{{.Name}}_user'))]"/>
+        <record id="group_{{.ModuleName}}_manager" model="core.group">
+            <field name="name">{{.DisplayName}} / Manager</field>
+            <field name="category_id" ref="module_category_{{.ModuleName}}"/>
+            <field name="implied_ids" eval="[(4, ref('group_{{.ModuleName}}_user'))]"/>
         </record>
     </data>
 </sumeru>

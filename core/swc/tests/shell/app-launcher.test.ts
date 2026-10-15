@@ -12,6 +12,7 @@ function sampleBoot(): SwcBootstrap {
   return {
     csrfToken: "t",
     rpcUrl: "/api/rpc",
+    apiDatabase: "test_db",
     swcApiBase: "/web/swc",
     user: { id: 1, name: "Admin", login: "admin", initials: "A" },
     company: { id: 1, name: "Main" },

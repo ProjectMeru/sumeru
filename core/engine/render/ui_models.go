@@ -55,7 +55,7 @@ func UIModelName(technicalModel string) string {
 		return name
 	}
 	parts := strings.Split(model, ".")
-	if len(parts) == 0 {
+	if 0 == len(parts) {
 		return model
 	}
 	last := parts[len(parts)-1]

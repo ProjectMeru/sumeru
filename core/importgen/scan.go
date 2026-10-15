@@ -144,9 +144,13 @@ func scanPackageForModels(dir string) ([]string, error) {
 func packageNameForDir(dir string) string {
 	fset := token.NewFileSet()
 	pkgs, err := parser.ParseDir(fset, dir, isSourceGo, parser.PackageClauseOnly) //nolint:staticcheck // SA1019: see scanPackageModels
-	if err != nil || len(pkgs) == 0 {
+	if err != nil {
 		return "models"
 	}
+	if 0 == len(pkgs) {
+		return "models"
+	}
+
 	for name := range pkgs {
 		return name
 	}

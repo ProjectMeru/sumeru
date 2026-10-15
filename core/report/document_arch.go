@@ -163,14 +163,14 @@ func TemplatePDFInputFromDocumentArch(arch string, ctx DocumentRenderContext, pa
 			out.TableRows = append(out.TableRows, rows...)
 		}
 	}
-	if len(out.Sections) == 0 && len(out.TableRows) == 0 && subtitle == "" {
+	if 0 == len(out.Sections) && 0 == len(out.TableRows) && subtitle == "" {
 		return TemplatePDFInput{}, fmt.Errorf("report arch produced no content")
 	}
 	return out, nil
 }
 
 func tableFromDocument(tbl documentTable, ctx DocumentRenderContext) ([]string, [][]string) {
-	if len(tbl.Rows) == 0 {
+	if 0 == len(tbl.Rows) {
 		return nil, nil
 	}
 	var head []string
@@ -184,7 +184,7 @@ func tableFromDocument(tbl documentTable, ctx DocumentRenderContext) ([]string, 
 			}
 			line[j] = rendered
 		}
-		if i == 0 {
+		if 0 == i {
 			head = line
 		} else {
 			rows = append(rows, line)

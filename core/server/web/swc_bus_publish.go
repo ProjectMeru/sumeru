@@ -17,7 +17,7 @@ func PublishSwcBusEvent(ctx context.Context, channel string, payload map[string]
 	if err != nil {
 		return err
 	}
-	if eventID <= 0 {
+	if 0 >= eventID {
 		return nil
 	}
 	if err := orm.NotifyBusEvent(eventID); err != nil {
@@ -29,7 +29,7 @@ func PublishSwcBusEvent(ctx context.Context, channel string, payload map[string]
 
 // PublishRecordBusEvent emits record.created|updated|deleted to record and model channels.
 func PublishRecordBusEvent(ctx context.Context, eventName, model string, id int) {
-	if model == "" || id <= 0 {
+	if model == "" || 0 >= id {
 		return
 	}
 	payload := map[string]interface{}{
@@ -53,7 +53,7 @@ func dispatchLocalBusEvent(eventID int64, channel string, payload map[string]int
 }
 
 func dispatchBusEventByID(ctx context.Context, eventID int64) {
-	if eventID <= 0 {
+	if 0 >= eventID {
 		return
 	}
 	channel, payload, err := orm.LoadBusEventByID(ctx, eventID)

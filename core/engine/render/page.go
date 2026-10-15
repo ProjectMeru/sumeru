@@ -10,7 +10,7 @@ import (
 // RenderPage executes base.html with the given shell + content data.
 func RenderPage(ctx context.Context, templatesDir string, data PageData, bootstrapWorkspace *SWCBootstrapWorkspace) (string, error) {
 	EnrichShellPageData(ctx, &data)
-	if len(data.SWCBootstrapJSON) == 0 {
+	if 0 == len(data.SWCBootstrapJSON) {
 		data.SWCBootstrapJSON = BuildSWCBootstrapJSON(ctx, data, bootstrapWorkspace)
 	}
 	paths := ShellLayoutTemplateFiles(templatesDir)

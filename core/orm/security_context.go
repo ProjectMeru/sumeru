@@ -30,7 +30,7 @@ func UIDFromContext(ctx context.Context) int {
 
 // ContextWithCompanyID returns a context with the user's active company id.
 func ContextWithCompanyID(ctx context.Context, companyID int64) context.Context {
-	if companyID <= 0 {
+	if 0 >= companyID {
 		return ctx
 	}
 	return context.WithValue(ctx, companyIDKey, companyID)

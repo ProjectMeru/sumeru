@@ -18,7 +18,7 @@ func CanReadAttachmentContent(ctx context.Context, uid int, att map[string]inter
 	}
 	resModel := strings.TrimSpace(AsString(att["model"]))
 	resID, _ := CoerceInt64(att["res_id"])
-	if resModel == "" || resID <= 0 {
+	if resModel == "" || 0 >= resID {
 		return nil
 	}
 	if _, ok := Registry[resModel]; !ok {
@@ -28,9 +28,13 @@ func CanReadAttachmentContent(ctx context.Context, uid int, att map[string]inter
 		return err
 	}
 	row, err := SearchOne(ctx, resModel, map[string]interface{}{"id": resID})
-	if err != nil || len(row) == 0 {
+	if err != nil {
 		return fmt.Errorf("linked record not found")
 	}
+	if 0 == len(row) {
+		return fmt.Errorf("linked record not found")
+	}
+
 	return nil
 }
 
@@ -47,7 +51,7 @@ func ResolveContentAttachment(ctx context.Context, attachmentID int, resModel, r
 	}
 	resModel = strings.TrimSpace(resModel)
 	resField = strings.TrimSpace(resField)
-	if resModel == "" || resField == "" || resID <= 0 {
+	if resModel == "" || resField == "" || 0 >= resID {
 		return nil, fmt.Errorf("attachment not found")
 	}
 	domain := map[string]interface{}{

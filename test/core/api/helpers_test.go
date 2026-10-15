@@ -20,13 +20,13 @@ func assertDispatch(t *testing.T, ctx context.Context, body string, wantStatus i
 		t.Fatalf("status = %d; want %d (body=%s)", status, wantStatus, body)
 	}
 	if wantStatus == http.StatusOK {
-		if !resp.OK {
-			t.Fatalf("ok = false; want true (body=%s)", body)
+		if !resp.Success {
+			t.Fatalf("success = false; want true (body=%s)", body)
 		}
 		return
 	}
-	if resp.OK {
-		t.Fatalf("ok = true; want false (body=%s)", body)
+	if resp.Success {
+		t.Fatalf("success = true; want false (body=%s)", body)
 	}
 	if resp.Error == nil {
 		t.Fatal("error is nil")

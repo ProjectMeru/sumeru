@@ -92,7 +92,13 @@ function buildEnv(boot: ReturnType<typeof readBootstrap>): SwcEnv {
   const router = new RouterService();
   const bus = new BusService();
   const command = new CommandService();
-  const rpc = new RpcService(boot.rpcUrl, boot.csrfToken);
+  const tenant = String(boot.activeCompanyId || boot.company?.id || "");
+  const rpc = new RpcService(
+    boot.rpcUrl,
+    boot.csrfToken,
+    boot.apiDatabase ?? "",
+    tenant,
+  );
   const services = {
     rpc,
     http: new HttpService(boot.csrfToken),

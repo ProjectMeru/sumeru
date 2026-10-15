@@ -1,10 +1,9 @@
 package orm_test
 
 import (
-	"testing"
 	"sumeru/core/orm"
+	"testing"
 )
-
 
 func TestHashAPIKey_stable(t *testing.T) {
 	a := orm.HashAPIKey("sk_test")
@@ -87,6 +86,9 @@ func TestTranslate_fallbackWithoutDB(t *testing.T) {
 	}
 	if orm.Translate(orm.BackgroundBypass(), "en_US", "X") != "X" {
 		t.Fatal("en_US should return src")
+	}
+	if orm.UserLang(nil) != "en_US" || orm.UserLang(orm.BackgroundBypass()) != "en_US" {
+		t.Fatal("missing user should use en_US")
 	}
 }
 

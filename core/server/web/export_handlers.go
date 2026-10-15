@@ -25,8 +25,12 @@ func resolveExportRequest(w http.ResponseWriter, r *http.Request) (report.Export
 		return report.ExportCSVInput{}, false
 	}
 	fields := report.ParseFieldsParam(r.URL.Query().Get(reportFieldsParam))
-	if len(fields) == 0 {
+	if 0 == len(fields) {
 		http.Error(w, "fields required", http.StatusBadRequest)
+		return report.ExportCSVInput{}, false
+	}
+	exportFormat := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/web/export/"), "/")
+	if !requireExportEntitlement(w, r, modelName, fields, exportFormat) {
 		return report.ExportCSVInput{}, false
 	}
 	domain := listExportDomain(r.Context(), r, modelName)

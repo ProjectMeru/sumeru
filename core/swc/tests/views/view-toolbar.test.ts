@@ -44,6 +44,7 @@ describe("view-toolbar", () => {
     expect(listParams.get("action")).toBe("12");
     expect(listParams.get("fields")).toBe("name,email");
     expect(listParams.get("id")).toBeNull();
+    expect(listParams.get("csrf_token")).toBeNull();
 
     const formParams = exportQuery(basePayload({ recordId: 7 }), "name,email", 7);
     expect(formParams.get("id")).toBe("7");
