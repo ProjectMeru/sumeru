@@ -118,6 +118,7 @@ func reloadModuleData(ctx context.Context, moduleName string, mode moduleReloadM
 	if err := SyncAddonTranslationPOFiles(ctx, addon.Path, moduleName); err != nil {
 		return recordSyncToDBResult(ctx, moduleName, err)
 	}
+	ReconcileSystemManagerImpliedForModule(ctx, moduleName)
 	return finalizeModuleReload(ctx, moduleName, mode)
 }
 

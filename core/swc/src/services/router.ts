@@ -33,6 +33,14 @@ export interface WorkspaceRoute {
   shell?: string;
 }
 
+const moduleWebPathRE = /^\/web\/([a-z][a-z0-9_]*)$/;
+
+/** Module segment from /web/{module} entry URLs (empty when path is not a single-segment module open). */
+export function moduleNameFromWebPath(pathname: string): string {
+  const m = moduleWebPathRE.exec(pathname.trim());
+  return m?.[1] ?? "";
+}
+
 export class RouterService {
   static searchParams(route: Partial<WorkspaceRoute>): URLSearchParams {
     const params = new URLSearchParams();
@@ -56,8 +64,26 @@ export class RouterService {
     return `${WEB_ROUTE}?${RouterService.searchParams(route).toString()}`;
   }
 
-  parse(location: { search: string } = window.location): WorkspaceRoute {
+  parse(location: { pathname?: string; search: string } = window.location): WorkspaceRoute {
     const q = new URLSearchParams(location.search);
+    const pathname = location.pathname ?? "";
+    if (moduleNameFromWebPath(pathname) && !q.get(Q_ACTION)) {
+      return {
+        actionId: 0,
+        menuId: "",
+        viewType: "",
+        recordId: 0,
+        formEdit: false,
+        listSearch: "",
+        model: "",
+        listFilter: "",
+        listSort: "",
+        listOffset: 0,
+        listGroupBy: "",
+        listDomain: "",
+        shell: "",
+      };
+    }
     return {
       actionId: Number(q.get(Q_ACTION) ?? "0"),
       menuId: q.get(Q_MENU_ID) ?? "",

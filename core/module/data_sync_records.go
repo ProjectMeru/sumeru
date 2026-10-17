@@ -139,6 +139,7 @@ func syncRegistryRecordByModel(ctx context.Context, moduleName string, xmlRecord
 	// Prefer external id when already synced (states/cities have no natural unique key).
 	if existingID, _, err := orm.ResolveXmlId(ctx, moduleName+"."+xmlRecord.ID); err == nil && existingID > 0 {
 		if err := orm.UpdateRecordByID(ctx, xmlRecord.Model, existingID, fieldValues); err == nil {
+			finishRegistryRecordSync(ctx, moduleName, xmlRecord, existingID, fieldMapStrings, impliedEval)
 			return
 		}
 		// Stale xml id — fall through to create and refresh model_data.
@@ -154,6 +155,7 @@ func syncRegistryRecordByModel(ctx context.Context, moduleName string, xmlRecord
 				if err := linkXMLRecord(ctx, moduleName, xmlRecord.ID, xmlRecord.Model, int(eid)); err != nil {
 					return
 				}
+				finishRegistryRecordSync(ctx, moduleName, xmlRecord, int(eid), fieldMapStrings, impliedEval)
 				return
 			}
 		}
@@ -174,6 +176,13 @@ func syncRegistryRecordByModel(ctx context.Context, moduleName string, xmlRecord
 		syncWarn(ctx, platformmsg.FmtGenericUpsertWarn, xmlRecord.Model, xmlRecord.ID, err)
 		return
 	}
+	finishRegistryRecordSync(ctx, moduleName, xmlRecord, id, fieldMapStrings, impliedEval)
+	if err := linkXMLRecord(ctx, moduleName, xmlRecord.ID, xmlRecord.Model, id); err != nil {
+		return
+	}
+}
+
+func finishRegistryRecordSync(ctx context.Context, moduleName string, xmlRecord parser.Record, id int, fieldMapStrings map[string]string, impliedEval string) {
 	if xmlRecord.Model == "core.group" {
 		if impliedEval != "" {
 			if err := syncCoreGroupImpliedFromEval(ctx, moduleName, id, impliedEval); err != nil {
@@ -191,43 +200,63 @@ func syncRegistryRecordByModel(ctx context.Context, moduleName string, xmlRecord
 			}
 		}
 	}
-	if err := linkXMLRecord(ctx, moduleName, xmlRecord.ID, xmlRecord.Model, id); err != nil {
-		return
-	}
 }
 
 // ConvertRecordScalar coerces XML/form string values into types used for registry upserts.
 func ConvertRecordScalar(ctx context.Context, moduleName, model, column, rawValue string) interface{} {
-	trimmedValue := strings.TrimSpace(rawValue)
+	value := strings.TrimSpace(rawValue)
+
 	if strings.HasPrefix(column, "perm_") {
-		return parseBoolish(trimmedValue)
+		return parseBoolish(value)
 	}
-	if column == "group_id" || column == "user_id" || column == "rule_id" || column == "implied_group_id" || column == "parent_id" || column == "category_id" || column == "country_id" || column == "state_id" || column == "city_id" || strings.HasSuffix(column, "_id") {
-		if isEmptyRef(trimmedValue) {
-			return nil
+	if isSyncForeignKeyColumn(column) {
+		return coerceSyncForeignKey(ctx, moduleName, value)
+	}
+	if "active" == column || strings.HasSuffix(column, "_active") {
+		return parseBoolish(value)
+	}
+	if evaluated, err := eval.SafeEval(value); err == nil {
+		if out, ok := coerceSyncEvalResult(ctx, moduleName, evaluated); ok {
+			return out
 		}
-		if id, err := resolveXMLIDInModule(ctx, moduleName, trimmedValue); err == nil && id > 0 {
-			return id
-		}
-		if n, err := strconv.ParseInt(trimmedValue, 10, 64); err == nil {
-			return n
-		}
+	}
+	return value
+}
+
+func isSyncForeignKeyColumn(column string) bool {
+	switch column {
+	case "group_id", "user_id", "rule_id", "implied_group_id", "parent_id",
+		"category_id", "country_id", "state_id", "city_id":
+		return true
+	default:
+		return strings.HasSuffix(column, "_id")
+	}
+}
+
+func coerceSyncForeignKey(ctx context.Context, moduleName, value string) interface{} {
+	if isEmptyRef(value) {
 		return nil
 	}
-	if column == "active" || strings.HasSuffix(column, "_active") {
-		return parseBoolish(trimmedValue)
+	if id, err := resolveXMLIDInModule(ctx, moduleName, value); err == nil && 0 < id {
+		return id
 	}
-	if v, err := eval.SafeEval(trimmedValue); err == nil {
-		switch typed := v.(type) {
-		case bool, int64, float64, string:
-			return typed
-		case []interface{}:
-			return resolveEvalTuple(ctx, moduleName, typed)
-		case nil:
-			return nil
-		}
+	if n, err := strconv.ParseInt(value, 10, 64); err == nil {
+		return n
 	}
-	return trimmedValue
+	return nil
+}
+
+func coerceSyncEvalResult(ctx context.Context, moduleName string, evaluated interface{}) (out interface{}, ok bool) {
+	switch typed := evaluated.(type) {
+	case bool, int64, float64, string:
+		return typed, true
+	case []interface{}:
+		return resolveEvalTuple(ctx, moduleName, typed), true
+	case nil:
+		return nil, true
+	default:
+		return nil, false
+	}
 }
 
 func parseBoolish(value string) bool {

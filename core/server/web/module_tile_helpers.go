@@ -2,7 +2,6 @@ package web
 
 import (
 	"context"
-	"fmt"
 	"sort"
 	"strings"
 
@@ -24,10 +23,8 @@ func loadInstalledAppTiles(ctx context.Context, forHome bool) ([]render.AppTile,
 			continue
 		}
 		menuID, rootWebIcon := render.ModuleRootMenu(ctx, parsed.Name)
-		openHref := appsRoute
-		if menuID > 0 {
-			openHref = menuHrefFromMenuID(menuID)
-		}
+		openHref := render.ModuleWorkspaceEntryURL(ctx, parsed.Name)
+		_ = menuID
 		iconURL := render.ModuleIconURL(ctx, parsed.Name)
 		webIcon := ""
 		if !forHome && iconURL == "" {
@@ -57,7 +54,3 @@ func loadInstalledAppTiles(ctx context.Context, forHome bool) ([]render.AppTile,
 	return tiles, nil
 }
 
-// menuHrefFromMenuID builds a workspace URL for a numeric menu id.
-func menuHrefFromMenuID(menuID int) string {
-	return fmt.Sprintf("/web?menu_id=%d", menuID)
-}

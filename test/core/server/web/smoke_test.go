@@ -80,6 +80,25 @@ func TestSmoke_registerAppRoutesRootRedirectsToHome(t *testing.T) {
 	}
 }
 
+func TestSmoke_moduleWebEntryUnauthenticatedRedirectsLogin(t *testing.T) {
+	mux := http.NewServeMux()
+	web.RegisterAppRoutes(mux)
+	h := web.SecurityMiddleware(mux)
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/web/crm", nil)
+	h.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusFound {
+		t.Fatalf("GET /web/crm: status %d; want %d", rr.Code, http.StatusFound)
+	}
+	loc := rr.Header().Get("Location")
+	u, err := url.Parse(loc)
+	if err != nil || u.Path != "/web/login" {
+		t.Fatalf("Location %q: want path /web/login", loc)
+	}
+}
+
 func TestSmoke_registerAppRoutesWebAppsTrailingSlashRedirect(t *testing.T) {
 	mux := http.NewServeMux()
 	web.RegisterAppRoutes(mux)

@@ -101,6 +101,10 @@ func ResolveActionIDFromQuery(ctx context.Context, actionQuery string) int {
 	return resolveActionIDFromQuery(ctx, actionQuery)
 }
 
+func ResolveWorkspaceRedirect(ctx context.Context, menuID string, resolvedActionID int) (redirectURL string, shouldRedirect bool) {
+	return resolveWorkspaceRedirect(ctx, menuID, resolvedActionID)
+}
+
 func MenuRecordActionID(menuRecord map[string]interface{}) (actionID int, ok bool) {
 	return menuRecordActionID(menuRecord)
 }

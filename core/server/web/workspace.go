@@ -18,6 +18,10 @@ func WebHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if handleWebDebugQueryRedirect(w, r) {
+		return
+	}
+
 	ctx := r.Context()
 	actionQuery, menuQuery := workspaceQueryParams(r)
 
@@ -111,8 +115,8 @@ func redirectIfNoWindowAction(w http.ResponseWriter, r *http.Request, actionQuer
 		return false
 	}
 
-	if 0 == actionID && redirectURL == appsRoute {
-		WebLogf(r.Context(), workspaceRoute, "no action for query action=%q menu_id=%q; redirecting to apps", actionQuery, menuQuery)
+	if 0 == actionID {
+		WebLogf(r.Context(), workspaceRoute, "no action for query action=%q menu_id=%q; redirecting to %s", actionQuery, menuQuery, redirectURL)
 	}
 	http.Redirect(w, r, redirectURL, http.StatusFound)
 	return true

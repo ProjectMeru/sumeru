@@ -2,7 +2,6 @@ package web
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -113,11 +112,13 @@ func moduleOpenAppURL(ctx context.Context, parsed moduleRow) string {
 	if parsed.State != "installed" || !parsed.Active {
 		return ""
 	}
-	menuID := render.RootMenuIDForModule(ctx, parsed.Name)
-	if 0 >= menuID {
-		return ""
+	if href := render.ModuleWebURL(parsed.Name); href != "" {
+		if 0 >= render.RootMenuIDForModule(ctx, parsed.Name) {
+			return ""
+		}
+		return href
 	}
-	return fmt.Sprintf("/web?menu_id=%d", menuID)
+	return ""
 }
 
 func moduleDepends(moduleName string, listedModules []appsModule, browse appsBrowseState) []appsModuleDep {

@@ -20,14 +20,18 @@ func UserHasAnyAccessGroup(ctx context.Context, uid int, accessGroupsCSV string)
 }
 
 // UserMayAccessMenu applies fail-closed menu policy: empty access_groups is visible
-// only to base.group_system (and superuser/bypass). Tagged menus require a matching group.
+// only to base.group_system (and superuser/bypass). Tagged menus require a matching group,
+// except base.group_system (Settings admin) which may open any menu for app navigation.
 func UserMayAccessMenu(ctx context.Context, uid int, accessGroupsCSV string) bool {
 	if SecurityBypass(ctx) || uid == superuserUID {
 		return true
 	}
+	if UserHasGroupXML(ctx, uid, "base.group_system") {
+		return true
+	}
 	ids := NormalizeAccessGroupList(accessGroupsCSV)
 	if 0 == len(ids) {
-		return UserHasGroupXML(ctx, uid, "base.group_system")
+		return false
 	}
 	return userMatchesAnyGroupXML(ctx, uid, ids)
 }

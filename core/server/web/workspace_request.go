@@ -48,7 +48,7 @@ func resolveWorkspaceRedirect(ctx context.Context, menuID string, resolvedAction
 	case isHomeMenuTree(ctx, menuID):
 		return homeRouteWithMenu(menuID), true
 	default:
-		return appsRoute, true
+		return homeRouteWithMenu(menuID), true
 	}
 }
 
