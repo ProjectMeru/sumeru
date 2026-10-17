@@ -14,7 +14,10 @@ export type DebugMode = "off" | "1" | "assets";
 
 export function parseDebugParam(raw: string | null): DebugMode {
   if (!raw) return "off";
-  const v = raw.trim().toLowerCase();
+  let v = raw.trim().toLowerCase();
+  if (v.startsWith("true/")) {
+    v = "true";
+  }
   if (v === "1" || v === "true" || v === "yes" || v === "on") return "1";
   if (v === "assets") return "assets";
   return "off";

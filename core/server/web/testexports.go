@@ -101,6 +101,10 @@ func ResolveActionIDFromQuery(ctx context.Context, actionQuery string) int {
 	return resolveActionIDFromQuery(ctx, actionQuery)
 }
 
+func ResolveWorkspaceRedirect(ctx context.Context, menuID string, resolvedActionID int) (redirectURL string, shouldRedirect bool) {
+	return resolveWorkspaceRedirect(ctx, menuID, resolvedActionID)
+}
+
 func MenuRecordActionID(menuRecord map[string]interface{}) (actionID int, ok bool) {
 	return menuRecordActionID(menuRecord)
 }
@@ -370,6 +374,10 @@ func FindAppsModule(modules []AppsModule, moduleName string) (AppsModule, bool) 
 }
 
 func APIKeyTargetUserID(r *http.Request) int { return apiKeyTargetUserID(r) }
+
+func APIKeyExpiresAtFromFormForTest(r *http.Request) (time.Time, string, error) {
+	return apiKeyExpiresAtFromForm(r)
+}
 
 func ParseModuleRow(values map[string]interface{}) (ModuleRow, bool) { return parseModuleRow(values) }
 

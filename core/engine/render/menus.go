@@ -89,6 +89,11 @@ func fetchShellMenus(ctx context.Context) []parser.MenuItem {
 			continue
 		}
 
+		isRoot := !parentID.Valid || parentID.Int64 == int64(id)
+		directAction := 0
+		if actionID.Valid && actionID.Int64 != 0 {
+			directAction = int(actionID.Int64)
+		}
 		m := parser.MenuItem{
 			ID:           fmt.Sprintf("%d", id),
 			Name:         orm.Translate(ctx, lang, name),
@@ -96,19 +101,14 @@ func fetchShellMenus(ctx context.Context) []parser.MenuItem {
 			Module:       mod,
 			WebIcon:      sanitizeMenuIcon(webIcon),
 			AccessGroups: strings.TrimSpace(accessGroups),
-			Action:       fmt.Sprintf("/web?menu_id=%d", id),
 		}
 		if parentID.Valid && parentID.Int64 != int64(id) {
 			m.ParentID = fmt.Sprintf("%d", parentID.Int64)
 		}
-		if actionID.Valid && actionID.Int64 != 0 {
-			if href := urlActionHrefs[int(actionID.Int64)]; href != "" {
-				m.Action = href
-			} else {
-				m.Action = fmt.Sprintf("/web?action=%d&menu_id=%d", actionID.Int64, id)
-			}
-		} else if !parentID.Valid && strings.EqualFold(strings.TrimSpace(name), "Home") {
-			m.Action = "/web/home"
+		if isRoot && strings.EqualFold(strings.TrimSpace(name), "Home") {
+			m.Action = HomeWebURL()
+		} else {
+			m.Action = menuItemWorkspaceHref(ctx, id, directAction, urlActionHrefs, mod, isRoot)
 		}
 		allMenus = append(allMenus, m)
 	}
@@ -408,11 +408,8 @@ func BuildAppLauncherJSON(ctx context.Context) template.JS {
 		if name == "" {
 			continue
 		}
+		href := ModuleWorkspaceEntryURL(ctx, name)
 		menuID := RootMenuIDForModule(ctx, name)
-		href := "/web/home"
-		if menuID > 0 {
-			href = fmt.Sprintf("/web?menu_id=%d", menuID)
-		}
 		items = append(items, appLauncherItem{
 			Kind:        "app",
 			Name:        name,

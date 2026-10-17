@@ -58,8 +58,9 @@ func SwcWorkspaceHandler(w http.ResponseWriter, r *http.Request) {
 	} else if modelQuery != "" {
 		actionData = map[string]interface{}{}
 		resolved, err = resolveWorkspaceByModel(ctx, r, modelQuery)
+	} else if redirectIfNoWindowAction(w, r, actionQuery, menuQuery, actionID) {
+		return
 	} else {
-		http.Error(w, "action required", http.StatusBadRequest)
 		return
 	}
 	if err != nil {

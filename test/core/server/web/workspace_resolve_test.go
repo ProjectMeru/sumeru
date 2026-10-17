@@ -1,8 +1,10 @@
 package web_test
 
 import (
-	"sumeru/core/server/web"
+	"strings"
 	"testing"
+
+	"sumeru/core/server/web"
 )
 
 func TestParseMenuIDString(t *testing.T) {
@@ -52,5 +54,19 @@ func TestResolveWindowActionID_prefersActionQuery(t *testing.T) {
 	ctx := t.Context()
 	if got := web.ResolveWindowActionID(ctx, "9", "1"); got != 9 {
 		t.Fatalf("action query should win over menu query, got %d", got)
+	}
+}
+
+func TestResolveWorkspaceRedirect_defaultNotApps(t *testing.T) {
+	ctx := t.Context()
+	url, ok := web.ResolveWorkspaceRedirect(ctx, "999999", 0)
+	if !ok {
+		t.Fatal("expected redirect")
+	}
+	if url == web.TestAppsRoute {
+		t.Fatalf("default redirect must not be apps catalog, got %q", url)
+	}
+	if url != web.TestHomeRoute && !strings.HasPrefix(url, web.TestHomeRoute+"?") {
+		t.Fatalf("got %q want home route prefix", url)
 	}
 }

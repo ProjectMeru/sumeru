@@ -12,8 +12,15 @@
                     <group string="Key">
                         <field name="user_id" string="User"/>
                         <field name="key_prefix" string="Prefix" readonly="true"/>
+                        <field name="expires_at" string="Expires" readonly="true"/>
+                        <field name="last_used_at" string="Last used" readonly="true"/>
                         <field name="active" string="Active"/>
                         <field name="create_date" string="Created" readonly="true"/>
+                    </group>
+                </group>
+                <group>
+                    <group string="Note" colspan="2">
+                        <label string="Generate keys from Account security or the create API key action. Secrets are never stored in plain text."/>
                     </group>
                 </group>
             </sheet>

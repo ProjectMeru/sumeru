@@ -38,6 +38,7 @@ func RegisterAppRoutes(mux *http.ServeMux) {
 
 	router.Apply(serveMux)
 	registerAppAliases(serveMux)
+	registerModuleWebRoutes(serveMux)
 	registerContentPrefixRoute(serveMux)
 	registerPortalSharePrefixRoute(serveMux)
 	registerAPIRPCPrefixRoute(serveMux)

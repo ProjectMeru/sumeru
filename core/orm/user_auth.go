@@ -121,9 +121,11 @@ func CreateUserSession(ctx context.Context, userID int, opts SessionCreateOpts) 
 	return sessionID, nil
 }
 
-// IssueAPIKeyForLogin mints a one-time API key for auth.login responses.
+// IssueAPIKeyForLogin mints an API key for auth.login (24h TTL, elevated create).
 func IssueAPIKeyForLogin(ctx context.Context, userID int) (raw string, err error) {
-	return CreateAPIKeyForUser(ctx, userID, "auth.login")
+	ctx = AuditedBypass(ctx, "auth.login.apikey")
+	expires := time.Now().UTC().Add(AuthLoginAPIKeyLifetime)
+	return CreateAPIKeyForUser(ctx, userID, "auth.login", expires)
 }
 
 // ResolveCompanyTenant resolves X-Sumeru-Tenant to a company id (numeric or name).

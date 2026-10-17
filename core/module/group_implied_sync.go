@@ -120,3 +120,31 @@ func EnsureSystemImpliesManagerGroup(ctx context.Context, moduleName, recordXMLI
 	}
 	return nil
 }
+
+// ReconcileSystemManagerImpliedForModule ensures base.group_system implies each Manager group declared in module XML.
+func ReconcileSystemManagerImpliedForModule(ctx context.Context, moduleName string) {
+	if orm.DB == nil {
+		return
+	}
+	moduleName = strings.TrimSpace(moduleName)
+	if moduleName == "" {
+		return
+	}
+	rows, err := orm.Search(ctx, "sys.model.data", [][]interface{}{
+		{"module", "=", moduleName},
+		{"model", "=", "core.group"},
+	})
+	if err != nil {
+		return
+	}
+	for _, row := range rows {
+		xmlID := strings.TrimSpace(orm.AsString(row["name"]))
+		gid64, ok := orm.CoerceInt64(row["core_id"])
+		if !ok || gid64 <= 0 || xmlID == "" {
+			continue
+		}
+		if err := EnsureSystemImpliesManagerGroup(ctx, moduleName, xmlID, int(gid64)); err != nil {
+			syncWarn(ctx, "Warning: reconcile system→manager %s.%s: %v", moduleName, xmlID, err)
+		}
+	}
+}
