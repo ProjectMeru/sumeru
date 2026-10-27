@@ -3,7 +3,7 @@
 **Modular open-source ERP/CRM platform** — Go backend, PostgreSQL, installable apps, and a TypeScript workspace client.
 
 [![CI](https://github.com/ProjectMeru/sumeru/actions/workflows/ci.yml/badge.svg)](https://github.com/ProjectMeru/sumeru/actions/workflows/ci.yml)
-[![Go](https://img.shields.io/badge/Go-1.27.0+-00ADD8?logo=go&logoColor=white)](https://go.dev/dl/)
+[![Go](https://img.shields.io/badge/Go-1.27.3+-00ADD8?logo=go&logoColor=white)](https://go.dev/dl/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Alpha](https://img.shields.io/badge/Status-Alpha%20(platform%20kernel)-orange)](https://github.com/ProjectMeru/sumeru)
 [![Docs](https://img.shields.io/badge/Docs-projectmeru.github.io-informational)](https://projectmeru.github.io/sumeru/docs/)
@@ -17,7 +17,7 @@ Sumeru is a **modular ERP/CRM engine**: **PostgreSQL**, **XML views**, **Go mode
 
 ## Quick start
 
-**Prerequisites:** Go 1.27.0+, Node.js (SWC build), PostgreSQL.
+**Prerequisites:** Go 1.27.3+, Node.js (SWC build), PostgreSQL.
 
 ```bash
 mkdir -p ~/sumeru_erp && cd ~/sumeru_erp
