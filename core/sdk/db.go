@@ -19,3 +19,6 @@ type SyncModelsInput struct{}
 func SyncModels(_ SyncModelsInput) error {
 	return orm.SyncModels()
 }
+
+// DatabaseOpen reports whether the process has a database pool.
+func DatabaseOpen() bool { return orm.DB != nil }

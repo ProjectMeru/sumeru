@@ -3,10 +3,13 @@ package swcmeta
 import "sumeru/core/orm"
 
 type UserSecurityGroupRow struct {
-	ID         int    `json:"id"`
-	Name       string `json:"name"`
-	Selected   bool   `json:"selected"`
-	IsUserType bool   `json:"isUserType"`
+	ID           int    `json:"id"`
+	Name         string `json:"name"`
+	Selected     bool   `json:"selected"`
+	IsUserType   bool   `json:"isUserType"`
+	CategoryID   int    `json:"categoryId,omitempty"`
+	CategoryName string `json:"categoryName,omitempty"`
+	Exclusive    bool   `json:"exclusive,omitempty"`
 }
 
 type UserSecurityCompanyRow struct {
@@ -32,6 +35,7 @@ func UserSecurityFromORM(m orm.UserSecurityMeta) UserSecurityPayload {
 	for _, g := range m.Groups {
 		out.Groups = append(out.Groups, UserSecurityGroupRow{
 			ID: g.ID, Name: g.Name, Selected: g.Selected, IsUserType: g.IsUserType,
+			CategoryID: g.CategoryID, CategoryName: g.CategoryName, Exclusive: g.Exclusive,
 		})
 	}
 	for _, c := range m.Companies {

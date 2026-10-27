@@ -1,8 +1,10 @@
 package orm_test
 
 import (
-	"sumeru/core/orm"
+	"context"
 	"testing"
+
+	"sumeru/core/orm"
 )
 
 func TestMenuRecordActionID(t *testing.T) {
@@ -12,6 +14,13 @@ func TestMenuRecordActionID(t *testing.T) {
 	}
 	if _, ok := orm.MenuRecordActionID(map[string]interface{}{"action_id": int64(0)}); ok {
 		t.Fatal("zero action_id should be rejected")
+	}
+}
+
+func TestMenuEntryActionForUser_zeroUIDReturnsZero(t *testing.T) {
+	actionID, leafID := orm.MenuEntryActionForUser(context.Background(), 0, 1)
+	if actionID != 0 || leafID != 0 {
+		t.Fatalf("uid=0 should not resolve menu entry; got action=%d leaf=%d", actionID, leafID)
 	}
 }
 

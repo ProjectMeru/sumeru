@@ -177,6 +177,6 @@ func sendRawMessage(ctx context.Context, to, subject string, msg []byte) error {
 // SendPasswordResetEmail notifies a user that an administrator requested a password reset.
 func SendPasswordResetEmail(ctx context.Context, to, login, loginURL string) error {
 	subject := "Sumeru password reset requested"
-	body := fmt.Sprintf("Hello,\n\nAn administrator requested a password reset for account %q.\n\nSign in at: %s\n\nIf you did not expect this message, contact your administrator.\n", login, loginURL)
+	body := fmt.Sprintf("Hello,\n\nAn administrator requested a password reset for account %q.\n\nOpen this link to choose a new password:\n%s\n\nIf you did not expect this message, contact your administrator.\n", login, loginURL)
 	return Send(ctx, to, subject, body)
 }

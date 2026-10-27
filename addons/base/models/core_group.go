@@ -10,4 +10,5 @@ type CoreGroup struct {
 	Name       sdk.String                      `sumeru:"required,unique,string=Name"`
 	CategoryID sdk.Many2One[SysModuleCategory] `sumeru:"index,string=Application"`
 	Sequence   sdk.Integer                     `sumeru:"string=Sequence"`
+	ImpliedIDs sdk.Many2Many[CoreGroup]        `sumeru:"string=Implied Groups,table=core_group_implied,left=group_id,right=implied_group_id"`
 }

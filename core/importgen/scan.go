@@ -1,6 +1,7 @@
 package importgen
 
 import (
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -22,6 +23,13 @@ type scannedModel struct {
 	GoName    string
 	ModelName string
 	Extend    bool
+	Computes  []computeBind
+}
+
+type computeBind struct {
+	Model string
+	Field string
+	Func  string
 }
 
 func structEmbedsModel(st *ast.StructType) bool {
@@ -82,7 +90,7 @@ func modelSpecFromStruct(st *ast.StructType, goName string) (modelmeta.ModelSpec
 	return modelmeta.ModelSpecFromTags(tags, goName)
 }
 
-func scanPackageModels(pkgs map[string]*ast.Package) []scannedModel { //nolint:staticcheck // SA1019: ParseDir/ast.Package adequate for model tag scan; go/packages migration is separate
+func scanPackageModels(pkgs map[string]*ast.Package) ([]scannedModel, error) { //nolint:staticcheck // SA1019: ParseDir/ast.Package adequate for model tag scan; go/packages migration is separate
 	var out []scannedModel
 	for _, pkg := range pkgs {
 		for _, f := range pkg.Files {
@@ -104,16 +112,59 @@ func scanPackageModels(pkgs map[string]*ast.Package) []scannedModel { //nolint:s
 					if err != nil {
 						continue
 					}
+					binds, err := computeBindsFromStruct(st, modelSpec.Name)
+					if err != nil {
+						return nil, err
+					}
 					out = append(out, scannedModel{
 						GoName:    ts.Name.Name,
 						ModelName: modelSpec.Name,
 						Extend:    modelSpec.Extend,
+						Computes:  binds,
 					})
 				}
 			}
 		}
 	}
-	return out
+	return out, nil
+}
+
+func computeBindsFromStruct(st *ast.StructType, modelName string) ([]computeBind, error) {
+	if st == nil || modelName == "" || modelName == "-" {
+		return nil, nil
+	}
+	var out []computeBind
+	for _, field := range st.Fields.List {
+		if 0 == len(field.Names) || field.Tag == nil {
+			continue
+		}
+		sumeruTag, ok := reflect.StructTag(strings.Trim(field.Tag.Value, "`")).Lookup("sumeru")
+		if !ok || sumeruTag == "" {
+			continue
+		}
+		tags, err := modelmeta.ParseFieldTag(sumeruTag)
+		if err != nil {
+			return nil, fmt.Errorf("model %s: %w", modelName, err)
+		}
+		if tags.Compute == "" {
+			continue
+		}
+		if !validComputeFunc(tags.Compute) {
+			return nil, fmt.Errorf("model %s field %s: compute %q is not a function name", modelName, field.Names[0].Name, tags.Compute)
+		}
+		for _, name := range field.Names {
+			fieldName := modelmeta.FieldNameFromGo(name.Name)
+			if tags.Column != "" {
+				fieldName = tags.Column
+			}
+			out = append(out, computeBind{Model: modelName, Field: fieldName, Func: tags.Compute})
+		}
+	}
+	return out, nil
+}
+
+func validComputeFunc(name string) bool {
+	return token.IsIdentifier(name) && !token.IsKeyword(name)
 }
 
 func parseDirModels(dir string) ([]scannedModel, error) {
@@ -122,7 +173,7 @@ func parseDirModels(dir string) ([]scannedModel, error) {
 	if err != nil {
 		return nil, err
 	}
-	return scanPackageModels(pkgs), nil
+	return scanPackageModels(pkgs)
 }
 
 func scanPackageForModels(dir string) ([]string, error) {

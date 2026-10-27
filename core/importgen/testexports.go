@@ -15,3 +15,7 @@ func ParseDirModelsForTest(dir string) ([]ScannedModelForTest, error) {
 func ScanPackageForModelsForTest(dir string) ([]string, error) {
 	return scanPackageForModels(dir)
 }
+
+func RenderPackageModelsForTest(dir, module, packageName string) (string, error) {
+	return packageModelsBody(dir, module, packageName)
+}

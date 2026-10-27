@@ -12,6 +12,7 @@
                     <group string="Scope">
                         <field name="model" string="Model (technical name)"/>
                         <field name="active" string="Active"/>
+                        <field name="group_ids" widget="many2many_tags" string="Groups"/>
                     </group>
                     <group string="Applicable Operations">
                         <field name="perm_read" string="Read"/>

@@ -30,6 +30,8 @@ type WorkspacePayload struct {
 	UserSecurity           *UserSecurityPayload     `json:"userSecurity,omitempty"`
 	RecordMessagesEligible bool                     `json:"recordMessagesEligible,omitempty"`
 	RecordLogEligible      bool                     `json:"recordLogEligible,omitempty"`
+	Target                 string                   `json:"target,omitempty"`
+	Fullscreen             bool                     `json:"fullscreen,omitempty"`
 }
 
 type ViewTab struct {

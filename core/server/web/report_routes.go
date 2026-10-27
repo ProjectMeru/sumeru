@@ -51,12 +51,6 @@ func ReportPreviewHandler(w http.ResponseWriter, r *http.Request) {
 	if !requireLogin(w, r) {
 		return
 	}
-	if !validateSessionCSRF(w, r) {
-		return
-	}
-	if !requireSystemAdmin(w, r, false) {
-		return
-	}
 	reportID, _ := strconv.Atoi(strings.TrimSpace(r.URL.Query().Get("report_id")))
 	recordID, _ := strconv.Atoi(strings.TrimSpace(r.URL.Query().Get("id")))
 	row, err := report.LoadReportActionForPreview(r.Context(), reportID)

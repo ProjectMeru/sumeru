@@ -144,6 +144,8 @@ func workspaceViewModeCandidates(r *http.Request, actionData map[string]interfac
 	}
 	if recordID := strings.TrimSpace(query.Get(workspaceRecordIDParam)); isNumericRecordID(recordID) {
 		modes = prependViewMode(workspaceViewModeForm, modes)
+	} else if actionResID(actionData) > 0 {
+		modes = prependViewMode(workspaceViewModeForm, modes)
 	}
 	return modes
 }

@@ -168,4 +168,21 @@ export class ActionService {
   closeDialog(): void {
     this.env?.services.dialog.close();
   }
+
+  /** Open a form workspace payload in the dialog host. No env is a no-op. */
+  openPayloadDialog(payload: SwcWorkspacePayload): void {
+    const env = this.env;
+    if (!env) return;
+    const viewType = payload.viewType || payload.arch?.type;
+    if (viewType !== VIEW_FORM) return;
+    this.closeDialog();
+    const view = new FormView({ payload, inDialog: true }, env);
+    view.callSetup();
+    this.dialogView = view;
+    const title = payload.arch.title || payload.arch.model || "Wizard";
+    void env.services.dialog.openHost(title, view.render()).then(() => {
+      view.destroy();
+      if (this.dialogView === view) this.dialogView = null;
+    });
+  }
 }

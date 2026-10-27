@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"sumeru/core/orm"
+	"sumeru/core/sdk"
 )
 
 const (
@@ -14,20 +14,20 @@ const (
 )
 
 func init() {
-	orm.RegisterObjectAction(auditCleanupModel, "action_purge", purgeAuditLog)
+	sdk.RegisterObjectAction(auditCleanupModel, "action_purge", purgeAuditLog)
 }
 
 func purgeAuditLog(ctx context.Context, model string, id int, _ map[string]string) (string, error) {
 	if model != auditCleanupModel || 0 >= id {
 		return "", fmt.Errorf("invalid cleanup record")
 	}
-	if !orm.UserHasGroupXML(ctx, orm.SecurityUID(ctx), "base.group_system") {
+	if !sdk.UserHasGroupXML(ctx, sdk.SecurityUID(ctx), "base.group_system") {
 		return "", fmt.Errorf("access denied")
 	}
-	if err := orm.CheckModelAccess(ctx, orm.SecurityUID(ctx), auditModel, "unlink"); err != nil {
+	if err := sdk.CheckModelAccess(ctx, sdk.SecurityUID(ctx), auditModel, "unlink"); err != nil {
 		return "", fmt.Errorf("access denied")
 	}
-	rec, err := orm.SearchOne(ctx, auditCleanupModel, map[string]interface{}{"id": id})
+	rec, err := sdk.SearchOne(ctx, auditCleanupModel, map[string]interface{}{"id": id})
 	if err != nil {
 		return "", fmt.Errorf("record not found")
 	}
@@ -35,10 +35,10 @@ func purgeAuditLog(ctx context.Context, model string, id int, _ map[string]strin
 	if err != nil {
 		return "", err
 	}
-	dryRun := orm.AsBool(rec["dry_run"])
+	dryRun := sdk.AsBool(rec["dry_run"])
 	opts := RetentionOptions{
 		RetentionDays:     days,
-		FilterModel:       strings.TrimSpace(orm.AsString(rec["filter_model"])),
+		FilterModel:       strings.TrimSpace(sdk.AsString(rec["filter_model"])),
 		DryRun:            dryRun,
 		DeleteAfterExport: !dryRun,
 		Compress:          true,
@@ -54,7 +54,7 @@ func purgeAuditLog(ctx context.Context, model string, id int, _ map[string]strin
 		}
 	}
 	var result RetentionResult
-	err = orm.WithElevated(ctx, "audit_cleanup", func(elevCtx context.Context) error {
+	err = sdk.WithElevated(ctx, "audit_cleanup", func(elevCtx context.Context) error {
 		var runErr error
 		result, runErr = runAuditRetention(elevCtx, opts)
 		return runErr
@@ -69,22 +69,22 @@ func purgeAuditLog(ctx context.Context, model string, id int, _ map[string]strin
 	if dryRun {
 		summary = "Dry run: " + summary
 	} else if result.RowsDeleted > 0 || result.RowsExported > 0 {
-		orm.AppendAudit(ctx, "audit_cleanup", auditModel, 0, nil, nil,
-			fmt.Sprintf("deleted=%d exported=%d days=%d model_filter=%q", result.RowsDeleted, result.RowsExported, days, strings.TrimSpace(orm.AsString(rec["filter_model"]))))
+		sdk.AppendAudit(ctx, "audit_cleanup", auditModel, 0, nil, nil,
+			fmt.Sprintf("deleted=%d exported=%d days=%d model_filter=%q", result.RowsDeleted, result.RowsExported, days, strings.TrimSpace(sdk.AsString(rec["filter_model"]))))
 	}
-	_ = orm.UpdateRecordByID(ctx, auditCleanupModel, id, map[string]interface{}{"result_summary": summary})
+	_, _ = sdk.Write(ctx, auditCleanupModel, []int{id}, map[string]interface{}{"result_summary": summary})
 	return "", nil
 }
 
 func retentionDaysFromRecord(rec map[string]interface{}) (int, error) {
-	preset := strings.TrimSpace(orm.AsString(rec["retention_preset"]))
+	preset := strings.TrimSpace(sdk.AsString(rec["retention_preset"]))
 	switch preset {
 	case "7_days":
 		return 7, nil
 	case "30_days", "":
 		return 30, nil
 	case "custom":
-		d, ok := orm.CoerceInt64(rec["retention_days"])
+		d, ok := sdk.CoerceInt64(rec["retention_days"])
 		if !ok || 0 >= d {
 			return 0, fmt.Errorf("custom retention requires days greater than zero")
 		}

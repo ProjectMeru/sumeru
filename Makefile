@@ -1,5 +1,5 @@
 # Sumeru kernel — `make` or `make all` runs the full local standard.
-.PHONY: help all check lint standards audit-test vet lint-go \
+.PHONY: help all check lint standards audit-test vet lint-go check-addon-sdk \
 	check-sql check-logs test test-go swc-test swc-check swc-build swc-deps swc assets \
 	setup run dev build build-check generate \
 	test-modules test-modules-static test-modules-unit test-modules-addon \
@@ -33,7 +33,7 @@ test: swc-test test-go
 # Static analysis
 # =============================================================================
 
-standards: check-sql check-logs check-test-layout
+standards: check-sql check-logs check-test-layout check-addon-sdk
 	@bash scripts/check_security_bypass.sh
 
 check-sql:
@@ -45,6 +45,9 @@ check-logs:
 
 check-test-layout:
 	@bash scripts/check_test_layout.sh
+
+check-addon-sdk:
+	@bash scripts/check_addon_sdk.sh
 
 audit-test:
 	go test ./test/core/security/... $(GO_TEST_FLAGS)

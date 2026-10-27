@@ -8,33 +8,33 @@ import (
 
 	"sumeru/core/applog"
 	"sumeru/core/event"
-	"sumeru/core/orm"
+	"sumeru/core/sdk"
 )
 
 func actionApplies(ctx context.Context, row map[string]interface{}, ev event.Event) bool {
-	actionModel := strings.TrimSpace(orm.AsString(row["model"]))
-	evModel := strings.TrimSpace(orm.AsString(ev.Payload["model"]))
+	actionModel := strings.TrimSpace(sdk.AsString(row["model"]))
+	evModel := strings.TrimSpace(sdk.AsString(ev.Payload["model"]))
 	if ev.Name == "cron.tick" {
-		if actionModel != "" || strings.TrimSpace(orm.AsString(row["trigger_domain"])) != "" {
+		if actionModel != "" || strings.TrimSpace(sdk.AsString(row["trigger_domain"])) != "" {
 			return false
 		}
 	}
 	if actionModel != "" && evModel != "" && actionModel != evModel {
 		return false
 	}
-	domRaw := strings.TrimSpace(orm.AsString(row["trigger_domain"]))
-	if ev.Name == orm.EventRecordDeleted {
+	domRaw := strings.TrimSpace(sdk.AsString(row["trigger_domain"]))
+	if ev.Name == sdk.EventRecordDeleted {
 		if domRaw == "" {
 			return true
 		}
-		actionID, _ := orm.CoerceInt64(row["id"])
-		resID, ok := orm.CoerceInt64(ev.Payload["id"])
+		actionID, _ := sdk.CoerceInt64(row["id"])
+		resID, ok := sdk.CoerceInt64(ev.Payload["id"])
 		return ok && deleteActionMatched(evModel, int(resID), actionID)
 	}
 	if domRaw == "" {
 		return true
 	}
-	resID, ok := orm.CoerceInt64(ev.Payload["id"])
+	resID, ok := sdk.CoerceInt64(ev.Payload["id"])
 	if evModel == "" || !ok || 0 >= resID {
 		return false
 	}
@@ -50,7 +50,7 @@ func actionApplies(ctx context.Context, row map[string]interface{}, ev event.Eve
 		})
 		return false
 	}
-	matches, err := orm.SearchCount(ctx, evModel, append(domain, []interface{}{"id", "=", resID}))
+	matches, err := sdk.SearchCount(ctx, evModel, append(domain, []interface{}{"id", "=", resID}))
 	return err == nil && matches > 0
 }
 
@@ -64,7 +64,7 @@ func executeServerAction(ctx context.Context, row map[string]interface{}, ev eve
 	if !actionApplies(ctx, row, ev) {
 		return nil
 	}
-	code := strings.TrimSpace(orm.AsString(row["code"]))
+	code := strings.TrimSpace(sdk.AsString(row["code"]))
 	if code == "" {
 		return nil
 	}
@@ -105,15 +105,16 @@ func executeServerAction(ctx context.Context, row map[string]interface{}, ev eve
 			})
 			return nil
 		}
-		modelName := strings.TrimSpace(orm.AsString(ev.Payload["model"]))
-		resID, ok := orm.CoerceInt64(ev.Payload["id"])
+		modelName := strings.TrimSpace(sdk.AsString(ev.Payload["model"]))
+		resID, ok := sdk.CoerceInt64(ev.Payload["id"])
 		if modelName == "" || !ok || 0 >= resID {
 			return nil
 		}
 		if err := rejectUnsafeWrite(modelName, vals); err != nil {
 			return err
 		}
-		return orm.UpdateRecordByID(ctx, modelName, int(resID), vals)
+		_, err := sdk.Write(ctx, modelName, []int{int(resID)}, vals)
+		return err
 
 	case strings.HasPrefix(code, "webhook:"):
 		url := strings.TrimSpace(strings.TrimPrefix(code, "webhook:"))
@@ -138,15 +139,15 @@ func createActivity(ctx context.Context, spec string, ev event.Event) error {
 	xmlid, summary, _ := strings.Cut(spec, "|")
 	xmlid = strings.TrimSpace(xmlid)
 	summary = strings.TrimSpace(summary)
-	modelName := strings.TrimSpace(orm.AsString(ev.Payload["model"]))
-	resID, ok := orm.CoerceInt64(ev.Payload["id"])
+	modelName := strings.TrimSpace(sdk.AsString(ev.Payload["model"]))
+	resID, ok := sdk.CoerceInt64(ev.Payload["id"])
 	if xmlid == "" || modelName == "" || !ok || 0 >= resID {
 		return fmt.Errorf("activity action requires type, model, and id")
 	}
-	if _, registered := orm.Registry["mail.activity"]; !registered {
+	if !sdk.ModelRegistered("mail.activity") {
 		return fmt.Errorf("mail.activity is not installed")
 	}
-	typeID, typeModel, err := orm.ResolveXmlId(ctx, xmlid)
+	typeID, typeModel, err := sdk.ResolveXmlId(ctx, xmlid)
 	if err != nil || typeModel != "mail.activity.type" || 0 >= typeID {
 		return fmt.Errorf("unknown activity type %q", xmlid)
 	}
@@ -163,6 +164,6 @@ func createActivity(ctx context.Context, spec string, ev event.Event) error {
 	if ev.Actor > 0 {
 		vals["user_id"] = ev.Actor
 	}
-	_, err = orm.Create(ctx, orm.Registry["mail.activity"], vals)
+	_, err = sdk.Create(ctx, "mail.activity", vals)
 	return err
 }

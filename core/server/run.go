@@ -170,19 +170,22 @@ func Run() {
 		applog.Fatal(ctx, "Default security groups failed", "err", err)
 	}
 
+	hadModuleOps := strings.TrimSpace(*installMods) != "" || strings.TrimSpace(*updateMods) != ""
 	if err := RunModuleCLI(*installMods, *updateMods); err != nil {
 		applog.Fatal(ctx, "Module CLI failed", "err", err)
 	}
 	if err := module.SyncInstalledAddonPOFiles(ctx); err != nil {
 		applog.Fatal(ctx, "Translation catalog sync failed", "err", err)
 	}
+	if !hadModuleOps {
+		module.ReconcileSystemManagerImpliedInstalled(ctx)
+	}
 
 	if err := orm.EnsureBootstrapSecurity(); err != nil {
 		applog.Fatal(ctx, "Security bootstrap failed", "err", err)
 	}
 
-	hadModuleOperations := strings.TrimSpace(*installMods) != "" || strings.TrimSpace(*updateMods) != ""
-	if *stopAfterInit && hadModuleOperations {
+	if *stopAfterInit && hadModuleOps {
 		applog.InfoMsg(ctx, "server", "shutdown", "stop-after-init: module operations finished, exiting", nil)
 		os.Exit(0)
 	}

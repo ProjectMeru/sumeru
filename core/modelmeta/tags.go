@@ -43,6 +43,7 @@ type FieldTags struct {
 	Groups     string
 	Related    string
 	Compute    string
+	Status     bool   // status: selection field shown as the status bar
 	Company    string // model tag: company=shared skips auto multi-company isolation
 	MailThread bool   // model tag: mail_thread — chatter auto-subscribe hooks
 }
@@ -242,6 +243,11 @@ func setTagOption(tags *FieldTags, key, value string) error {
 		tags.Related = value
 	case "compute":
 		tags.Compute = value
+	case "status":
+		if value != "" {
+			return fmt.Errorf("status does not take a value")
+		}
+		tags.Status = true
 	case "mail_thread":
 		tags.MailThread = true
 	default:

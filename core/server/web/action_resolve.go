@@ -3,6 +3,7 @@ package web
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"sumeru/core/engine/render"
@@ -52,7 +53,13 @@ func resolveNavigationAction(ctx context.Context, actionID int, actionQuery stri
 		if err != nil {
 			return navigationAction{}, fmt.Errorf("action %d not found", coreID)
 		}
+		if !orm.UserHasAnyAccessGroup(ctx, orm.SecurityUID(ctx), orm.AsString(row["groups"])) {
+			return navigationAction{}, &orm.AccessDeniedError{Model: sysActionWindowModel, Operation: "read"}
+		}
 		return navigationAction{kind: navActionWindow, windowData: row}, nil
+	case sysReportActionModel:
+		url := reportPreviewRoute + "?report_id=" + strconv.Itoa(coreID)
+		return navigationAction{kind: navActionURL, url: url}, nil
 	default:
 		return navigationAction{}, fmt.Errorf("unsupported action model %q", modelName)
 	}

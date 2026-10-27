@@ -39,6 +39,9 @@ func executeCreateMutation(ctx context.Context, model Model, values map[string]i
 			return err
 		}
 		result.ID = id
+		if err := writeMany2Many(ctx, tx, id, many2ManyLinks(model.ModelName(), values)); err != nil {
+			return err
+		}
 		if shouldEmitSideEffects(ctx, model.ModelName()) {
 			emitSideEffectsOnTx(ctx, tx, model.ModelName(), uid, []sideEffectRow{{
 				Action:    "create",
@@ -97,7 +100,8 @@ func executeUpdateMutation(ctx context.Context, modelName string, domain [][]int
 	if err := CheckFieldWriteAccess(ctx, uid, modelName, prepared); err != nil {
 		return result, err
 	}
-	if 0 == len(prepared) {
+	links := many2ManyLinks(modelName, values)
+	if 0 == len(prepared) && 0 == len(links) {
 		return result, nil
 	}
 	table, err := QuotedTableForModel(modelName)
@@ -137,16 +141,8 @@ func executeUpdateMutation(ctx context.Context, modelName string, domain [][]int
 			}
 		}
 		for _, before := range locked {
-			if newState, ok := prepared["state"].(string); ok {
-				oldState := AsString(before["state"])
-				if newState != oldState {
-					rid, _ := CoerceInt64(before["id"])
-					if err := CanWorkflowTransition(ctx, WorkflowTransitionInput{
-						Model: modelName, RecordID: int(rid), FromState: oldState, ToState: newState, UID: uid,
-					}); err != nil {
-						return err
-					}
-				}
+			if err := checkStatusTransition(ctx, modelName, uid, before, prepared); err != nil {
+				return err
 			}
 			merged := mergeRecordMap(before, prepared)
 			if err := runConstraints(ctx, modelName, merged); err != nil {
@@ -156,30 +152,40 @@ func executeUpdateMutation(ctx context.Context, modelName string, domain [][]int
 				return err
 			}
 		}
-		var setClauses []string
-		var setArgs []interface{}
-		placeholderIndex := 1
-		for k, v := range prepared {
-			qcol, err := QuotedColumnForModel(modelName, k)
+		if len(prepared) > 0 {
+			var setClauses []string
+			var setArgs []interface{}
+			placeholderIndex := 1
+			for k, v := range prepared {
+				qcol, err := QuotedColumnForModel(modelName, k)
+				if err != nil {
+					return err
+				}
+				setClauses = append(setClauses, fmt.Sprintf("%s = $%d", qcol, placeholderIndex))
+				setArgs = append(setArgs, v)
+				placeholderIndex++
+			}
+			shiftedWhere := shiftPlaceholders(securedSQL, len(setArgs)+1)
+			allArgs := append(setArgs, args...)
+			updQ := fmt.Sprintf(`UPDATE %s SET %s WHERE %s`, table, strings.Join(setClauses, ", "), shiftedWhere)
+			res, err := tx.ExecContext(ctx, updQ, allArgs...)
 			if err != nil {
 				return err
 			}
-			setClauses = append(setClauses, fmt.Sprintf("%s = $%d", qcol, placeholderIndex))
-			setArgs = append(setArgs, v)
-			placeholderIndex++
+			n, _ := res.RowsAffected()
+			if 0 == n {
+				return fmt.Errorf("access denied or record not found")
+			}
+			result.RowsAffected = n
+		} else {
+			result.RowsAffected = int64(len(locked))
 		}
-		shiftedWhere := shiftPlaceholders(securedSQL, len(setArgs)+1)
-		allArgs := append(setArgs, args...)
-		updQ := fmt.Sprintf(`UPDATE %s SET %s WHERE %s`, table, strings.Join(setClauses, ", "), shiftedWhere)
-		res, err := tx.ExecContext(ctx, updQ, allArgs...)
-		if err != nil {
-			return err
+		for _, before := range locked {
+			rid, _ := CoerceInt64(before["id"])
+			if err := writeMany2Many(ctx, tx, int(rid), links); err != nil {
+				return err
+			}
 		}
-		n, _ := res.RowsAffected()
-		if 0 == n {
-			return fmt.Errorf("access denied or record not found")
-		}
-		result.RowsAffected = n
 		if shouldEmitSideEffects(ctx, modelName) {
 			for _, before := range locked {
 				rid, _ := CoerceInt64(before["id"])
@@ -270,4 +276,131 @@ func executeDeleteMutation(ctx context.Context, modelName string, domain [][]int
 		publishRecordEvents(ctx, result.EventName, uid, modelName, result.PendingEventIDs)
 	}
 	return result, nil
+}
+
+type many2ManyLink struct {
+	table string
+	left  string
+	right string
+	ids   []int
+}
+
+func many2ManyLinks(modelName string, values map[string]interface{}) []many2ManyLink {
+	model, err := requireRegisteredModel(modelName)
+	if err != nil || model == nil {
+		return nil
+	}
+	var out []many2ManyLink
+	for _, fd := range model.Fields() {
+		if fd.Name != "group_ids" && fd.Name != "implied_ids" {
+			continue
+		}
+		if fd.Type != Many2Many {
+			continue
+		}
+		raw, ok := values[fd.Name]
+		if !ok {
+			continue
+		}
+		ids, ok := many2ManyIDs(raw)
+		if !ok {
+			continue
+		}
+		if !pgIdentOK(fd.RelationTable) || !pgIdentOK(fd.Column1) || !pgIdentOK(fd.Column2) {
+			continue
+		}
+		out = append(out, many2ManyLink{
+			table: fd.RelationTable,
+			left:  fd.Column1,
+			right: fd.Column2,
+			ids:   ids,
+		})
+	}
+	return out
+}
+
+func many2ManyIDs(raw interface{}) ([]int, bool) {
+	switch v := raw.(type) {
+	case []int:
+		return v, true
+	case []int64:
+		ids := make([]int, 0, len(v))
+		for _, id := range v {
+			if id > 0 {
+				ids = append(ids, int(id))
+			}
+		}
+		return ids, true
+	case []interface{}:
+		ids := make([]int, 0, len(v))
+		for _, item := range v {
+			id, ok := CoerceInt64(item)
+			if ok && id > 0 {
+				ids = append(ids, int(id))
+			}
+		}
+		return ids, true
+	default:
+		return nil, false
+	}
+}
+
+func writeMany2Many(ctx context.Context, tx TxWrapper, rowID int, links []many2ManyLink) error {
+	if 0 >= rowID || 0 == len(links) {
+		return nil
+	}
+	for _, link := range links {
+		del := fmt.Sprintf(`DELETE FROM %s WHERE %s = $1`, quoteIdent(link.table), quoteIdent(link.left))
+		if _, err := tx.ExecContext(ctx, del, rowID); err != nil {
+			return err
+		}
+		if 0 == len(link.ids) {
+			continue
+		}
+		ins := fmt.Sprintf(`INSERT INTO %s (%s, %s) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+			quoteIdent(link.table), quoteIdent(link.left), quoteIdent(link.right))
+		for _, id := range link.ids {
+			if _, err := tx.ExecContext(ctx, ins, rowID, id); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func checkStatusTransition(ctx context.Context, modelName string, uid int, before, prepared map[string]interface{}) error {
+	for _, name := range statusWriteFields(modelName) {
+		newState, ok := prepared[name].(string)
+		if !ok {
+			continue
+		}
+		oldState := AsString(before[name])
+		if newState == oldState {
+			continue
+		}
+		rid, _ := CoerceInt64(before["id"])
+		if err := CanWorkflowTransition(ctx, WorkflowTransitionInput{
+			Model: modelName, RecordID: int(rid), FromState: oldState, ToState: newState, UID: uid,
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func statusWriteFields(modelName string) []string {
+	inst := RegistryModel(modelName)
+	if inst == nil {
+		return []string{"state"}
+	}
+	var names []string
+	for _, field := range inst.Fields() {
+		if field.Status {
+			names = append(names, field.Name)
+		}
+	}
+	if 0 == len(names) {
+		return []string{"state"}
+	}
+	return names
 }

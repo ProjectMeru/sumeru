@@ -121,6 +121,21 @@ func EnsureSystemImpliesManagerGroup(ctx context.Context, moduleName, recordXMLI
 	return nil
 }
 
+// ReconcileSystemManagerImpliedInstalled runs ReconcileSystemManagerImpliedForModule for every installed module (idempotent).
+func ReconcileSystemManagerImpliedInstalled(ctx context.Context) {
+	if orm.DB == nil {
+		return
+	}
+	names, err := orm.InstalledModuleNames(ctx)
+	if err != nil {
+		syncWarn(ctx, "Warning: reconcile system→manager installed modules: %v", err)
+		return
+	}
+	for name := range names {
+		ReconcileSystemManagerImpliedForModule(ctx, name)
+	}
+}
+
 // ReconcileSystemManagerImpliedForModule ensures base.group_system implies each Manager group declared in module XML.
 func ReconcileSystemManagerImpliedForModule(ctx context.Context, moduleName string) {
 	if orm.DB == nil {

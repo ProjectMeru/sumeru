@@ -180,6 +180,7 @@ type Notebook struct {
 
 type Page struct {
 	Title     string      `xml:"string,attr"`
+	Groups    string      `xml:"groups,attr"`
 	Field     []Field     `xml:"field"`
 	Group     []Group     `xml:"group"`
 	Separator []Separator `xml:"separator"`
@@ -193,6 +194,7 @@ type Button struct {
 	Class     string `xml:"class,attr"`
 	Invisible string `xml:"invisible,attr"`
 	Confirm   string `xml:"confirm,attr"`
+	Groups    string `xml:"groups,attr"`
 }
 
 type Chatter struct {
@@ -288,6 +290,7 @@ type MenuItem struct {
 	Sequence     int    `xml:"sequence,attr"`
 	WebIcon      string `xml:"web_icon,attr"`
 	AccessGroups string `xml:"groups,attr"`
+	Active       string `xml:"active,attr"`
 	Module       string `xml:"-"` // set from DB rows only (not in XML menu files)
 }
 

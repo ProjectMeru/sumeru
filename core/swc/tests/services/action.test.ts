@@ -117,6 +117,25 @@ describe("ActionService", () => {
     expect(openHost).toHaveBeenCalledWith("Wizard", expect.any(HTMLElement));
   });
 
+  it("openPayloadDialog without env does not throw", () => {
+    const action = new ActionService();
+    expect(() =>
+      action.openPayloadDialog({
+        actionId: 1,
+        menuId: "",
+        viewType: "form",
+        model: "sale.order",
+        recordId: 3,
+        formEdit: false,
+        csrfToken: "",
+        arch: { type: "form", model: "sale.order", fields: [] },
+        viewTabs: [],
+        breadcrumbs: [],
+        target: "new",
+      }),
+    ).not.toThrow();
+  });
+
   it("returns false for primitive call results", async () => {
     const action = new ActionService();
     expect(await action.applyCallResult(true)).toBe(false);

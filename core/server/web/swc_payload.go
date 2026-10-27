@@ -15,8 +15,12 @@ func buildSwcWorkspacePayload(
 	viewRecord *render.ViewRecordData,
 	actionData map[string]interface{},
 ) swcmeta.WorkspacePayload {
+	crumbMenuID := req.menuID
+	if actionTarget(actionData) == "main" {
+		crumbMenuID = ""
+	}
 	crumbs := render.BuildWorkspaceBreadcrumbs(ctx, render.BreadcrumbInput{
-		ActiveMenuID:  req.menuID,
+		ActiveMenuID:  crumbMenuID,
 		ResModel:      resolved.view.Model,
 		ViewType:      resolved.selectedMode,
 		FormBaseQuery: viewRecord.FormBaseQuery,
@@ -74,6 +78,9 @@ func buildSwcWorkspacePayload(
 			payload.UserSecurity = &us
 		}
 	}
+	target := actionTarget(actionData)
+	payload.Target = target
+	payload.Fullscreen = target == "fullscreen"
 	applyActivityRecordFlags(ctx, &payload, resolved.selectedMode, viewRecord.RecordID, viewRecord.ResModel)
 	return payload
 }

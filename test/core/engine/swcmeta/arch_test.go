@@ -1,15 +1,13 @@
 package swcmeta_test
 
 import (
-	"sumeru/core/engine/swcmeta"
 	"context"
 	"strings"
-	"testing"
 	"sumeru/core/engine/parser"
+	"sumeru/core/engine/swcmeta"
 	"sumeru/core/orm"
+	"testing"
 )
-
-
 
 func TestSerializeSheetNestedGroupsAndDivs(t *testing.T) {
 	sheet := &parser.Sheet{
@@ -264,6 +262,35 @@ func (stubO2MChild) Fields() []orm.FieldDefinition {
 		{Name: "parent_id", Type: orm.Many2One, Relation: "test.o2m.parent"},
 		{Name: "name", Type: orm.Char, String: "Description"},
 		{Name: "quantity", Type: orm.Integer, String: "Qty"},
+	}
+}
+
+func TestSerializeButtonAndPageGroups(t *testing.T) {
+	ctx := orm.ContextWithUID(context.Background(), 5)
+	view := &parser.View{
+		Model: "sale.order",
+		Type:  "form",
+		Header: &parser.Header{
+			Button: []parser.Button{
+				{Name: "open", String: "Open"},
+				{Name: "secret", String: "Secret", Groups: "base.group_system"},
+			},
+		},
+		Sheet: &parser.Sheet{
+			Notebook: []parser.Notebook{{
+				Page: []parser.Page{
+					{Title: "Public"},
+					{Title: "Secret", Groups: "base.group_system"},
+				},
+			}},
+		},
+	}
+	arch := swcmeta.SerializeViewForUser(ctx, view)
+	if arch.Header == nil || len(arch.Header.Buttons) != 1 || arch.Header.Buttons[0].Name != "open" {
+		t.Fatalf("buttons: %+v", arch.Header)
+	}
+	if arch.Sheet == nil || len(arch.Sheet.Notebook) != 1 || len(arch.Sheet.Notebook[0].Pages) != 1 || arch.Sheet.Notebook[0].Pages[0].Title != "Public" {
+		t.Fatalf("pages: %+v", arch.Sheet)
 	}
 }
 

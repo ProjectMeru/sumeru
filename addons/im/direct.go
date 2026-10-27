@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"sumeru/core/orm"
+	"sumeru/core/sdk"
 )
 
 const MessageModel = "im.message"
@@ -19,10 +19,10 @@ const (
 
 // SearchInternalUsers finds active internal users by name or login (excluding uid).
 func SearchInternalUsers(ctx context.Context, uid int, query string, limit int) ([]map[string]interface{}, error) {
-	if orm.DB == nil {
+	if !sdk.DatabaseOpen() {
 		return nil, nil
 	}
-	if err := orm.CheckModelAccess(ctx, uid, "core.user", "read"); err != nil {
+	if err := sdk.CheckModelAccess(ctx, uid, "core.user", "read"); err != nil {
 		return nil, err
 	}
 	q := strings.TrimSpace(query)
@@ -50,7 +50,7 @@ func SearchInternalUsers(ctx context.Context, uid int, query string, limit int) 
 		domain = append(domain, []interface{}{"name", "ilike", pattern})
 		domain = append(domain, []interface{}{"login", "ilike", pattern})
 	}
-	return orm.SearchPage(ctx, "core.user", domain, limit, 0, "name ASC")
+	return sdk.SearchPage(ctx, "core.user", domain, limit, 0, "name ASC")
 }
 
 func ilikePattern(token string) string {
@@ -66,10 +66,10 @@ func ilikePattern(token string) string {
 
 // ListDirectConversations returns recent peers for uid with last message preview.
 func ListDirectConversations(ctx context.Context, uid int, limit int) ([]map[string]interface{}, error) {
-	if orm.DB == nil {
+	if !sdk.DatabaseOpen() {
 		return nil, nil
 	}
-	if err := orm.CheckModelAccess(ctx, uid, MessageModel, "read"); err != nil {
+	if err := sdk.CheckModelAccess(ctx, uid, MessageModel, "read"); err != nil {
 		return nil, err
 	}
 	if 0 >= limit || limit > 50 {
@@ -80,7 +80,7 @@ func ListDirectConversations(ctx context.Context, uid int, limit int) ([]map[str
 		{"sender_id", "=", uid},
 		{"recipient_id", "=", uid},
 	}
-	rows, err := orm.SearchPage(ctx, MessageModel, domain, 200, 0, "create_date DESC")
+	rows, err := sdk.SearchPage(ctx, MessageModel, domain, 200, 0, "create_date DESC")
 	if err != nil {
 		return nil, err
 	}
@@ -91,8 +91,8 @@ func ListDirectConversations(ctx context.Context, uid int, limit int) ([]map[str
 	seen := map[int]conv{}
 	order := []int{}
 	for _, row := range rows {
-		sid, _ := orm.CoerceInt64(row["sender_id"])
-		rid, _ := orm.CoerceInt64(row["recipient_id"])
+		sid, _ := sdk.CoerceInt64(row["sender_id"])
+		rid, _ := sdk.CoerceInt64(row["recipient_id"])
 		var peer int
 		switch uid {
 		case int(sid):
@@ -108,13 +108,13 @@ func ListDirectConversations(ctx context.Context, uid int, limit int) ([]map[str
 		if _, ok := seen[peer]; ok {
 			continue
 		}
-		preview := strings.TrimSpace(orm.AsString(row["body"]))
+		preview := strings.TrimSpace(sdk.AsString(row["body"]))
 		if len(preview) > 80 {
 			preview = preview[:77] + "…"
 		}
 		seen[peer] = conv{
 			preview: preview,
-			when:    strings.TrimSpace(orm.AsString(row["create_date"])),
+			when:    strings.TrimSpace(sdk.AsString(row["create_date"])),
 		}
 		order = append(order, peer)
 		if len(order) >= limit {
@@ -139,7 +139,7 @@ func ListDirectConversations(ctx context.Context, uid int, limit int) ([]map[str
 
 func directUnreadBySender(ctx context.Context, uid int) map[int]int {
 	out := map[int]int{}
-	rows, err := orm.Search(ctx, MessageModel, [][]interface{}{
+	rows, err := sdk.Search(ctx, MessageModel, [][]interface{}{
 		{"recipient_id", "=", uid},
 		{"is_read", "=", false},
 	})
@@ -147,7 +147,7 @@ func directUnreadBySender(ctx context.Context, uid int) map[int]int {
 		return out
 	}
 	for _, row := range rows {
-		sid, _ := orm.CoerceInt64(row["sender_id"])
+		sid, _ := sdk.CoerceInt64(row["sender_id"])
 		if 0 >= sid {
 			continue
 		}
@@ -161,23 +161,23 @@ func ListDirectThread(ctx context.Context, uid, peerID int) ([]map[string]interf
 	if 0 >= peerID || peerID == uid {
 		return nil, fmt.Errorf("invalid peer")
 	}
-	if orm.DB == nil {
+	if !sdk.DatabaseOpen() {
 		return nil, nil
 	}
-	if err := orm.CheckModelAccess(ctx, uid, MessageModel, "read"); err != nil {
+	if err := sdk.CheckModelAccess(ctx, uid, MessageModel, "read"); err != nil {
 		return nil, err
 	}
 	if err := assertInternalUser(ctx, uid, peerID); err != nil {
 		return nil, err
 	}
-	rowsA, err := orm.SearchPage(ctx, MessageModel, [][]interface{}{
+	rowsA, err := sdk.SearchPage(ctx, MessageModel, [][]interface{}{
 		{"sender_id", "=", uid},
 		{"recipient_id", "=", peerID},
 	}, 120, 0, "create_date ASC")
 	if err != nil {
 		return nil, err
 	}
-	rowsB, err := orm.SearchPage(ctx, MessageModel, [][]interface{}{
+	rowsB, err := sdk.SearchPage(ctx, MessageModel, [][]interface{}{
 		{"sender_id", "=", peerID},
 		{"recipient_id", "=", uid},
 	}, 120, 0, "create_date ASC")
@@ -188,15 +188,15 @@ func ListDirectThread(ctx context.Context, uid, peerID int) ([]map[string]interf
 	sortDirectMessages(rows)
 	out := make([]map[string]interface{}, 0, len(rows))
 	for _, row := range rows {
-		msgID, _ := orm.CoerceInt64(row["id"])
-		sid, _ := orm.CoerceInt64(row["sender_id"])
-		resID, _ := orm.CoerceInt64(row["res_id"])
+		msgID, _ := sdk.CoerceInt64(row["id"])
+		sid, _ := sdk.CoerceInt64(row["sender_id"])
+		resID, _ := sdk.CoerceInt64(row["res_id"])
 		out = append(out, map[string]interface{}{
 			"id":          int(msgID),
-			"body":        strings.TrimSpace(orm.AsString(row["body"])),
-			"createDate":  strings.TrimSpace(orm.AsString(row["create_date"])),
+			"body":        strings.TrimSpace(sdk.AsString(row["body"])),
+			"createDate":  strings.TrimSpace(sdk.AsString(row["create_date"])),
 			"outgoing":    int(sid) == uid,
-			"resModel":    strings.TrimSpace(orm.AsString(row["res_model"])),
+			"resModel":    strings.TrimSpace(sdk.AsString(row["res_model"])),
 			"resId":       int(resID),
 			"attachments": listMessageAttachments(ctx, uid, int(msgID)),
 		})
@@ -209,10 +209,10 @@ func listMessageAttachments(ctx context.Context, uid, messageID int) []map[strin
 	if 0 >= messageID {
 		return nil
 	}
-	if err := orm.CheckModelAccess(ctx, uid, "sys.attachment", "read"); err != nil {
+	if err := sdk.CheckModelAccess(ctx, uid, "sys.attachment", "read"); err != nil {
 		return nil
 	}
-	rows, err := orm.Search(ctx, "sys.attachment", [][]interface{}{
+	rows, err := sdk.Search(ctx, "sys.attachment", [][]interface{}{
 		{"model", "=", MessageModel},
 		{"res_id", "=", messageID},
 	})
@@ -221,12 +221,12 @@ func listMessageAttachments(ctx context.Context, uid, messageID int) []map[strin
 	}
 	out := make([]map[string]interface{}, 0, len(rows))
 	for _, row := range rows {
-		id, _ := orm.CoerceInt64(row["id"])
+		id, _ := sdk.CoerceInt64(row["id"])
 		out = append(out, map[string]interface{}{
 			"id":       int(id),
-			"name":     strings.TrimSpace(orm.AsString(row["name"])),
+			"name":     strings.TrimSpace(sdk.AsString(row["name"])),
 			"url":      fmt.Sprintf("/web/content/%d", id),
-			"mimetype": strings.TrimSpace(orm.AsString(row["mimetype"])),
+			"mimetype": strings.TrimSpace(sdk.AsString(row["mimetype"])),
 		})
 	}
 	return out
@@ -243,14 +243,13 @@ func PostDirectMessageLinked(ctx context.Context, uid, recipientID int, body, re
 	if body == "" {
 		return 0, fmt.Errorf("message required")
 	}
-	if err := orm.CheckModelAccess(ctx, uid, MessageModel, "create"); err != nil {
+	if err := sdk.CheckModelAccess(ctx, uid, MessageModel, "create"); err != nil {
 		return 0, err
 	}
 	if err := assertInternalUser(ctx, uid, recipientID); err != nil {
 		return 0, err
 	}
-	inst, ok := orm.Registry[MessageModel]
-	if !ok {
+	if !sdk.ModelRegistered(MessageModel) {
 		return 0, fmt.Errorf("internal chat not available")
 	}
 	vals := map[string]interface{}{
@@ -265,7 +264,7 @@ func PostDirectMessageLinked(ctx context.Context, uid, recipientID int, body, re
 		vals["res_model"] = resModel
 		vals["res_id"] = resID
 	}
-	id, err := orm.Create(ctx, inst, vals)
+	id, err := sdk.Create(ctx, MessageModel, vals)
 	if err != nil {
 		return 0, err
 	}
@@ -273,17 +272,17 @@ func PostDirectMessageLinked(ctx context.Context, uid, recipientID int, body, re
 }
 
 func assertInternalUser(ctx context.Context, uid, peerID int) error {
-	if err := orm.CheckModelAccess(ctx, uid, "core.user", "read"); err != nil {
+	if err := sdk.CheckModelAccess(ctx, uid, "core.user", "read"); err != nil {
 		return err
 	}
-	u, err := orm.SearchOne(ctx, "core.user", map[string]interface{}{"id": peerID})
+	u, err := sdk.SearchOne(ctx, "core.user", map[string]interface{}{"id": peerID})
 	if err != nil {
 		return fmt.Errorf("user not found")
 	}
-	if !orm.AsBool(u["active"]) {
+	if !sdk.AsBool(u["active"]) {
 		return fmt.Errorf("user not available")
 	}
-	if strings.TrimSpace(orm.AsString(u["user_type"])) != "internal" {
+	if strings.TrimSpace(sdk.AsString(u["user_type"])) != "internal" {
 		return fmt.Errorf("direct messages are for internal users only")
 	}
 	return nil
@@ -291,22 +290,22 @@ func assertInternalUser(ctx context.Context, uid, peerID int) error {
 
 func sortDirectMessages(rows []map[string]interface{}) {
 	sort.Slice(rows, func(i, j int) bool {
-		a := strings.TrimSpace(orm.AsString(rows[i]["create_date"]))
-		b := strings.TrimSpace(orm.AsString(rows[j]["create_date"]))
+		a := strings.TrimSpace(sdk.AsString(rows[i]["create_date"]))
+		b := strings.TrimSpace(sdk.AsString(rows[j]["create_date"]))
 		return a < b
 	})
 }
 
 // UserDisplayName returns a label for a user id.
 func UserDisplayName(ctx context.Context, userID int) string {
-	u, err := orm.SearchOne(ctx, "core.user", map[string]interface{}{"id": userID})
+	u, err := sdk.SearchOne(ctx, "core.user", map[string]interface{}{"id": userID})
 	if err != nil {
 		return fmt.Sprintf("User #%d", userID)
 	}
-	if nm := strings.TrimSpace(orm.AsString(u["name"])); nm != "" {
+	if nm := strings.TrimSpace(sdk.AsString(u["name"])); nm != "" {
 		return nm
 	}
-	if lg := strings.TrimSpace(orm.AsString(u["login"])); lg != "" {
+	if lg := strings.TrimSpace(sdk.AsString(u["login"])); lg != "" {
 		return lg
 	}
 	return fmt.Sprintf("User #%d", userID)

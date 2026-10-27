@@ -1,8 +1,10 @@
 package orm_test
 
 import (
-	"sumeru/core/orm"
 	"testing"
+	"time"
+
+	"sumeru/core/orm"
 )
 
 func TestHashAPIKey_stable(t *testing.T) {
@@ -53,6 +55,15 @@ func TestSubstituteDomainContext_ABAC(t *testing.T) {
 	}
 	if out[3][2] != "keep" {
 		t.Fatalf("literal changed: %v", out[3][2])
+	}
+	today := time.Now().UTC().Format("2006-01-02")
+	timed := orm.SubstituteDomainContext([][]interface{}{{"date", "=", "$today"}, {"ts", "=", "$now"}}, orm.DomainContext{})
+	if timed[0][2] != today {
+		t.Fatalf("today: %v", timed[0][2])
+	}
+	now, ok := timed[1][2].(string)
+	if !ok || len(now) < len(today) || now[:len(today)] != today {
+		t.Fatalf("now: %v", timed[1][2])
 	}
 }
 

@@ -57,6 +57,17 @@ func ApplyUserSecurityPostErr(ctx context.Context, actor, userID int, form url.V
 				gids = append(gids, n)
 			}
 		}
+		for key, vals := range form {
+			if !strings.HasPrefix(key, "security_exclusive_") {
+				continue
+			}
+			for _, s := range vals {
+				n, err := strconv.Atoi(strings.TrimSpace(s))
+				if err == nil && n > 0 {
+					gids = append(gids, n)
+				}
+			}
+		}
 		if err := SetUserGroupLinks(ctx, userID, gids); err != nil {
 			return fmt.Errorf("set user groups: %w", err)
 		}

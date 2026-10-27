@@ -10,7 +10,7 @@ import (
 	"io"
 	"sort"
 
-	"sumeru/core/orm"
+	"sumeru/core/sdk"
 )
 
 const (
@@ -33,19 +33,19 @@ type auditExportRow struct {
 }
 
 func auditRowFromMap(row map[string]interface{}) auditExportRow {
-	id, _ := orm.CoerceInt64(row["id"])
-	resID, _ := orm.CoerceInt64(row["res_id"])
-	uid, _ := orm.CoerceInt64(row["user_id"])
+	id, _ := sdk.CoerceInt64(row["id"])
+	resID, _ := sdk.CoerceInt64(row["res_id"])
+	uid, _ := sdk.CoerceInt64(row["user_id"])
 	return auditExportRow{
 		ID:         id,
-		Action:     orm.AsString(row["action"]),
-		Model:      orm.AsString(row["model"]),
+		Action:     sdk.AsString(row["action"]),
+		Model:      sdk.AsString(row["model"]),
 		ResID:      resID,
 		UserID:     uid,
-		CreateDate: orm.AsString(row["create_date"]),
-		BeforeJSON: orm.AsString(row["before_json"]),
-		AfterJSON:  orm.AsString(row["after_json"]),
-		Detail:     orm.AsString(row["detail"]),
+		CreateDate: sdk.AsString(row["create_date"]),
+		BeforeJSON: sdk.AsString(row["before_json"]),
+		AfterJSON:  sdk.AsString(row["after_json"]),
+		Detail:     sdk.AsString(row["detail"]),
 	}
 }
 

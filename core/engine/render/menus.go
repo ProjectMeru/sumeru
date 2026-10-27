@@ -19,7 +19,7 @@ import (
 var menuIconKey = regexp.MustCompile(`^[a-z0-9-]+$`)
 
 func shellMenuAllowed(ctx context.Context, uid int, mi parser.MenuItem) bool {
-	return orm.UserMayAccessMenu(ctx, uid, mi.AccessGroups)
+	return orm.UserMayAccessMenuNavigation(ctx, uid, mi.AccessGroups)
 }
 
 func sanitizeMenuIcon(s string) string {
@@ -61,10 +61,11 @@ func fetchShellMenus(ctx context.Context) []parser.MenuItem {
 		        COALESCE(NULLIF(TRIM(m.web_icon), ''), '') AS web_icon,
 		        COALESCE(NULLIF(TRIM(m.access_groups), ''), '') AS access_groups
 		   FROM %s m
-		  WHERE COALESCE(NULLIF(TRIM(m.module), ''), '') = ''
+		  WHERE m.active = true
+		    AND (COALESCE(NULLIF(TRIM(m.module), ''), '') = ''
 		     OR EXISTS (
 		      SELECT 1 FROM %s im WHERE im.name = m.module AND im.state = 'installed' AND im.active = true
-		    )
+		    ))
 		  ORDER BY m.sequence`,
 		menuTbl, modTbl,
 	)

@@ -42,8 +42,8 @@ func TestResolveNavigationActionURLRedirect(t *testing.T) {
 	mock := setupURLActionWebTest(t)
 	metaRows := sqlmock.NewRows([]string{"id", "module", "name", "model", "core_id"}).
 		AddRow(1, "account", "x", "sys.action.url", 5)
-	mock.ExpectQuery(`SELECT \* FROM "sys_model_data" WHERE \("core_id" = \$1 AND "model" IN \(\$2,\$3\)\)`).
-		WithArgs(5, "sys.action.window", "sys.action.url").
+	mock.ExpectQuery(`SELECT \* FROM "sys_model_data" WHERE \("core_id" = \$1 AND "model" IN \(\$2,\$3,\$4\)\)`).
+		WithArgs(5, "sys.action.window", "sys.action.url", "sys.report.action").
 		WillReturnRows(metaRows)
 	urlRows := sqlmock.NewRows([]string{"id", "name", "url"}).
 		AddRow(5, "Profit & Loss", "/account/reports/view?type=profit_loss")
@@ -67,8 +67,8 @@ func TestResolveNavigationActionURLRejectsUnsafe(t *testing.T) {
 	mock := setupURLActionWebTest(t)
 	metaRows := sqlmock.NewRows([]string{"id", "module", "name", "model", "core_id"}).
 		AddRow(1, "account", "x", "sys.action.url", 5)
-	mock.ExpectQuery(`SELECT \* FROM "sys_model_data" WHERE \("core_id" = \$1 AND "model" IN \(\$2,\$3\)\)`).
-		WithArgs(5, "sys.action.window", "sys.action.url").
+	mock.ExpectQuery(`SELECT \* FROM "sys_model_data" WHERE \("core_id" = \$1 AND "model" IN \(\$2,\$3,\$4\)\)`).
+		WithArgs(5, "sys.action.window", "sys.action.url", "sys.report.action").
 		WillReturnRows(metaRows)
 	urlRows := sqlmock.NewRows([]string{"id", "name", "url"}).
 		AddRow(5, "Bad", "javascript:alert(1)")
@@ -91,8 +91,8 @@ func TestResolveNavigationActionWindowUnchanged(t *testing.T) {
 	})
 	metaRows := sqlmock.NewRows([]string{"id", "module", "name", "model", "core_id"}).
 		AddRow(1, "base", "x", "sys.action.window", 3)
-	mock.ExpectQuery(`SELECT \* FROM "sys_model_data" WHERE \("core_id" = \$1 AND "model" IN \(\$2,\$3\)\)`).
-		WithArgs(3, "sys.action.window", "sys.action.url").
+	mock.ExpectQuery(`SELECT \* FROM "sys_model_data" WHERE \("core_id" = \$1 AND "model" IN \(\$2,\$3,\$4\)\)`).
+		WithArgs(3, "sys.action.window", "sys.action.url", "sys.report.action").
 		WillReturnRows(metaRows)
 	windowRows := sqlmock.NewRows([]string{"id", "name", "core_model", "view_mode"}).
 		AddRow(3, "Contacts", "core.partner", "list,form")
@@ -106,6 +106,26 @@ func TestResolveNavigationActionWindowUnchanged(t *testing.T) {
 	}
 	if kind != int(web.NavActionWindowForTest) || url != "" {
 		t.Fatalf("kind=%d url=%q", kind, url)
+	}
+}
+
+func TestResolveNavigationActionReport(t *testing.T) {
+	mock := setupURLActionWebTest(t)
+	metaRows := sqlmock.NewRows([]string{"id", "module", "name", "model", "core_id"}).
+		AddRow(1, "base", "report_sale", "sys.report.action", 8)
+	mock.ExpectQuery(`SELECT \* FROM "sys_model_data" WHERE \("core_id" = \$1 AND "model" IN \(\$2,\$3,\$4\)\)`).
+		WithArgs(8, "sys.action.window", "sys.action.url", "sys.report.action").
+		WillReturnRows(metaRows)
+
+	kind, url, err := web.ResolveNavigationActionForTest(bypassCtx(), 8, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if kind != int(web.NavActionURLForTest) {
+		t.Fatalf("kind=%d want url", kind)
+	}
+	if url != "/web/report/preview?report_id=8" {
+		t.Fatalf("url=%q", url)
 	}
 }
 

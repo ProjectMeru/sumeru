@@ -32,6 +32,9 @@ export interface SwcUserSecurityGroupRow {
   name: string;
   selected: boolean;
   isUserType: boolean;
+  categoryId?: number;
+  categoryName?: string;
+  exclusive?: boolean;
 }
 
 export interface SwcUserSecurityCompanyRow {
@@ -282,4 +285,6 @@ export interface SwcWorkspacePayload {
   userSecurity?: SwcUserSecurityMeta;
   recordMessagesEligible?: boolean;
   recordLogEligible?: boolean;
+  target?: string;
+  fullscreen?: boolean;
 }

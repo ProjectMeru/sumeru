@@ -73,6 +73,18 @@ func SetDBForTest(w DBWrapper) {
 	DB = w
 }
 
+// ApplyAccessDomainForTest classifies one sys.access domain into global AND vs group OR.
+func ApplyAccessDomainForTest(groupID int, groups []int, dom [][]interface{}) (globals int, groupRules int, allowAll bool) {
+	var out ruleDomainParts
+	applyAccessDomain(&out, groupID, groups, dom)
+	return len(out.globals), len(out.groups), out.allowAllGroups
+}
+
+// DropExtraExclusiveGroupsForTest keeps the first group in each exclusive category.
+func DropExtraExclusiveGroupsForTest(groupIDs []int, exclusiveCategory map[int]int) []int {
+	return dropExtraExclusiveGroups(groupIDs, exclusiveCategory)
+}
+
 // ResetDBForTest clears the global DB handle.
 func ResetDBForTest() {
 	DB = nil

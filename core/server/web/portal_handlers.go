@@ -215,7 +215,28 @@ func postLoginDestination(ctx context.Context, userID int, requestedNext string)
 		}
 		return portalHomeRoute
 	}
-	return SafePathNext(requestedNext, homeRoute)
+	next := SafePathNext(requestedNext, homeRoute)
+	if next == homeRoute {
+		if dest := userHomeActionURL(ctx, userID); dest != "" {
+			return dest
+		}
+	}
+	return next
+}
+
+func userHomeActionURL(ctx context.Context, userID int) string {
+	if 0 >= userID {
+		return ""
+	}
+	row, err := orm.SearchOne(ctx, "core.user", map[string]interface{}{"id": userID})
+	if err != nil {
+		return ""
+	}
+	actionID, ok := orm.CoerceInt64(row["action_id"])
+	if !ok || 0 >= actionID {
+		return ""
+	}
+	return render.WorkspaceURL(render.WorkspaceQuery{ActionID: int(actionID)})
 }
 
 func stringsHasPortalPrefix(path string) bool {
