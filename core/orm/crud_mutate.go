@@ -141,16 +141,8 @@ func executeUpdateMutation(ctx context.Context, modelName string, domain [][]int
 			}
 		}
 		for _, before := range locked {
-			if newState, ok := prepared["state"].(string); ok {
-				oldState := AsString(before["state"])
-				if newState != oldState {
-					rid, _ := CoerceInt64(before["id"])
-					if err := CanWorkflowTransition(ctx, WorkflowTransitionInput{
-						Model: modelName, RecordID: int(rid), FromState: oldState, ToState: newState, UID: uid,
-					}); err != nil {
-						return err
-					}
-				}
+			if err := checkStatusTransition(ctx, modelName, uid, before, prepared); err != nil {
+				return err
 			}
 			merged := mergeRecordMap(before, prepared)
 			if err := runConstraints(ctx, modelName, merged); err != nil {
@@ -374,4 +366,41 @@ func writeMany2Many(ctx context.Context, tx TxWrapper, rowID int, links []many2M
 		}
 	}
 	return nil
+}
+
+func checkStatusTransition(ctx context.Context, modelName string, uid int, before, prepared map[string]interface{}) error {
+	for _, name := range statusWriteFields(modelName) {
+		newState, ok := prepared[name].(string)
+		if !ok {
+			continue
+		}
+		oldState := AsString(before[name])
+		if newState == oldState {
+			continue
+		}
+		rid, _ := CoerceInt64(before["id"])
+		if err := CanWorkflowTransition(ctx, WorkflowTransitionInput{
+			Model: modelName, RecordID: int(rid), FromState: oldState, ToState: newState, UID: uid,
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func statusWriteFields(modelName string) []string {
+	inst := RegistryModel(modelName)
+	if inst == nil {
+		return []string{"state"}
+	}
+	var names []string
+	for _, field := range inst.Fields() {
+		if field.Status {
+			names = append(names, field.Name)
+		}
+	}
+	if 0 == len(names) {
+		return []string{"state"}
+	}
+	return names
 }

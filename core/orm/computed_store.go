@@ -24,11 +24,9 @@ func MergeStoredComputes(ctx context.Context, modelName string, rec map[string]i
 		if !ok || spec.fn == nil {
 			continue
 		}
-		val, err := spec.fn(ctx, rec)
-		if err != nil {
-			return fmt.Errorf("compute %s.%s: %w", modelName, field, err)
+		if err := runCompute(ctx, modelName, field, spec.fn, rec); err != nil {
+			return err
 		}
-		rec[field] = val
 	}
 	return nil
 }

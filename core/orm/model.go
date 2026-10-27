@@ -52,6 +52,7 @@ type FieldDefinition struct {
 	Compute            string // compute handler name
 	ComputeStore       bool   // persist computed value
 	Virtual            bool   // no SQL column (related/compute without store)
+	Status             bool   // selection field shown as the status bar
 }
 
 type Model interface {

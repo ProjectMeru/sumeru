@@ -180,6 +180,7 @@ func fieldFromStructField(ctx *registerCtx, f reflect.StructField) (orm.FieldDef
 		Groups:    tags.Groups,
 		Related:   tags.Related,
 		Compute:   tags.Compute,
+		Status:    tags.Status,
 	}
 
 	if tags.Related != "" {
@@ -212,6 +213,14 @@ func fieldFromStructField(ctx *registerCtx, f reflect.StructField) (orm.FieldDef
 			fieldDef.Selection = opts
 		} else if typeName := typeShortName(selectionTypeKey(f.Type)); typeName != "" {
 			fieldDef.Selection = selectionOptionsFromPackage(ctx.pkgDir, typeName)
+		}
+	}
+	if tags.Status {
+		if fieldDef.Type != orm.Selection {
+			return orm.FieldDefinition{}, fmt.Errorf("field %s: status requires a selection", f.Name)
+		}
+		if fieldDef.Widget == "" {
+			fieldDef.Widget = "statusbar"
 		}
 	}
 

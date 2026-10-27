@@ -9,7 +9,7 @@
 //   - Read: Search, SearchOne, SearchRead, SearchCount, SearchPage, Read, NameSearch, DefaultGet
 //   - Write: Create, Upsert, Write, SearchWrite, Unlink, Copy, NameCreate
 //   - Methods: Recordset, Browse, RegisterMethod, ActionResult
-//   - Field hooks: RegisterCompute, RegisterOnchange, RegisterConstraint
+//   - Field hooks: compute=<function> via generated BindCompute, RegisterOnchange, RegisterConstraint
 //   - Sequence and elevated work: NextSequence, WithElevated
 //   - Aggregate, report, units, HTTP, startup: ReadGroup, report, convert, http, startup
 package sdk

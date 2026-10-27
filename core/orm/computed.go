@@ -47,13 +47,32 @@ func ApplyComputes(ctx context.Context, model string, rec map[string]interface{}
 		return nil
 	}
 	for field, spec := range specs {
-		val, err := spec.fn(ctx, rec)
-		if err != nil {
-			return fmt.Errorf("compute %s.%s: %w", model, field, err)
+		if err := runCompute(ctx, model, field, spec.fn, rec); err != nil {
+			return err
 		}
-		rec[field] = val
 	}
 	return nil
+}
+
+func runCompute(ctx context.Context, model, field string, fn ComputeFunc, rec map[string]interface{}) error {
+	val, err := fn(ctx, rec)
+	if err != nil {
+		return fmt.Errorf("compute %s.%s: %w", model, field, err)
+	}
+	coerced, err := coerceComputeResult(model, field, val)
+	if err != nil {
+		return fmt.Errorf("compute %s.%s: value %v: %w", model, field, val, err)
+	}
+	rec[field] = coerced
+	return nil
+}
+
+func coerceComputeResult(model, field string, val interface{}) (interface{}, error) {
+	fieldDef := FieldDef(model, field)
+	if fieldDef == nil {
+		return val, nil
+	}
+	return coerceFieldValue(*fieldDef, val)
 }
 
 func snapshotComputeSpecs(modelName string) map[string]computeSpec {
