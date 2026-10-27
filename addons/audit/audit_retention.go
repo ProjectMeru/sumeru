@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"sumeru/core/orm"
 	"sumeru/core/scheduler"
+	"sumeru/core/sdk"
 )
 
 const (
@@ -19,14 +19,14 @@ const (
 
 // RetentionOptions configures one retention pass.
 type RetentionOptions struct {
-	RetentionDays      int
-	FilterModel        string
-	DryRun             bool
-	LegalHold          bool
-	DeleteAfterExport  bool
-	Compress           bool
-	BatchSize          int
-	MaxRowsPerRun int
+	RetentionDays     int
+	FilterModel       string
+	DryRun            bool
+	LegalHold         bool
+	DeleteAfterExport bool
+	Compress          bool
+	BatchSize         int
+	MaxRowsPerRun     int
 }
 
 // RetentionResult aggregates one run.
@@ -39,7 +39,7 @@ type RetentionResult struct {
 }
 
 func init() {
-	orm.RegisterObjectAction(auditRetentionPolicyModel, "action_run_retention", runRetentionFromPolicy)
+	sdk.RegisterObjectAction(auditRetentionPolicyModel, "action_run_retention", runRetentionFromPolicy)
 	scheduler.RegisterCronHandler(auditRetentionCronCode, runAuditRetentionCron)
 }
 
@@ -48,7 +48,7 @@ func runAuditRetentionCron(ctx context.Context, _ map[string]interface{}) error 
 	if err != nil {
 		return nil
 	}
-	if !orm.AsBool(policy["auto_enabled"]) {
+	if !sdk.AsBool(policy["auto_enabled"]) {
 		return nil
 	}
 	_, err = executeRetentionPolicy(ctx, policy, false)
@@ -56,23 +56,23 @@ func runAuditRetentionCron(ctx context.Context, _ map[string]interface{}) error 
 }
 
 func runRetentionFromPolicy(ctx context.Context, model string, id int, _ map[string]string) (string, error) {
-	if model != auditRetentionPolicyModel || id <= 0 {
+	if model != auditRetentionPolicyModel || 0 >= id {
 		return "", fmt.Errorf("invalid policy record")
 	}
-	if !orm.UserHasGroupXML(ctx, orm.SecurityUID(ctx), "base.group_system") {
+	if !sdk.UserHasGroupXML(ctx, sdk.SecurityUID(ctx), "base.group_system") {
 		return "", fmt.Errorf("access denied")
 	}
-	rec, err := orm.SearchOne(ctx, auditRetentionPolicyModel, map[string]interface{}{"id": id})
+	rec, err := sdk.SearchOne(ctx, auditRetentionPolicyModel, map[string]interface{}{"id": id})
 	if err != nil {
 		return "", fmt.Errorf("record not found")
 	}
-	dryRun := orm.AsBool(rec["dry_run_next"])
+	dryRun := sdk.AsBool(rec["dry_run_next"])
 	summary, err := executeRetentionPolicy(ctx, rec, dryRun)
 	if err != nil {
 		return "", err
 	}
 	if dryRun {
-		_ = orm.UpdateRecordByID(ctx, auditRetentionPolicyModel, id, map[string]interface{}{"dry_run_next": false})
+		_, _ = sdk.Write(ctx, auditRetentionPolicyModel, []int{id}, map[string]interface{}{"dry_run_next": false})
 	}
 	return summary, nil
 }
@@ -80,7 +80,7 @@ func runRetentionFromPolicy(ctx context.Context, model string, id int, _ map[str
 func executeRetentionPolicy(ctx context.Context, policy map[string]interface{}, forceDryRun bool) (string, error) {
 	opts := retentionOptionsFromPolicy(policy, forceDryRun)
 	var result RetentionResult
-	err := orm.WithElevated(ctx, "audit_retention", func(elevCtx context.Context) error {
+	err := sdk.WithElevated(ctx, "audit_retention", func(elevCtx context.Context) error {
 		var runErr error
 		result, runErr = runAuditRetention(elevCtx, opts)
 		return runErr
@@ -89,54 +89,54 @@ func executeRetentionPolicy(ctx context.Context, policy map[string]interface{}, 
 	if summary == "" && err != nil {
 		summary = err.Error()
 	}
-	policyID, _ := orm.CoerceInt64(policy["id"])
+	policyID, _ := sdk.CoerceInt64(policy["id"])
 	if policyID > 0 {
-		_ = orm.UpdateRecordByID(ctx, auditRetentionPolicyModel, int(policyID), map[string]interface{}{
+		_, _ = sdk.Write(ctx, auditRetentionPolicyModel, []int{int(policyID)}, map[string]interface{}{
 			"last_run_at":      time.Now().UTC().Format(time.RFC3339),
 			"last_run_summary": summary,
 		})
 	}
 	if err == nil && !opts.DryRun && (result.RowsExported > 0 || result.RowsDeleted > 0) {
-		orm.AppendAudit(ctx, "audit_retention", auditModel, 0, nil, nil, summary)
+		sdk.AppendAudit(ctx, "audit_retention", auditModel, 0, nil, nil, summary)
 	}
 	return summary, err
 }
 
 func loadRetentionPolicy(ctx context.Context) (map[string]interface{}, error) {
-	rows, err := orm.SearchPage(ctx, auditRetentionPolicyModel, nil, 1, 0, "id ASC")
+	rows, err := sdk.SearchPage(ctx, auditRetentionPolicyModel, nil, 1, 0, "id ASC")
 	if err != nil {
 		return nil, err
 	}
-	if len(rows) == 0 {
+	if 0 == len(rows) {
 		return nil, fmt.Errorf("audit retention policy not configured")
 	}
 	return rows[0], nil
 }
 
 func retentionOptionsFromPolicy(policy map[string]interface{}, forceDryRun bool) RetentionOptions {
-	days, _ := orm.CoerceInt64(policy["hot_retention_days"])
-	if days <= 0 {
-		if raw := strings.TrimSpace(orm.GetConfigParam(context.Background(), "audit.default_retention_days", "")); raw != "" {
-			if d, ok := orm.CoerceInt64(raw); ok && d > 0 {
+	days, _ := sdk.CoerceInt64(policy["hot_retention_days"])
+	if 0 >= days {
+		if raw := strings.TrimSpace(sdk.GetConfigParam(context.Background(), "audit.default_retention_days", "")); raw != "" {
+			if d, ok := sdk.CoerceInt64(raw); ok && d > 0 {
 				days = d
 			}
 		}
 	}
-	if days <= 0 {
+	if 0 >= days {
 		days = 90
 	}
-	batch, _ := orm.CoerceInt64(policy["batch_size"])
-	maxRows, _ := orm.CoerceInt64(policy["max_rows_per_run"])
+	batch, _ := sdk.CoerceInt64(policy["batch_size"])
+	maxRows, _ := sdk.CoerceInt64(policy["max_rows_per_run"])
 	compress := true
 	if _, ok := policy["compress"]; ok {
-		compress = orm.AsBool(policy["compress"])
+		compress = sdk.AsBool(policy["compress"])
 	}
 	return RetentionOptions{
 		RetentionDays:     int(days),
-		FilterModel:       strings.TrimSpace(orm.AsString(policy["filter_model"])),
-		DryRun:            forceDryRun || orm.AsBool(policy["dry_run_next"]),
-		LegalHold:         orm.AsBool(policy["legal_hold"]),
-		DeleteAfterExport: orm.AsBool(policy["delete_after_export"]),
+		FilterModel:       strings.TrimSpace(sdk.AsString(policy["filter_model"])),
+		DryRun:            forceDryRun || sdk.AsBool(policy["dry_run_next"]),
+		LegalHold:         sdk.AsBool(policy["legal_hold"]),
+		DeleteAfterExport: sdk.AsBool(policy["delete_after_export"]),
 		Compress:          compress,
 		BatchSize:         int(batch),
 		MaxRowsPerRun:     int(maxRows),
@@ -153,7 +153,7 @@ func runAuditRetention(ctx context.Context, opts RetentionOptions) (RetentionRes
 
 	out := RetentionResult{}
 	if opts.DryRun {
-		n, err := orm.SearchCount(ctx, auditModel, domain)
+		n, err := sdk.SearchCount(ctx, auditModel, domain)
 		if err != nil {
 			return out, err
 		}
@@ -171,11 +171,11 @@ func runAuditRetention(ctx context.Context, opts RetentionOptions) (RetentionRes
 		if remaining := opts.MaxRowsPerRun - processed; remaining < limit {
 			limit = remaining
 		}
-		rows, err := orm.SearchPage(ctx, auditModel, domain, limit, 0, "id ASC")
+		rows, err := sdk.SearchPage(ctx, auditModel, domain, limit, 0, "id ASC")
 		if err != nil {
 			return out, err
 		}
-		if len(rows) == 0 {
+		if 0 == len(rows) {
 			break
 		}
 		if err := processAuditBatch(ctx, opts, rows, &out); err != nil {
@@ -210,12 +210,12 @@ func processAuditBatch(ctx context.Context, opts RetentionOptions, rows []map[st
 	ids := make([]int64, 0, len(rows))
 	for _, row := range rows {
 		exportRows = append(exportRows, auditRowFromMap(row))
-		id, ok := orm.CoerceInt64(row["id"])
+		id, ok := sdk.CoerceInt64(row["id"])
 		if ok && id > 0 {
 			ids = append(ids, id)
 		}
 	}
-	if len(exportRows) == 0 {
+	if 0 == len(exportRows) {
 		return nil
 	}
 
@@ -236,11 +236,10 @@ func processAuditBatch(ctx context.Context, opts RetentionOptions, rows []map[st
 		filename += ".jsonl"
 	}
 
-	inst, ok := orm.Registry[auditArchiveModel]
-	if !ok {
+	if !sdk.ModelRegistered(auditArchiveModel) {
 		return fmt.Errorf("%s not registered", auditArchiveModel)
 	}
-	archiveID, err := orm.Create(ctx, inst, map[string]interface{}{
+	archiveID, err := sdk.Create(ctx, auditArchiveModel, map[string]interface{}{
 		"name":        filename,
 		"state":       auditArchiveStateStored,
 		"period_from": periodFrom,
@@ -253,7 +252,7 @@ func processAuditBatch(ctx context.Context, opts RetentionOptions, rows []map[st
 		return err
 	}
 
-	attID, err := orm.CreateBinaryAttachment(ctx, orm.CreateBinaryAttachmentInput{
+	attID, err := sdk.CreateBinaryAttachment(ctx, sdk.BinaryAttachmentInput{
 		Name:     filename,
 		ResModel: auditArchiveModel,
 		ResID:    archiveID,
@@ -261,13 +260,13 @@ func processAuditBatch(ctx context.Context, opts RetentionOptions, rows []map[st
 		Mimetype: mime,
 	})
 	if err != nil {
-		_ = orm.UpdateRecordByID(ctx, auditArchiveModel, archiveID, map[string]interface{}{
+		_, _ = sdk.Write(ctx, auditArchiveModel, []int{archiveID}, map[string]interface{}{
 			"state":         auditArchiveStateFailed,
 			"error_message": err.Error(),
 		})
 		return err
 	}
-	_ = orm.UpdateRecordByID(ctx, auditArchiveModel, archiveID, map[string]interface{}{
+	_, _ = sdk.Write(ctx, auditArchiveModel, []int{archiveID}, map[string]interface{}{
 		"attachment_id": attID,
 	})
 	out.RowsExported += len(exportRows)
@@ -279,7 +278,7 @@ func processAuditBatch(ctx context.Context, opts RetentionOptions, rows []map[st
 		return err
 	}
 	out.RowsDeleted += len(ids)
-	_ = orm.UpdateRecordByID(ctx, auditArchiveModel, archiveID, map[string]interface{}{
+	_, _ = sdk.Write(ctx, auditArchiveModel, []int{archiveID}, map[string]interface{}{
 		"state": auditArchiveStatePurged,
 	})
 	return nil
@@ -287,10 +286,10 @@ func processAuditBatch(ctx context.Context, opts RetentionOptions, rows []map[st
 
 func unlinkAuditIDs(ctx context.Context, ids []int64) error {
 	for _, id := range ids {
-		if id <= 0 {
+		if 0 >= id {
 			continue
 		}
-		if err := orm.Unlink(ctx, auditModel, int(id)); err != nil {
+		if _, err := sdk.Unlink(ctx, auditModel, []int{int(id)}); err != nil {
 			return err
 		}
 	}

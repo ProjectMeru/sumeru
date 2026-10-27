@@ -34,13 +34,13 @@ func TestValidateCSRF_acceptsMatchingHeader(t *testing.T) {
 	}
 }
 
-func TestValidateCSRF_acceptsMatchingQueryOnGET(t *testing.T) {
+func TestValidateCSRF_rejectsQueryTokenOnGET(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/web/export/csv?model=core.user&fields=name", nil)
 	req.AddCookie(&http.Cookie{Name: web.TestSessionCookieName, Value: "export-session-sid"})
 	token := web.CSRFTokenForRequest(req)
 	req.URL.RawQuery = "model=core.user&fields=name&csrf_token=" + token
-	if !web.ValidateCSRF(req) {
-		t.Fatal("expected CSRF validation to pass with matching query token on GET")
+	if web.ValidateCSRF(req) {
+		t.Fatal("expected CSRF validation to reject query token on GET")
 	}
 }
 

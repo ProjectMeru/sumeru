@@ -4,5 +4,7 @@
         <action id="action_app_logs" type="url" name="Event Log" url="/web/settings/app-logs"/>
         <action id="action_settings.hub" type="url" name="General Settings" url="/web/settings"/>
         <action id="action_settings.account" type="url" name="Account security" url="/web/settings/account"/>
+        <action id="action_settings.auth" type="url" name="Authentication" url="/web/settings/auth"/>
+        <action id="action_settings.mail" type="url" name="Mail delivery" url="/web/settings/mail"/>
     </data>
 </sumeru>

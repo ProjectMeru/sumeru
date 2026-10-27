@@ -25,7 +25,7 @@ func Start(parent context.Context, every time.Duration) {
 	if cancel != nil {
 		return
 	}
-	if every <= 0 {
+	if 0 >= every {
 		every = time.Minute
 	}
 	ctx, c := context.WithCancel(parent)
@@ -146,7 +146,7 @@ func cronIntervalTx(ctx context.Context, tx orm.TxWrapper, id int64) time.Durati
 		return time.Hour
 	}
 	n := int(mins.Int64)
-	if n <= 0 {
+	if 0 >= n {
 		n = 60
 	}
 	return time.Duration(n) * time.Minute

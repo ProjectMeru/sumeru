@@ -29,7 +29,7 @@ func ResolveInverseOne2ManyField(parentModel, comodel string) string {
 
 // DisplayNameForID returns a short label for a related record id.
 func DisplayNameForID(ctx context.Context, modelName string, id int) string {
-	if id <= 0 || strings.TrimSpace(modelName) == "" {
+	if 0 >= id || strings.TrimSpace(modelName) == "" {
 		return ""
 	}
 	rec, err := SearchOne(ctx, modelName, map[string]interface{}{"id": id})

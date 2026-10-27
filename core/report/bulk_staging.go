@@ -57,18 +57,18 @@ func CreateBatch(ctx context.Context, in CreateBatchInput) (batchID int, err err
 	mappingJSON, _ := json.Marshal(mapping)
 
 	batchID, err = orm.Create(ctx, orm.Registry[BulkModelName], map[string]interface{}{
-		"name":             fmt.Sprintf("Import %s", in.TargetModel),
-		"target_model":     in.TargetModel,
-		"import_mode":      mode,
-		"attachment_id":    attID,
-		"selected_fields":  string(fieldsJSON),
-		"csv_headers":      string(headersJSON),
-		"column_mapping":   string(mappingJSON),
-		"next_url":         in.NextURL,
-		"user_id":          in.UserID,
-		"action_id":        in.ActionID,
-		"state":            BulkStateDraft,
-		"direction":        DirectionImport,
+		"name":            fmt.Sprintf("Import %s", in.TargetModel),
+		"target_model":    in.TargetModel,
+		"import_mode":     mode,
+		"attachment_id":   attID,
+		"selected_fields": string(fieldsJSON),
+		"csv_headers":     string(headersJSON),
+		"column_mapping":  string(mappingJSON),
+		"next_url":        in.NextURL,
+		"user_id":         in.UserID,
+		"action_id":       in.ActionID,
+		"state":           BulkStateDraft,
+		"direction":       DirectionImport,
 	})
 	if err != nil {
 		return 0, err
@@ -106,7 +106,7 @@ func loadBatchCSV(ctx context.Context, batchID int) (map[string]interface{}, []b
 		return nil, nil, nil, fmt.Errorf("batch not found")
 	}
 	attID, _ := orm.CoerceInt64(batch["attachment_id"])
-	if attID <= 0 {
+	if 0 >= attID {
 		return nil, nil, nil, fmt.Errorf("missing attachment")
 	}
 	att, err := orm.SearchOne(ctx, "sys.attachment", map[string]interface{}{"id": attID})

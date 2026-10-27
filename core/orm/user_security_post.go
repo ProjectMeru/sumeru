@@ -18,7 +18,7 @@ func ApplyUserSecurityPost(ctx context.Context, actor, userID int, form url.Valu
 
 // ApplyUserSecurityPostErr is like ApplyUserSecurityPost but returns the first hard error.
 func ApplyUserSecurityPostErr(ctx context.Context, actor, userID int, form url.Values) error {
-	if userID <= 0 {
+	if 0 >= userID {
 		return fmt.Errorf("invalid user id")
 	}
 	if err := CheckModelAccess(ctx, actor, "core.user", "write"); err != nil {
@@ -55,6 +55,17 @@ func ApplyUserSecurityPostErr(ctx context.Context, actor, userID int, form url.V
 			n, err := strconv.Atoi(strings.TrimSpace(s))
 			if err == nil && n > 0 {
 				gids = append(gids, n)
+			}
+		}
+		for key, vals := range form {
+			if !strings.HasPrefix(key, "security_exclusive_") {
+				continue
+			}
+			for _, s := range vals {
+				n, err := strconv.Atoi(strings.TrimSpace(s))
+				if err == nil && n > 0 {
+					gids = append(gids, n)
+				}
 			}
 		}
 		if err := SetUserGroupLinks(ctx, userID, gids); err != nil {

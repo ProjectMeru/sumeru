@@ -14,11 +14,12 @@ const (
 	CodeModelNotFound        = "MODEL_NOT_FOUND"
 	CodeNotFound             = "NOT_FOUND" // errcode.NotFound
 	CodeMethodNotAllowed     = "METHOD_NOT_ALLOWED"
-	CodeUnauthorized         = "UNAUTHORIZED" // errcode.Unauthorized
+	CodeUnauthorized         = "UNAUTHORIZED"  // errcode.Unauthorized
 	CodeAccessDenied         = "ACCESS_DENIED" // errcode.AccessDenied
 	CodePayloadTooLarge      = "PAYLOAD_TOO_LARGE"
 	CodeUnsupportedMediaType = "UNSUPPORTED_MEDIA_TYPE"
 	CodeInternalError        = "INTERNAL_ERROR" // errcode.InternalError
+	CodeRateLimited          = "RATE_LIMITED"
 )
 
 type codedError struct {

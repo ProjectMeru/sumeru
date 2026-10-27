@@ -24,16 +24,16 @@ func SwcWorkspaceHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx := r.Context()
 	actionQuery, menuQuery := workspaceQueryParams(r)
-	if redirectIfMenuAccessDenied(w, r, menuQuery) {
+	actionID := ResolveWindowActionID(ctx, actionQuery, menuQuery)
+	if redirectIfResolvedMenuAccessDenied(w, r, menuQuery, actionID) {
 		return
 	}
-	actionID := ResolveWindowActionID(ctx, actionQuery, menuQuery)
 	modelQuery := strings.TrimSpace(r.URL.Query().Get(workspaceModelParam))
 
 	if actionID != 0 || strings.TrimSpace(actionQuery) != "" {
 		nav, navErr := resolveNavigationAction(ctx, actionID, actionQuery)
 		if navErr != nil {
-			respondActionNotFound(w, actionID)
+			respondNavigationError(w, actionID, navErr)
 			return
 		}
 		if nav.kind == navActionURL {
@@ -58,8 +58,9 @@ func SwcWorkspaceHandler(w http.ResponseWriter, r *http.Request) {
 	} else if modelQuery != "" {
 		actionData = map[string]interface{}{}
 		resolved, err = resolveWorkspaceByModel(ctx, r, modelQuery)
+	} else if redirectIfNoWindowAction(w, r, actionQuery, menuQuery, actionID) {
+		return
 	} else {
-		http.Error(w, "action required", http.StatusBadRequest)
 		return
 	}
 	if err != nil {
@@ -68,6 +69,7 @@ func SwcWorkspaceHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	req := parseWorkspaceRequest(r, actionID)
 	req.menuID = CanonicalMenuID(ctx, req.menuID, actionID)
+	applyWindowActionRequest(&req, actionData)
 	viewRecord, err := buildViewRecordData(ctx, w, r, req, resolved, actionData)
 	if err != nil {
 		respondWorkspaceLoadError(w, ctx, err)

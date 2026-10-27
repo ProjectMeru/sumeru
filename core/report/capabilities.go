@@ -65,10 +65,10 @@ func mergeCaps(caps *Capabilities, download, upload, pdfSizes, modes string) {
 }
 
 func normalizeCaps(caps *Capabilities) {
-	if caps.BulkUpload && len(caps.BulkModes) == 0 {
+	if caps.BulkUpload && 0 == len(caps.BulkModes) {
 		caps.BulkModes = []string{ImportModeCreate, ImportModeUpsert}
 	}
-	if caps.HasDownload() && len(caps.PDFSizes) == 0 {
+	if caps.HasDownload() && 0 == len(caps.PDFSizes) {
 		caps.PDFSizes = []string{PageSizeA4, PageSizeLegal, PageSizeLetter}
 	}
 }
@@ -120,4 +120,3 @@ func appendUnique(list []string, items ...string) []string {
 	}
 	return list
 }
-

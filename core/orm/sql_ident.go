@@ -71,7 +71,7 @@ func ParseOrderByForModel(modelName, orderBy string) (string, error) {
 		return col + " ASC", nil
 	}
 	parts := strings.Fields(ob)
-	if len(parts) == 0 || len(parts) > 2 {
+	if 0 == len(parts) || len(parts) > 2 {
 		return "", fmt.Errorf("invalid order by %q", orderBy)
 	}
 	field := parts[0]

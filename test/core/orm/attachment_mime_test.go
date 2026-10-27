@@ -13,6 +13,13 @@ func TestValidateAttachmentMIME_rejectsHTML(t *testing.T) {
 	}
 }
 
+func TestValidateAttachmentMIME_rejectsSVG(t *testing.T) {
+	err := orm.ValidateAttachmentMIME("image/svg+xml", []byte("<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>"))
+	if err == nil {
+		t.Fatal("expected SVG upload to be rejected")
+	}
+}
+
 func TestValidateAttachmentMIME_allowsPDF(t *testing.T) {
 	if err := orm.ValidateAttachmentMIME("application/pdf", []byte("%PDF-1.4")); err != nil {
 		t.Fatalf("expected PDF allowed: %v", err)

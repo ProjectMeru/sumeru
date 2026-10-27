@@ -19,7 +19,7 @@ import (
 var menuIconKey = regexp.MustCompile(`^[a-z0-9-]+$`)
 
 func shellMenuAllowed(ctx context.Context, uid int, mi parser.MenuItem) bool {
-	return orm.UserMayAccessMenu(ctx, uid, mi.AccessGroups)
+	return orm.UserMayAccessMenuNavigation(ctx, uid, mi.AccessGroups)
 }
 
 func sanitizeMenuIcon(s string) string {
@@ -33,7 +33,7 @@ func sanitizeMenuIcon(s string) string {
 func LoadShellMenus(ctx context.Context, activeMenuID string) (topMenus []parser.MenuItem, sidebarMenus []SidebarMenu, activeModuleID, shellModuleTitle string) {
 	shellModuleTitle = AppDisplayName
 	allMenus := fetchShellMenus(ctx)
-	if len(allMenus) == 0 {
+	if 0 == len(allMenus) {
 		return nil, nil, "", AppDisplayName
 	}
 
@@ -61,10 +61,11 @@ func fetchShellMenus(ctx context.Context) []parser.MenuItem {
 		        COALESCE(NULLIF(TRIM(m.web_icon), ''), '') AS web_icon,
 		        COALESCE(NULLIF(TRIM(m.access_groups), ''), '') AS access_groups
 		   FROM %s m
-		  WHERE COALESCE(NULLIF(TRIM(m.module), ''), '') = ''
+		  WHERE m.active = true
+		    AND (COALESCE(NULLIF(TRIM(m.module), ''), '') = ''
 		     OR EXISTS (
 		      SELECT 1 FROM %s im WHERE im.name = m.module AND im.state = 'installed' AND im.active = true
-		    )
+		    ))
 		  ORDER BY m.sequence`,
 		menuTbl, modTbl,
 	)
@@ -75,14 +76,7 @@ func fetchShellMenus(ctx context.Context) []parser.MenuItem {
 	}
 	defer rows.Close()
 
-	lang := "en_US"
-	if uid := orm.UIDFromContext(ctx); uid > 0 {
-		if u, err := orm.SearchOne(ctx, "core.user", map[string]interface{}{"id": uid}); err == nil {
-			if l := strings.TrimSpace(orm.AsString(u["lang"])); l != "" {
-				lang = l
-			}
-		}
-	}
+	lang := orm.UserLang(ctx)
 
 	urlActionHrefs := loadURLActionHrefs(ctx)
 
@@ -96,6 +90,11 @@ func fetchShellMenus(ctx context.Context) []parser.MenuItem {
 			continue
 		}
 
+		isRoot := !parentID.Valid || parentID.Int64 == int64(id)
+		directAction := 0
+		if actionID.Valid && actionID.Int64 != 0 {
+			directAction = int(actionID.Int64)
+		}
 		m := parser.MenuItem{
 			ID:           fmt.Sprintf("%d", id),
 			Name:         orm.Translate(ctx, lang, name),
@@ -103,19 +102,14 @@ func fetchShellMenus(ctx context.Context) []parser.MenuItem {
 			Module:       mod,
 			WebIcon:      sanitizeMenuIcon(webIcon),
 			AccessGroups: strings.TrimSpace(accessGroups),
-			Action:       fmt.Sprintf("/web?menu_id=%d", id),
 		}
 		if parentID.Valid && parentID.Int64 != int64(id) {
 			m.ParentID = fmt.Sprintf("%d", parentID.Int64)
 		}
-		if actionID.Valid && actionID.Int64 != 0 {
-			if href := urlActionHrefs[int(actionID.Int64)]; href != "" {
-				m.Action = href
-			} else {
-				m.Action = fmt.Sprintf("/web?action=%d&menu_id=%d", actionID.Int64, id)
-			}
-		} else if !parentID.Valid && strings.EqualFold(strings.TrimSpace(name), "Home") {
-			m.Action = "/web/home"
+		if isRoot && strings.EqualFold(strings.TrimSpace(name), "Home") {
+			m.Action = HomeWebURL()
+		} else {
+			m.Action = menuItemWorkspaceHref(ctx, id, directAction, urlActionHrefs, mod, isRoot)
 		}
 		allMenus = append(allMenus, m)
 	}
@@ -135,7 +129,7 @@ func loadURLActionHrefs(ctx context.Context) map[int]string {
 	}
 	for _, row := range rows {
 		id, ok := orm.CoerceInt64(row["id"])
-		if !ok || id <= 0 {
+		if !ok || 0 >= id {
 			continue
 		}
 		url := strings.TrimSpace(orm.AsString(row["url"]))
@@ -225,7 +219,7 @@ func menuItemHasWindowOrURLAction(mi parser.MenuItem) bool {
 }
 
 func filterSidebarLinks(links []parser.MenuItem) []parser.MenuItem {
-	if len(links) == 0 {
+	if 0 == len(links) {
 		return links
 	}
 	out := links[:0]
@@ -307,7 +301,7 @@ func buildSidebarMenus(allMenus []parser.MenuItem, activeModuleID string, menuAl
 		}
 		sortMenuItemsBySequenceName(links)
 		section.SubMenus = filterSidebarLinks(links)
-		if len(section.SubMenus) == 0 {
+		if 0 == len(section.SubMenus) {
 			continue
 		}
 		sections = append(sections, section)
@@ -335,7 +329,7 @@ func SidebarHasMenus(menus []SidebarMenu) bool {
 // sortTopBarRootMenus orders application root menus by each menuitem's `sequence` (then `name`),
 // matching Sumeru XML.
 func sortTopBarRootMenus(in []parser.MenuItem) []parser.MenuItem {
-	if len(in) == 0 {
+	if 0 == len(in) {
 		return in
 	}
 	out := append([]parser.MenuItem{}, in...)
@@ -372,11 +366,11 @@ func queryInstalledApplicationNames(ctx context.Context) (map[string]struct{}, e
 // IsMenuUnderSettingsRoot reports whether activeMenuID is the Settings root or one of its descendants.
 func IsMenuUnderSettingsRoot(ctx context.Context, activeMenuID string) bool {
 	id64, err := strconv.ParseInt(strings.TrimSpace(activeMenuID), 10, 64)
-	if err != nil || id64 <= 0 || orm.DB == nil {
+	if err != nil || 0 >= id64 || orm.DB == nil {
 		return false
 	}
 	rootID, _, err := orm.ResolveXmlId(ctx, "base.menu_settings_root")
-	if err != nil || rootID == 0 {
+	if err != nil || 0 == rootID {
 		return false
 	}
 	return orm.MenuHasAncestor(ctx, int(id64), rootID)
@@ -415,11 +409,8 @@ func BuildAppLauncherJSON(ctx context.Context) template.JS {
 		if name == "" {
 			continue
 		}
+		href := ModuleWorkspaceEntryURL(ctx, name)
 		menuID := RootMenuIDForModule(ctx, name)
-		href := "/web/home"
-		if menuID > 0 {
-			href = fmt.Sprintf("/web?menu_id=%d", menuID)
-		}
 		items = append(items, appLauncherItem{
 			Kind:        "app",
 			Name:        name,

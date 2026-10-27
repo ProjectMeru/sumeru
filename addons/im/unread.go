@@ -3,25 +3,25 @@ package im
 import (
 	"context"
 
-	"sumeru/core/orm"
+	"sumeru/core/sdk"
 )
 
 // UnreadDirectCount returns incoming messages not yet marked read for uid.
 func UnreadDirectCount(ctx context.Context, uid int) (int, error) {
-	if uid <= 0 || orm.DB == nil {
+	if 0 >= uid || !sdk.DatabaseOpen() {
 		return 0, nil
 	}
-	if err := orm.CheckModelAccess(ctx, uid, MessageModel, "read"); err != nil {
+	if err := sdk.CheckModelAccess(ctx, uid, MessageModel, "read"); err != nil {
 		return 0, err
 	}
-	if _, ok := orm.Registry[MessageModel]; !ok {
+	if !sdk.ModelRegistered(MessageModel) {
 		return 0, nil
 	}
 	domain := [][]interface{}{
 		{"recipient_id", "=", uid},
 		{"is_read", "=", false},
 	}
-	rows, err := orm.Search(ctx, MessageModel, domain)
+	rows, err := sdk.Search(ctx, MessageModel, domain)
 	if err != nil {
 		return 0, err
 	}
@@ -30,13 +30,13 @@ func UnreadDirectCount(ctx context.Context, uid int) (int, error) {
 
 // MarkDirectThreadRead sets is_read on incoming messages in a peer thread.
 func MarkDirectThreadRead(ctx context.Context, uid, peerID int) error {
-	if uid <= 0 || peerID <= 0 {
+	if 0 >= uid || 0 >= peerID {
 		return nil
 	}
-	if err := orm.CheckModelAccess(ctx, uid, MessageModel, "write"); err != nil {
+	if err := sdk.CheckModelAccess(ctx, uid, MessageModel, "write"); err != nil {
 		return err
 	}
-	rows, err := orm.Search(ctx, MessageModel, [][]interface{}{
+	rows, err := sdk.Search(ctx, MessageModel, [][]interface{}{
 		{"sender_id", "=", peerID},
 		{"recipient_id", "=", uid},
 		{"is_read", "=", false},
@@ -45,11 +45,11 @@ func MarkDirectThreadRead(ctx context.Context, uid, peerID int) error {
 		return err
 	}
 	for _, row := range rows {
-		id, _ := orm.CoerceInt64(row["id"])
-		if id <= 0 {
+		id, _ := sdk.CoerceInt64(row["id"])
+		if 0 >= id {
 			continue
 		}
-		if _, err := orm.Update(ctx, MessageModel, [][]interface{}{{"id", "=", int(id)}}, map[string]interface{}{"is_read": true}); err != nil {
+		if _, err := sdk.Write(ctx, MessageModel, []int{int(id)}, map[string]interface{}{"is_read": true}); err != nil {
 			return err
 		}
 	}

@@ -48,8 +48,8 @@ type PageData struct {
 	Title               string // legacy / diagnostics; prefer ViewBreadcrumb for UI
 	ViewBreadcrumb      string // human label for breadcrumb (not the technical model id)
 	AppName             string // product display name (browser tab suffix, header)
-	ModuleName string
-	Content    template.HTML
+	ModuleName          string
+	Content             template.HTML
 	TopMenus            []parser.MenuItem
 	SidebarMenus        []SidebarMenu
 	ActiveModuleID      string
@@ -75,7 +75,7 @@ type PageData struct {
 	ShellCompany       string
 	ShellUser          string
 	ShellUserLogin     string
-	ShellUserImage     template.URL // template.URL so data: URLs are not scrubbed
+	ShellUserImage     template.URL      // template.URL so data: URLs are not scrubbed
 	ShellUserImageCrop template.HTMLAttr // inline crop style for shell avatar when image_crop is set
 	UserInitial        string            // legacy single-letter hint; prefer ShellUserInitials in shell chrome
 	ShellUserInitials  string            // two-letter avatar label in top bar when no photo
@@ -197,10 +197,10 @@ type ViewRecordData struct {
 
 // ListSection groups list rows under a foldable header (list group_by v2).
 type ListSection struct {
-	Label  string
-	Value  string
-	Count  int
-	Rows   []map[string]interface{}
+	Label string
+	Value string
+	Count int
+	Rows  []map[string]interface{}
 }
 
 // PivotData holds aggregated pivot table cells for HTML rendering.

@@ -3,19 +3,19 @@ package orm
 type FieldType string
 
 const (
-	Char      FieldType = "char"
-	Text      FieldType = "text"
-	Integer   FieldType = "integer"
-	Float     FieldType = "float"
-	Float64   FieldType = "float64"
-	Numeric   FieldType = "numeric" // For exact decimal precision (money)
-	Boolean   FieldType = "boolean"
-	Date      FieldType = "date"
-	DateTime  FieldType = "datetime"
-	Selection FieldType = "selection"
-	Many2One  FieldType = "many2one"
-	Many2Many FieldType = "many2many"
-	One2Many  FieldType = "one2many"
+	Char       FieldType = "char"
+	Text       FieldType = "text"
+	Integer    FieldType = "integer"
+	Float      FieldType = "float"
+	Float64    FieldType = "float64"
+	Numeric    FieldType = "numeric" // For exact decimal precision (money)
+	Boolean    FieldType = "boolean"
+	Date       FieldType = "date"
+	DateTime   FieldType = "datetime"
+	Selection  FieldType = "selection"
+	Many2One   FieldType = "many2one"
+	Many2Many  FieldType = "many2many"
+	One2Many   FieldType = "one2many"
 	Json       FieldType = "json"
 	Properties FieldType = "properties"
 )
@@ -52,6 +52,7 @@ type FieldDefinition struct {
 	Compute            string // compute handler name
 	ComputeStore       bool   // persist computed value
 	Virtual            bool   // no SQL column (related/compute without store)
+	Status             bool   // selection field shown as the status bar
 }
 
 type Model interface {

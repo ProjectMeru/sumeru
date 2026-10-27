@@ -46,7 +46,7 @@ func RegisterScheduledReport(spec ScheduledReportSpec) error {
 }
 
 func deliverScheduledReport(ctx context.Context, model string, fields []string, domain [][]interface{}, format string, recipients []string, reportName string) error {
-	if len(recipients) == 0 {
+	if 0 == len(recipients) {
 		return fmt.Errorf("scheduled report %q: no recipients", reportName)
 	}
 	in := ExportCSVInput{Model: model, Fields: fields, Domain: domain, Title: reportName}

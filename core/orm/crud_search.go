@@ -3,7 +3,10 @@ package orm
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
+
+	"sumeru/core/applog"
 )
 
 // SearchResultFilter drops or rewrites rows after a search. Addons use it for parent-record checks.
@@ -27,7 +30,117 @@ func applySearchResultFilters(ctx context.Context, model string, rows []map[stri
 	if rows == nil {
 		return []map[string]interface{}{}
 	}
+	attachMany2ManyIDs(ctx, model, rows)
 	return rows
+}
+
+func attachMany2ManyIDs(ctx context.Context, modelName string, rows []map[string]interface{}) {
+	if DB == nil || 0 == len(rows) {
+		return
+	}
+	model, err := requireRegisteredModel(modelName)
+	if err != nil || model == nil {
+		return
+	}
+	var ids []interface{}
+	placeholders := make([]string, 0, len(rows))
+	for _, row := range rows {
+		id, ok := CoerceInt64(row["id"])
+		if !ok || 0 >= id {
+			continue
+		}
+		ids = append(ids, id)
+		placeholders = append(placeholders, fmt.Sprintf("$%d", len(ids)))
+	}
+	if 0 == len(ids) {
+		return
+	}
+	inList := strings.Join(placeholders, ",")
+	for _, fd := range model.Fields() {
+		if (fd.Name != "group_ids" && fd.Name != "implied_ids") || fd.Type != Many2Many {
+			continue
+		}
+		if !pgIdentOK(fd.RelationTable) || !pgIdentOK(fd.Column1) || !pgIdentOK(fd.Column2) {
+			continue
+		}
+		byLeft := map[int][]int{}
+		q := fmt.Sprintf(`SELECT %s, %s FROM %s WHERE %s IN (%s)`,
+			quoteIdent(fd.Column1), quoteIdent(fd.Column2), quoteIdent(fd.RelationTable), quoteIdent(fd.Column1), inList)
+		relRows, err := DB.QueryContext(ctx, q, ids...)
+		if err != nil {
+			applog.WarnMsg(ctx, "orm", "search", "many2many ids", err, map[string]interface{}{"model": modelName, "field": fd.Name})
+			continue
+		}
+		for relRows.Next() {
+			var left, right int
+			if err := relRows.Scan(&left, &right); err != nil {
+				continue
+			}
+			byLeft[left] = append(byLeft[left], right)
+		}
+		relRows.Close()
+		names := many2ManyNames(ctx, fd.Relation, byLeft)
+		for _, row := range rows {
+			id, ok := CoerceInt64(row["id"])
+			if !ok {
+				continue
+			}
+			linked := byLeft[int(id)]
+			if linked == nil {
+				linked = []int{}
+			}
+			row[fd.Name] = linked
+			if names != nil {
+				var labeled []map[string]interface{}
+				for _, gid := range linked {
+					labeled = append(labeled, map[string]interface{}{"id": gid, "name": names[gid]})
+				}
+				row[fd.Name+"_names"] = labeled
+			}
+		}
+	}
+}
+
+func many2ManyNames(ctx context.Context, relation string, byLeft map[int][]int) map[int]string {
+	if strings.TrimSpace(relation) == "" {
+		return nil
+	}
+	seen := map[int]struct{}{}
+	var ids []interface{}
+	var placeholders []string
+	for _, linked := range byLeft {
+		for _, id := range linked {
+			if _, ok := seen[id]; ok || 0 >= id {
+				continue
+			}
+			seen[id] = struct{}{}
+			ids = append(ids, id)
+			placeholders = append(placeholders, fmt.Sprintf("$%d", len(ids)))
+		}
+	}
+	if 0 == len(ids) {
+		return map[int]string{}
+	}
+	table, err := QuotedTableName(relation)
+	if err != nil {
+		return nil
+	}
+	q := fmt.Sprintf(`SELECT id, name FROM %s WHERE id IN (%s)`, table, strings.Join(placeholders, ","))
+	rows, err := DB.QueryContext(ctx, q, ids...)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+	out := map[int]string{}
+	for rows.Next() {
+		var id int
+		var name string
+		if err := rows.Scan(&id, &name); err != nil {
+			continue
+		}
+		out[id] = name
+	}
+	return out
 }
 
 // BeforeDeleteFunc sees each row before it is removed. The payload of the public event stays model and id.
@@ -57,7 +170,35 @@ type searchPaging struct {
 	offset     int
 }
 
-func execSearchQuery(ctx context.Context, modelName string, domain [][]interface{}, paging *searchPaging) ([]map[string]interface{}, error) {
+// searchSelectList quotes a column list. An empty list keeps SELECT *.
+func searchSelectList(modelName string, fields []string) (string, error) {
+	if 0 == len(fields) {
+		return "", nil
+	}
+	seen := map[string]struct{}{}
+	cols := make([]string, 0, len(fields))
+	for _, field := range fields {
+		field = strings.TrimSpace(field)
+		if field == "" {
+			continue
+		}
+		if _, ok := seen[field]; ok {
+			continue
+		}
+		seen[field] = struct{}{}
+		col, err := QuotedColumnForModel(modelName, field)
+		if err != nil {
+			return "", err
+		}
+		cols = append(cols, col)
+	}
+	if 0 == len(cols) {
+		return "", nil
+	}
+	return strings.Join(cols, ", "), nil
+}
+
+func execSearchQuery(ctx context.Context, modelName string, domain [][]interface{}, columns string, paging *searchPaging) ([]map[string]interface{}, error) {
 	ctx = ContextWithReadReplica(ctx, true)
 	uid, whereClause, args, err := prepareSearchRead(ctx, modelName, domain)
 	if err != nil {
@@ -68,7 +209,10 @@ func execSearchQuery(ctx context.Context, modelName string, domain [][]interface
 	if err != nil {
 		return nil, err
 	}
-	query := fmt.Sprintf("SELECT * FROM %s WHERE %s", table, whereClause)
+	if strings.TrimSpace(columns) == "" {
+		columns = "*"
+	}
+	query := fmt.Sprintf("SELECT %s FROM %s WHERE %s", columns, table, whereClause)
 	if paging != nil {
 		placeholderIndex := len(args) + 1
 		query += fmt.Sprintf(" ORDER BY %s LIMIT $%d OFFSET $%d", paging.orderBySQL, placeholderIndex, placeholderIndex+1)
@@ -131,7 +275,7 @@ func Search(ctx context.Context, modelName string, domain [][]interface{}) (resu
 		}
 		logORMOperation(ctx, start, "search", modelName, err, map[string]interface{}{"rows": n})
 	}()
-	results, err = execSearchQuery(ctx, modelName, domain, nil)
+	results, err = execSearchQuery(ctx, modelName, domain, "", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +307,7 @@ func SearchPage(ctx context.Context, modelName string, domain [][]interface{}, l
 		}
 		logORMOperation(ctx, start, "search_page", modelName, err, map[string]interface{}{"rows": n, "limit": limit, "offset": offset})
 	}()
-	if limit <= 0 || limit > maxSearchLimit {
+	if 0 >= limit || limit > maxSearchLimit {
 		limit = maxSearchLimit
 	}
 	if offset < 0 {
@@ -176,11 +320,53 @@ func SearchPage(ctx context.Context, modelName string, domain [][]interface{}, l
 	if err != nil {
 		return nil, err
 	}
-	return execSearchQuery(ctx, modelName, domain, &searchPaging{
+	return execSearchQuery(ctx, modelName, domain, "", &searchPaging{
 		orderBySQL: obSQL,
 		limit:      limit,
 		offset:     offset,
 	})
+}
+
+// SearchRead is Search with an optional column list, limit, offset, and order.
+// An empty field list selects every column. limit <= 0 and an empty order return every matching row.
+func SearchRead(ctx context.Context, modelName string, domain [][]interface{}, fields []string, limit, offset int, orderBy string) (results []map[string]interface{}, err error) {
+	start := time.Now()
+	defer func() {
+		n := 0
+		if results != nil {
+			n = len(results)
+		}
+		logORMOperation(ctx, start, "search_read", modelName, err, map[string]interface{}{"rows": n, "limit": limit, "offset": offset})
+	}()
+	columns, err := searchSelectList(modelName, fields)
+	if err != nil {
+		return nil, err
+	}
+	var paging *searchPaging
+	if limit > 0 || offset > 0 || strings.TrimSpace(orderBy) != "" {
+		if 0 >= limit || limit > maxSearchLimit {
+			limit = maxSearchLimit
+		}
+		if offset < 0 {
+			offset = 0
+		}
+		if offset > maxSearchOffset {
+			offset = maxSearchOffset
+		}
+		obSQL, orderErr := ParseOrderByForModel(modelName, orderBy)
+		if orderErr != nil {
+			return nil, orderErr
+		}
+		paging = &searchPaging{orderBySQL: obSQL, limit: limit, offset: offset}
+	}
+	results, err = execSearchQuery(ctx, modelName, domain, columns, paging)
+	if err != nil {
+		return nil, err
+	}
+	if results == nil {
+		results = []map[string]interface{}{}
+	}
+	return results, nil
 }
 
 // SearchCount returns the number of rows matching domain (record rules applied).

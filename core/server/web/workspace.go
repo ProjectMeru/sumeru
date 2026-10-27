@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"sumeru/core/engine/render"
@@ -18,14 +19,17 @@ func WebHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := r.Context()
-	actionQuery, menuQuery := workspaceQueryParams(r)
-
-	if redirectIfMenuAccessDenied(w, r, menuQuery) {
+	if handleWebDebugQueryRedirect(w, r) {
 		return
 	}
 
+	ctx := r.Context()
+	actionQuery, menuQuery := workspaceQueryParams(r)
+
 	actionID := ResolveWindowActionID(ctx, actionQuery, menuQuery)
+	if redirectIfResolvedMenuAccessDenied(w, r, menuQuery, actionID) {
+		return
+	}
 	modelQuery := strings.TrimSpace(r.URL.Query().Get(workspaceModelParam))
 
 	var actionData map[string]interface{}
@@ -34,7 +38,7 @@ func WebHandler(w http.ResponseWriter, r *http.Request) {
 	if actionID != 0 || strings.TrimSpace(actionQuery) != "" {
 		nav, navErr := resolveNavigationAction(ctx, actionID, actionQuery)
 		if navErr != nil {
-			respondActionNotFound(w, actionID)
+			respondNavigationError(w, actionID, navErr)
 			return
 		}
 		if nav.kind == navActionURL {
@@ -63,6 +67,7 @@ func WebHandler(w http.ResponseWriter, r *http.Request) {
 
 	req := parseWorkspaceRequest(r, actionID)
 	req.menuID = CanonicalMenuID(ctx, req.menuID, actionID)
+	applyWindowActionRequest(&req, actionData)
 	viewRecord, err := buildViewRecordData(ctx, w, r, req, resolved, actionData)
 	if err != nil {
 		respondWorkspaceLoadError(w, ctx, err)
@@ -75,6 +80,7 @@ func WebHandler(w http.ResponseWriter, r *http.Request) {
 		TemplatesDir: config.AppConfig.TemplatesPath,
 		RecData:      viewRecord,
 		SelectedMode: resolved.selectedMode,
+		ActionTarget: actionTarget(actionData),
 	})
 	logWorkspaceViewOpened(ctx, r.URL.Path, req, actionID, resolved)
 	writeHTML(w, ctx, r.URL.Path, html)
@@ -83,6 +89,18 @@ func WebHandler(w http.ResponseWriter, r *http.Request) {
 func workspaceQueryParams(r *http.Request) (actionQuery, menuQuery string) {
 	query := r.URL.Query()
 	return query.Get(workspaceActionParam), query.Get(workspaceMenuIDParam)
+}
+
+func redirectIfResolvedMenuAccessDenied(w http.ResponseWriter, r *http.Request, menuQuery string, actionID int) bool {
+	menuQuery = strings.TrimSpace(menuQuery)
+	if menuQuery == "" && actionID == 0 {
+		return false
+	}
+	checkMenuID := menuQuery
+	if actionID != 0 {
+		checkMenuID = CanonicalMenuID(r.Context(), menuQuery, actionID)
+	}
+	return redirectIfMenuAccessDenied(w, r, checkMenuID)
 }
 
 func redirectIfMenuAccessDenied(w http.ResponseWriter, r *http.Request, menuQuery string) bool {
@@ -111,8 +129,8 @@ func redirectIfNoWindowAction(w http.ResponseWriter, r *http.Request, actionQuer
 		return false
 	}
 
-	if actionID == 0 && redirectURL == appsRoute {
-		WebLogf(r.Context(), workspaceRoute, "no action for query action=%q menu_id=%q; redirecting to apps", actionQuery, menuQuery)
+	if 0 == actionID {
+		WebLogf(r.Context(), workspaceRoute, "no action for query action=%q menu_id=%q; redirecting to %s", actionQuery, menuQuery, redirectURL)
 	}
 	http.Redirect(w, r, redirectURL, http.StatusFound)
 	return true
@@ -124,6 +142,23 @@ func loadWindowAction(ctx context.Context, actionID int) (map[string]interface{}
 
 func respondActionNotFound(w http.ResponseWriter, actionID int) {
 	http.Error(w, fmt.Sprintf("Action %d not found", actionID), http.StatusNotFound)
+}
+
+func respondNavigationError(w http.ResponseWriter, actionID int, err error) {
+	if orm.IsAccessDenied(err) {
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+	respondActionNotFound(w, actionID)
+}
+
+func applyWindowActionRequest(req *workspaceRequest, actionData map[string]interface{}) {
+	if req == nil || strings.TrimSpace(req.recordID) != "" {
+		return
+	}
+	if id := actionResID(actionData); id > 0 {
+		req.recordID = strconv.Itoa(id)
+	}
 }
 
 func respondWorkspaceLoadError(w http.ResponseWriter, ctx context.Context, err error) {

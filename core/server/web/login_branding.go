@@ -11,11 +11,11 @@ import (
 )
 
 const (
-	defaultSumeruLogoURL     = "/static/img/sumeru-logo.svg"
-	loginBrandLogoRoute      = "/web/login/logo"
-	loginBrandPlatformName   = "Sumeru"
-	defaultLoginHeadline     = "Enterprise workspace"
-	defaultLoginTagline      = "Role-based access, audit trails, and optional single sign-on for your organization."
+	defaultSumeruLogoURL      = "/static/img/sumeru-logo.svg"
+	loginBrandLogoRoute       = "/web/login/logo"
+	loginBrandPlatformName    = "Sumeru"
+	defaultLoginHeadline      = "Enterprise workspace"
+	defaultLoginTagline       = "Role-based access, audit trails, and optional single sign-on for your organization."
 	defaultLoginTenantTagline = "Sign in to continue to your workspace."
 )
 
@@ -110,9 +110,13 @@ func buildLoginBrand(row loginCompanyRow) loginBrand {
 func loadLoginCompanyRow(ctx context.Context) loginCompanyRow {
 	ctx = orm.AuditedBypass(ctx, "login.brand")
 	rows, err := orm.SearchLimit(ctx, "core.company", nil, 1)
-	if err != nil || len(rows) == 0 {
+	if err != nil {
 		return loginCompanyRow{}
 	}
+	if 0 == len(rows) {
+		return loginCompanyRow{}
+	}
+
 	rec := rows[0]
 	return loginCompanyRow{
 		Name:         oauthRowString(rec, "name"),

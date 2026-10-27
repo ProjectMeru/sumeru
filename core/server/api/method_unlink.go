@@ -20,6 +20,9 @@ func rpcUnlink(ctx context.Context, model string, args json.RawMessage) (interfa
 	if err := json.Unmarshal(arr[0], &ids); err != nil {
 		return nil, newRPCError(CodeInvalidArgs, fmt.Sprintf("args[0] ids: %v", err), map[string]interface{}{"method": "unlink"})
 	}
+	if err := capRPCIDs(ids); err != nil {
+		return nil, err
+	}
 	for _, id := range ids {
 		if err := orm.Unlink(ctx, model, id); err != nil {
 			return nil, err

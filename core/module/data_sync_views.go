@@ -58,13 +58,8 @@ func upsertSysActionWindowFromRecord(ctx context.Context, moduleName string, xml
 	if _, ok := recordValues["name"]; !ok || recordValues["name"] == "" {
 		recordValues["name"] = xmlRecord.ID
 	}
-	id, err := orm.Upsert(ctx, orm.RegistryModel("sys.action.window"), recordValues, "name")
-	if err != nil {
+	if _, err := upsertLinkedRecord(ctx, moduleName, "sys.action.window", xmlRecord.ID, recordValues); err != nil {
 		syncWarn(ctx, platformmsg.FmtGenericUpsertWarn, "sys.action.window", xmlRecord.ID, err)
-		return
-	}
-	if err := linkXMLRecord(ctx, moduleName, xmlRecord.ID, "sys.action.window", id); err != nil {
-		return
 	}
 }
 
@@ -77,13 +72,8 @@ func upsertSysActionURLFromRecord(ctx context.Context, moduleName string, xmlRec
 	if _, ok := recordValues["name"]; !ok || recordValues["name"] == "" {
 		recordValues["name"] = xmlRecord.ID
 	}
-	id, err := orm.Upsert(ctx, orm.RegistryModel("sys.action.url"), recordValues, "name")
-	if err != nil {
+	if _, err := upsertLinkedRecord(ctx, moduleName, "sys.action.url", xmlRecord.ID, recordValues); err != nil {
 		syncWarn(ctx, platformmsg.FmtGenericUpsertWarn, "sys.action.url", xmlRecord.ID, err)
-		return
-	}
-	if err := linkXMLRecord(ctx, moduleName, xmlRecord.ID, "sys.action.url", id); err != nil {
-		return
 	}
 }
 
@@ -196,7 +186,7 @@ func applySysUIViewInherit(ctx context.Context, moduleName string, xmlRecord par
 		return fmt.Errorf("arch missing on inherit record %q", xmlRecord.ID)
 	}
 	parentID, err := resolveXMLIDInModule(ctx, moduleName, inheritReference)
-	if err != nil || parentID == 0 {
+	if err != nil || 0 == parentID {
 		return fmt.Errorf("resolve inherit_id %q: %w", inheritReference, err)
 	}
 	parentView, err := orm.SearchOne(ctx, "sys.view", map[string]interface{}{"id": parentID})
@@ -233,7 +223,7 @@ func applySysReportActionInherit(ctx context.Context, moduleName string, xmlReco
 		return fmt.Errorf("arch missing on inherit record %q", xmlRecord.ID)
 	}
 	parentID, err := resolveXMLIDInModule(ctx, moduleName, inheritReference)
-	if err != nil || parentID == 0 {
+	if err != nil || 0 == parentID {
 		return fmt.Errorf("resolve inherit_id %q: %w", inheritReference, err)
 	}
 	parent, err := orm.SearchOne(ctx, "sys.report.action", map[string]interface{}{"id": parentID})

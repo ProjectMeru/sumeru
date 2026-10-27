@@ -59,7 +59,7 @@ func IsFatalSync(err error) bool {
 }
 
 func aggregateErrors(module string, errs []error) error {
-	if len(errs) == 0 {
+	if 0 == len(errs) {
 		return nil
 	}
 	fatal := false
@@ -73,7 +73,7 @@ func aggregateErrors(module string, errs []error) error {
 		}
 		msgs = append(msgs, e.Error())
 	}
-	if len(msgs) == 0 {
+	if 0 == len(msgs) {
 		return nil
 	}
 	joined := strings.Join(msgs, "; ")

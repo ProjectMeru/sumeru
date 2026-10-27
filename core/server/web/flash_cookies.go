@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	apiKeyFlashCookie        = "sumeru_api_key_flash"
-	recordErrorFlashCookie   = "sumeru_record_error_flash"
+	apiKeyFlashCookie      = "sumeru_api_key_flash"
+	recordErrorFlashCookie = "sumeru_record_error_flash"
 )
 
 type recordErrorFlashPayload struct {

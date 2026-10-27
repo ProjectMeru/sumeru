@@ -51,7 +51,7 @@ func syncSysModuleRows(ctx context.Context, discovered map[string]*Addon) error 
 	if err != nil {
 		return err
 	}
-	isBootstrap := totalModules == 0
+	isBootstrap := 0 == totalModules
 
 	for _, addon := range discovered {
 		categoryID, err := resolveModuleCategoryID(ctx, addon.Manifest.Category)

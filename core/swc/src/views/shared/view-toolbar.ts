@@ -27,13 +27,64 @@ function bulkJobFormUrl(jobId: number): string {
   return `/web?${params.toString()}`;
 }
 
+function parseDownloadFilename(contentDisposition: string | null): string {
+  if (!contentDisposition) return "export";
+  const star = /filename\*=UTF-8''([^;\s]+)/i.exec(contentDisposition);
+  if (star?.[1]) {
+    try {
+      return decodeURIComponent(star[1]);
+    } catch {
+      return star[1];
+    }
+  }
+  const quoted = /filename="([^"]+)"/i.exec(contentDisposition);
+  if (quoted?.[1]) return quoted[1];
+  const plain = /filename=([^;\s]+)/i.exec(contentDisposition);
+  if (plain?.[1]) return plain[1].replace(/^"|"$/g, "");
+  return "export";
+}
+
+async function downloadProtectedGET(url: string, csrfToken: string, failureLabel: string): Promise<void> {
+  const headers: Record<string, string> = {};
+  if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
+  const res = await fetch(url, { method: "GET", credentials: "same-origin", headers });
+  if (!res.ok) {
+    window.alert(`${failureLabel} failed: ${await res.text()}`);
+    return;
+  }
+  const blob = await res.blob();
+  const filename = parseDownloadFilename(res.headers.get("Content-Disposition"));
+  const objectUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = objectUrl;
+  anchor.download = filename;
+  anchor.rel = "noopener";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(objectUrl);
+}
+
+function protectedDownloadButton(
+  url: string,
+  label: string,
+  csrfToken: string,
+  className = "sum-popover-menu-link",
+): HTMLElement {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = className;
+  btn.textContent = label;
+  btn.addEventListener("click", () => void downloadProtectedGET(url, csrfToken, label));
+  return btn;
+}
+
 async function queueAsyncExport(
   payload: SwcWorkspacePayload,
   fields: string,
   format: "csv" | "xlsx",
 ): Promise<void> {
   const query = exportQuery(payload, fields);
-  query.delete("csrf_token");
   const body = new URLSearchParams();
   body.set("csrf_token", payload.csrfToken);
   body.set("model", payload.model);
@@ -113,7 +164,6 @@ export function exportQuery(
   if (payload.listFilter) params.set("filter", payload.listFilter);
   if (payload.listDomain) params.set("domain", payload.listDomain);
   if (payload.listSearch) params.set("q", payload.listSearch);
-  if (payload.csrfToken) params.set("csrf_token", payload.csrfToken);
   return params;
 }
 
@@ -316,7 +366,12 @@ export function buildReportActionEntries(
           : listTotal > 0 && !largeList && (fmt === "csv" || fmt === "xlsx")
             ? label
             : label;
-      const node = linkButton(`${route}?${exportParams.toString()}`, syncLabel, "sum-popover-menu-link");
+      const node = protectedDownloadButton(
+        `${route}?${exportParams.toString()}`,
+        syncLabel,
+        payload.csrfToken,
+        "sum-popover-menu-link",
+      );
       if (largeList && fmt === "pdf") {
         node.title = `PDF export includes at most ${MAX_SYNC_EXPORT_ROWS} rows. Use background CSV export for full data.`;
       }
@@ -384,9 +439,10 @@ function appendReadGroupExportEntries(
     if (groups.length > 0 && measures.length > 0) {
       entries.push({
         label: "Export pivot CSV",
-        node: linkButton(
+        node: protectedDownloadButton(
           pivotExportUrl(payload, groups, measures),
           "Export pivot CSV",
+          payload.csrfToken,
           "sum-popover-menu-link",
         ),
       });
@@ -398,9 +454,10 @@ function appendReadGroupExportEntries(
     if (groupField && measureField) {
       entries.push({
         label: "Export graph CSV",
-        node: linkButton(
+        node: protectedDownloadButton(
           graphExportUrl(payload, groupField, measureField),
           "Export graph CSV",
+          payload.csrfToken,
           "sum-popover-menu-link",
         ),
       });

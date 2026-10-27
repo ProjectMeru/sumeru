@@ -7,7 +7,7 @@ import (
 
 	"sumeru/core/applog"
 	"sumeru/core/event"
-	"sumeru/core/orm"
+	"sumeru/core/sdk"
 )
 
 func init() {
@@ -15,14 +15,18 @@ func init() {
 }
 
 func runDueDigests(ctx context.Context, _ event.Event) error {
-	if orm.DB == nil {
+	if !sdk.DatabaseOpen() {
 		return nil
 	}
-	return orm.WithElevated(ctx, "digest.hook", func(bypass context.Context) error {
-		rows, err := orm.Search(bypass, "digest.digest", [][]interface{}{{"active", "=", true}})
-		if err != nil || len(rows) == 0 {
+	return sdk.WithElevated(ctx, "digest.hook", func(bypass context.Context) error {
+		rows, err := sdk.Search(bypass, "digest.digest", [][]interface{}{{"active", "=", true}})
+		if err != nil {
 			return err
 		}
+		if 0 == len(rows) {
+			return err
+		}
+
 		for _, digestRow := range rows {
 			if err := runDigest(bypass, digestRow); err != nil {
 				applog.Warn(ctx, applog.Event{
@@ -39,25 +43,25 @@ func runDueDigests(ctx context.Context, _ event.Event) error {
 }
 
 func runDigest(ctx context.Context, digestRow map[string]interface{}) error {
-	digestID, ok := orm.CoerceInt64(digestRow["id"])
-	if !ok || digestID <= 0 {
+	digestID, ok := sdk.CoerceInt64(digestRow["id"])
+	if !ok || 0 >= digestID {
 		return nil
 	}
-	name := strings.TrimSpace(orm.AsString(digestRow["name"]))
+	name := strings.TrimSpace(sdk.AsString(digestRow["name"]))
 	if name == "" {
 		name = fmt.Sprintf("digest #%d", digestID)
 	}
-	kpiRows, err := orm.Search(ctx, "digest.kpi", [][]interface{}{{"digest_id", "=", int(digestID)}})
+	kpiRows, err := sdk.Search(ctx, "digest.kpi", [][]interface{}{{"digest_id", "=", int(digestID)}})
 	if err != nil {
 		return err
 	}
-	if len(kpiRows) == 0 {
+	if 0 == len(kpiRows) {
 		return nil
 	}
 	var lines []string
 	for _, kpi := range kpiRows {
-		code := strings.TrimSpace(orm.AsString(kpi["compute_code"]))
-		label := strings.TrimSpace(orm.AsString(kpi["name"]))
+		code := strings.TrimSpace(sdk.AsString(kpi["compute_code"]))
+		label := strings.TrimSpace(sdk.AsString(kpi["name"]))
 		if code == "" {
 			continue
 		}
@@ -71,9 +75,9 @@ func runDigest(ctx context.Context, digestRow map[string]interface{}) error {
 		}
 		lines = append(lines, fmt.Sprintf("- %s: %.0f", label, value))
 	}
-	if len(lines) == 0 {
+	if 0 == len(lines) {
 		return nil
 	}
 	body := name + "\n" + strings.Join(lines, "\n")
-	return orm.AppendAppLog(ctx, "digest", "KPI digest", body)
+	return sdk.AppendAppLog(ctx, "digest", "KPI digest", body)
 }

@@ -13,11 +13,11 @@ import (
 	"time"
 
 	"sumeru/core/applog"
-	_ "sumeru/core/ormmodels"
 	"sumeru/core/metrics"
 	"sumeru/core/modelreg"
 	"sumeru/core/module"
 	"sumeru/core/orm"
+	_ "sumeru/core/ormmodels"
 	"sumeru/core/runtime"
 	"sumeru/core/scheduler"
 	"sumeru/core/sdk"
@@ -170,16 +170,22 @@ func Run() {
 		applog.Fatal(ctx, "Default security groups failed", "err", err)
 	}
 
+	hadModuleOps := strings.TrimSpace(*installMods) != "" || strings.TrimSpace(*updateMods) != ""
 	if err := RunModuleCLI(*installMods, *updateMods); err != nil {
 		applog.Fatal(ctx, "Module CLI failed", "err", err)
+	}
+	if err := module.SyncInstalledAddonPOFiles(ctx); err != nil {
+		applog.Fatal(ctx, "Translation catalog sync failed", "err", err)
+	}
+	if !hadModuleOps {
+		module.ReconcileSystemManagerImpliedInstalled(ctx)
 	}
 
 	if err := orm.EnsureBootstrapSecurity(); err != nil {
 		applog.Fatal(ctx, "Security bootstrap failed", "err", err)
 	}
 
-	hadModuleOperations := strings.TrimSpace(*installMods) != "" || strings.TrimSpace(*updateMods) != ""
-	if *stopAfterInit && hadModuleOperations {
+	if *stopAfterInit && hadModuleOps {
 		applog.InfoMsg(ctx, "server", "shutdown", "stop-after-init: module operations finished, exiting", nil)
 		os.Exit(0)
 	}
@@ -228,6 +234,12 @@ func newHTTPServer(addr string, handler http.Handler) *http.Server {
 func serveUntilSignal(ctx context.Context, srv *http.Server) error {
 	errCh := make(chan error, 1)
 	go func() {
+		cert := strings.TrimSpace(config.AppConfig.TLSCertFile)
+		key := strings.TrimSpace(config.AppConfig.TLSKeyFile)
+		if cert != "" && key != "" {
+			errCh <- srv.ListenAndServeTLS(cert, key)
+			return
+		}
 		errCh <- srv.ListenAndServe()
 	}()
 	select {

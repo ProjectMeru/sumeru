@@ -5,24 +5,26 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"sumeru/core/engine/render"
 	"sumeru/core/engine/swcmeta"
 	"sumeru/core/orm"
 	"sumeru/core/report"
+	"sumeru/core/server/config"
 )
 
 // Type aliases for external tests in core/server/web (web_test package).
 type (
-	ShellPageOpts      = shellPageOpts
-	SetupInitRequest   = setupInitRequest
-	AppsBrowseState    = appsBrowseState
-	ModuleRow          = moduleRow
-	PinnedAppsRequest  = pinnedAppsRequest
-	WorkspaceRequest   = workspaceRequest
-	AppsModule         = appsModule
-	AppsModuleGroup    = appsModuleGroup
+	ShellPageOpts     = shellPageOpts
+	SetupInitRequest  = setupInitRequest
+	AppsBrowseState   = appsBrowseState
+	ModuleRow         = moduleRow
+	PinnedAppsRequest = pinnedAppsRequest
+	WorkspaceRequest  = workspaceRequest
+	AppsModule        = appsModule
+	AppsModuleGroup   = appsModuleGroup
 )
 
 // Route and query constants for external tests.
@@ -40,6 +42,7 @@ const (
 	TestCompanySwitchRoute     = companySwitchRoute
 	TestModuleActionRoute      = moduleActionRoute
 	TestAPIRPCRoute            = apiRPCRoute
+	TestAPIRPCRoutePrefix      = apiRPCRoutePrefix
 	TestWorkspaceActionParam   = workspaceActionParam
 	TestWorkspaceMenuIDParam   = workspaceMenuIDParam
 	TestWorkspaceViewTypeParam = workspaceViewTypeParam
@@ -96,6 +99,10 @@ func ParseMenuIDString(menuQuery string) (menuID int, ok bool) { return parseMen
 
 func ResolveActionIDFromQuery(ctx context.Context, actionQuery string) int {
 	return resolveActionIDFromQuery(ctx, actionQuery)
+}
+
+func ResolveWorkspaceRedirect(ctx context.Context, menuID string, resolvedActionID int) (redirectURL string, shouldRedirect bool) {
+	return resolveWorkspaceRedirect(ctx, menuID, resolvedActionID)
 }
 
 func MenuRecordActionID(menuRecord map[string]interface{}) (actionID int, ok bool) {
@@ -274,6 +281,11 @@ func ImportCSVFlashMessage(createdCount int) string { return importCSVFlashMessa
 
 func ParseCompanySwitchForm(r *http.Request) companySwitchForm { return parseCompanySwitchForm(r) }
 
+// SwitchActiveCompanyForTest exercises active company switching without HTTP.
+func SwitchActiveCompanyForTest(ctx context.Context, userID, companyID int) {
+	switchActiveCompany(ctx, userID, companyID)
+}
+
 // LoginURLWithReturn returns the login path (return target is stored in a cookie by redirectToLogin).
 func LoginURLWithReturn(_ string) string { return loginRoute }
 
@@ -363,6 +375,10 @@ func FindAppsModule(modules []AppsModule, moduleName string) (AppsModule, bool) 
 
 func APIKeyTargetUserID(r *http.Request) int { return apiKeyTargetUserID(r) }
 
+func APIKeyExpiresAtFromFormForTest(r *http.Request) (time.Time, string, error) {
+	return apiKeyExpiresAtFromForm(r)
+}
+
 func ParseModuleRow(values map[string]interface{}) (ModuleRow, bool) { return parseModuleRow(values) }
 
 func ModuleDisplayName(moduleName, displayName string) string {
@@ -401,7 +417,9 @@ func ParseContentPathForTest(path string) (field string, id int, ok bool) {
 
 func ContentInlineAllowedForTest(mime string) bool { return contentInlineAllowed(mime) }
 
-func SafeContentDispositionInlineForTest(name string) string { return safeContentDispositionInline(name) }
+func SafeContentDispositionInlineForTest(name string) string {
+	return safeContentDispositionInline(name)
+}
 
 func BulkPreviewHandlerForTest(w http.ResponseWriter, r *http.Request) {
 	BulkPreviewHandler(w, r)
@@ -417,6 +435,11 @@ func BulkSaveImportTemplateHandlerForTest(w http.ResponseWriter, r *http.Request
 
 func BulkStatusHandlerForTest(w http.ResponseWriter, r *http.Request) {
 	BulkStatusHandler(w, r)
+}
+
+// BulkBatchOwnedByForTest exposes bulk batch ownership checks for tests.
+func BulkBatchOwnedByForTest(batch map[string]interface{}, uid int) bool {
+	return bulkBatchOwnedBy(batch, uid)
 }
 
 func SwcImportHandlerForTest(w http.ResponseWriter, r *http.Request) {
@@ -470,6 +493,27 @@ func AuthViaSessionForTest(r *http.Request) bool { return AuthViaSession(r) }
 // RPCJSONHandlerForTest exposes the JSON RPC handler for external tests.
 func RPCJSONHandlerForTest(w http.ResponseWriter, r *http.Request) { RPCJSONHandler(w, r) }
 
+// ApplyDefaultRPCHeadersForTest sets required RPC headers for handler tests.
+func ApplyDefaultRPCHeadersForTest(r *http.Request) {
+	if strings.TrimSpace(config.AppConfig.DbName) == "" {
+		config.AppConfig.DbName = "test_db"
+	}
+	r.Header.Set(sumeruDatabaseHeader, config.AppConfig.DbName)
+	if strings.TrimSpace(r.Header.Get(sumeruTenantHeader)) == "" {
+		r.Header.Set(sumeruTenantHeader, "1")
+	}
+}
+
+// TestRPCURLForTest builds a path-based RPC URL for tests.
+func TestRPCURLForTest(model, method string) string {
+	return apiRPCRoutePrefix + model + "/" + method
+}
+
+// TestAuthLoginURLForTest is POST /api/rpc/auth.login.
+func TestAuthLoginURLForTest() string {
+	return apiRPCRoutePrefix + rpcAuthLoginSegment
+}
+
 // BuildSessionCookieForTest exposes session cookie construction for tests.
 func BuildSessionCookieForTest(value string, deleteCookie bool) *http.Cookie {
 	return buildSessionCookie(value, deleteCookie)
@@ -490,9 +534,27 @@ func OAuthCallbackForTest(w http.ResponseWriter, r *http.Request) { OAuthCallbac
 func OAuthStartForTest(w http.ResponseWriter, r *http.Request) { OAuthStartHandler(w, r) }
 
 // LinkOAuthUserForTest exposes OAuth account linking and JIT provisioning for tests.
-func LinkOAuthUserForTest(ctx context.Context, providerID int, subject, email, policy string) (int, error) {
-	return linkOAuthUser(ctx, providerID, subject, email, policy)
+func LinkOAuthUserForTest(ctx context.Context, providerID int, subject, email string, emailVerified bool, policy string) (int, error) {
+	return linkOAuthUser(ctx, providerID, subject, email, emailVerified, policy)
 }
+
+// ResolveOAuthIdentityForTest exposes OIDC identity resolution for tests.
+func ResolveOAuthIdentityForTest(ctx context.Context, prov map[string]interface{}, tok map[string]interface{}) (email, sub string, emailVerified bool, err error) {
+	return resolveOAuthIdentity(ctx, prov, tok)
+}
+
+// PublicBaseURLForTest exposes canonical public origin resolution for tests.
+func PublicBaseURLForTest(r *http.Request) (string, error) {
+	return publicBaseURL(r)
+}
+
+// ValidateSetupCSRFForTest exposes setup wizard CSRF validation for tests.
+func ValidateSetupCSRFForTest(r *http.Request, tokenFromBody string) bool {
+	return validateSetupCSRF(r, tokenFromBody)
+}
+
+// TestSetupCSRFCookie is the HttpOnly setup CSRF cookie name.
+const TestSetupCSRFCookie = setupCSRFCookie
 
 // AuthLocalEnabledForTest reports whether password login is shown on the login page.
 func AuthLocalEnabledForTest(ctx context.Context) bool { return authLocalEnabled(ctx) }
@@ -607,6 +669,11 @@ func ComparePasswordConstantTimeForTest(storedHash, plain string) bool {
 // RequireSystemAdminForTest exposes requireSystemAdmin for handler tests.
 func RequireSystemAdminForTest(w http.ResponseWriter, r *http.Request, redirectOnDeny bool) bool {
 	return requireSystemAdmin(w, r, redirectOnDeny)
+}
+
+// RequireModuleManagerOrSystemForTest exposes requireModuleManagerOrSystem for handler tests.
+func RequireModuleManagerOrSystemForTest(w http.ResponseWriter, r *http.Request, redirectOnDeny bool) bool {
+	return requireModuleManagerOrSystem(w, r, redirectOnDeny)
 }
 
 // RequireModelAccessForTest exposes requireModelAccess for handler tests.

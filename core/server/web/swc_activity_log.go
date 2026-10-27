@@ -37,7 +37,7 @@ func SwcActivityLogHandler(w http.ResponseWriter, r *http.Request) {
 	model := strings.TrimSpace(r.URL.Query().Get("model"))
 	idRaw := strings.TrimSpace(r.URL.Query().Get("id"))
 	recordID, _ := strconv.ParseInt(idRaw, 10, 64)
-	if model == "" || recordID <= 0 {
+	if model == "" || 0 >= recordID {
 		http.Error(w, "model and id required", http.StatusBadRequest)
 		return
 	}

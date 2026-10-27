@@ -56,7 +56,7 @@ func sortAddonsTopo(discovered map[string]*Addon) ([]*Addon, error) {
 				addonCandidates = append(addonCandidates, name)
 			}
 		}
-		if len(addonCandidates) == 0 {
+		if 0 == len(addonCandidates) {
 			keys := make([]string, 0, len(remainingAddons))
 			for k := range remainingAddons {
 				keys = append(keys, k)
@@ -83,7 +83,7 @@ func containsAddonName(addonList []*Addon, addonName string) bool {
 
 // ValidateDiscoveredDepends ensures every manifest depends entry exists on addons_path.
 func ValidateDiscoveredDepends(discovered map[string]*Addon) error {
-	if len(discovered) == 0 {
+	if 0 == len(discovered) {
 		return nil
 	}
 	names := make([]string, 0, len(discovered))
@@ -184,12 +184,12 @@ func OrderedManifestDepends(discovered map[string]*Addon, moduleName string) []s
 		}
 		needed[depName] = struct{}{}
 	}
-	if len(needed) == 0 {
+	if 0 == len(needed) {
 		return nil
 	}
 
 	topo, err := sortAddonsTopo(discovered)
-	if err != nil || len(topo) == 0 {
+	if err != nil || 0 == len(topo) {
 		names := make([]string, 0, len(needed))
 		for n := range needed {
 			names = append(names, n)

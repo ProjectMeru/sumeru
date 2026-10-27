@@ -61,6 +61,12 @@ func FlashFromQueryMessage(msg string) (render.FlashMessage, bool) {
 		return render.FlashMessage{Kind: "error", Title: "Password required", Body: "Enter a new password."}, true
 	case "password_failed":
 		return render.FlashMessage{Kind: "error", Title: "Could not update password", Body: "Check policy requirements and try again."}, true
+	case "auth_settings_saved":
+		return render.FlashMessage{Kind: "success", Title: "Authentication settings saved", Body: "System parameters were updated."}, true
+	case "auth_settings_invalid":
+		return render.FlashMessage{Kind: "error", Title: "Invalid settings", Body: "Check password minimum length (6–72) and try again."}, true
+	case "auth_settings_failed":
+		return render.FlashMessage{Kind: "error", Title: "Could not save settings", Body: "Try again or contact your administrator."}, true
 	case "field_acl_saved":
 		return render.FlashMessage{Kind: "success", Title: "Field access saved", Body: "Matrix rules were updated."}, true
 	case "field_acl_failed":
@@ -70,7 +76,17 @@ func FlashFromQueryMessage(msg string) (render.FlashMessage, bool) {
 	case "model_acl_failed":
 		return render.FlashMessage{Kind: "error", Title: "Model access not saved", Body: "Check the model and try again."}, true
 	case "api_key_created":
-		return render.FlashMessage{Kind: "success", Title: "API key created", Body: "Copy the key from the banner above if shown."}, true
+		return render.FlashMessage{Kind: "success", Title: "API key created", Body: "Open /web/apikey/reveal within 2 minutes to copy your key (shown once)."}, true
+	case "api_key_duration_required":
+		return render.FlashMessage{Kind: "error", Title: "Duration required", Body: "Enter how many days the API key should remain valid (1–30)."}, true
+	case "api_key_duration_invalid":
+		return render.FlashMessage{Kind: "error", Title: "Invalid duration", Body: "Duration must be a whole number of days from 1 to 30."}, true
+	case "api_key_create_failed":
+		return render.FlashMessage{Kind: "error", Title: "Could not create API key", Body: "Try again or contact an administrator."}, true
+	case "api_key_revoked":
+		return render.FlashMessage{Kind: "success", Title: "API key revoked", Body: "The key can no longer be used."}, true
+	case "api_key_revoke_failed":
+		return render.FlashMessage{Kind: "error", Title: "Could not revoke API key", Body: "Check the key and try again."}, true
 	case moduleMsgSaved:
 		return render.FlashMessage{Kind: "success", Title: "Saved", Body: "Changes were saved."}, true
 	case saveOKCreatedMsg:

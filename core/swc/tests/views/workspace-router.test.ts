@@ -120,6 +120,29 @@ describe("WorkspaceRouter", () => {
     router.destroy();
   });
 
+  it("defers module entry paths to full server navigation", async () => {
+    const assign = vi.fn();
+    const getJSON = vi.fn().mockResolvedValue(workspacePayload());
+    const env = routerEnv(getJSON);
+    const routerSvc = new RouterService();
+    env.services.router = {
+      parse: () => routerSvc.parse({ pathname: "/web/crm", search: "" }),
+    } as never;
+    vi.stubGlobal("location", {
+      pathname: "/web/crm",
+      search: "",
+      hash: "",
+      assign,
+    });
+
+    const router = new WorkspaceRouter({}, env);
+    router.callSetup();
+    await vi.waitFor(() => expect(assign).toHaveBeenCalledWith("/web/crm"));
+    expect(getJSON).not.toHaveBeenCalled();
+    router.destroy();
+    vi.unstubAllGlobals();
+  });
+
   it("ShellLayout mounts WorkspaceRouter via callSetup", async () => {
     const layout = new ShellLayout({}, routerEnv());
     expect(() => layout.callSetup()).not.toThrow();

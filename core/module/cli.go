@@ -95,7 +95,7 @@ func listInstalledModuleNames(ctx context.Context) ([]string, error) {
 // expandUpdateModuleNames resolves -u all into installed module names, dedupes, and orders by addon dependency topo.
 // Installed rows not present on disk (stale sys.module) are skipped for "all" only.
 func expandUpdateModuleNames(ctx context.Context, parts []string) ([]string, error) {
-	if len(parts) == 0 {
+	if 0 == len(parts) {
 		return nil, nil
 	}
 	var installedCache []string
@@ -166,7 +166,7 @@ func expandUpdateModuleNames(ctx context.Context, parts []string) ([]string, err
 }
 
 func orderModulesForUpdate(names []string) []string {
-	if len(names) == 0 {
+	if 0 == len(names) {
 		return nil
 	}
 	set := make(map[string]struct{}, len(names))
@@ -174,7 +174,7 @@ func orderModulesForUpdate(names []string) []string {
 		set[n] = struct{}{}
 	}
 	topo, err := sortAddonsTopo(DiscoveredAddons)
-	if err != nil || len(topo) == 0 {
+	if err != nil || 0 == len(topo) {
 		out := append([]string(nil), names...)
 		sort.Strings(out)
 		return out
@@ -198,7 +198,7 @@ func orderModulesForUpdate(names []string) []string {
 
 // expandInstallModuleNames resolves -i all into uninstalled module names in dependency order.
 func expandInstallModuleNames(ctx context.Context, parts []string) ([]string, error) {
-	if len(parts) == 0 {
+	if 0 == len(parts) {
 		return nil, nil
 	}
 	var installedSet map[string]struct{}

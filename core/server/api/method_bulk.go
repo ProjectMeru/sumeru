@@ -67,7 +67,7 @@ func rpcWriteMany(ctx context.Context, model string, args json.RawMessage) (inte
 		return nil, newRPCError(CodeInvalidArgs, fmt.Sprintf("args[1] values: %v", err), map[string]interface{}{"method": "write_many"})
 	}
 	domain := make([][]interface{}, 0, len(ids))
-	if len(ids) == 0 {
+	if 0 == len(ids) {
 		return true, nil
 	}
 	idList := make([]interface{}, len(ids))
@@ -97,7 +97,7 @@ func rpcUnlinkMany(ctx context.Context, model string, args json.RawMessage) (int
 	if err := capRPCIDs(ids); err != nil {
 		return nil, err
 	}
-	if len(ids) == 0 {
+	if 0 == len(ids) {
 		return true, nil
 	}
 	idList := make([]interface{}, len(ids))

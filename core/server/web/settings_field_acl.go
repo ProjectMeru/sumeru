@@ -25,10 +25,10 @@ type fieldACLMatrixCell struct {
 }
 
 type fieldACLMatrixRow struct {
-	FieldName   string
+	FieldName    string
 	SchemaGroups bool
-	KernelTags  []string
-	Cells       []fieldACLMatrixCell
+	KernelTags   []string
+	Cells        []fieldACLMatrixCell
 }
 
 type settingsFieldACLData struct {
@@ -199,7 +199,7 @@ func applyFieldACLMatrixPost(ctx context.Context, model string, form map[string]
 }
 
 func fieldACLMatrixRowName(model, field string, groupID int) string {
-	if groupID <= 0 {
+	if 0 >= groupID {
 		return "matrix." + model + "." + field + ".global"
 	}
 	return fmt.Sprintf("matrix.%s.%s.g%d", model, field, groupID)
@@ -382,12 +382,12 @@ func buildSettingsFieldACLPageData(ctx context.Context, menuIDStr string, page s
 	crumbs := render.BuildSettingsHubBreadcrumbs(ctx)
 	crumbs = append(crumbs, render.BreadcrumbItem{Label: "Field access matrix"})
 	pd := render.PageData{
-		Title:                "Field access matrix",
-		SettingsNavActive:    true,
-		ActiveMenuID:         menuIDStr,
-		BreadcrumbItems:      crumbs,
-		ViewStylesheetURLs:   []string{settingsHubStylesheetURL},
-		ExtraBodyClasses:     settingsHubBodyClass,
+		Title:              "Field access matrix",
+		SettingsNavActive:  true,
+		ActiveMenuID:       menuIDStr,
+		BreadcrumbItems:    crumbs,
+		ViewStylesheetURLs: []string{settingsHubStylesheetURL},
+		ExtraBodyClasses:   settingsHubBodyClass,
 	}
 	if page.Flash.Body != "" || page.Flash.Title != "" {
 		pd.FlashMessages = []render.FlashMessage{page.Flash}

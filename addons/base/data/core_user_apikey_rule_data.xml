@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sumeru>
+    <data noupdate="true">
+        <record id="rule_core_user_apikey_own" model="sys.rule">
+            <field name="name">Users: own API keys</field>
+            <field name="model">core.user.apikey</field>
+            <field name="domain_force">[["user_id", "=", "$uid"]]</field>
+            <field name="active">True</field>
+            <field name="perm_read">True</field>
+            <field name="perm_write">True</field>
+            <field name="perm_create">True</field>
+            <field name="perm_unlink">False</field>
+            <field name="groups">[(4, ref('base.group_user'))]</field>
+        </record>
+    </data>
+</sumeru>

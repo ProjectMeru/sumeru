@@ -108,10 +108,10 @@ func loadDocumentContext(ctx context.Context, actionRow map[string]interface{}, 
 
 // StoreReportPDFAttachment saves PDF to filestore and creates sys.attachment linked to record.
 func StoreReportPDFAttachment(ctx context.Context, modelName string, recordID int, filename string, pdf []byte) (int, error) {
-	if recordID <= 0 {
+	if 0 >= recordID {
 		return 0, fmt.Errorf("id required to store attachment")
 	}
-	if len(pdf) == 0 {
+	if 0 == len(pdf) {
 		return 0, fmt.Errorf("empty pdf")
 	}
 	name := strings.TrimSpace(filename)

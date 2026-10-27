@@ -2,6 +2,9 @@ package web
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -29,6 +32,7 @@ type setupInitRequest struct {
 	Email       string `json:"email"`
 	Password    string `json:"password"`
 	SetupToken  string `json:"setup_token"`
+	CSRFToken   string `json:"csrf_token"`
 }
 
 type setupPageData struct {
@@ -37,6 +41,7 @@ type setupPageData struct {
 	SetupTokenRequired bool
 	AppName            string
 	Brand              loginBrand
+	CSRFToken          string
 }
 
 // SetupInitHandler runs database sync, installs base, bootstraps security from the JSON wizard payload, then restarts.
@@ -60,12 +65,17 @@ func SetupInitHandler(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if !validateSetupCSRF(r, payload.CSRFToken) {
+		http.Error(w, "Invalid request", http.StatusForbidden)
+		return
+	}
 	if !allowSetupRequest(w, r, payload.SetupToken) {
 		return
 	}
 
 	if err := runFirstTimeSetup(ctx, toSetupAdminParams(payload)); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		logSetupFailure(ctx, "Setup init failed", err)
+		http.Error(w, "Setup failed", http.StatusInternalServerError)
 		return
 	}
 
@@ -78,7 +88,38 @@ func SetupPageHandler(w http.ResponseWriter, r *http.Request) {
 	if !requireSetupEnvironment(w, r) {
 		return
 	}
-	writeSetupPage(w, r.Context(), buildSetupPageData())
+	pageData := buildSetupPageData()
+	pageData.CSRFToken = setSetupCSRFCookie(w)
+	writeSetupPage(w, r.Context(), pageData)
+}
+
+func setSetupCSRFCookie(w http.ResponseWriter) string {
+	token := newSetupCSRFToken()
+	setNamedCookie(w, setupCSRFCookie, token, setupRoute, 600, http.SameSiteStrictMode)
+	return token
+}
+
+func newSetupCSRFToken() string {
+	buf := make([]byte, 16)
+	if _, err := rand.Read(buf); err != nil {
+		panic("setup csrf: crypto/rand failed: " + err.Error())
+	}
+	return hex.EncodeToString(buf)
+}
+
+func validateSetupCSRF(r *http.Request, tokenFromBody string) bool {
+	cookie, err := r.Cookie(setupCSRFCookie)
+	if err != nil || cookie.Value == "" {
+		return false
+	}
+	got := strings.TrimSpace(tokenFromBody)
+	if got == "" {
+		got = strings.TrimSpace(r.Header.Get(csrfHeaderName))
+	}
+	if got == "" {
+		return false
+	}
+	return hmac.Equal([]byte(got), []byte(cookie.Value))
 }
 
 func parseSetupInitRequest(w http.ResponseWriter, requestBody []byte) (setupInitRequest, bool) {

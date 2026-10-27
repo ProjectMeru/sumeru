@@ -29,13 +29,13 @@ func SerializeViewForUser(ctx context.Context, view *parser.View) ViewArch {
 	}
 	if view.Header != nil {
 		arch.Header = &ArchHeader{
-			Buttons: serializeButtons(view.Header.Button),
+			Buttons: serializeButtons(ctx, view.Header.Button),
 			Fields:  enrichFields(model, serializeFields(ctx, view.Header.Field)),
 		}
 	}
 	if view.Footer != nil && len(view.Footer.Button) > 0 {
 		arch.Footer = &ArchFooter{
-			Buttons: serializeButtons(view.Footer.Button),
+			Buttons: serializeButtons(ctx, view.Footer.Button),
 		}
 	}
 	if view.Sheet != nil {
@@ -102,6 +102,7 @@ func SerializeViewForUser(ctx context.Context, view *parser.View) ViewArch {
 			BulkModes: strings.Join(caps.BulkModes, ","),
 		}
 	}
+	translateArch(ctx, orm.UserLang(ctx), &arch)
 	return arch
 }
 
@@ -125,7 +126,7 @@ func formMetaForModel(model string) *FormMeta {
 }
 
 func enrichFields(model string, fields []ArchField) []ArchField {
-	if model == "" || len(fields) == 0 {
+	if model == "" || 0 == len(fields) {
 		return fields
 	}
 	out := make([]ArchField, len(fields))
@@ -162,7 +163,7 @@ func enrichField(model string, f ArchField) ArchField {
 	if f.Relation == "" {
 		f.Relation = fd.Relation
 	}
-	if len(f.Selection) == 0 && len(fd.Selection) > 0 {
+	if 0 == len(f.Selection) && len(fd.Selection) > 0 {
 		f.Selection = fd.Selection
 	}
 	if fd.Required {
@@ -269,6 +270,9 @@ func serializeSheet(ctx context.Context, model string, s *parser.Sheet) *ArchShe
 	for _, nb := range s.Notebook {
 		pages := make([]ArchPage, 0, len(nb.Page))
 		for _, p := range nb.Page {
+			if !orm.UserHasAnyAccessGroup(ctx, orm.SecurityUID(ctx), p.Groups) {
+				continue
+			}
 			pg := ArchPage{
 				Title:      strings.TrimSpace(p.Title),
 				Fields:     enrichFields(model, serializeFields(ctx, p.Field)),
@@ -315,7 +319,7 @@ func parseArchInt(raw string) int {
 }
 
 func serializeDivs(ctx context.Context, model string, s *parser.Sheet) []ArchDiv {
-	if s == nil || len(s.Div) == 0 {
+	if s == nil || 0 == len(s.Div) {
 		return nil
 	}
 	out := make([]ArchDiv, 0, len(s.Div))
@@ -325,7 +329,7 @@ func serializeDivs(ctx context.Context, model string, s *parser.Sheet) []ArchDiv
 			out = append(out, div)
 		}
 	}
-	if len(out) == 0 {
+	if 0 == len(out) {
 		return nil
 	}
 	return out
@@ -335,7 +339,7 @@ func serializeDiv(ctx context.Context, model string, d parser.Div) ArchDiv {
 	out := ArchDiv{
 		Class:   strings.TrimSpace(d.Class),
 		Fields:  enrichFields(model, serializeFields(ctx, d.Field)),
-		Buttons: serializeButtons(d.Button),
+		Buttons: serializeButtons(ctx, d.Button),
 	}
 	for _, h1 := range d.H1 {
 		out.H1Fields = append(out.H1Fields, enrichFields(model, serializeFields(ctx, h1.Field))...)
@@ -353,9 +357,13 @@ func divHasContent(d ArchDiv) bool {
 	return len(d.Fields) > 0 || len(d.H1Fields) > 0 || len(d.Divs) > 0 || len(d.Buttons) > 0
 }
 
-func serializeButtons(buttons []parser.Button) []ArchButton {
+func serializeButtons(ctx context.Context, buttons []parser.Button) []ArchButton {
 	out := make([]ArchButton, 0, len(buttons))
+	uid := orm.SecurityUID(ctx)
 	for _, b := range buttons {
+		if !orm.UserHasAnyAccessGroup(ctx, uid, b.Groups) {
+			continue
+		}
 		ab := ArchButton{
 			Name:    strings.TrimSpace(b.Name),
 			String:  strings.TrimSpace(b.String),
@@ -440,14 +448,14 @@ func parseFieldOptions(raw string) map[string]string {
 			out[strings.TrimSpace(kv[0])] = strings.TrimSpace(kv[1])
 		}
 	}
-	if len(out) == 0 {
+	if 0 == len(out) {
 		return nil
 	}
 	return out
 }
 
 func serializeSeparators(items []parser.Separator) []ArchSeparator {
-	if len(items) == 0 {
+	if 0 == len(items) {
 		return nil
 	}
 	out := make([]ArchSeparator, 0, len(items))
@@ -457,8 +465,126 @@ func serializeSeparators(items []parser.Separator) []ArchSeparator {
 	return out
 }
 
+func translateArch(ctx context.Context, lang string, arch *ViewArch) {
+	if arch == nil || lang == "" || lang == "en_US" {
+		return
+	}
+	arch.Title = orm.Translate(ctx, lang, arch.Title)
+	arch.Fields = translateArchFields(ctx, lang, arch.Fields)
+	if arch.Header != nil {
+		arch.Header.Buttons = translateButtons(ctx, lang, arch.Header.Buttons)
+		arch.Header.Fields = translateArchFields(ctx, lang, arch.Header.Fields)
+	}
+	if arch.Footer != nil {
+		arch.Footer.Buttons = translateButtons(ctx, lang, arch.Footer.Buttons)
+	}
+	if arch.Sheet != nil {
+		translateSheet(ctx, lang, arch.Sheet)
+	}
+	translateSearch(ctx, lang, arch.Search)
+}
+
+func translateSheet(ctx context.Context, lang string, sheet *ArchSheet) {
+	sheet.Fields = translateArchFields(ctx, lang, sheet.Fields)
+	sheet.Groups = translateGroups(ctx, lang, sheet.Groups)
+	sheet.Divs = translateDivs(ctx, lang, sheet.Divs)
+	sheet.Separators = translateSeparators(ctx, lang, sheet.Separators)
+	sheet.Labels = translateLabels(ctx, lang, sheet.Labels)
+	for i := range sheet.Notebook {
+		for j := range sheet.Notebook[i].Pages {
+			page := &sheet.Notebook[i].Pages[j]
+			page.Title = orm.Translate(ctx, lang, page.Title)
+			page.Fields = translateArchFields(ctx, lang, page.Fields)
+			page.Groups = translateGroups(ctx, lang, page.Groups)
+			page.Separators = translateSeparators(ctx, lang, page.Separators)
+			page.Labels = translateLabels(ctx, lang, page.Labels)
+		}
+	}
+}
+
+func translateGroups(ctx context.Context, lang string, groups []ArchGroup) []ArchGroup {
+	for i := range groups {
+		groups[i].String = orm.Translate(ctx, lang, groups[i].String)
+		groups[i].Fields = translateArchFields(ctx, lang, groups[i].Fields)
+		groups[i].Groups = translateGroups(ctx, lang, groups[i].Groups)
+		groups[i].Separators = translateSeparators(ctx, lang, groups[i].Separators)
+		groups[i].Labels = translateLabels(ctx, lang, groups[i].Labels)
+	}
+	return groups
+}
+
+func translateDivs(ctx context.Context, lang string, divs []ArchDiv) []ArchDiv {
+	for i := range divs {
+		divs[i].Fields = translateArchFields(ctx, lang, divs[i].Fields)
+		divs[i].H1Fields = translateArchFields(ctx, lang, divs[i].H1Fields)
+		divs[i].Buttons = translateButtons(ctx, lang, divs[i].Buttons)
+		divs[i].Divs = translateDivs(ctx, lang, divs[i].Divs)
+	}
+	return divs
+}
+
+func translateArchFields(ctx context.Context, lang string, fields []ArchField) []ArchField {
+	for i := range fields {
+		fields[i].String = orm.Translate(ctx, lang, fields[i].String)
+		fields[i].Placeholder = orm.Translate(ctx, lang, fields[i].Placeholder)
+		fields[i].Selection = translateSelection(ctx, lang, fields[i].Selection)
+		if fields[i].Subview != nil {
+			fields[i].Subview.Fields = translateArchFields(ctx, lang, fields[i].Subview.Fields)
+		}
+	}
+	return fields
+}
+
+func translateButtons(ctx context.Context, lang string, buttons []ArchButton) []ArchButton {
+	for i := range buttons {
+		buttons[i].String = orm.Translate(ctx, lang, buttons[i].String)
+	}
+	return buttons
+}
+
+func translateSeparators(ctx context.Context, lang string, items []ArchSeparator) []ArchSeparator {
+	for i := range items {
+		items[i].String = orm.Translate(ctx, lang, items[i].String)
+	}
+	return items
+}
+
+func translateLabels(ctx context.Context, lang string, items []ArchLabel) []ArchLabel {
+	for i := range items {
+		items[i].String = orm.Translate(ctx, lang, items[i].String)
+	}
+	return items
+}
+
+func translateSelection(ctx context.Context, lang string, selection [][]string) [][]string {
+	if 0 == len(selection) {
+		return selection
+	}
+	out := make([][]string, len(selection))
+	for i, pair := range selection {
+		cp := append([]string(nil), pair...)
+		if len(cp) >= 2 {
+			cp[1] = orm.Translate(ctx, lang, cp[1])
+		}
+		out[i] = cp
+	}
+	return out
+}
+
+func translateSearch(ctx context.Context, lang string, meta *SearchMeta) {
+	if meta == nil || lang == "" || lang == "en_US" {
+		return
+	}
+	for i := range meta.Filters {
+		meta.Filters[i].String = orm.Translate(ctx, lang, meta.Filters[i].String)
+	}
+	meta.SearchFields = translateArchFields(ctx, lang, meta.SearchFields)
+	meta.FilterFields = translateArchFields(ctx, lang, meta.FilterFields)
+	meta.GroupByFields = translateArchFields(ctx, lang, meta.GroupByFields)
+}
+
 func serializeLabels(items []parser.Label) []ArchLabel {
-	if len(items) == 0 {
+	if 0 == len(items) {
 		return nil
 	}
 	out := make([]ArchLabel, 0, len(items))

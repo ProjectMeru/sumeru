@@ -114,7 +114,45 @@ func ensureDefaultKernelGroups(ctx context.Context) (adminGID int, userGID int, 
 	if _, err := DB.ExecContext(ctx, `INSERT INTO `+MustQuotedTableName(tableGroupImplied)+` (group_id, implied_group_id) VALUES ($1, $2) ON CONFLICT (group_id, implied_group_id) DO NOTHING`, adminGID, userGID); err != nil {
 		return 0, 0, fmt.Errorf("bootstrap group imply: %w", err)
 	}
+
+	moduleManagerGID, err := Upsert(ctx, groupModel, map[string]interface{}{
+		"name":        "Administration / Apps",
+		"category_id": catAdminID,
+		"sequence":    5,
+	}, "name")
+	if err != nil {
+		return 0, 0, fmt.Errorf("bootstrap core.group module manager: %w", err)
+	}
+	if err := seedXmlID(ctx, "base", "group_module_manager", "core.group", moduleManagerGID); err != nil {
+		return 0, 0, err
+	}
+	if _, err := DB.ExecContext(ctx, `INSERT INTO `+MustQuotedTableName(tableGroupImplied)+` (group_id, implied_group_id) VALUES ($1, $2) ON CONFLICT (group_id, implied_group_id) DO NOTHING`, moduleManagerGID, userGID); err != nil {
+		return 0, 0, fmt.Errorf("bootstrap module manager imply user: %w", err)
+	}
+	if err := ensureModuleManagerACL(ctx, moduleManagerGID); err != nil {
+		return 0, 0, err
+	}
+
 	return adminGID, userGID, nil
+}
+
+func ensureModuleManagerACL(ctx context.Context, moduleManagerGID int) error {
+	if moduleManagerGID <= 0 {
+		return nil
+	}
+	_, err := Upsert(ctx, RegistryModel("sys.access"), map[string]interface{}{
+		"name":        "access_sys_module_module_manager",
+		"model":       "sys.module",
+		"group_id":    NullableGroupIDForAccess(moduleManagerGID),
+		"perm_read":   true,
+		"perm_write":  true,
+		"perm_create": false,
+		"perm_unlink": false,
+	}, "name")
+	if err != nil {
+		return fmt.Errorf("bootstrap sys.module ACL for module manager: %w", err)
+	}
+	return nil
 }
 
 func ensureBootstrapSecurity(ctx context.Context, first *SetupAdminParams) error {
@@ -174,7 +212,7 @@ func ensureBootstrapSecurity(ctx context.Context, first *SetupAdminParams) error
 	if err != nil {
 		return fmt.Errorf("bootstrap administrator: %w", err)
 	}
-	if adminUID == 0 {
+	if 0 == adminUID {
 		return fmt.Errorf("bootstrap administrator user id")
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(first.Password), bcrypt.DefaultCost)
@@ -195,7 +233,12 @@ func ensureBootstrapSecurity(ctx context.Context, first *SetupAdminParams) error
 	if _, err := DB.ExecContext(ctx, `INSERT INTO `+MustQuotedTableName(tableGroupUserRel)+` (user_id, group_id) VALUES ($1, $2) ON CONFLICT (user_id, group_id) DO NOTHING`, adminUID, userGID); err != nil {
 		return err
 	}
-	_, _ = DB.ExecContext(ctx, `UPDATE `+userTbl+` SET company_id = $1 WHERE id = $2`, compID, adminUID)
+	if _, err := DB.ExecContext(ctx, `UPDATE `+userTbl+` SET company_id = $1 WHERE id = $2`, compID, adminUID); err != nil {
+		return fmt.Errorf("set administrator company: %w", err)
+	}
+	if err := SetUserCompanyLinks(ctx, adminUID, []int{compID}); err != nil {
+		return err
+	}
 
 	ensureBootstrapACLs(ctx, adminGID, userGID)
 	ensurePlatformDefaults(ctx)
@@ -262,22 +305,26 @@ func ensureBootstrapACLs(ctx context.Context, adminGID, userGID int) {
 		}, "name")
 	}
 
-	for _, pair := range []struct{ model, name string }{
-		{"core.company", "access_core_company_user"},
-		{"core.user", "access_core_user_user"},
-		{"core.group", "access_core_group_user_read"},
-		{"sys.access", "access_sys_access_user_read"},
-		{"sys.rule", "access_sys_rule_user_read"},
-		{"sys.property.definition", "access_sys_property_definition_user"},
+	for _, pair := range []struct {
+		model, name                 string
+		read, write, create, unlink bool
+	}{
+		{"core.company", "access_core_company_user", true, false, false, false},
+		{"core.user", "access_core_user_user", true, false, false, false},
+		{"core.user.apikey", "access_core_user_apikey_user", true, true, true, false},
+		{"core.group", "access_core_group_user_read", true, false, false, false},
+		{"sys.access", "access_sys_access_user_read", true, false, false, false},
+		{"sys.rule", "access_sys_rule_user_read", true, false, false, false},
+		{"sys.property.definition", "access_sys_property_definition_user", true, false, false, false},
 	} {
 		_, _ = Upsert(ctx, RegistryModel("sys.access"), map[string]interface{}{
 			"name":        pair.name,
 			"model":       pair.model,
 			"group_id":    NullableGroupIDForAccess(userGID),
-			"perm_read":   true,
-			"perm_write":  false,
-			"perm_create": false,
-			"perm_unlink": false,
+			"perm_read":   pair.read,
+			"perm_write":  pair.write,
+			"perm_create": pair.create,
+			"perm_unlink": pair.unlink,
 		}, "name")
 	}
 }

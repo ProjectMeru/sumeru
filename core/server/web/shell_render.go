@@ -95,7 +95,7 @@ func applyShellPageDefaults(page render.PageData, opts shellPageOpts, r *http.Re
 	if !page.SuppressSidebar && !render.SidebarHasMenus(sidebarMenus) {
 		page.SuppressSidebar = true
 	}
-	if len(page.ViewStylesheetURLs) == 0 {
+	if 0 == len(page.ViewStylesheetURLs) {
 		page.ViewStylesheetURLs = []string{workspaceStylesheetURL}
 	}
 	page.ExtraStylesheetURLs = resolveExtraStylesheets(page.ExtraStylesheetURLs, opts.ExtraStylesheetURLs)

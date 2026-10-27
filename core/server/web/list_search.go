@@ -40,12 +40,12 @@ func listSearchFieldNames(views ...*parser.View) []string {
 }
 
 type listDomainInput struct {
-	ActionData   map[string]interface{}
-	View         *parser.View
-	SearchView   *parser.View
-	SearchQuery  string
-	FilterCSV    string
-	DomainJSON   string
+	ActionData  map[string]interface{}
+	View        *parser.View
+	SearchView  *parser.View
+	SearchQuery string
+	FilterCSV   string
+	DomainJSON  string
 }
 
 func workspaceListDomain(ctx context.Context, in listDomainInput) [][]interface{} {
@@ -66,9 +66,13 @@ func workspaceListDomain(ctx context.Context, in listDomainInput) [][]interface{
 			continue
 		}
 		dom, err := orm.ParseDomainJSON(f.Domain)
-		if err != nil || len(dom) == 0 {
+		if err != nil {
 			continue
 		}
+		if 0 == len(dom) {
+			continue
+		}
+
 		dom = orm.ResolveDomainXMLRefs(ctx, dom)
 		dom = orm.SubstituteDomainUID(dom, uid)
 		base = orm.MergeDomains(base, dom)
@@ -86,7 +90,7 @@ func workspaceListDomain(ctx context.Context, in listDomainInput) [][]interface{
 }
 
 func filterDomainToModel(model string, domain [][]interface{}) [][]interface{} {
-	if model == "" || len(domain) == 0 {
+	if model == "" || 0 == len(domain) {
 		return domain
 	}
 	inst, ok := orm.Registry[model]

@@ -92,14 +92,12 @@ func TestActionSearchViewIDInContext(t *testing.T) {
 		t.Fatalf("actions=%d", len(vl.Actions))
 	}
 	rec := vl.Actions[0].ToRecord()
-	var ctx string
-	for _, f := range rec.Field {
-		if f.Name == "context" {
-			ctx = f.Body
-		}
+	m := parser.RecordFieldMap(rec)
+	if m["search_view_id"] != "view_crm_pipeline_search" {
+		t.Fatalf("search_view_id: %q", m["search_view_id"])
 	}
-	if !strings.Contains(ctx, "search_view_id") || !strings.Contains(ctx, "default_type") {
-		t.Fatalf("context missing search_view_id or default_type: %q", ctx)
+	if !strings.Contains(m["context"], "default_type") || strings.Contains(m["context"], "search_view_id") {
+		t.Fatalf("context: %q", m["context"])
 	}
 }
 

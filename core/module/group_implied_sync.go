@@ -34,11 +34,11 @@ func ExtractImpliedGroupXMLRefs(evalStr string) []string {
 
 // syncCoreGroupImpliedFromEval parses implied_ids eval and inserts rows into core.group.implied.
 func syncCoreGroupImpliedFromEval(ctx context.Context, moduleName string, groupID int, evalStr string) error {
-	if groupID <= 0 || strings.TrimSpace(evalStr) == "" {
+	if 0 >= groupID || strings.TrimSpace(evalStr) == "" {
 		return nil
 	}
 	refs := ExtractImpliedGroupXMLRefs(evalStr)
-	if len(refs) == 0 {
+	if 0 == len(refs) {
 		return fmt.Errorf("no (4, ref('…')) implied link commands in %q", evalStr)
 	}
 	implTbl := orm.MustQuotedTableName("core.group.implied")
@@ -47,7 +47,7 @@ func syncCoreGroupImpliedFromEval(ctx context.Context, moduleName string, groupI
 		if err != nil {
 			return fmt.Errorf("resolve implied ref %q: %w", ref, err)
 		}
-		if impliedID <= 0 {
+		if 0 >= impliedID {
 			return fmt.Errorf("resolve implied ref %q: id is 0", ref)
 		}
 		if impliedID == groupID {
@@ -65,11 +65,11 @@ func syncCoreGroupImpliedFromEval(ctx context.Context, moduleName string, groupI
 
 // syncSysRuleGroupsFromEval parses groups eval [(4, ref('…'))] into sys.rule.group.rel.
 func syncSysRuleGroupsFromEval(ctx context.Context, moduleName string, ruleID int, evalStr string) error {
-	if ruleID <= 0 || strings.TrimSpace(evalStr) == "" {
+	if 0 >= ruleID || strings.TrimSpace(evalStr) == "" {
 		return nil
 	}
 	refs := ExtractImpliedGroupXMLRefs(evalStr)
-	if len(refs) == 0 {
+	if 0 == len(refs) {
 		return fmt.Errorf("no (4, ref('…')) group link commands in %q", evalStr)
 	}
 	relTbl := orm.MustQuotedTableName("sys.rule.group.rel")
@@ -81,7 +81,7 @@ func syncSysRuleGroupsFromEval(ctx context.Context, moduleName string, ruleID in
 		if err != nil {
 			return fmt.Errorf("resolve rule group ref %q: %w", ref, err)
 		}
-		if gid <= 0 {
+		if 0 >= gid {
 			continue
 		}
 		_, err = orm.DB.ExecContext(ctx,
@@ -97,7 +97,7 @@ func syncSysRuleGroupsFromEval(ctx context.Context, moduleName string, ruleID in
 // EnsureSystemImpliesManagerGroup links base.group_system → module Manager groups
 // so Settings admins inherit every installed app Manager (and thus User) ladder.
 func EnsureSystemImpliesManagerGroup(ctx context.Context, moduleName, recordXMLID string, groupID int) error {
-	if groupID <= 0 {
+	if 0 >= groupID {
 		return nil
 	}
 	idLower := strings.ToLower(strings.TrimSpace(recordXMLID))
@@ -105,7 +105,7 @@ func EnsureSystemImpliesManagerGroup(ctx context.Context, moduleName, recordXMLI
 		return nil
 	}
 	sysGID, _, err := orm.ResolveXmlId(ctx, "base.group_system")
-	if err != nil || sysGID <= 0 {
+	if err != nil || 0 >= sysGID {
 		return err
 	}
 	if sysGID == groupID {
@@ -119,4 +119,47 @@ func EnsureSystemImpliesManagerGroup(ctx context.Context, moduleName, recordXMLI
 		return fmt.Errorf("system implies %s.%s: %w", moduleName, recordXMLID, err)
 	}
 	return nil
+}
+
+// ReconcileSystemManagerImpliedInstalled runs ReconcileSystemManagerImpliedForModule for every installed module (idempotent).
+func ReconcileSystemManagerImpliedInstalled(ctx context.Context) {
+	if orm.DB == nil {
+		return
+	}
+	names, err := orm.InstalledModuleNames(ctx)
+	if err != nil {
+		syncWarn(ctx, "Warning: reconcile system→manager installed modules: %v", err)
+		return
+	}
+	for name := range names {
+		ReconcileSystemManagerImpliedForModule(ctx, name)
+	}
+}
+
+// ReconcileSystemManagerImpliedForModule ensures base.group_system implies each Manager group declared in module XML.
+func ReconcileSystemManagerImpliedForModule(ctx context.Context, moduleName string) {
+	if orm.DB == nil {
+		return
+	}
+	moduleName = strings.TrimSpace(moduleName)
+	if moduleName == "" {
+		return
+	}
+	rows, err := orm.Search(ctx, "sys.model.data", [][]interface{}{
+		{"module", "=", moduleName},
+		{"model", "=", "core.group"},
+	})
+	if err != nil {
+		return
+	}
+	for _, row := range rows {
+		xmlID := strings.TrimSpace(orm.AsString(row["name"]))
+		gid64, ok := orm.CoerceInt64(row["core_id"])
+		if !ok || gid64 <= 0 || xmlID == "" {
+			continue
+		}
+		if err := EnsureSystemImpliesManagerGroup(ctx, moduleName, xmlID, int(gid64)); err != nil {
+			syncWarn(ctx, "Warning: reconcile system→manager %s.%s: %v", moduleName, xmlID, err)
+		}
+	}
 }

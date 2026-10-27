@@ -6,7 +6,7 @@ import (
 
 	"sumeru/core/applog"
 	"sumeru/core/event"
-	"sumeru/core/orm"
+	"sumeru/core/sdk"
 )
 
 func init() {
@@ -18,26 +18,26 @@ func registerHooks() {
 	event.Subscribe("record.updated", runServerActionsForEvent)
 	event.Subscribe("record.deleted", runServerActionsForEvent)
 	event.Subscribe("cron.tick", runServerActionsForEvent)
-	orm.RegisterBeforeDelete(matchBeforeDelete)
+	sdk.RegisterBeforeDelete(matchBeforeDelete)
 }
 
 func runServerActionsForEvent(ctx context.Context, ev event.Event) error {
-	if orm.DB == nil {
+	if !sdk.DatabaseOpen() {
 		return nil
 	}
-	if _, ok := orm.Registry["sys.server.action"]; !ok {
+	if !sdk.ModelRegistered("sys.server.action") {
 		return nil
 	}
-	modelName := strings.TrimSpace(orm.AsString(ev.Payload["model"]))
+	modelName := strings.TrimSpace(sdk.AsString(ev.Payload["model"]))
 	if automationSkippedModel(modelName) {
 		return nil
 	}
-	return orm.WithElevated(ctx, "automation.server_action", func(bypass context.Context) error {
-		installed, err := orm.InstalledModuleNames(bypass)
-		if err != nil || !orm.ShouldMaterializeModel("sys.server.action", installed) {
+	return sdk.WithElevated(ctx, "automation.server_action", func(bypass context.Context) error {
+		installed, err := sdk.InstalledModuleNames(bypass)
+		if err != nil || !sdk.ShouldMaterializeModel("sys.server.action", installed) {
 			return nil
 		}
-		rows, err := orm.Search(bypass, "sys.server.action", [][]interface{}{
+		rows, err := sdk.Search(bypass, "sys.server.action", [][]interface{}{
 			{"event_name", "=", ev.Name},
 			{"active", "=", true},
 		})
@@ -49,8 +49,8 @@ func runServerActionsForEvent(ctx context.Context, ev event.Event) error {
 			if !actionApplies(runCtx, row, ev) {
 				continue
 			}
-			actionID, _ := orm.CoerceInt64(row["id"])
-			resID, _ := orm.CoerceInt64(ev.Payload["id"])
+			actionID, _ := sdk.CoerceInt64(row["id"])
+			resID, _ := sdk.CoerceInt64(ev.Payload["id"])
 			claimed, err := claimRun(runCtx, actionID, ev, modelName, resID)
 			if err != nil {
 				applog.Warn(runCtx, applog.Event{

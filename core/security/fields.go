@@ -11,12 +11,13 @@ type FieldPolicy struct {
 // FieldRegistry is the single source of truth for sensitive field handling.
 var FieldRegistry = map[string]map[string]FieldPolicy{
 	"core.user": {
-		"password":     {ReadRedact: true, WriteDenyDirect: true},
-		"totp_secret":  {ReadRedact: true, WriteDenyUnlessSys: true},
-		"totp_enabled": {WriteDenyUnlessSys: true},
-		"active":       {WriteDenyUnlessSys: true},
-		"user_type":    {WriteDenyUnlessSys: true},
-		"company_id":   {WriteDenyUnlessSys: true},
+		"password":         {ReadRedact: true, WriteDenyDirect: true},
+		"reset_token_hash": {ReadRedact: true, WriteDenyDirect: true},
+		"totp_secret":      {ReadRedact: true, WriteDenyUnlessSys: true},
+		"totp_enabled":     {WriteDenyUnlessSys: true},
+		"active":           {WriteDenyUnlessSys: true},
+		"user_type":        {WriteDenyUnlessSys: true},
+		"company_id":       {WriteDenyUnlessSys: true},
 	},
 	"core.user.apikey": {
 		"key_hash": {ReadRedact: true},
@@ -49,7 +50,7 @@ func WriteDenyDirectFields(model string) map[string]bool {
 
 func fieldsMatching(model string, pred func(FieldPolicy) bool) map[string]bool {
 	fields := FieldRegistry[model]
-	if len(fields) == 0 {
+	if 0 == len(fields) {
 		return nil
 	}
 	out := make(map[string]bool)

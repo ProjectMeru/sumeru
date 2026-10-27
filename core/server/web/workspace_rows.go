@@ -116,7 +116,7 @@ func loadWorkspaceListData(ctx context.Context, in workspaceLoadInput) error {
 			orderBy = gbOrder + ", " + orderBy
 		}
 	}
-	rows, err := orm.SearchPage(ctx, targetModel, domain, workspaceListPageSize, req.listOffset, orderBy)
+	rows, err := orm.SearchPage(ctx, targetModel, domain, actionListLimit(in.ActionData), req.listOffset, orderBy)
 	if err != nil {
 		return fmt.Errorf("list load: %w", err)
 	}

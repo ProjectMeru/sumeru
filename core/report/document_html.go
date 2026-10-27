@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	"html"
+	"html/template"
 	"regexp"
 	"strings"
-	"text/template"
 )
 
 var htmlTemplates = map[string]string{}
@@ -22,19 +22,27 @@ func RegisterHTMLTemplate(name, body string) {
 
 // RenderHTMLTemplate executes a registered HTML template into PDF input.
 func RenderHTMLTemplate(name string, ctx DocumentRenderContext) (TemplatePDFInput, error) {
+	body, err := executeRegisteredHTML(name, ctx)
+	if err != nil {
+		return TemplatePDFInput{}, err
+	}
+	return TemplatePDFInputFromHTML(body, PageSizeA4)
+}
+
+func executeRegisteredHTML(name string, ctx DocumentRenderContext) (string, error) {
 	raw, ok := htmlTemplates[strings.TrimSpace(name)]
 	if !ok {
-		return TemplatePDFInput{}, fmt.Errorf("report html template %q not found", name)
+		return "", fmt.Errorf("report html template %q not found", name)
 	}
 	tmpl, err := template.New("htmlreport").Option("missingkey=zero").Parse(raw)
 	if err != nil {
-		return TemplatePDFInput{}, fmt.Errorf("html template parse: %w", err)
+		return "", fmt.Errorf("html template parse: %w", err)
 	}
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, ctx); err != nil {
-		return TemplatePDFInput{}, fmt.Errorf("html template exec: %w", err)
+		return "", fmt.Errorf("html template exec: %w", err)
 	}
-	return TemplatePDFInputFromHTML(buf.String(), PageSizeA4)
+	return buf.String(), nil
 }
 
 // TemplatePDFInputFromHTML maps a minimal HTML subset to structured PDF sections.
@@ -82,10 +90,10 @@ func TemplatePDFInputFromHTML(htmlBody string, pageSize string) (TemplatePDFInpu
 			for _, cm := range cellRe.FindAllStringSubmatch(rm[1], -1) {
 				cells = append(cells, stripHTMLTags(cm[1]))
 			}
-			if len(cells) == 0 {
+			if 0 == len(cells) {
 				continue
 			}
-			if i == 0 {
+			if 0 == i {
 				out.TableHead = cells
 			} else {
 				rows = append(rows, cells)
@@ -93,7 +101,7 @@ func TemplatePDFInputFromHTML(htmlBody string, pageSize string) (TemplatePDFInpu
 		}
 		out.TableRows = rows
 	}
-	if len(out.Sections) == 0 && len(out.TableRows) == 0 {
+	if 0 == len(out.Sections) && 0 == len(out.TableRows) {
 		out.Sections = append(out.Sections, TemplatePDFSection{Body: stripHTMLTags(htmlBody)})
 	}
 	return out, nil
@@ -104,21 +112,12 @@ func stripHTMLTags(s string) string {
 	return strings.TrimSpace(html.UnescapeString(s))
 }
 
-// PreviewHTMLFromTemplate renders registered HTML for admin preview (escaped wrapper).
+// PreviewHTMLFromTemplate renders a registered HTML template for admin preview.
 func PreviewHTMLFromTemplate(name string, ctx DocumentRenderContext) (string, error) {
-	raw, ok := htmlTemplates[strings.TrimSpace(name)]
-	if !ok {
-		return "", fmt.Errorf("report html template %q not found", name)
-	}
-	tmpl, err := template.New("htmlreport").Option("missingkey=zero").Parse(raw)
+	body, err := executeRegisteredHTML(name, ctx)
 	if err != nil {
 		return "", err
 	}
-	var body bytes.Buffer
-	if err := tmpl.Execute(&body, ctx); err != nil {
-		return "", err
-	}
-	// Serve template output inside a safe shell; dynamic text in template should use html/template auto-escape.
 	return fmt.Sprintf("<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>%s</title></head><body>%s</body></html>",
-		html.EscapeString(name), body.String()), nil
+		html.EscapeString(name), body), nil
 }

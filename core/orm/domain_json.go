@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 )
 
 // ParseDomainJSON parses a JSON array of [field, operator, value] triples into [][]interface{}.
@@ -39,7 +40,7 @@ func ParseDomainJSON(raw string) ([][]interface{}, error) {
 // ResolveDomainXMLRefs replaces many2one-style string values that look like XML ids
 // (module.name) with their resolved integer ids.
 func ResolveDomainXMLRefs(ctx context.Context, domain [][]interface{}) [][]interface{} {
-	if len(domain) == 0 {
+	if 0 == len(domain) {
 		return domain
 	}
 	out := make([][]interface{}, len(domain))
@@ -59,7 +60,7 @@ func ResolveDomainXMLRefs(ctx context.Context, domain [][]interface{}) [][]inter
 			continue
 		}
 		id, _, err := ResolveXmlId(ctx, s)
-		if err != nil || id <= 0 {
+		if err != nil || 0 >= id {
 			out[i] = d
 			continue
 		}
@@ -83,7 +84,7 @@ type DomainContext struct {
 
 // SubstituteDomainContext replaces $uid, $company_id, and $company_ids in domain values.
 func SubstituteDomainContext(domain [][]interface{}, dc DomainContext) [][]interface{} {
-	if len(domain) == 0 {
+	if 0 == len(domain) {
 		return domain
 	}
 	out := make([][]interface{}, len(domain))
@@ -109,6 +110,10 @@ func SubstituteDomainContext(domain [][]interface{}, dc DomainContext) [][]inter
 				arr[j] = id
 			}
 			out[i] = []interface{}{d[0], d[1], arr}
+		case "$today":
+			out[i] = []interface{}{d[0], d[1], time.Now().UTC().Format("2006-01-02")}
+		case "$now":
+			out[i] = []interface{}{d[0], d[1], time.Now().UTC().Format(time.RFC3339)}
 		default:
 			out[i] = d
 		}

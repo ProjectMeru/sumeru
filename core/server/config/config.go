@@ -46,6 +46,7 @@ type Config struct {
 	DbReadReplicaDSN            string   // optional libpq DSN for read replica (search/read_group RPC)
 	RateLimitRPM                int      // rate_limit_rpm per client IP on /api/rpc and login; 0 = disabled
 	TrustedProxies              string   // trusted_proxies: comma-separated CIDRs/IPs allowed to set X-Forwarded-For; empty = never trust XFF
+	WebBaseURL                  string   // web_base_url: canonical public origin (scheme + host); required for OAuth behind untrusted Host
 	CSRFSecret                  string   // csrf_secret: shared HMAC key for multi-instance; empty = ephemeral per process
 	ForceSecureCookies          bool     // force_secure_cookies: set Secure on session/flash cookies even when dev_mode=true
 	SessionCookieStrictSameSite bool     // session_cookie_strict_samesite: use SameSite=Strict on session cookie (default Lax)
@@ -58,6 +59,8 @@ type Config struct {
 	SMTPUser                    string
 	SMTPPassword                string
 	SMTPFrom                    string
+	TLSCertFile                 string // tls_cert_file: enable HTTPS + HTTP/2 via ALPN when set with tls_key_file
+	TLSKeyFile                  string // tls_key_file
 }
 
 var AppConfig Config
@@ -187,6 +190,8 @@ func LoadConfig(path string) error {
 			}
 		case keyTrustedProxies:
 			AppConfig.TrustedProxies = val
+		case keyWebBaseURL:
+			AppConfig.WebBaseURL = val
 		case keyCSRFSecret:
 			AppConfig.CSRFSecret = val
 		case keyForceSecureCookies:
@@ -217,6 +222,10 @@ func LoadConfig(path string) error {
 			AppConfig.SMTPPassword = val
 		case keySMTPFrom:
 			AppConfig.SMTPFrom = val
+		case keyTLSCertFile:
+			AppConfig.TLSCertFile = val
+		case keyTLSKeyFile:
+			AppConfig.TLSKeyFile = val
 		}
 	}
 

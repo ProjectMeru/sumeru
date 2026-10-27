@@ -167,7 +167,7 @@ func collectModelRefs(workspace, sumeruRoot, addonsRoot string, modules []string
 			if err != nil {
 				return nil, fmt.Errorf("scan %s: %w", dir, err)
 			}
-			if len(refs) == 0 {
+			if 0 == len(refs) {
 				continue
 			}
 			for i := range refs {
@@ -185,7 +185,7 @@ func collectModelRefs(workspace, sumeruRoot, addonsRoot string, modules []string
 }
 
 func filterRefsForUsage(refs []modelRef, used map[string]struct{}) []modelRef {
-	if len(used) == 0 {
+	if 0 == len(used) {
 		return nil
 	}
 	byTech := map[string]modelRef{}

@@ -18,6 +18,11 @@ func NewStubModelForTest(name string, fields []FieldDefinition) StubModelForTest
 }
 
 // RegisterStubModelForTest registers a minimal model for external tests.
+// StampActiveCompanyOnCreateForTest applies create-time company_id defaulting for tests.
+func StampActiveCompanyOnCreateForTest(ctx context.Context, modelName string, prepared map[string]interface{}) {
+	stampActiveCompanyOnCreate(ctx, modelName, prepared)
+}
+
 func RegisterStubModelForTest(t *testing.T, name string, fields []FieldDefinition) StubModelForTest {
 	t.Helper()
 	m := StubModelForTest{name: name, fields: fields}
@@ -66,6 +71,18 @@ func ResolveActionRecordForTest(ctx context.Context, actionID int, actionQuery s
 // SetDBForTest replaces the global DB handle for external tests. Call ResetDBForTest in t.Cleanup.
 func SetDBForTest(w DBWrapper) {
 	DB = w
+}
+
+// ApplyAccessDomainForTest classifies one sys.access domain into global AND vs group OR.
+func ApplyAccessDomainForTest(groupID int, groups []int, dom [][]interface{}) (globals int, groupRules int, allowAll bool) {
+	var out ruleDomainParts
+	applyAccessDomain(&out, groupID, groups, dom)
+	return len(out.globals), len(out.groups), out.allowAllGroups
+}
+
+// DropExtraExclusiveGroupsForTest keeps the first group in each exclusive category.
+func DropExtraExclusiveGroupsForTest(groupIDs []int, exclusiveCategory map[int]int) []int {
+	return dropExtraExclusiveGroups(groupIDs, exclusiveCategory)
 }
 
 // ResetDBForTest clears the global DB handle.

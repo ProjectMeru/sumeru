@@ -12,11 +12,11 @@ import (
 
 func TestSuccess_and_Fail(t *testing.T) {
 	ok := api.Success([]int{1})
-	if !ok.OK || ok.Error != nil || ok.Result == nil {
+	if !ok.Success || ok.Error != nil || ok.Data == nil {
 		t.Fatalf("Success: %+v", ok)
 	}
 	fail := api.Fail(api.CodeValidationError, "bad", map[string]interface{}{"field": "x"})
-	if fail.OK || fail.Error == nil || fail.Error.Code != api.CodeValidationError {
+	if fail.Success || fail.Error == nil || fail.Error.Code != api.CodeValidationError {
 		t.Fatalf("Fail: %+v", fail)
 	}
 }
@@ -34,15 +34,15 @@ func TestWriteResponse(t *testing.T) {
 	if err := json.Unmarshal(rr.Body.Bytes(), &m); err != nil {
 		t.Fatal(err)
 	}
-	if m["ok"] != false {
-		t.Fatalf("ok = %v", m["ok"])
+	if m["success"] != false {
+		t.Fatalf("success = %v", m["success"])
 	}
 }
 
 func TestResponseFromError(t *testing.T) {
 	t.Run("nil", func(t *testing.T) {
 		resp, status := api.ResponseFromError(nil)
-		if status != http.StatusOK || !resp.OK {
+		if status != http.StatusOK || !resp.Success {
 			t.Fatalf("resp=%+v status=%d", resp, status)
 		}
 	})

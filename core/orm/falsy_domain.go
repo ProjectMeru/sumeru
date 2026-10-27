@@ -179,7 +179,7 @@ func cellIsFalsyEmpty(modelName, fieldName string, cellValue interface{}) bool {
 					return true
 				}
 				if id, ok := CoerceInt64(cellValue); ok {
-					return id == 0
+					return 0 == id
 				}
 				return false
 			case falsyEmpty:
@@ -189,10 +189,10 @@ func cellIsFalsyEmpty(modelName, fieldName string, cellValue interface{}) bool {
 					return true
 				}
 				if n, ok := CoerceInt64(cellValue); ok {
-					return n == 0
+					return 0 == n
 				}
 				f, ok := toFloat64(cellValue)
-				return ok && f == 0
+				return ok && 0 == f
 			case falsyRelOne2Many, falsyRelMany2Many:
 				return relationalCellEmpty(cellValue)
 			case falsyNone:
@@ -210,16 +210,16 @@ func relationalCellEmpty(cellValue interface{}) bool {
 	case nil:
 		return true
 	case []interface{}:
-		return len(v) == 0
+		return 0 == len(v)
 	case []int:
-		return len(v) == 0
+		return 0 == len(v)
 	case []int64:
-		return len(v) == 0
+		return 0 == len(v)
 	case []map[string]interface{}:
-		return len(v) == 0
+		return 0 == len(v)
 	default:
 		if id, ok := CoerceInt64(cellValue); ok {
-			return id == 0
+			return 0 == id
 		}
 		return strings.TrimSpace(AsString(cellValue)) == ""
 	}

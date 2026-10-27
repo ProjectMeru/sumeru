@@ -11,7 +11,7 @@ Maturity of the **`sumeru` repository** (Go engine + `addons/`). Business apps i
 | Modules & ORM | **Ready** | Manifests, install/update, compute, domains, multi-company, elevated context |
 | Security | **Ready** | Groups, record rules, model ACL, field ACL UI |
 | Views & SWC | **Ready** | List, form, kanban, graph, pivot, calendar, gantt, map, cohort, hierarchy, activity; view inherit |
-| JSON-RPC | **Ready** | `POST /api/rpc` (session or API key) — primary integration API |
+| JSON-RPC | **Ready** | `POST /api/rpc/{model}/{method}` + `POST /api/rpc/auth.login` (session or API key) — primary integration API |
 | Reports, import/export | **Ready** | Document reports; import wizard; async export / bulk jobs (`platform`) |
 | Mail & activities | **Partial** | `mail` addon: messages, followers, notifications, outbound queue, activity board; no inbound IMAP |
 | Realtime | **Ready** | `sys.bus.event`, PG NOTIFY, SWC WebSocket reconnect |

@@ -41,7 +41,7 @@ func rpcReadGroup(ctx context.Context, model string, args json.RawMessage, kwarg
 	for _, f := range spec.Fields {
 		rg.Fields = append(rg.Fields, orm.ReadGroupField{Name: f.Name, Field: f.Field, Measure: f.Measure})
 	}
-	if len(rg.Fields) == 0 && len(rg.GroupBy) > 0 {
+	if 0 == len(rg.Fields) && len(rg.GroupBy) > 0 {
 		rg.Fields = []orm.ReadGroupField{{Name: "__count", Field: "id", Measure: "count"}}
 	}
 	return orm.ReadGroup(ctx, model, domain, rg)

@@ -11,7 +11,7 @@ import (
 // CriteriaToDomain converts a SearchOne equality map into a conjunctive domain
 // (sorted keys so SQL placeholder order is stable).
 func CriteriaToDomain(criteria map[string]interface{}) [][]interface{} {
-	if len(criteria) == 0 {
+	if 0 == len(criteria) {
 		return nil
 	}
 	keys := make([]string, 0, len(criteria))
@@ -47,7 +47,7 @@ func SearchOne(ctx context.Context, modelName string, criteria map[string]interf
 	}
 
 	domain := CriteriaToDomain(criteria)
-	if len(domain) == 0 {
+	if 0 == len(domain) {
 		return nil, fmt.Errorf("search criteria required")
 	}
 

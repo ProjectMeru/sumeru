@@ -2,9 +2,10 @@ package orm_test
 
 import (
 	"testing"
+	"time"
+
 	"sumeru/core/orm"
 )
-
 
 func TestHashAPIKey_stable(t *testing.T) {
 	a := orm.HashAPIKey("sk_test")
@@ -55,6 +56,15 @@ func TestSubstituteDomainContext_ABAC(t *testing.T) {
 	if out[3][2] != "keep" {
 		t.Fatalf("literal changed: %v", out[3][2])
 	}
+	today := time.Now().UTC().Format("2006-01-02")
+	timed := orm.SubstituteDomainContext([][]interface{}{{"date", "=", "$today"}, {"ts", "=", "$now"}}, orm.DomainContext{})
+	if timed[0][2] != today {
+		t.Fatalf("today: %v", timed[0][2])
+	}
+	now, ok := timed[1][2].(string)
+	if !ok || len(now) < len(today) || now[:len(today)] != today {
+		t.Fatalf("now: %v", timed[1][2])
+	}
 }
 
 func TestRecordMatchesDomain(t *testing.T) {
@@ -87,6 +97,9 @@ func TestTranslate_fallbackWithoutDB(t *testing.T) {
 	}
 	if orm.Translate(orm.BackgroundBypass(), "en_US", "X") != "X" {
 		t.Fatal("en_US should return src")
+	}
+	if orm.UserLang(nil) != "en_US" || orm.UserLang(orm.BackgroundBypass()) != "en_US" {
+		t.Fatal("missing user should use en_US")
 	}
 }
 

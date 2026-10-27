@@ -25,6 +25,12 @@
         <!-- Security -->
         <menuitem id="menu_security_section" name="Security" parent="menu_settings_root"
             sequence="15" web_icon="settings" groups="base.group_system" />
+        <menuitem id="menu_security_auth_settings" name="Authentication" parent="menu_security_section"
+            sequence="5" action="base.action_settings.auth" groups="base.group_system"
+            web_icon="settings" />
+        <menuitem id="menu_security_mail_settings" name="Mail delivery" parent="menu_security_section"
+            sequence="8" action="base.action_settings.mail" groups="base.group_system"
+            web_icon="settings" />
         <menuitem id="menu_security_access" name="Access Rights" parent="menu_security_section"
             sequence="10" action="base.access_action_sys.access" groups="base.group_system"
             web_icon="settings" />

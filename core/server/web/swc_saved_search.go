@@ -78,7 +78,7 @@ func SwcSavedSearchDeleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id, err := strconv.Atoi(strings.TrimSpace(r.URL.Query().Get("id")))
-	if err != nil || id <= 0 {
+	if err != nil || 0 >= id {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}

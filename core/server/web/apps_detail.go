@@ -2,7 +2,6 @@ package web
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -13,23 +12,23 @@ import (
 
 // appsModuleDetailVM is the read-only app detail view for one sys.module row on the Apps screen.
 type appsModuleDetailVM struct {
-	Layout                             string
-	Editing                            bool
-	Name, DisplayName, Author, Version string
+	Layout                              string
+	Editing                             bool
+	Name, DisplayName, Author, Version  string
 	Description, Summary, CategoryLabel string
-	State, StatusLabel                 string
-	HasLongDescription                 bool
-	Active                             bool
-	IsApplication, IsCore              bool
-	ID                                 int
-	IconURL, IconLetter                string
-	IconHue                            int
-	OpenAppURL                         string
-	Depends                            []appsModuleDep
-	CanInstall, CanUninstall           bool
-	CanDeactivate, CanActivate         bool
-	BackAppsQuery                      string
-	EditURL, CancelURL                 string
+	State, StatusLabel                  string
+	HasLongDescription                  bool
+	Active                              bool
+	IsApplication, IsCore               bool
+	ID                                  int
+	IconURL, IconLetter                 string
+	IconHue                             int
+	OpenAppURL                          string
+	Depends                             []appsModuleDep
+	CanInstall, CanUninstall            bool
+	CanDeactivate, CanActivate          bool
+	BackAppsQuery                       string
+	EditURL, CancelURL                  string
 }
 
 const appsListBreadcrumb = "Applications"
@@ -76,22 +75,22 @@ func loadAppsModuleDetail(
 		HasLongDescription: moduleHasLongDescription(summary, parsed.Description),
 		State:              parsed.State,
 		StatusLabel:        moduleStatusLabel(parsed),
-		Active:        parsed.Active,
-		IsApplication: parsed.Application,
-		IsCore:        listEntry.IsCore,
-		ID:            recordID,
-		IconURL:       listEntry.IconURL,
-		IconLetter:    listEntry.IconLetter,
-		IconHue:       listEntry.IconHue,
-		OpenAppURL:    moduleOpenAppURL(ctx, parsed),
-		Depends:       moduleDepends(parsed.Name, listedModules, browse),
-		CanInstall:    listEntry.CanInstall,
-		CanUninstall:  listEntry.CanUninstall,
-		CanDeactivate: listEntry.CanDeactivate,
-		CanActivate:   listEntry.CanActivate,
-		BackAppsQuery: browseQuery,
-		EditURL:       appsDetailPageURL(moduleBrowse, true),
-		CancelURL:     appsDetailPageURL(moduleBrowse, false),
+		Active:             parsed.Active,
+		IsApplication:      parsed.Application,
+		IsCore:             listEntry.IsCore,
+		ID:                 recordID,
+		IconURL:            listEntry.IconURL,
+		IconLetter:         listEntry.IconLetter,
+		IconHue:            listEntry.IconHue,
+		OpenAppURL:         moduleOpenAppURL(ctx, parsed),
+		Depends:            moduleDepends(parsed.Name, listedModules, browse),
+		CanInstall:         listEntry.CanInstall,
+		CanUninstall:       listEntry.CanUninstall,
+		CanDeactivate:      listEntry.CanDeactivate,
+		CanActivate:        listEntry.CanActivate,
+		BackAppsQuery:      browseQuery,
+		EditURL:            appsDetailPageURL(moduleBrowse, true),
+		CancelURL:          appsDetailPageURL(moduleBrowse, false),
 	}
 	breadcrumb = "Apps · " + detail.DisplayName
 	return detail, breadcrumb, true
@@ -113,11 +112,13 @@ func moduleOpenAppURL(ctx context.Context, parsed moduleRow) string {
 	if parsed.State != "installed" || !parsed.Active {
 		return ""
 	}
-	menuID := render.RootMenuIDForModule(ctx, parsed.Name)
-	if menuID <= 0 {
-		return ""
+	if href := render.ModuleWebURL(parsed.Name); href != "" {
+		if 0 >= render.RootMenuIDForModule(ctx, parsed.Name) {
+			return ""
+		}
+		return href
 	}
-	return fmt.Sprintf("/web?menu_id=%d", menuID)
+	return ""
 }
 
 func moduleDepends(moduleName string, listedModules []appsModule, browse appsBrowseState) []appsModuleDep {
@@ -126,7 +127,7 @@ func moduleDepends(moduleName string, listedModules []appsModule, browse appsBro
 		return nil
 	}
 	deps := addon.Manifest.Depends
-	if len(deps) == 0 {
+	if 0 == len(deps) {
 		return nil
 	}
 	out := make([]appsModuleDep, 0, len(deps))

@@ -130,7 +130,7 @@ func PortalRecordHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	model := strings.TrimSpace(r.URL.Query().Get("model"))
 	id, _ := strconv.ParseInt(strings.TrimSpace(r.URL.Query().Get("id")), 10, 64)
-	if model == "" || id <= 0 || !orm.PortalAllowsModel(model, "read") {
+	if model == "" || 0 >= id || !orm.PortalAllowsModel(model, "read") {
 		http.NotFound(w, r)
 		return
 	}
@@ -190,7 +190,7 @@ func requirePortalUser(w http.ResponseWriter, r *http.Request) bool {
 		return false
 	}
 	uid := SessionUserID(r)
-	if uid <= 0 {
+	if 0 >= uid {
 		return false
 	}
 	if !orm.UserIsPortalOnly(r.Context(), uid) && !orm.UserHasGroupXML(r.Context(), uid, "base.group_user") {
@@ -201,7 +201,7 @@ func requirePortalUser(w http.ResponseWriter, r *http.Request) bool {
 }
 
 func redirectPortalUserFromWeb(w http.ResponseWriter, r *http.Request, uid int) bool {
-	if uid <= 0 || !orm.UserIsPortalOnly(r.Context(), uid) {
+	if 0 >= uid || !orm.UserIsPortalOnly(r.Context(), uid) {
 		return false
 	}
 	http.Redirect(w, r, portalHomeRoute, http.StatusFound)
@@ -215,7 +215,28 @@ func postLoginDestination(ctx context.Context, userID int, requestedNext string)
 		}
 		return portalHomeRoute
 	}
-	return SafePathNext(requestedNext, homeRoute)
+	next := SafePathNext(requestedNext, homeRoute)
+	if next == homeRoute {
+		if dest := userHomeActionURL(ctx, userID); dest != "" {
+			return dest
+		}
+	}
+	return next
+}
+
+func userHomeActionURL(ctx context.Context, userID int) string {
+	if 0 >= userID {
+		return ""
+	}
+	row, err := orm.SearchOne(ctx, "core.user", map[string]interface{}{"id": userID})
+	if err != nil {
+		return ""
+	}
+	actionID, ok := orm.CoerceInt64(row["action_id"])
+	if !ok || 0 >= actionID {
+		return ""
+	}
+	return render.WorkspaceURL(render.WorkspaceQuery{ActionID: int(actionID)})
 }
 
 func stringsHasPortalPrefix(path string) bool {

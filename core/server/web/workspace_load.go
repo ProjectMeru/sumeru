@@ -86,4 +86,3 @@ func parsePositiveRecordID(recordIDRaw string) (int, bool) {
 	recordID, err := strconv.Atoi(strings.TrimSpace(recordIDRaw))
 	return recordID, err == nil && recordID > 0
 }
-

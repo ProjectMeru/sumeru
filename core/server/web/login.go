@@ -13,8 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/crypto/bcrypt"
-
 	"sumeru/core/applog"
 	"sumeru/core/engine/assets"
 	"sumeru/core/engine/render"
@@ -59,19 +57,10 @@ type loginFinishOpts struct {
 var (
 	loginLockoutMu    sync.Mutex
 	loginFailures     = map[string][]time.Time{}
-	dummyPasswordHash = mustDummyBcryptHash()
 	authTemplateMu    sync.Mutex
 	authTemplateCache = map[string]*template.Template{}
 	authTemplateErrs  = map[string]error{}
 )
-
-func mustDummyBcryptHash() string {
-	h, err := bcrypt.GenerateFromPassword([]byte("sumeru-timing-dummy-password"), bcrypt.DefaultCost)
-	if err != nil {
-		panic("login lockout: dummy bcrypt: " + err.Error())
-	}
-	return string(h)
-}
 
 func setLoginCSRFCookie(w http.ResponseWriter) string {
 	token := newLoginCSRFToken()
@@ -185,12 +174,7 @@ func resetLoginLockoutState() {
 }
 
 func comparePasswordConstantTime(storedHash, plain string) bool {
-	storedHash = strings.TrimSpace(storedHash)
-	if storedHash == "" {
-		_ = bcrypt.CompareHashAndPassword([]byte(dummyPasswordHash), []byte(plain))
-		return false
-	}
-	return bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(plain)) == nil
+	return auth.ComparePasswordHash(storedHash, plain)
 }
 
 func parsePositiveInt(s string) int {
@@ -305,7 +289,7 @@ func TOTPLoginPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	uid := pendingMFAUserID(r)
-	if uid <= 0 {
+	if 0 >= uid {
 		http.Error(w, "session expired", http.StatusUnauthorized)
 		return
 	}
@@ -397,7 +381,7 @@ func finishTOTPSession(w http.ResponseWriter, r *http.Request, uid int, nextFrom
 }
 
 func establishSessionAndRedirect(w http.ResponseWriter, r *http.Request, userID int, next, logRoute string) {
-	if err := CreateSession(w, userID); err != nil {
+	if err := CreateSession(w, r.Context(), userID); err != nil {
 		WebLogEvent(r.Context(), WebLogInput{
 			Route:     logRoute,
 			Message:   "Could not start session",
@@ -518,22 +502,9 @@ func parseLoginCredentials(r *http.Request) loginCredentials {
 }
 
 func verifyLoginCredentials(ctx context.Context, credentials loginCredentials, clientIP string) (int, bool) {
-	var userID int
-	var passwordHash string
-	var active bool
-	userTbl := orm.MustQuotedTableName(coreUserModel)
-	err := orm.DB.QueryRowContext(ctx,
-		`SELECT id, COALESCE(password, ''), active FROM `+userTbl+` WHERE LOWER(TRIM(login)) = LOWER(TRIM($1)) LIMIT 1`,
-		credentials.Login,
-	).Scan(&userID, &passwordHash, &active)
-	if err != nil || !active {
-		comparePasswordConstantTime("", credentials.Password)
+	userID, _, _, err := orm.AuthenticateLocalUser(ctx, credentials.Login, credentials.Password)
+	if err != nil {
 		recordFailedLogin(ctx, 0, clientIP, "login="+credentials.Login)
-		recordLoginFailure(credentials.Login)
-		return 0, false
-	}
-	if !comparePasswordConstantTime(passwordHash, credentials.Password) {
-		recordFailedLogin(ctx, userID, clientIP, "bad password")
 		recordLoginFailure(credentials.Login)
 		return 0, false
 	}
@@ -546,10 +517,37 @@ func recordFailedLogin(ctx context.Context, userID int, clientIP, auditNote stri
 }
 
 func ActionResetPassword(w http.ResponseWriter, r *http.Request) {
-	if !requireLoginAndPOST(w, r) {
+	switch r.Method {
+	case http.MethodGet:
+		token := strings.TrimSpace(r.URL.Query().Get("token"))
+		if token == "" {
+			http.NotFound(w, r)
+			return
+		}
+		writePasswordResetForm(w, token, "")
+		return
+	case http.MethodPost:
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if !requireSystemAdmin(w, r, false) {
+	if !ParsePostForm(w, r) {
+		return
+	}
+	if token := strings.TrimSpace(r.PostFormValue("token")); token != "" {
+		if !validateLoginCSRF(r) {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		err := orm.ConsumePasswordReset(r.Context(), token, r.PostFormValue("password"), r.PostFormValue("confirm"))
+		if err != nil {
+			writePasswordResetForm(w, token, err.Error())
+			return
+		}
+		http.Redirect(w, r, loginRoute, http.StatusSeeOther)
+		return
+	}
+	if !requireLogin(w, r) || !validateSessionCSRF(w, r) || !requireSystemAdmin(w, r, false) {
 		return
 	}
 
@@ -559,26 +557,50 @@ func ActionResetPassword(w http.ResponseWriter, r *http.Request) {
 	if to == "" && strings.Contains(loginName, "@") {
 		to = loginName
 	}
-	loginURL := loginRoute
-	if mail.Configured() && to != "" {
-		if err := mail.SendPasswordResetEmail(r.Context(), to, loginName, loginURL); err != nil {
+	uid, _ := strconv.Atoi(userID)
+	if mail.Configured() && to != "" && uid > 0 {
+		raw, err := orm.IssuePasswordReset(r.Context(), uid)
+		if err != nil {
 			WebLogEvent(r.Context(), WebLogInput{
-				Route:     resetPasswordRoute,
-				Message:   "login-link email failed",
-				Code:      errcode.InternalError,
-				Operation: "login_link_email",
-				Status:    logStatusFailure,
-				Err:       err,
-				ContextFields: map[string]interface{}{
-					"user_id": userID,
-				},
+				Route: resetPasswordRoute, Message: "password reset token failed",
+				Code: errcode.InternalError, Operation: "password_reset", Status: logStatusFailure, Err: err,
+				ContextFields: map[string]interface{}{"user_id": userID},
+			})
+		} else if err := mail.SendPasswordResetEmail(r.Context(), to, loginName, orm.PasswordResetURL(raw)); err != nil {
+			WebLogEvent(r.Context(), WebLogInput{
+				Route: resetPasswordRoute, Message: "password reset email failed",
+				Code: errcode.InternalError, Operation: "password_reset", Status: logStatusFailure, Err: err,
+				ContextFields: map[string]interface{}{"user_id": userID},
 			})
 		} else {
-			WebLogf(r.Context(), resetPasswordRoute, "login-link email sent for user id=%s login=%q", userID, loginName)
+			WebLogf(r.Context(), resetPasswordRoute, "password reset email sent for user id=%s login=%q", userID, loginName)
 		}
 	} else {
 		WebLogf(r.Context(), resetPasswordRoute,
-			"login-link notify for user id=%s login=%q (configure smtp_host/smtp_from to send email; this does not reset passwords)", userID, loginName)
+			"password reset notify for user id=%s login=%q (configure smtp_host/smtp_from to send email; this does not reset passwords)", userID, loginName)
 	}
 	redirectWithWebMessage(w, r, r.PostFormValue(nextField), resetPasswordMsg)
+}
+
+func writePasswordResetForm(w http.ResponseWriter, token, errMsg string) {
+	csrf := setLoginCSRFCookie(w)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	page := template.Must(template.New("reset").Parse(`<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Choose a password</title></head>
+<body class="sum-body">
+<form method="post" action="{{.Action}}">
+<input type="hidden" name="csrf_token" value="{{.CSRF}}"/>
+<input type="hidden" name="token" value="{{.Token}}"/>
+{{if .Error}}<p>{{.Error}}</p>{{end}}
+<label>New password <input type="password" name="password" required autocomplete="new-password"/></label>
+<label>Confirm <input type="password" name="confirm" required autocomplete="new-password"/></label>
+<button type="submit">Save password</button>
+</form>
+</body></html>`))
+	_ = page.Execute(w, map[string]string{
+		"Action": resetPasswordRoute,
+		"CSRF":   csrf,
+		"Token":  token,
+		"Error":  errMsg,
+	})
 }

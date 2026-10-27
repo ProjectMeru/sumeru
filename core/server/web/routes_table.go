@@ -38,8 +38,10 @@ func RegisterAppRoutes(mux *http.ServeMux) {
 
 	router.Apply(serveMux)
 	registerAppAliases(serveMux)
+	registerModuleWebRoutes(serveMux) // after router.Apply: exact /web/* routes beat the /web/ prefix handler
 	registerContentPrefixRoute(serveMux)
 	registerPortalSharePrefixRoute(serveMux)
+	registerAPIRPCPrefixRoute(serveMux)
 }
 
 func registerContentPrefixRoute(mux *http.ServeMux) {
@@ -98,13 +100,15 @@ func registerRecordRoutes() {
 }
 
 func registerActionRoutes() {
-	registerSession(http.MethodPost, resetPasswordRoute, ActionResetPassword)
+	registerPublic(http.MethodGet, resetPasswordRoute, ActionResetPassword)
+	registerPublic(http.MethodPost, resetPasswordRoute, ActionResetPassword)
 	registerSession(http.MethodPost, createAPIKeyRoute, ActionCreateAPIKey)
 }
 
 func registerSettingsRoutes() {
 	registerSession(http.MethodGet, settingsRoute, SettingsHubHandler)
 	registerSettingsAccountRoutes()
+	registerSettingsPlatformRoutes()
 	registerSettingsFieldACLRoutes()
 	registerSettingsModelACLRoutes()
 	registerSession(http.MethodGet, appLogsRoute, AppLogsHandler)
@@ -114,7 +118,10 @@ func registerSettingsRoutes() {
 func registerAPIRoutes() {
 	registerPublic(http.MethodGet, apiHealthRoute, APIHealthHandler)
 	registerPublic(http.MethodGet, apiReadyRoute, APIReadyHandler)
-	registerPublic(http.MethodPost, apiRPCRoute, RPCJSONHandler)
+}
+
+func registerAPIRPCPrefixRoute(mux *http.ServeMux) {
+	mux.HandleFunc(apiRPCRoutePrefix, RPCPrefixHandler)
 }
 
 func registerPortalRoutes() {

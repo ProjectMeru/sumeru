@@ -19,6 +19,14 @@ export function renderUserSecuritySection(
     const typeGroups = meta.groups.filter((g) => g.isUserType);
     const otherGroups = meta.groups.filter((g) => !g.isUserType);
     const selectedType = typeGroups.find((g) => g.selected)?.id ?? typeGroups[0]?.id ?? 0;
+    const exclusive = new Map<number, typeof otherGroups>();
+    const plainGroups = otherGroups.filter((g) => {
+      if (!g.exclusive || !g.categoryId) return true;
+      const list = exclusive.get(g.categoryId) ?? [];
+      list.push(g);
+      exclusive.set(g.categoryId, list);
+      return false;
+    });
 
     return html`<div class="sum-user-security-root sum-user-security-root--access" data-sum-user-security="access">
       <input type="hidden" name="security_groups_touched" value="1"/>
@@ -40,11 +48,31 @@ export function renderUserSecuritySection(
             </div>
           </div>`
         : ""}
-      ${otherGroups.length > 0
+      ${[...exclusive.entries()].map(([categoryId, groups]) => {
+        const selected = groups.find((g) => g.selected)?.id;
+        const title = groups[0]?.categoryName || "Group";
+        return html`<div class="sum-form-group-outer sum-field-region--sheet">
+          <div class="sum-form-group-title">${title}</div>
+          <div class="sum-user-security-radio-group" role="radiogroup">
+            ${groups.map(
+              (g) => html`<label class="sum-field-radio">
+                <input
+                  type="radio"
+                  name=${"security_exclusive_" + String(categoryId)}
+                  value=${String(g.id)}
+                  checked=${g.id === selected ? "checked" : undefined}
+                />
+                ${g.name}
+              </label>`,
+            )}
+          </div>
+        </div>`;
+      })}
+      ${plainGroups.length > 0
         ? html`<div class="sum-form-group-outer sum-field-region--sheet">
             <div class="sum-form-group-title">Groups</div>
             <ul class="sum-user-security-checklist">
-              ${otherGroups.map(
+              ${plainGroups.map(
                 (g) => html`<li>
                   <label class="sum-field-checkbox">
                     <input

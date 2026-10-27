@@ -2,7 +2,6 @@ package module
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"sumeru/core/engine/parser"
@@ -31,6 +30,9 @@ func syncMenusFromItems(ctx context.Context, moduleName string, menus []parser.M
 		}
 		if sanitizedIcon := sanitizeWebIcon(menu.WebIcon); sanitizedIcon != "" {
 			menuValues["web_icon"] = sanitizedIcon
+		}
+		if active := strings.TrimSpace(menu.Active); active != "" {
+			menuValues["active"] = active == "1" || strings.EqualFold(active, "true")
 		}
 		return menuValues
 	}
@@ -62,7 +64,7 @@ func syncMenusFromItems(ctx context.Context, moduleName string, menus []parser.M
 		for _, menu := range pending {
 			pid := strings.TrimSpace(menu.ParentID)
 			parentID, err := resolveXMLIDInModule(ctx, moduleName, pid)
-			if err != nil || parentID == 0 {
+			if err != nil || 0 == parentID {
 				next = append(next, menu)
 				continue
 			}
@@ -76,7 +78,7 @@ func syncMenusFromItems(ctx context.Context, moduleName string, menus []parser.M
 			progress++
 		}
 		pending = next
-		if progress == 0 {
+		if 0 == progress {
 			break
 		}
 	}
@@ -88,6 +90,15 @@ func syncMenusFromItems(ctx context.Context, moduleName string, menus []parser.M
 
 func upsertMenuRow(ctx context.Context, moduleName, xmlID string, menuValues map[string]interface{}) (int, error) {
 	rowID, _ := menuRowID(ctx, moduleName, xmlID)
+	if incoming, ok := menuValues["access_groups"].(string); ok {
+		existing := ""
+		if rowID > 0 {
+			if row, err := orm.SearchOne(ctx, "sys.menu", map[string]interface{}{"id": rowID}); err == nil {
+				existing = orm.AsString(row["access_groups"])
+			}
+		}
+		menuValues["access_groups"] = orm.MergeAccessGroupCSV(existing, incoming)
+	}
 	if rowID > 0 {
 		if err := orm.UpdateRecordByID(ctx, "sys.menu", rowID, menuValues); err != nil {
 			return 0, err
@@ -106,19 +117,7 @@ func upsertMenuRow(ctx context.Context, moduleName, xmlID string, menuValues map
 }
 
 func menuRowID(ctx context.Context, moduleName, xmlID string) (int, error) {
-	md, err := orm.SearchOne(ctx, "sys.model.data", map[string]interface{}{
-		"module": moduleName,
-		"model":  "sys.menu",
-		"name":   xmlID,
-	})
-	if err != nil {
-		return 0, err
-	}
-	cid, ok := orm.CoerceInt64(md["core_id"])
-	if !ok || cid <= 0 {
-		return 0, fmt.Errorf("no core_id")
-	}
-	return int(cid), nil
+	return linkedCoreID(ctx, moduleName, "sys.menu", xmlID)
 }
 
 func sanitizeWebIcon(iconString string) string {

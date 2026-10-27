@@ -39,7 +39,7 @@ func parseOneX2MCommand(item interface{}) (X2MCommand, error) {
 	if !ok {
 		return X2MCommand{}, fmt.Errorf("x2m: expected command tuple, got %T", item)
 	}
-	if len(tuple) == 0 {
+	if 0 == len(tuple) {
 		return X2MCommand{}, fmt.Errorf("x2m: empty command tuple")
 	}
 	op, ok := asInt64(tuple[0])

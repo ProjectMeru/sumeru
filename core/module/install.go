@@ -118,6 +118,7 @@ func reloadModuleData(ctx context.Context, moduleName string, mode moduleReloadM
 	if err := SyncAddonTranslationPOFiles(ctx, addon.Path, moduleName); err != nil {
 		return recordSyncToDBResult(ctx, moduleName, err)
 	}
+	ReconcileSystemManagerImpliedForModule(ctx, moduleName)
 	return finalizeModuleReload(ctx, moduleName, mode)
 }
 
@@ -368,7 +369,7 @@ func transitiveDependencies(moduleName string) []string {
 	delete(needed, moduleName)
 
 	topo, err := sortAddonsTopo(DiscoveredAddons)
-	if err != nil || len(topo) == 0 {
+	if err != nil || 0 == len(topo) {
 		names := make([]string, 0, len(needed))
 		for n := range needed {
 			names = append(names, n)

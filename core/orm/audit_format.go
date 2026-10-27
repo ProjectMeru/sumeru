@@ -85,7 +85,7 @@ func formatAuditDiff(ctx context.Context, model string, before, after map[string
 		}
 	}
 	sort.Strings(keys)
-	if len(keys) == 0 {
+	if 0 == len(keys) {
 		return ""
 	}
 	extra := 0
@@ -113,7 +113,7 @@ func formatAuditDiff(ctx context.Context, model string, before, after map[string
 }
 
 func formatAuditFieldLines(ctx context.Context, model string, _ map[string]interface{}, after map[string]interface{}, createMode bool) string {
-	if len(after) == 0 {
+	if 0 == len(after) {
 		return ""
 	}
 	redact := sensitiveAuditFields(model)
@@ -128,7 +128,7 @@ func formatAuditFieldLines(ctx context.Context, model string, _ map[string]inter
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
-	if len(keys) == 0 {
+	if 0 == len(keys) {
 		return ""
 	}
 	extra := 0

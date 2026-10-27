@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"sumeru/core/errcode"
 	"sumeru/core/orm"
@@ -28,9 +29,22 @@ func ActionCreateAPIKey(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 	targetUserID := apiKeyTargetUserID(r)
+	if targetUserID <= 0 {
+		http.Error(w, "Could not create API key", http.StatusUnauthorized)
+		return
+	}
 	keyName := strings.TrimSpace(r.PostFormValue("name"))
+	expiresAt, msg, err := apiKeyExpiresAtFromForm(r)
+	if msg != "" {
+		redirectWithWebMessage(w, r, r.PostFormValue("next"), msg)
+		return
+	}
+	if err != nil {
+		redirectWithWebMessage(w, r, r.PostFormValue("next"), "api_key_duration_invalid")
+		return
+	}
 
-	rawKey, err := orm.CreateAPIKeyForUser(ctx, targetUserID, keyName)
+	rawKey, err := orm.CreateAPIKeyForUser(ctx, targetUserID, keyName, expiresAt)
 	if err != nil {
 		WebLogEvent(ctx, WebLogInput{
 			Route:     createAPIKeyRoute,
@@ -54,7 +68,7 @@ func ActionCreateAPIKey(w http.ResponseWriter, r *http.Request) {
 func apiKeyTargetUserID(r *http.Request) int {
 	sessionUID := SessionUserID(r)
 	userID, _ := strconv.Atoi(strings.TrimSpace(r.PostFormValue("user_id")))
-	if userID <= 0 || userID == sessionUID {
+	if 0 >= userID || userID == sessionUID {
 		return sessionUID
 	}
 	if orm.UserHasGroupXML(r.Context(), sessionUID, groupSystemXML) {
@@ -85,4 +99,20 @@ func APIKeyRevealHandler(w http.ResponseWriter, r *http.Request) {
 func htmlEscape(s string) string {
 	repl := strings.NewReplacer("&", "&amp;", "<", "&lt;", ">", "&gt;", `"`, "&quot;")
 	return repl.Replace(s)
+}
+
+func apiKeyExpiresAtFromForm(r *http.Request) (time.Time, string, error) {
+	daysStr := strings.TrimSpace(r.PostFormValue("duration_days"))
+	if daysStr == "" {
+		return time.Time{}, "api_key_duration_required", nil
+	}
+	days, err := strconv.Atoi(daysStr)
+	if err != nil {
+		return time.Time{}, "api_key_duration_invalid", err
+	}
+	expires, err := orm.ExpiresAtFromDurationDays(days, time.Now().UTC())
+	if err != nil {
+		return time.Time{}, "api_key_duration_invalid", err
+	}
+	return expires, "", nil
 }

@@ -4,7 +4,7 @@ import "context"
 
 // UserIsPortalOnly reports portal group without internal user group.
 func UserIsPortalOnly(ctx context.Context, uid int) bool {
-	if uid <= 0 || uid == superuserUID {
+	if 0 >= uid || uid == superuserUID {
 		return false
 	}
 	if !UserHasGroupXML(ctx, uid, "base.group_portal") {
@@ -20,7 +20,7 @@ var portalRPCAllowlist = map[string]bool{
 // EnforcePortalRPCModel restricts portal-only users to allowlisted RPC models.
 func EnforcePortalRPCModel(ctx context.Context, model string) error {
 	uid := UIDFromContext(ctx)
-	if uid <= 0 || !UserIsPortalOnly(ctx, uid) {
+	if 0 >= uid || !UserIsPortalOnly(ctx, uid) {
 		return nil
 	}
 	if portalRPCAllowlist[model] {

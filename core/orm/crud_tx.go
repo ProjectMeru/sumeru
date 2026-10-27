@@ -31,7 +31,7 @@ func insertRawOnTx(ctx context.Context, tx TxWrapper, model Model, values map[st
 	if err != nil {
 		return 0, err
 	}
-	if len(prepared) == 0 {
+	if 0 == len(prepared) {
 		return 0, fmt.Errorf("insert requires at least one column")
 	}
 	return insertPreparedOnTx(ctx, tx, model, prepared)
@@ -78,7 +78,7 @@ func lockRowsForDomain(ctx context.Context, tx TxWrapper, table, whereSQL string
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	if len(locked) == 0 {
+	if 0 == len(locked) {
 		return nil, fmt.Errorf("access denied or record not found")
 	}
 	return locked, nil

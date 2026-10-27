@@ -13,9 +13,13 @@ func actionListDomain(ctx context.Context, actionData map[string]interface{}) []
 		return nil
 	}
 	dom, err := orm.ParseDomainJSON(raw)
-	if err != nil || len(dom) == 0 {
+	if err != nil {
 		return nil
 	}
+	if 0 == len(dom) {
+		return nil
+	}
+
 	dom = orm.ResolveDomainXMLRefs(ctx, dom)
 	return orm.SubstituteDomainUID(dom, orm.SecurityUID(ctx))
 }

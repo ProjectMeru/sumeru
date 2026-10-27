@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"sumeru/core/orm"
+	"sumeru/core/sdk"
 )
 
 // ComputeKPI evaluates a digest KPI compute_code and returns a numeric value.
@@ -23,10 +23,10 @@ func ComputeKPI(ctx context.Context, code string) (float64, error) {
 }
 
 func countModel(ctx context.Context, model string, domain [][]interface{}) (float64, error) {
-	if _, ok := orm.Registry[model]; !ok {
+	if !sdk.ModelRegistered(model) {
 		return 0, nil
 	}
-	rows, err := orm.Search(ctx, model, domain)
+	rows, err := sdk.Search(ctx, model, domain)
 	if err != nil {
 		return 0, err
 	}

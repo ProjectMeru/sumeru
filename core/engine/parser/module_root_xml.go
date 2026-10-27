@@ -2,7 +2,6 @@ package parser
 
 import (
 	"bytes"
-	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"strings"
@@ -24,18 +23,22 @@ type actionHelp struct {
 
 // Action represents a simplified <action> tag for actions like sys.action.window.
 type Action struct {
-	XMLName  xml.Name   `xml:"action"`
-	ID       string     `xml:"id,attr"`
-	Type     string     `xml:"type,attr"`
-	Model    string     `xml:"model,attr"`
-	Name     string     `xml:"name,attr"`
-	ViewMode     string `xml:"view_mode,attr"`
-	ViewID       string `xml:"view_id,attr"`
-	SearchViewID string `xml:"search_view_id,attr"`
-	Context      string `xml:"context,attr"`
-	Domain   string     `xml:"domain,attr"`
-	URL      string     `xml:"url,attr"`
-	Help     actionHelp `xml:"help"`
+	XMLName      xml.Name   `xml:"action"`
+	ID           string     `xml:"id,attr"`
+	Type         string     `xml:"type,attr"`
+	Model        string     `xml:"model,attr"`
+	Name         string     `xml:"name,attr"`
+	ViewMode     string     `xml:"view_mode,attr"`
+	ViewID       string     `xml:"view_id,attr"`
+	SearchViewID string     `xml:"search_view_id,attr"`
+	Context      string     `xml:"context,attr"`
+	Domain       string     `xml:"domain,attr"`
+	URL          string     `xml:"url,attr"`
+	Target       string     `xml:"target,attr"`
+	ResID        string     `xml:"res_id,attr"`
+	Limit        string     `xml:"limit,attr"`
+	Groups       string     `xml:"groups,attr"`
+	Help         actionHelp `xml:"help"`
 }
 
 // ToRecord converts an Action to a Record for backward compatibility.
@@ -59,20 +62,26 @@ func (a Action) ToRecord() Record {
 	if d := strings.TrimSpace(a.Domain); d != "" {
 		fields = append(fields, RecordField{Name: "domain", Body: d})
 	}
-	ctxMap := map[string]interface{}{}
-	if c := strings.TrimSpace(a.Context); c != "" {
-		_ = json.Unmarshal([]byte(c), &ctxMap)
-	}
 	if vid := strings.TrimSpace(a.ViewID); vid != "" {
-		ctxMap["view_id"] = vid
+		fields = append(fields, RecordField{Name: "view_id", Body: vid})
 	}
 	if svid := strings.TrimSpace(a.SearchViewID); svid != "" {
-		ctxMap["search_view_id"] = svid
+		fields = append(fields, RecordField{Name: "search_view_id", Body: svid})
 	}
-	if len(ctxMap) > 0 {
-		if b, err := json.Marshal(ctxMap); err == nil {
-			fields = append(fields, RecordField{Name: "context", Body: string(b)})
-		}
+	if t := strings.TrimSpace(a.Target); t != "" {
+		fields = append(fields, RecordField{Name: "target", Body: t})
+	}
+	if rid := strings.TrimSpace(a.ResID); rid != "" {
+		fields = append(fields, RecordField{Name: "res_id", Body: rid})
+	}
+	if lim := strings.TrimSpace(a.Limit); lim != "" {
+		fields = append(fields, RecordField{Name: "limit", Body: lim})
+	}
+	if g := strings.TrimSpace(a.Groups); g != "" {
+		fields = append(fields, RecordField{Name: "groups", Body: g})
+	}
+	if c := strings.TrimSpace(a.Context); c != "" {
+		fields = append(fields, RecordField{Name: "context", Body: c})
 	}
 	if help := strings.TrimSpace(a.Help.Body); help != "" {
 		fields = append(fields, RecordField{Name: "help", Type: "html", Body: help})

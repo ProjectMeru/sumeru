@@ -9,6 +9,29 @@ import (
 	"sumeru/core/server/web"
 )
 
+func TestBulkBatchOwnedBy_acceptsMatch(t *testing.T) {
+	batch := map[string]interface{}{"user_id": int64(7)}
+	if !web.BulkBatchOwnedByForTest(batch, 7) {
+		t.Fatal("expected owner match")
+	}
+}
+
+func TestBulkBatchOwnedBy_rejectsWrongUser(t *testing.T) {
+	batch := map[string]interface{}{"user_id": int64(1)}
+	if web.BulkBatchOwnedByForTest(batch, 2) {
+		t.Fatal("expected foreign owner to fail")
+	}
+	if web.BulkBatchOwnedByForTest(batch, 0) {
+		t.Fatal("expected uid 0 to fail")
+	}
+}
+
+func TestBulkBatchOwnedBy_rejectsMissingOwner(t *testing.T) {
+	if web.BulkBatchOwnedByForTest(map[string]interface{}{}, 1) {
+		t.Fatal("expected missing user_id to fail")
+	}
+}
+
 func TestSwcImportHandlerMissingBatchRecord(t *testing.T) {
 	web.ResetTestSessionUserIDForTest()
 	t.Cleanup(web.ResetTestSessionUserIDForTest)

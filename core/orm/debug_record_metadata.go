@@ -11,7 +11,7 @@ const debugMetadataXmlIDCap = 50
 // BuildDebugRecordMetadata returns record audit + XML id rows for developer UI (admin support only).
 func BuildDebugRecordMetadata(ctx context.Context, uid int, model string, recordID int) (map[string]interface{}, error) {
 	model = strings.TrimSpace(model)
-	if uid <= 0 {
+	if 0 >= uid {
 		return nil, fmt.Errorf("login required")
 	}
 	if UserIsPortalOnly(ctx, uid) {
@@ -20,7 +20,7 @@ func BuildDebugRecordMetadata(ctx context.Context, uid int, model string, record
 	if model == "" {
 		return nil, fmt.Errorf("model required")
 	}
-	if recordID <= 0 {
+	if 0 >= recordID {
 		return nil, fmt.Errorf("record_id required")
 	}
 	if RegistryModel(model) == nil {
@@ -34,7 +34,7 @@ func BuildDebugRecordMetadata(ctx context.Context, uid int, model string, record
 	if err != nil {
 		return nil, err
 	}
-	if len(rows) == 0 {
+	if 0 == len(rows) {
 		return nil, fmt.Errorf("record not found")
 	}
 	rec := rows[0]

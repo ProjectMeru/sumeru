@@ -32,9 +32,11 @@ func SettingsAccountGetHandler(w http.ResponseWriter, r *http.Request) {
 	flash, _ := FlashFromQueryMessage(r.URL.Query().Get("msg"))
 	actor := orm.SecurityUID(ctx)
 	renderSettingsAccountPage(w, r, settingsAccountData{
-		CSRFToken: CSRFTokenForRequest(r),
-		Flash:     flash,
-		TOTP:      loadSettingsAccountTOTPState(ctx, actor),
+		CSRFToken:          CSRFTokenForRequest(r),
+		Flash:              flash,
+		TOTP:               loadSettingsAccountTOTPState(ctx, actor),
+		APIKeys:            loadSettingsAccountAPIKeys(ctx, actor),
+		MaxKeyDurationDays: orm.MaxAPIKeyDurationDays,
 	}, menuIDStr)
 }
 
@@ -59,6 +61,13 @@ func SettingsAccountPostHandler(w http.ResponseWriter, r *http.Request) {
 	if handleSettingsAccountTOTP(w, r, ctx, actor, action) {
 		return
 	}
+	if handleSettingsAccountAPIKey(w, r, ctx, actor, action) {
+		return
+	}
+	if action != "" {
+		http.Error(w, "unknown action", http.StatusBadRequest)
+		return
+	}
 	pw := strings.TrimSpace(r.PostForm.Get("password_plain"))
 	confirm := strings.TrimSpace(r.PostForm.Get("password_plain_confirm"))
 	if pw == "" {
@@ -77,9 +86,11 @@ func SettingsAccountPostHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type settingsAccountData struct {
-	CSRFToken string
-	Flash     render.FlashMessage
-	TOTP      settingsAccountTOTPState
+	CSRFToken          string
+	Flash              render.FlashMessage
+	TOTP               settingsAccountTOTPState
+	APIKeys            []settingsAccountAPIKeyRow
+	MaxKeyDurationDays int
 }
 
 func renderSettingsAccountPage(w http.ResponseWriter, r *http.Request, pageData settingsAccountData, menuIDStr string) {

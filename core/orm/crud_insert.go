@@ -15,6 +15,12 @@ func Create(ctx context.Context, model Model, values map[string]interface{}) (id
 		logORMOperation(ctx, start, "create", model.ModelName(), err, map[string]interface{}{"resource_id": id})
 	}()
 	res, err := executeCreateMutation(ctx, model, values)
+	if err != nil {
+		return res.ID, err
+	}
+	if res.ID > 0 && model.ModelName() == "core.company" {
+		err = addCompanyForCreator(ctx, res.ID)
+	}
 	return res.ID, err
 }
 
@@ -57,7 +63,7 @@ func Upsert(ctx context.Context, model Model, values map[string]interface{}, con
 			}
 		}
 	}
-	if len(prepared) == 0 {
+	if 0 == len(prepared) {
 		return 0, fmt.Errorf("upsert requires at least one column")
 	}
 
@@ -85,7 +91,7 @@ func Upsert(ctx context.Context, model Model, values map[string]interface{}, con
 		}
 		updates = append(updates, fmt.Sprintf("%s = EXCLUDED.%s", qcol, qcol))
 	}
-	if len(updates) == 0 {
+	if 0 == len(updates) {
 		updates = append(updates, fmt.Sprintf("%s = EXCLUDED.%s", conflictQuoted, conflictQuoted))
 	}
 

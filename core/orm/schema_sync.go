@@ -31,7 +31,7 @@ func SyncRegistrySchemaContext(ctx context.Context) error {
 	}
 	names := make([]string, 0, len(Registry))
 	for name := range Registry {
-		if len(installed) == 0 {
+		if 0 == len(installed) {
 			if owner := DeclaringModule(name); owner != "" && !IsPlatformModule(owner) {
 				continue
 			}
@@ -261,7 +261,6 @@ func ensureModelIndexes(ctx context.Context, tbl schemaTable) error {
 	}
 	return nil
 }
-
 
 func pgIdentOK(name string) bool {
 	if name == "" {

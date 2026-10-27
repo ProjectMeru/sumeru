@@ -44,6 +44,7 @@ const (
 	keyDbReadReplicaDSN            = "db_read_replica_dsn"
 	keyRateLimitRPM                = "rate_limit_rpm"
 	keyTrustedProxies              = "trusted_proxies"
+	keyWebBaseURL                  = "web_base_url"
 	keyCSRFSecret                  = "csrf_secret"
 	keyForceSecureCookies          = "force_secure_cookies"
 	keySessionCookieStrictSameSite = "session_cookie_strict_samesite"
@@ -56,6 +57,8 @@ const (
 	keySMTPUser                    = "smtp_user"
 	keySMTPPassword                = "smtp_password"
 	keySMTPFrom                    = "smtp_from"
+	keyTLSCertFile                 = "tls_cert_file"
+	keyTLSKeyFile                  = "tls_key_file"
 )
 
 const (

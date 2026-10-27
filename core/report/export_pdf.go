@@ -37,7 +37,7 @@ func landscapePage(size document.Size) document.Size {
 }
 
 func equalColumnWidths(n int) []float64 {
-	if n <= 0 {
+	if 0 >= n {
 		return nil
 	}
 	width := 100.0 / float64(n)

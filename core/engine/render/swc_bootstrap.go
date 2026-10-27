@@ -21,35 +21,38 @@ type SWCBootstrapWorkspace struct {
 	ListSearch string `json:"listSearch"`
 }
 
+// swcBootstrap JSON is embedded in the shell for the SWC client. It may include the per-session
+// CSRF token and public navigation metadata only — never API keys, raw session ids, or csrf_secret.
 type swcBootstrap struct {
-	CSRFToken           string                 `json:"csrfToken"`
-	RPCURL              string                 `json:"rpcUrl"`
-	SwcAPIBase          string                 `json:"swcApiBase"`
-	User                swcBootstrapUser       `json:"user"`
-	Company             swcBootstrapCompany    `json:"company"`
-	Companies           []swcBootstrapCompany  `json:"companies"`
-	ActiveCompanyID     int                    `json:"activeCompanyId"`
-	ShowCompanySwitcher bool                   `json:"showCompanySwitcher"`
-	TopMenus            []swcBootstrapMenu     `json:"topMenus"`
-	SidebarMenus        []swcBootstrapSidebar  `json:"sidebarMenus"`
-	ActiveModuleID      string                 `json:"activeModuleId"`
-	ActiveMenuID        string                 `json:"activeMenuId"`
-	Apps                []swcBootstrapApp      `json:"apps"`
-	PinnedApps          []string               `json:"pinnedApps"`
-	AppsNavAllowed      bool                   `json:"appsNavAllowed"`
-	SettingsNavAllowed  bool                   `json:"settingsNavAllowed"`
-	ActivityEnabled           bool   `json:"activityEnabled"`
-	InternalMessagesEnabled   bool   `json:"internalMessagesEnabled"`
-	CompanyFormHref           string `json:"companyFormHref,omitempty"`
-	BusEnabled                 bool `json:"busEnabled"`
-	CloseSessionOnLastTab      bool `json:"closeSessionOnLastTab"`
-	SessionBrowserPingSeconds  int  `json:"sessionBrowserPingSeconds"`
-	SessionBrowserGraceSeconds int  `json:"sessionBrowserGraceSeconds"`
+	CSRFToken                  string                 `json:"csrfToken"`
+	RPCURL                     string                 `json:"rpcUrl"`
+	APIDatabase                string                 `json:"apiDatabase"`
+	SwcAPIBase                 string                 `json:"swcApiBase"`
+	User                       swcBootstrapUser       `json:"user"`
+	Company                    swcBootstrapCompany    `json:"company"`
+	Companies                  []swcBootstrapCompany  `json:"companies"`
+	ActiveCompanyID            int                    `json:"activeCompanyId"`
+	ShowCompanySwitcher        bool                   `json:"showCompanySwitcher"`
+	TopMenus                   []swcBootstrapMenu     `json:"topMenus"`
+	SidebarMenus               []swcBootstrapSidebar  `json:"sidebarMenus"`
+	ActiveModuleID             string                 `json:"activeModuleId"`
+	ActiveMenuID               string                 `json:"activeMenuId"`
+	Apps                       []swcBootstrapApp      `json:"apps"`
+	PinnedApps                 []string               `json:"pinnedApps"`
+	AppsNavAllowed             bool                   `json:"appsNavAllowed"`
+	SettingsNavAllowed         bool                   `json:"settingsNavAllowed"`
+	ActivityEnabled            bool                   `json:"activityEnabled"`
+	InternalMessagesEnabled    bool                   `json:"internalMessagesEnabled"`
+	CompanyFormHref            string                 `json:"companyFormHref,omitempty"`
+	BusEnabled                 bool                   `json:"busEnabled"`
+	CloseSessionOnLastTab      bool                   `json:"closeSessionOnLastTab"`
+	SessionBrowserPingSeconds  int                    `json:"sessionBrowserPingSeconds"`
+	SessionBrowserGraceSeconds int                    `json:"sessionBrowserGraceSeconds"`
 	DocsURL                    string                 `json:"docsUrl"`
-	ProfileURL          string                 `json:"profileUrl"`
-	Features            map[string]bool        `json:"features,omitempty"`
-	Workspace           *SWCBootstrapWorkspace `json:"workspace,omitempty"`
-	Toasts              []swcBootstrapToast    `json:"toasts,omitempty"`
+	ProfileURL                 string                 `json:"profileUrl"`
+	Features                   map[string]bool        `json:"features,omitempty"`
+	Workspace                  *SWCBootstrapWorkspace `json:"workspace,omitempty"`
+	Toasts                     []swcBootstrapToast    `json:"toasts,omitempty"`
 }
 
 type swcBootstrapUser struct {
@@ -99,26 +102,27 @@ type swcBootstrapToast struct {
 func BuildSWCBootstrapJSON(ctx context.Context, page PageData, ws *SWCBootstrapWorkspace) template.JS {
 	topMenus, sidebarMenus, activeModuleID, _ := LoadShellMenus(ctx, page.ActiveMenuID)
 	b := swcBootstrap{
-		CSRFToken:           page.CSRFToken,
-		RPCURL:              "/api/rpc",
-		SwcAPIBase:          "/web/swc",
-		ActiveModuleID:      activeModuleID,
-		ActiveMenuID:        page.ActiveMenuID,
-		AppsNavAllowed:      page.AppsNavAllowed,
-		SettingsNavAllowed:  page.SettingsNavAllowed,
-		ActivityEnabled:           shellActivityEnabled(ctx, page),
-		InternalMessagesEnabled:   im.IMEnabled(ctx),
-		CompanyFormHref:           im.CompanySettingsFormHref(ctx, page.ShellActiveCompanyID),
+		CSRFToken:                  page.CSRFToken,
+		RPCURL:                     "/api/rpc",
+		APIDatabase:                config.AppConfig.DbName,
+		SwcAPIBase:                 "/web/swc",
+		ActiveModuleID:             activeModuleID,
+		ActiveMenuID:               page.ActiveMenuID,
+		AppsNavAllowed:             page.AppsNavAllowed,
+		SettingsNavAllowed:         page.SettingsNavAllowed,
+		ActivityEnabled:            shellActivityEnabled(ctx, page),
+		InternalMessagesEnabled:    im.IMEnabled(ctx),
+		CompanyFormHref:            im.CompanySettingsFormHref(ctx, page.ShellActiveCompanyID),
 		BusEnabled:                 true,
 		CloseSessionOnLastTab:      config.AppConfig.CloseSessionOnLastTab,
 		SessionBrowserPingSeconds:  sessionBrowserPingSecondsForBootstrap(),
 		SessionBrowserGraceSeconds: sessionBrowserGraceSecondsForBootstrap(),
 		DocsURL:                    page.UserDocsHref,
-		ProfileURL:          page.UserProfileHref,
-		Features:            buildSWCFeatureFlags(ctx),
-		Workspace:           ws,
-		ShowCompanySwitcher: page.ShowCompanySwitcher,
-		ActiveCompanyID:     page.ShellActiveCompanyID,
+		ProfileURL:                 page.UserProfileHref,
+		Features:                   buildSWCFeatureFlags(ctx),
+		Workspace:                  ws,
+		ShowCompanySwitcher:        page.ShowCompanySwitcher,
+		ActiveCompanyID:            page.ShellActiveCompanyID,
 	}
 	for _, m := range topMenus {
 		b.TopMenus = append(b.TopMenus, swcBootstrapMenu{
@@ -157,7 +161,7 @@ func BuildSWCBootstrapJSON(ctx context.Context, page PageData, ws *SWCBootstrapW
 	}
 	b.Apps = parseSWCLauncherApps(page.AppLauncherJSON)
 	pinnedJSON := page.PinnedAppsJSON
-	if len(pinnedJSON) == 0 {
+	if 0 == len(pinnedJSON) {
 		pinnedJSON = BuildPinnedAppsJSON(ctx)
 	}
 	b.PinnedApps = parseSWCPinnedApps(pinnedJSON)
@@ -217,7 +221,7 @@ func parseSWCPinnedApps(raw template.JS) []string {
 
 func sessionBrowserPingSecondsForBootstrap() int {
 	sec := config.AppConfig.SessionBrowserPingSeconds
-	if sec <= 0 {
+	if 0 >= sec {
 		return 30
 	}
 	return sec
@@ -225,7 +229,7 @@ func sessionBrowserPingSecondsForBootstrap() int {
 
 func sessionBrowserGraceSecondsForBootstrap() int {
 	sec := config.AppConfig.SessionBrowserGraceSeconds
-	if sec <= 0 {
+	if 0 >= sec {
 		return 90
 	}
 	return sec
@@ -233,7 +237,7 @@ func sessionBrowserGraceSecondsForBootstrap() int {
 
 func buildSWCFeatureFlags(ctx context.Context) map[string]bool {
 	uid := orm.UIDFromContext(ctx)
-	if uid <= 0 {
+	if 0 >= uid {
 		return nil
 	}
 	flags := map[string]bool{}
@@ -243,7 +247,7 @@ func buildSWCFeatureFlags(ctx context.Context) map[string]bool {
 	if orm.UserHasAnyAccessGroup(ctx, uid, "base.group_system") {
 		flags["debugMenu"] = true
 	}
-	if len(flags) == 0 {
+	if 0 == len(flags) {
 		return nil
 	}
 	return flags

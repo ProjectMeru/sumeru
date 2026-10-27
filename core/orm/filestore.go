@@ -54,7 +54,7 @@ func filestorePath(key string) (string, error) {
 
 // StoreAttachment writes blob bytes and returns the stored filename key.
 func StoreAttachment(_ context.Context, name string, data []byte) (storeFname string, size int64, err error) {
-	if len(data) == 0 {
+	if 0 == len(data) {
 		return "", 0, fmt.Errorf("filestore: empty data")
 	}
 	if err := ValidateAttachmentMIME(normalizeAttachmentMIME("", data), data); err != nil {

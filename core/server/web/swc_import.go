@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"sumeru/core/orm"
-	"sumeru/core/report"
 )
 
 func registerSwcImportRoute() {
@@ -20,13 +19,12 @@ func SwcImportHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	batchID, _ := strconv.Atoi(strings.TrimSpace(r.URL.Query().Get("batch")))
-	if batchID <= 0 {
+	if 0 >= batchID {
 		http.Error(w, "batch required", http.StatusBadRequest)
 		return
 	}
-	batch, err := orm.SearchOne(r.Context(), report.BulkModelName, map[string]interface{}{"id": batchID})
-	if err != nil || len(batch) == 0 {
-		http.NotFound(w, r)
+	batch, ok := loadOwnedBulkBatch(w, r, batchID)
+	if !ok {
 		return
 	}
 	targetModel := orm.AsString(batch["target_model"])
@@ -49,14 +47,14 @@ func SwcImportHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	writeJSONResponse(w, map[string]interface{}{
-		"batchId":      batchID,
-		"targetModel":  targetModel,
-		"importMode":   orm.AsString(batch["import_mode"]),
-		"headers":      headers,
-		"mapping":      mapping,
-		"fields":       fields,
-		"fieldLabels":  fieldLabels,
-		"state":        orm.AsString(batch["state"]),
-		"nextUrl":      orm.AsString(batch["next_url"]),
+		"batchId":     batchID,
+		"targetModel": targetModel,
+		"importMode":  orm.AsString(batch["import_mode"]),
+		"headers":     headers,
+		"mapping":     mapping,
+		"fields":      fields,
+		"fieldLabels": fieldLabels,
+		"state":       orm.AsString(batch["state"]),
+		"nextUrl":     orm.AsString(batch["next_url"]),
 	})
 }

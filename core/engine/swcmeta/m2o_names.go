@@ -12,7 +12,7 @@ import (
 // instead of "#<id>". It batch-resolves each comodel once.
 func enrichMany2OneNames(ctx context.Context, model string, rows []map[string]interface{}) {
 	inst, ok := orm.Registry[model]
-	if !ok || inst == nil || len(rows) == 0 {
+	if !ok || inst == nil || 0 == len(rows) {
 		return
 	}
 	for _, fd := range inst.Fields() {
@@ -22,7 +22,7 @@ func enrichMany2OneNames(ctx context.Context, model string, rows []map[string]in
 		fieldName := fd.Name
 		comodel := strings.TrimSpace(fd.Relation)
 		ids := collectDistinctIDs(rows, fieldName)
-		if len(ids) == 0 {
+		if 0 == len(ids) {
 			continue
 		}
 		values := make([]interface{}, 0, len(ids))

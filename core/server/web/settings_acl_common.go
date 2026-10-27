@@ -35,7 +35,7 @@ func loadACLGroups(ctx context.Context, groupFilter string) ([]aclGroupCol, erro
 	out := make([]aclGroupCol, 0, len(rows))
 	for _, row := range rows {
 		id := intField(row["id"])
-		if id <= 0 {
+		if 0 >= id {
 			continue
 		}
 		label := stringField(row["name"])

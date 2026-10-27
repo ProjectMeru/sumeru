@@ -6,7 +6,7 @@ import (
 
 // MenuHasAncestor reports whether startID is rootID or a descendant (walk parent_id, max 64).
 func MenuHasAncestor(ctx context.Context, startID, rootID int) bool {
-	if startID <= 0 || rootID <= 0 || DB == nil {
+	if 0 >= startID || 0 >= rootID || DB == nil {
 		return false
 	}
 	cur := startID
@@ -19,7 +19,7 @@ func MenuHasAncestor(ctx context.Context, startID, rootID int) bool {
 			return false
 		}
 		pid, ok := CoerceInt64(row["parent_id"])
-		if !ok || pid == 0 {
+		if !ok || 0 == pid {
 			return false
 		}
 		cur = int(pid)

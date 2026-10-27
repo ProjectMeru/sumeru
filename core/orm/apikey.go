@@ -11,6 +11,15 @@ import (
 	"time"
 )
 
+const (
+	// MaxAPIKeyLifetime is the longest allowed key lifetime from creation.
+	MaxAPIKeyLifetime = 30 * 24 * time.Hour
+	// MaxAPIKeyDurationDays is the maximum duration_days accepted from UI and API.
+	MaxAPIKeyDurationDays = 30
+	// AuthLoginAPIKeyLifetime is the fixed TTL for keys minted by auth.login.
+	AuthLoginAPIKeyLifetime = 24 * time.Hour
+)
+
 // HashAPIKey returns a hex SHA-256 digest of the raw key.
 func HashAPIKey(raw string) string {
 	sum := sha256.Sum256([]byte(raw))
@@ -31,6 +40,34 @@ func GenerateAPIKey() (raw, prefix, hash string, err error) {
 	return raw, prefix, HashAPIKey(raw), nil
 }
 
+// ValidateAPIKeyExpiresAt ensures expiresAt is in the future and within MaxAPIKeyLifetime.
+func ValidateAPIKeyExpiresAt(expiresAt, now time.Time) error {
+	if expiresAt.IsZero() {
+		return fmt.Errorf("api key expiration is required")
+	}
+	expiresAt = expiresAt.UTC()
+	now = now.UTC()
+	if !expiresAt.After(now) {
+		return fmt.Errorf("api key expiration must be in the future")
+	}
+	if expiresAt.Sub(now) > MaxAPIKeyLifetime {
+		return fmt.Errorf("api key expiration cannot exceed %d days", MaxAPIKeyDurationDays)
+	}
+	return nil
+}
+
+// ExpiresAtFromDurationDays computes UTC expiry from whole days (1..MaxAPIKeyDurationDays).
+func ExpiresAtFromDurationDays(days int, now time.Time) (time.Time, error) {
+	if days < 1 || days > MaxAPIKeyDurationDays {
+		return time.Time{}, fmt.Errorf("duration must be between 1 and %d days", MaxAPIKeyDurationDays)
+	}
+	expires := now.UTC().Add(time.Duration(days) * 24 * time.Hour)
+	if err := ValidateAPIKeyExpiresAt(expires, now); err != nil {
+		return time.Time{}, err
+	}
+	return expires, nil
+}
+
 // UIDFromAPIKey resolves an active API key to a user id. Returns 0 if invalid.
 func UIDFromAPIKey(ctx context.Context, raw string) int {
 	raw = strings.TrimSpace(raw)
@@ -45,7 +82,7 @@ func UIDFromAPIKey(ctx context.Context, raw string) int {
 	err := DB.QueryRowContext(ctx,
 		`SELECT user_id, active, expires_at FROM `+tbl+` WHERE key_hash = $1 LIMIT 1`, hash,
 	).Scan(&uid, &active, &expiresAt)
-	if err == sql.ErrNoRows || err != nil || !active || uid <= 0 {
+	if err == sql.ErrNoRows || err != nil || !active || 0 >= uid {
 		return 0
 	}
 	if expiresAt.Valid && strings.TrimSpace(expiresAt.String) != "" {
@@ -66,9 +103,12 @@ func UIDFromAPIKey(ctx context.Context, raw string) int {
 }
 
 // CreateAPIKeyForUser inserts a new key row. Returns the raw key (caller must show once).
-func CreateAPIKeyForUser(ctx context.Context, userID int, name string) (raw string, err error) {
-	if userID <= 0 {
+func CreateAPIKeyForUser(ctx context.Context, userID int, name string, expiresAt time.Time) (raw string, err error) {
+	if 0 >= userID {
 		return "", fmt.Errorf("user id required")
+	}
+	if err := ValidateAPIKeyExpiresAt(expiresAt, time.Now().UTC()); err != nil {
+		return "", err
 	}
 	inst, ok := Registry["core.user.apikey"]
 	if !ok {
@@ -93,6 +133,7 @@ func CreateAPIKeyForUser(ctx context.Context, userID int, name string) (raw stri
 		"key_hash":    hash,
 		"active":      true,
 		"create_date": time.Now().UTC().Format(time.RFC3339),
+		"expires_at":  expiresAt.UTC().Format(time.RFC3339),
 	})
 	return raw, err
 }

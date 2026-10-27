@@ -19,7 +19,7 @@ func SwitchCompanyPost(w http.ResponseWriter, r *http.Request) {
 
 	form := parseCompanySwitchForm(r)
 	userID := SessionUserID(r)
-	if userID <= 0 {
+	if 0 >= userID {
 		http.Redirect(w, r, loginRoute, http.StatusSeeOther)
 		return
 	}
@@ -42,7 +42,7 @@ func parseCompanySwitchForm(r *http.Request) companySwitchForm {
 }
 
 func switchActiveCompany(ctx context.Context, userID, companyID int) {
-	if companyID <= 0 || !companyRecordExists(ctx, companyID) {
+	if 0 >= companyID || !companyRecordExists(ctx, companyID) {
 		auditCompanySwitchDeny(ctx, userID, companyID, "invalid company")
 		return
 	}
@@ -88,12 +88,7 @@ func companyRecordExists(ctx context.Context, companyID int) bool {
 }
 
 func updateUserActiveCompany(ctx context.Context, userID, companyID int) error {
-	userTable := orm.MustQuotedTableName(coreUserModel)
-	_, err := orm.DB.ExecContext(ctx,
-		`UPDATE `+userTable+` SET company_id = $1 WHERE id = $2`,
-		companyID, userID,
-	)
-	return err
+	return orm.SetUserActiveCompany(ctx, userID, companyID)
 }
 
 func redirectToWebNext(w http.ResponseWriter, r *http.Request, rawNext string) {

@@ -41,7 +41,7 @@ func processXMLRecords(ctx context.Context, moduleName string, records []parser.
 }
 
 func RecordsFromActions(actions []parser.Action) []parser.Record {
-	if len(actions) == 0 {
+	if 0 == len(actions) {
 		return nil
 	}
 	out := make([]parser.Record, 0, len(actions))

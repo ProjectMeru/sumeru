@@ -149,7 +149,7 @@ func BuildSettingsHubCategories(ctx context.Context, settingsRootMenuID string) 
 		return nil
 	}
 	allMenus := fetchShellMenus(ctx)
-	if len(allMenus) == 0 {
+	if 0 == len(allMenus) {
 		return nil
 	}
 	uid := orm.UIDFromContext(ctx)
@@ -170,7 +170,7 @@ func BuildSettingsHubCategories(ctx context.Context, settingsRootMenuID string) 
 			continue
 		}
 		cat := buildSettingsHubCategory(catNode, allMenus, menuAllowed, seen)
-		if len(cat.Groups) == 0 {
+		if 0 == len(cat.Groups) {
 			continue
 		}
 		categories = append(categories, cat)
@@ -207,7 +207,7 @@ func BuildSettingsHubCategoriesForTest(allMenus []parser.MenuItem, settingsRootM
 			continue
 		}
 		cat := buildSettingsHubCategory(catNode, allMenus, menuAllowed, seen)
-		if len(cat.Groups) == 0 {
+		if 0 == len(cat.Groups) {
 			continue
 		}
 		categories = append(categories, cat)

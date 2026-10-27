@@ -53,7 +53,7 @@ func AllDependsInstalled(ctx context.Context, moduleName string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return len(missing) == 0, nil
+	return 0 == len(missing), nil
 }
 
 // AutoInstallCandidateNames returns uninstalled auto_install modules whose depends are satisfied.

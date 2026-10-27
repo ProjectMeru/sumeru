@@ -6,7 +6,7 @@ const totpQRQuietBorder = 4
 
 // TOTPQRPng returns a PNG image for an otpauth URI.
 func TOTPQRPng(otpauthURI string, size int) ([]byte, error) {
-	if size <= 0 {
+	if 0 >= size {
 		size = 200
 	}
 	qr, err := go_qr.EncodeText(otpauthURI, go_qr.Medium)

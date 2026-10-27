@@ -9,6 +9,12 @@ Alpha kernel — use for pilots and staging only. See [platform-status.md](platf
 3. Start: `./sumeru -c sumeru.conf` or `docker compose -f docker-compose.prod.yml up --build`.
 4. Probes: `GET /api/health` (live), `GET /api/ready` (database).
 
+### HTTPS and HTTP/2 (RPC + web)
+
+Set **`tls_cert_file`** and **`tls_key_file`** in `sumeru.conf` (see `sumeru.conf.example`). The process listens with TLS; Go negotiates **HTTP/2** via ALPN on that listener. Terminate TLS at a reverse proxy instead when you prefer — ensure the proxy speaks HTTP/2 to clients and HTTP/1.1 or h2 to the app as appropriate.
+
+Integrators call **`POST /api/rpc/auth.login`** (database + tenant headers, no Bearer), then **`POST /api/rpc/{model}/{method}`** with **`Authorization: Bearer <api_key>`** from the login response.
+
 Optional shell presence (off by default):
 
 - `close_session_on_last_tab = true` — SWC tab lease + `POST /web/session/touch` heartbeat; when all tabs stop, session ends after `session_browser_grace_seconds`.

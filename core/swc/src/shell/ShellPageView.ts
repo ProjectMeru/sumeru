@@ -8,7 +8,11 @@ interface ShellPageProps {
 }
 
 function appHref(action: string): string {
-  const id = action.replace(/\D/g, "") || action;
+  const href = action.trim();
+  if (href.startsWith("/web")) {
+    return href;
+  }
+  const id = href.replace(/\D/g, "") || href;
   return `/web?action=${encodeURIComponent(id)}`;
 }
 

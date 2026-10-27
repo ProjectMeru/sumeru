@@ -6,7 +6,7 @@ import (
 )
 
 func buildSearchWhereClause(modelName string, domain [][]interface{}) (string, []interface{}, error) {
-	if len(domain) == 0 {
+	if 0 == len(domain) {
 		return "1=1", nil, nil
 	}
 	// Prefix Polish OR: ["|", ...] repeated (N-1) times then N leaf triples → OR of leaves.
@@ -102,7 +102,7 @@ func buildSearchWhereClause(modelName string, domain [][]interface{}) (string, [
 
 func appendDomainListClause(col, op string, list []interface{}, placeholderIndex int) (clause string, args []interface{}, nextIndex int) {
 	if op == "in" {
-		if len(list) == 0 {
+		if 0 == len(list) {
 			return "FALSE", nil, placeholderIndex
 		}
 		placeholders := make([]string, len(list))
@@ -113,7 +113,7 @@ func appendDomainListClause(col, op string, list []interface{}, placeholderIndex
 		}
 		return fmt.Sprintf("%s IN (%s)", col, strings.Join(placeholders, ",")), args, placeholderIndex
 	}
-	if len(list) == 0 {
+	if 0 == len(list) {
 		return "TRUE", nil, placeholderIndex
 	}
 	placeholders := make([]string, len(list))
@@ -126,7 +126,7 @@ func appendDomainListClause(col, op string, list []interface{}, placeholderIndex
 }
 
 func joinShiftedWhereFragments(separator, modelName string, domains [][][]interface{}, startPlaceholder int) (string, []interface{}, error) {
-	if len(domains) == 0 {
+	if 0 == len(domains) {
 		return "1=1", nil, nil
 	}
 	var parts []string

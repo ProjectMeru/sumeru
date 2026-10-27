@@ -11,7 +11,7 @@ import (
 )
 
 func buildORMModelsGo(module string, types []string) string {
-	if len(types) == 0 {
+	if 0 == len(types) {
 		return ""
 	}
 	var b strings.Builder
@@ -27,8 +27,8 @@ func buildORMModelsGo(module string, types []string) string {
 	return b.String()
 }
 
-func buildPackageModelsGo(module string, types []string, packageName string) string {
-	if len(types) == 0 {
+func buildPackageModelsGo(module string, types []string, packageName string, binds []computeBind) string {
+	if 0 == len(types) {
 		return ""
 	}
 	if packageName == "" {
@@ -46,39 +46,90 @@ func buildPackageModelsGo(module string, types []string, packageName string) str
 		b.WriteString(t)
 		b.WriteString("{},\n")
 	}
-	b.WriteString("\t)\n}\n")
+	b.WriteString("\t)\n")
+	for _, bind := range binds {
+		fmt.Fprintf(&b, "\tsdk.BindCompute(%q, %q, %s)\n", bind.Model, bind.Field, bind.Func)
+	}
+	b.WriteString("}\n")
 	return b.String()
 }
 
 func writeAddonModelFiles(addonRoot, module string) error {
-	pkgName := filepath.Base(addonRoot)
-	if types, err := scanPackageForModels(addonRoot); err == nil && len(types) > 0 {
-		body := buildPackageModelsGo(module, types, pkgName)
-		dest := filepath.Join(addonRoot, "zmodels.go")
-		if err := os.WriteFile(dest, []byte(body), 0o644); err != nil {
-			return fmt.Errorf("write %s: %w", dest, err)
-		}
+	if err := writePackageModels(addonRoot, module, filepath.Base(addonRoot)); err != nil {
+		return err
 	}
 	for _, sub := range []string{"models", "wizard"} {
-		dir := filepath.Join(addonRoot, sub)
-		types, err := scanPackageForModels(dir)
-		if err != nil || len(types) == 0 {
-			continue
-		}
-		body := buildPackageModelsGo(module, types, packageNameForDir(dir))
-		dest := filepath.Join(dir, "zmodels.go")
-		if err := os.WriteFile(dest, []byte(body), 0o644); err != nil {
-			return fmt.Errorf("write %s: %w", dest, err)
+		if err := writePackageModels(filepath.Join(addonRoot, sub), module, ""); err != nil {
+			return err
 		}
 	}
 	return nil
 }
 
-func writeORMModelsRegistration(ormDir, ormmodelsDir, module string) error {
-	types, err := scanPackageForModels(ormDir)
-	if err != nil || len(types) == 0 {
+func writePackageModels(dir, module, packageName string) error {
+	info, err := os.Stat(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	if !info.IsDir() {
 		return nil
 	}
+	if packageName == "" {
+		packageName = packageNameForDir(dir)
+	}
+	body, err := packageModelsBody(dir, module, packageName)
+	if err != nil {
+		return err
+	}
+	if body == "" {
+		return nil
+	}
+	dest := filepath.Join(dir, "zmodels.go")
+	if err := os.WriteFile(dest, []byte(body), 0o644); err != nil {
+		return fmt.Errorf("write %s: %w", dest, err)
+	}
+	return nil
+}
+
+func packageModelsBody(dir, module, packageName string) (string, error) {
+	models, err := parseDirModels(dir)
+	if err != nil {
+		return "", err
+	}
+	var types []string
+	var binds []computeBind
+	for _, m := range models {
+		if m.ModelName == "-" {
+			continue
+		}
+		types = append(types, m.GoName)
+		binds = append(binds, m.Computes...)
+	}
+	sort.Strings(types)
+	sort.Slice(binds, func(i, j int) bool {
+		if binds[i].Model != binds[j].Model {
+			return binds[i].Model < binds[j].Model
+		}
+		if binds[i].Field != binds[j].Field {
+			return binds[i].Field < binds[j].Field
+		}
+		return binds[i].Func < binds[j].Func
+	})
+	return buildPackageModelsGo(module, types, packageName, binds), nil
+}
+
+func writeORMModelsRegistration(ormDir, ormmodelsDir, module string) error {
+	types, err := scanPackageForModels(ormDir)
+	if err != nil {
+		return nil
+	}
+	if 0 == len(types) {
+		return nil
+	}
+
 	body := buildORMModelsGo(module, types)
 	if err := os.MkdirAll(ormmodelsDir, 0o755); err != nil {
 		return err
@@ -114,7 +165,7 @@ func writeORMZRefs(ormDir string) error {
 	sort.Strings(names)
 
 	zrefsPath := filepath.Join(ormDir, "zrefs.go")
-	if len(names) == 0 {
+	if 0 == len(names) {
 		_ = os.Remove(zrefsPath)
 		return nil
 	}

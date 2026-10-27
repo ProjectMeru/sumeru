@@ -31,7 +31,7 @@ func PreviewBulkImport(ctx context.Context, in PreviewBulkImportInput) (PreviewR
 		return PreviewResult{}, err
 	}
 	mapping := in.Mapping
-	if len(mapping) == 0 {
+	if 0 == len(mapping) {
 		_ = json.Unmarshal([]byte(orm.AsString(batch["column_mapping"])), &mapping)
 	}
 	allowed := allowedFieldNames(modelInst)
@@ -62,7 +62,7 @@ func PreviewBulkImport(ctx context.Context, in PreviewBulkImportInput) (PreviewR
 
 func validateRowValues(modelInst orm.Model, vals map[string]interface{}, allowed map[string]struct{}, mode string) []string {
 	var errs []string
-	if len(vals) == 0 {
+	if 0 == len(vals) {
 		return []string{"no mapped values"}
 	}
 	for k := range vals {
@@ -72,7 +72,7 @@ func validateRowValues(modelInst orm.Model, vals map[string]interface{}, allowed
 	}
 	if mode == ImportModeUpsert {
 		if idRaw, ok := vals["id"]; ok {
-			if id, ok := orm.CoerceInt64(idRaw); !ok || id <= 0 {
+			if id, ok := orm.CoerceInt64(idRaw); !ok || 0 >= id {
 				errs = append(errs, "invalid id for upsert")
 			}
 		}

@@ -106,7 +106,7 @@ func appsModuleMatchesCategory(moduleEntry appsModule, categoryFilter string) bo
 
 func groupAppsModules(modules []appsModule, groupBy string) []appsModuleGroup {
 	if groupBy != appsGroupByCategory {
-		if len(modules) == 0 {
+		if 0 == len(modules) {
 			return nil
 		}
 		return []appsModuleGroup{{Modules: modules}}

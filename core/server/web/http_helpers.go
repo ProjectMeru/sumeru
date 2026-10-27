@@ -24,7 +24,7 @@ func splitCommaSeparatedValues(raw string) []string {
 
 func firstGroupByField(raw string) string {
 	fields := splitCommaSeparatedValues(raw)
-	if len(fields) == 0 {
+	if 0 == len(fields) {
 		return ""
 	}
 	return fields[0]

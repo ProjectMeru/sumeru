@@ -50,7 +50,7 @@ func loadRuleDomainParts(ctx context.Context, uid int, model string, op string) 
 	if SecurityBypass(ctx) || uid == superuserUID {
 		return empty, nil
 	}
-	if uid <= 0 {
+	if 0 >= uid {
 		return empty, nil
 	}
 	groups, err := EffectiveGroupIDs(ctx, uid)
@@ -144,7 +144,7 @@ func loadRuleDomainsFromDB(ctx context.Context, model, op string, groups []int, 
 		}
 		dom = SubstituteDomainContext(dom, dc)
 		gids := groupsByRule[r.id]
-		if len(gids) == 0 {
+		if 0 == len(gids) {
 			if len(dom) > 0 {
 				out.globals = append(out.globals, dom)
 			}
@@ -160,13 +160,62 @@ func loadRuleDomainsFromDB(ctx context.Context, model, op string, groups []int, 
 		if !match {
 			continue
 		}
-		if len(dom) == 0 {
+		if 0 == len(dom) {
 			out.allowAllGroups = true
 			continue
 		}
 		out.groups = append(out.groups, dom)
 	}
+	if err := appendAccessDomains(ctx, model, op, groups, dc, &out); err != nil {
+		return out, err
+	}
 	return out, nil
+}
+
+func appendAccessDomains(ctx context.Context, model, op string, groups []int, dc DomainContext, out *ruleDomainParts) error {
+	if out == nil || DB == nil {
+		return nil
+	}
+	permCol, err := QuotedPermColumnForOp(op)
+	if err != nil {
+		permCol, err = QuotedPermColumnForOp("read")
+		if err != nil {
+			return err
+		}
+	}
+	q := `SELECT COALESCE(group_id, 0), COALESCE(domain, '') FROM ` + MustQuotedTableName("sys.access") +
+		` WHERE model = $1 AND ` + permCol + ` = true AND COALESCE(TRIM(domain), '') <> ''`
+	rows, err := DB.QueryContext(ctx, q, model)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var gid int
+		var domain string
+		if err := rows.Scan(&gid, &domain); err != nil {
+			return err
+		}
+		dom, err := ParseDomainJSON(domain)
+		if err != nil {
+			return fmt.Errorf("access domain: %w", err)
+		}
+		applyAccessDomain(out, gid, groups, SubstituteDomainContext(dom, dc))
+	}
+	return rows.Err()
+}
+
+func applyAccessDomain(out *ruleDomainParts, groupID int, groups []int, dom [][]interface{}) {
+	if out == nil || 0 == len(dom) {
+		return
+	}
+	if groupID == 0 {
+		out.globals = append(out.globals, dom)
+		return
+	}
+	if intSliceContains(groups, groupID) {
+		out.groups = append(out.groups, dom)
+	}
 }
 
 // BuildWhereWithRecordRules builds WHERE for user domain AND compiled record rules with correct parentheses.
@@ -182,11 +231,11 @@ func BuildWhereWithRecordRules(ctx context.Context, uid int, model, op string, b
 			Operation: "dev_access_rules",
 			Status:    "success",
 			Context: map[string]interface{}{
-				"resource":        model,
-				"op":              op,
-				"uid":             uid,
-				"global_rules":    len(parts.globals),
-				"group_rules":     len(parts.groups),
+				"resource":         model,
+				"op":               op,
+				"uid":              uid,
+				"global_rules":     len(parts.globals),
+				"group_rules":      len(parts.groups),
 				"allow_all_groups": parts.allowAllGroups,
 			},
 		})
@@ -210,10 +259,10 @@ func BuildWhereWithRecordRules(ctx context.Context, uid int, model, op string, b
 			if err != nil {
 				return "", nil, err
 			}
-			if andSQL == "1=1" && len(clauses) == 0 {
+			if andSQL == "1=1" && 0 == len(clauses) {
 				return orSQL, orArgs, nil
 			}
-			if len(clauses) == 0 {
+			if 0 == len(clauses) {
 				return orSQL, orArgs, nil
 			}
 			shifted := shiftPlaceholders(orSQL, len(andArgs)+1)
@@ -232,7 +281,7 @@ func CheckRecordRules(ctx context.Context, uid int, model string, op string, rec
 	if SecurityBypass(ctx) || uid == superuserUID {
 		return nil
 	}
-	if uid <= 0 {
+	if 0 >= uid {
 		return &AccessDeniedError{Model: model, Operation: op}
 	}
 	parts, err := loadRuleDomainParts(ctx, uid, model, op)
@@ -247,7 +296,7 @@ func CheckRecordRules(ctx context.Context, uid int, model string, op string, rec
 	if parts.allowAllGroups {
 		return nil
 	}
-	if len(parts.groups) == 0 {
+	if 0 == len(parts.groups) {
 		return nil
 	}
 	for _, dom := range parts.groups {
