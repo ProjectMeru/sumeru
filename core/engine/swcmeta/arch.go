@@ -29,13 +29,13 @@ func SerializeViewForUser(ctx context.Context, view *parser.View) ViewArch {
 	}
 	if view.Header != nil {
 		arch.Header = &ArchHeader{
-			Buttons: serializeButtons(view.Header.Button),
+			Buttons: serializeButtons(ctx, view.Header.Button),
 			Fields:  enrichFields(model, serializeFields(ctx, view.Header.Field)),
 		}
 	}
 	if view.Footer != nil && len(view.Footer.Button) > 0 {
 		arch.Footer = &ArchFooter{
-			Buttons: serializeButtons(view.Footer.Button),
+			Buttons: serializeButtons(ctx, view.Footer.Button),
 		}
 	}
 	if view.Sheet != nil {
@@ -270,6 +270,9 @@ func serializeSheet(ctx context.Context, model string, s *parser.Sheet) *ArchShe
 	for _, nb := range s.Notebook {
 		pages := make([]ArchPage, 0, len(nb.Page))
 		for _, p := range nb.Page {
+			if !orm.UserHasAnyAccessGroup(ctx, orm.SecurityUID(ctx), p.Groups) {
+				continue
+			}
 			pg := ArchPage{
 				Title:      strings.TrimSpace(p.Title),
 				Fields:     enrichFields(model, serializeFields(ctx, p.Field)),
@@ -336,7 +339,7 @@ func serializeDiv(ctx context.Context, model string, d parser.Div) ArchDiv {
 	out := ArchDiv{
 		Class:   strings.TrimSpace(d.Class),
 		Fields:  enrichFields(model, serializeFields(ctx, d.Field)),
-		Buttons: serializeButtons(d.Button),
+		Buttons: serializeButtons(ctx, d.Button),
 	}
 	for _, h1 := range d.H1 {
 		out.H1Fields = append(out.H1Fields, enrichFields(model, serializeFields(ctx, h1.Field))...)
@@ -354,9 +357,13 @@ func divHasContent(d ArchDiv) bool {
 	return len(d.Fields) > 0 || len(d.H1Fields) > 0 || len(d.Divs) > 0 || len(d.Buttons) > 0
 }
 
-func serializeButtons(buttons []parser.Button) []ArchButton {
+func serializeButtons(ctx context.Context, buttons []parser.Button) []ArchButton {
 	out := make([]ArchButton, 0, len(buttons))
+	uid := orm.SecurityUID(ctx)
 	for _, b := range buttons {
+		if !orm.UserHasAnyAccessGroup(ctx, uid, b.Groups) {
+			continue
+		}
 		ab := ArchButton{
 			Name:    strings.TrimSpace(b.Name),
 			String:  strings.TrimSpace(b.String),

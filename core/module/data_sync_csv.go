@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"sumeru/core/orm"
 	"sumeru/core/sdk/platformmsg"
@@ -73,6 +74,9 @@ func (addon *Addon) syncCSVModelAccess(ctx context.Context) error {
 		}
 		if groupId > 0 {
 			accessValues["group_id"] = groupId
+		}
+		if len(csvRecord) > 8 {
+			accessValues["domain"] = strings.TrimSpace(csvRecord[8])
 		}
 
 		id, err := orm.Upsert(ctx, orm.RegistryModel("sys.access"), accessValues, "name")

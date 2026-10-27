@@ -166,7 +166,56 @@ func loadRuleDomainsFromDB(ctx context.Context, model, op string, groups []int, 
 		}
 		out.groups = append(out.groups, dom)
 	}
+	if err := appendAccessDomains(ctx, model, op, groups, dc, &out); err != nil {
+		return out, err
+	}
 	return out, nil
+}
+
+func appendAccessDomains(ctx context.Context, model, op string, groups []int, dc DomainContext, out *ruleDomainParts) error {
+	if out == nil || DB == nil {
+		return nil
+	}
+	permCol, err := QuotedPermColumnForOp(op)
+	if err != nil {
+		permCol, err = QuotedPermColumnForOp("read")
+		if err != nil {
+			return err
+		}
+	}
+	q := `SELECT COALESCE(group_id, 0), COALESCE(domain, '') FROM ` + MustQuotedTableName("sys.access") +
+		` WHERE model = $1 AND ` + permCol + ` = true AND COALESCE(TRIM(domain), '') <> ''`
+	rows, err := DB.QueryContext(ctx, q, model)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var gid int
+		var domain string
+		if err := rows.Scan(&gid, &domain); err != nil {
+			return err
+		}
+		dom, err := ParseDomainJSON(domain)
+		if err != nil {
+			return fmt.Errorf("access domain: %w", err)
+		}
+		applyAccessDomain(out, gid, groups, SubstituteDomainContext(dom, dc))
+	}
+	return rows.Err()
+}
+
+func applyAccessDomain(out *ruleDomainParts, groupID int, groups []int, dom [][]interface{}) {
+	if out == nil || 0 == len(dom) {
+		return
+	}
+	if groupID == 0 {
+		out.globals = append(out.globals, dom)
+		return
+	}
+	if intSliceContains(groups, groupID) {
+		out.groups = append(out.groups, dom)
+	}
 }
 
 // BuildWhereWithRecordRules builds WHERE for user domain AND compiled record rules with correct parentheses.

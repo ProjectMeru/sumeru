@@ -8,6 +8,9 @@ import (
 
 const sysMenuModel = "sys.menu"
 
+// ponytail: matches maxMenuParentRounds in core/module/data_sync_menus.go.
+const maxMenuNavDepth = 16
+
 type menuNavRow struct {
 	id           int
 	actionID     int
@@ -34,39 +37,33 @@ func MenuEntryAction(ctx context.Context, menuID int) (actionID int, leafMenuID 
 	if 0 >= menuID || DB == nil {
 		return 0, 0
 	}
+	return dfsMenuEntryAction(ctx, menuID, 0, 0)
+}
+
+// MenuEntryActionForUser returns the first window action under menuID the user may open.
+func MenuEntryActionForUser(ctx context.Context, uid, menuID int) (actionID int, leafMenuID int) {
+	if 0 >= menuID || DB == nil || 0 >= uid {
+		return 0, 0
+	}
+	return dfsMenuEntryAction(ctx, menuID, 0, uid)
+}
+
+func dfsMenuEntryAction(ctx context.Context, menuID, depth int, uid int) (actionID int, leafMenuID int) {
+	if depth >= maxMenuNavDepth {
+		return 0, 0
+	}
 	row, ok := loadMenuNavRow(ctx, menuID)
 	if !ok {
 		return 0, 0
 	}
 	if row.actionID != 0 {
-		return row.actionID, menuID
-	}
-	for _, child := range loadMenuNavChildren(ctx, menuID) {
-		if aid, leaf := MenuEntryAction(ctx, child.id); aid != 0 {
-			return aid, leaf
+		if uid == 0 || UserMayAccessMenuNavigation(ctx, uid, row.accessGroups) {
+			return row.actionID, menuID
 		}
-	}
-	return 0, 0
-}
-
-// MenuEntryActionForUser returns the first window action under menuID the user may open.
-func MenuEntryActionForUser(ctx context.Context, uid, menuID int) (actionID int, leafMenuID int) {
-	if 0 >= menuID || DB == nil {
 		return 0, 0
-	}
-	return menuEntryActionForUser(ctx, uid, menuID)
-}
-
-func menuEntryActionForUser(ctx context.Context, uid, menuID int) (actionID int, leafMenuID int) {
-	row, ok := loadMenuNavRow(ctx, menuID)
-	if !ok {
-		return 0, 0
-	}
-	if row.actionID != 0 && UserMayAccessMenu(ctx, uid, row.accessGroups) {
-		return row.actionID, menuID
 	}
 	for _, child := range loadMenuNavChildren(ctx, menuID) {
-		if aid, leaf := menuEntryActionForUser(ctx, uid, child.id); aid != 0 {
+		if aid, leaf := dfsMenuEntryAction(ctx, child.id, depth+1, uid); aid != 0 {
 			return aid, leaf
 		}
 	}
@@ -121,7 +118,7 @@ func ParseMenuIDString(menuQuery string) (menuID int, ok bool) {
 func loadMenuNavRow(ctx context.Context, menuID int) (menuNavRow, bool) {
 	table := MustQuotedTableName(sysMenuModel)
 	q := `SELECT id, COALESCE(action_id, 0), COALESCE(NULLIF(TRIM(access_groups), ''), '')
-		FROM ` + table + ` WHERE id = $1`
+		FROM ` + table + ` WHERE id = $1 AND active = true`
 	var row menuNavRow
 	err := DB.QueryRowContext(ctx, q, menuID).Scan(&row.id, &row.actionID, &row.accessGroups)
 	if err != nil {
@@ -133,7 +130,7 @@ func loadMenuNavRow(ctx context.Context, menuID int) (menuNavRow, bool) {
 func loadMenuNavChildren(ctx context.Context, parentMenuID int) []menuNavRow {
 	table := MustQuotedTableName(sysMenuModel)
 	q := `SELECT id, COALESCE(action_id, 0), COALESCE(NULLIF(TRIM(access_groups), ''), '')
-		FROM ` + table + ` WHERE parent_id = $1 ORDER BY sequence ASC, id ASC`
+		FROM ` + table + ` WHERE parent_id = $1 AND active = true ORDER BY sequence ASC, id ASC`
 	rows, err := DB.QueryContext(ctx, q, parentMenuID)
 	if err != nil {
 		return nil

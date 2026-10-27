@@ -15,4 +15,5 @@ type SysRule struct {
 	PermWrite   modelmeta.Boolean
 	PermCreate  modelmeta.Boolean
 	PermUnlink  modelmeta.Boolean
+	GroupIDs    modelmeta.Many2Many[CoreGroup] `sumeru:"string=Groups,table=sys_rule_group_rel,left=rule_id,right=group_id"`
 }

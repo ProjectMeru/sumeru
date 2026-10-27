@@ -15,4 +15,5 @@ type SysMenu struct {
 	WebIcon      modelmeta.String
 	Module       modelmeta.String `sumeru:"index"`
 	AccessGroups modelmeta.String
+	Active       modelmeta.Boolean `sumeru:"string=Active,default=true"`
 }

@@ -15,6 +15,7 @@ var ReservedWebSegments = map[string]struct{}{
 	"import": {}, "export": {}, "bulk": {}, "swc": {}, "debug": {},
 	"company": {}, "module": {}, "action": {}, "session": {}, "report": {},
 	"kanban": {}, "setup": {}, "portal": {}, "api": {}, "user": {}, "content": {},
+	"auth": {}, "apikey": {},
 }
 
 // AppsWebURL is the installed-apps administration catalog.
@@ -56,7 +57,7 @@ func ParseDebugQuery(debugParam string) (enabled bool, moduleName string) {
 		if ValidModuleWebSegment(mod) {
 			return true, mod
 		}
-		return true, mod
+		return true, ""
 	}
 	return false, ""
 }

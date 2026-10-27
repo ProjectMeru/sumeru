@@ -10,9 +10,9 @@ import { collectFormFields } from "../form/form-sheet.js";
 import { ShellPageView } from "../../shell/ShellPageView.js";
 import { syncWorkspaceViewTabs } from "../../shell/view-tab-sync.js";
 import { syncWorkspaceBreadcrumbs } from "../../shell/breadcrumb-sync.js";
-import { ACTION_CLOSED, RECORD_UPDATED, SWC_API_BASE } from "../../constants/routes.js";
+import { ACTION_CLOSED, Q_ACTION, RECORD_UPDATED, SWC_API_BASE } from "../../constants/routes.js";
 import { ACTIVITY_CONTEXT, activityContextFromWorkspace } from "../../shell/activity-context.js";
-import { RouterService } from "../../services/router.js";
+import { moduleNameFromWebPath, RouterService } from "../../services/router.js";
 import { runWillStart } from "../../runtime/lifecycle.js";
 
 type ViewInstance = SwcComponent & { callSetup(): void; render(): HTMLElement };
@@ -37,6 +37,7 @@ export class WorkspaceRouter extends SwcComponent {
     };
     window.addEventListener("popstate", this.onPopState);
     this.unsubActionClosed = this.env.services.bus.subscribe(ACTION_CLOSED, () => {
+      if (this.payload?.target === "new") return;
       void this.load();
     });
     this.unsubRecordUpdated = this.env.services.bus.subscribe(RECORD_UPDATED, (payload) => {
@@ -59,7 +60,22 @@ export class WorkspaceRouter extends SwcComponent {
     this.unsubRecordUpdated = null;
   }
 
+  private deferModuleEntryToServer(): boolean {
+    const { pathname, search, hash } = window.location;
+    if (!moduleNameFromWebPath(pathname)) {
+      return false;
+    }
+    if (new URLSearchParams(search).get(Q_ACTION)) {
+      return false;
+    }
+    window.location.assign(`${pathname}${search}${hash}`);
+    return true;
+  }
+
   private async load(): Promise<void> {
+    if (this.deferModuleEntryToServer()) {
+      return;
+    }
     this.loading = true;
     this.error = "";
     this.rerender();
@@ -69,7 +85,9 @@ export class WorkspaceRouter extends SwcComponent {
       logViewArch(this.payload.arch);
       syncWorkspaceViewTabs(this.payload.viewTabs);
       syncWorkspaceBreadcrumbs(this.payload.breadcrumbs);
-      this.syncView();
+      if (!this.openActionDialog(this.payload)) {
+        this.syncView();
+      }
       this.emitActivityContext(this.payload);
       void updateDebugDrawer(this.env.bootstrap, this.debugContext(this.payload));
     } catch (err) {
@@ -130,6 +148,17 @@ export class WorkspaceRouter extends SwcComponent {
     return view;
   }
 
+  private openActionDialog(payload: SwcWorkspacePayload): boolean {
+    document.body.classList.toggle("sum-body--fullscreen", payload.target === "fullscreen");
+    const viewType = payload.viewType || payload.arch.type;
+    if (payload.target !== "new" || viewType !== "form") return false;
+    this.env.services.action.openPayloadDialog(payload);
+    this.activeView?.destroy();
+    this.activeView = null;
+    this.activeViewType = "";
+    return true;
+  }
+
   private syncView(): void {
     if (!this.payload) return;
     const type = this.payload.viewType || this.payload.arch.type;
@@ -158,7 +187,9 @@ export class WorkspaceRouter extends SwcComponent {
         this.payload = payload;
         syncWorkspaceViewTabs(payload.viewTabs);
         syncWorkspaceBreadcrumbs(payload.breadcrumbs);
-        this.syncView();
+        if (!this.openActionDialog(payload)) {
+          this.syncView();
+        }
         this.emitActivityContext(payload);
         this.patch();
         void updateDebugDrawer(this.env.bootstrap, this.debugContext(payload));
@@ -172,6 +203,7 @@ export class WorkspaceRouter extends SwcComponent {
   override template() {
     const route = this.env.services.router.parse();
     if (route.shell === "home" || route.shell === "apps" || route.shell === "settings") {
+      document.body.classList.remove("sum-body--fullscreen");
       const page = route.shell as "home" | "apps" | "settings";
       const shellView = new ShellPageView({ boot: this.env.bootstrap, page }, this.env);
       return html`<div class="sum-workspace-root sum-workspace-root--shell">${shellView.render()}</div>`;

@@ -7,23 +7,23 @@ import (
 
 	"sumeru/core/applog"
 	"sumeru/core/mail"
-	"sumeru/core/orm"
+	"sumeru/core/sdk"
 )
 
 func init() {
-	orm.RegisterObjectAction("core.user", "action_archive", archiveCoreUser)
-	orm.RegisterObjectAction("core.user", "action_reset_password", resetPasswordCoreUser)
+	sdk.RegisterObjectAction("core.user", "action_archive", archiveCoreUser)
+	sdk.RegisterObjectAction("core.user", "action_reset_password", resetPasswordCoreUser)
 }
 
 func archiveCoreUser(ctx context.Context, model string, id int, _ map[string]string) (string, error) {
 	_ = model
-	if err := orm.CheckModelAccess(ctx, orm.SecurityUID(ctx), "core.user", "write"); err != nil {
+	if err := sdk.CheckModelAccess(ctx, sdk.SecurityUID(ctx), "core.user", "write"); err != nil {
 		return "", err
 	}
-	if _, err := orm.SearchOne(ctx, "core.user", map[string]interface{}{"id": id}); err != nil {
+	if _, err := sdk.SearchOne(ctx, "core.user", map[string]interface{}{"id": id}); err != nil {
 		return "", fmt.Errorf("record not found")
 	}
-	if err := orm.UpdateRecordByID(ctx, "core.user", id, map[string]interface{}{"active": false}); err != nil {
+	if _, err := sdk.Write(ctx, "core.user", []int{id}, map[string]interface{}{"active": false}); err != nil {
 		return "", err
 	}
 	return "", nil
@@ -32,21 +32,24 @@ func archiveCoreUser(ctx context.Context, model string, id int, _ map[string]str
 func resetPasswordCoreUser(ctx context.Context, model string, id int, vals map[string]string) (string, error) {
 	_ = model
 	_ = vals
-	if !orm.UserHasGroupXML(ctx, orm.SecurityUID(ctx), "base.group_system") {
+	if !sdk.UserHasGroupXML(ctx, sdk.SecurityUID(ctx), "base.group_system") {
 		return "", fmt.Errorf("access denied")
 	}
-	rec, err := orm.SearchOne(ctx, "core.user", map[string]interface{}{"id": id})
+	rec, err := sdk.SearchOne(ctx, "core.user", map[string]interface{}{"id": id})
 	if err != nil {
 		return "", fmt.Errorf("record not found")
 	}
-	login := orm.AsString(rec["login"])
-	to := strings.TrimSpace(orm.AsString(rec["email"]))
+	login := sdk.AsString(rec["login"])
+	to := strings.TrimSpace(sdk.AsString(rec["email"]))
 	if to == "" && strings.Contains(login, "@") {
 		to = login
 	}
-	loginURL := "/web/login"
 	if mail.Configured() && to != "" {
-		if err := mail.SendPasswordResetEmail(ctx, to, login, loginURL); err != nil {
+		token, err := sdk.IssuePasswordReset(ctx, id)
+		if err != nil {
+			return "", err
+		}
+		if err := mail.SendPasswordResetEmail(ctx, to, login, sdk.PasswordResetURL(token)); err != nil {
 			return "", fmt.Errorf("send reset email: %w", err)
 		}
 		applog.InfoMsg(ctx, "base", "user_action", "Password reset email sent",

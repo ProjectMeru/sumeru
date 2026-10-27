@@ -42,6 +42,7 @@
                             <group string="Localization">
                                 <field name="lang" string="Language" widget="selection"/>
                                 <field name="tz" string="Timezone" widget="selection"/>
+                                <field name="action_id" string="Home Action"/>
                             </group>
                             <group string="Signature">
                                 <field name="signature" string="Email signature"/>

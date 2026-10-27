@@ -8,7 +8,7 @@ import (
 )
 
 // ActionModels lists navigable action tables referenced from sys.menu.action_id.
-var ActionModels = []string{"sys.action.window", "sys.action.url"}
+var ActionModels = []string{"sys.action.window", "sys.action.url", "sys.report.action"}
 
 // ResolveActionRecord returns the action model name and core row id for a menu /web link.
 // actionQuery may be a numeric id or an XML id (module.name); actionID is the parsed numeric id when known.

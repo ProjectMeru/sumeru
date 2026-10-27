@@ -10,7 +10,7 @@ import (
 
 	"sumeru/core/applog"
 	"sumeru/core/event"
-	"sumeru/core/orm"
+	"sumeru/core/sdk"
 	"sumeru/core/security"
 )
 
@@ -34,9 +34,9 @@ func depthOf(ctx context.Context) int {
 }
 
 func actorContext(ctx context.Context, actor int) context.Context {
-	out := orm.ContextWithUID(context.Background(), actor)
-	if cid := orm.CompanyIDFromContext(ctx); cid > 0 {
-		out = orm.ContextWithCompanyID(out, cid)
+	out := sdk.ContextWithUID(context.Background(), actor)
+	if cid := sdk.CompanyIDFromContext(ctx); cid > 0 {
+		out = sdk.ContextWithCompanyID(out, cid)
 	}
 	return withDepth(out, depthOf(ctx))
 }
@@ -71,15 +71,15 @@ func deleteActionMatched(model string, id int, actionID int64) bool {
 }
 
 func matchBeforeDelete(ctx context.Context, model string, id int, before map[string]interface{}) {
-	if orm.DB == nil || 0 >= id || automationSkippedModel(model) {
+	if !sdk.DatabaseOpen() || 0 >= id || automationSkippedModel(model) {
 		return
 	}
-	if _, ok := orm.Registry["sys.server.action"]; !ok {
+	if !sdk.ModelRegistered("sys.server.action") {
 		return
 	}
-	_ = orm.WithElevated(ctx, "automation.delete_match", func(bypass context.Context) error {
-		rows, err := orm.Search(bypass, "sys.server.action", [][]interface{}{
-			{"event_name", "=", orm.EventRecordDeleted},
+	_ = sdk.WithElevated(ctx, "automation.delete_match", func(bypass context.Context) error {
+		rows, err := sdk.Search(bypass, "sys.server.action", [][]interface{}{
+			{"event_name", "=", sdk.EventRecordDeleted},
 			{"active", "=", true},
 		})
 		if err != nil {
@@ -87,11 +87,11 @@ func matchBeforeDelete(ctx context.Context, model string, id int, before map[str
 		}
 		matched := map[int64]struct{}{}
 		for _, row := range rows {
-			actionModel := strings.TrimSpace(orm.AsString(row["model"]))
+			actionModel := strings.TrimSpace(sdk.AsString(row["model"]))
 			if actionModel != "" && actionModel != model {
 				continue
 			}
-			domRaw := strings.TrimSpace(orm.AsString(row["trigger_domain"]))
+			domRaw := strings.TrimSpace(sdk.AsString(row["trigger_domain"]))
 			if domRaw == "" {
 				continue
 			}
@@ -107,10 +107,10 @@ func matchBeforeDelete(ctx context.Context, model string, id int, before map[str
 				})
 				continue
 			}
-			if !orm.RecordMatchesDomain(model, before, parsed) {
+			if !sdk.RecordMatchesDomain(model, before, parsed) {
 				continue
 			}
-			actionID, ok := orm.CoerceInt64(row["id"])
+			actionID, ok := sdk.CoerceInt64(row["id"])
 			if ok {
 				matched[actionID] = struct{}{}
 			}
@@ -121,18 +121,17 @@ func matchBeforeDelete(ctx context.Context, model string, id int, before map[str
 }
 
 func claimRun(ctx context.Context, actionID int64, ev event.Event, model string, resID int64) (bool, error) {
-	if orm.DB == nil || 0 >= actionID {
+	if !sdk.DatabaseOpen() || 0 >= actionID {
 		return true, nil
 	}
-	if _, ok := orm.Registry["sys.server.action.log"]; !ok {
+	if !sdk.ModelRegistered("sys.server.action.log") {
 		return true, nil
 	}
 	bucket := time.Now().UTC().Unix() / 60
 	key := fmt.Sprintf("%d|%s|%s|%d|%d", actionID, ev.Name, model, resID, bucket)
 	claimed := false
-	err := orm.WithElevated(ctx, "automation.action_log", func(bypass context.Context) error {
-		inst := orm.Registry["sys.server.action.log"]
-		_, err := orm.Create(bypass, inst, map[string]interface{}{
+	err := sdk.WithElevated(ctx, "automation.action_log", func(bypass context.Context) error {
+		_, err := sdk.Create(bypass, "sys.server.action.log", map[string]interface{}{
 			"action_id":  actionID,
 			"event_name": ev.Name,
 			"model":      model,
@@ -154,13 +153,13 @@ func claimRun(ctx context.Context, actionID int64, ev event.Event, model string,
 }
 
 func rejectUnsafeWrite(modelName string, vals map[string]interface{}) error {
-	inst := orm.RegistryModel(modelName)
-	if inst == nil {
+	names, ok := sdk.ModelFieldNames(modelName)
+	if !ok {
 		return fmt.Errorf("unknown model %q", modelName)
 	}
 	known := map[string]struct{}{}
-	for _, field := range inst.Fields() {
-		known[field.Name] = struct{}{}
+	for _, field := range names {
+		known[field] = struct{}{}
 	}
 	policies := security.FieldRegistry[modelName]
 	for key := range vals {

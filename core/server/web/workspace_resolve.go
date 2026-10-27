@@ -17,6 +17,10 @@ func ResolveWindowActionID(ctx context.Context, actionQuery, menuQuery string) i
 	if !ok {
 		return 0
 	}
+	actionID, _ := orm.MenuEntryActionForUser(ctx, orm.SecurityUID(ctx), menuID)
+	if actionID != 0 {
+		return actionID
+	}
 	return orm.WindowActionIDFromMenu(ctx, menuID)
 }
 

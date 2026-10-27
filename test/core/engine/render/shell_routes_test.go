@@ -32,4 +32,8 @@ func TestParseDebugQuery(t *testing.T) {
 	if enabled, _ := render.ParseDebugQuery("false"); enabled {
 		t.Fatal("false should not enable debug")
 	}
+	enabled, mod = render.ParseDebugQuery("true/not-a-valid!!!")
+	if !enabled || mod != "" {
+		t.Fatalf("invalid module suffix: enabled=%v mod=%q", enabled, mod)
+	}
 }

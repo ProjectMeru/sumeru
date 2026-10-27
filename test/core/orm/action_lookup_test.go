@@ -18,8 +18,8 @@ func TestResolveActionRecord_numericURLAction(t *testing.T) {
 	})
 	rows := sqlmock.NewRows([]string{"id", "module", "name", "model", "core_id"}).
 		AddRow(1, "account", "action_report_pl", "sys.action.url", 42)
-	mock.ExpectQuery(`SELECT \* FROM "sys_model_data" WHERE \("core_id" = \$1 AND "model" IN \(\$2,\$3\)\)`).
-		WithArgs(42, "sys.action.window", "sys.action.url").
+	mock.ExpectQuery(`SELECT \* FROM "sys_model_data" WHERE \("core_id" = \$1 AND "model" IN \(\$2,\$3,\$4\)\)`).
+		WithArgs(42, "sys.action.window", "sys.action.url", "sys.report.action").
 		WillReturnRows(rows)
 
 	modelName, coreID, err := orm.ResolveActionRecordForTest(bypassCtx(), 42, "")

@@ -14,4 +14,5 @@ type SysAccess struct {
 	PermWrite  modelmeta.Boolean
 	PermCreate modelmeta.Boolean
 	PermUnlink modelmeta.Boolean
+	Domain     modelmeta.Text `sumeru:"string=Domain"`
 }

@@ -38,7 +38,7 @@ func RegisterAppRoutes(mux *http.ServeMux) {
 
 	router.Apply(serveMux)
 	registerAppAliases(serveMux)
-	registerModuleWebRoutes(serveMux)
+	registerModuleWebRoutes(serveMux) // after router.Apply: exact /web/* routes beat the /web/ prefix handler
 	registerContentPrefixRoute(serveMux)
 	registerPortalSharePrefixRoute(serveMux)
 	registerAPIRPCPrefixRoute(serveMux)
@@ -100,7 +100,8 @@ func registerRecordRoutes() {
 }
 
 func registerActionRoutes() {
-	registerSession(http.MethodPost, resetPasswordRoute, ActionResetPassword)
+	registerPublic(http.MethodGet, resetPasswordRoute, ActionResetPassword)
+	registerPublic(http.MethodPost, resetPasswordRoute, ActionResetPassword)
 	registerSession(http.MethodPost, createAPIKeyRoute, ActionCreateAPIKey)
 }
 

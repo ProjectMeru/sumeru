@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 )
 
 // ParseDomainJSON parses a JSON array of [field, operator, value] triples into [][]interface{}.
@@ -109,6 +110,10 @@ func SubstituteDomainContext(domain [][]interface{}, dc DomainContext) [][]inter
 				arr[j] = id
 			}
 			out[i] = []interface{}{d[0], d[1], arr}
+		case "$today":
+			out[i] = []interface{}{d[0], d[1], time.Now().UTC().Format("2006-01-02")}
+		case "$now":
+			out[i] = []interface{}{d[0], d[1], time.Now().UTC().Format(time.RFC3339)}
 		default:
 			out[i] = d
 		}

@@ -2,67 +2,36 @@ package im
 
 import (
 	"context"
-	"database/sql"
-	"strings"
 
-	"sumeru/core/orm"
+	"sumeru/core/sdk"
 )
 
 // IMEnabled reports whether internal chat is enabled for the active company (default true).
 func IMEnabled(ctx context.Context) bool {
-	if orm.DB == nil {
+	if !sdk.DatabaseOpen() {
 		return true
 	}
-	companyID := orm.CompanyIDFromContext(ctx)
+	companyID := sdk.CompanyIDFromContext(ctx)
 	if 0 >= companyID {
-		companyID = orm.ActiveCompanyIDForUser(ctx, orm.SecurityUID(ctx))
+		companyID = sdk.ActiveCompanyIDForUser(ctx, sdk.SecurityUID(ctx))
 	}
-	if enabled, ok := readIMEnabledColumn(ctx, int(companyID)); ok {
-		return enabled
+	rec, err := companyRow(ctx, int(companyID))
+	if err != nil || 0 == len(rec) {
+		return true
 	}
-	if enabled, ok := readLegacyChatterColumn(ctx, int(companyID)); ok {
-		return enabled
+	if _, ok := rec["im_enabled"]; !ok {
+		return true
 	}
-	return true
+	return sdk.AsBool(rec["im_enabled"])
 }
 
-func readIMEnabledColumn(ctx context.Context, companyID int) (enabled bool, ok bool) {
-	tn := orm.MustQuotedTableName("core.company")
-	q := `SELECT im_enabled FROM ` + tn
-	var imEnabled sql.NullBool
-	var err error
+func companyRow(ctx context.Context, companyID int) (map[string]interface{}, error) {
 	if companyID > 0 {
-		err = orm.DB.QueryRowContext(ctx, q+` WHERE id = $1`, companyID).Scan(&imEnabled)
-	} else {
-		err = orm.DB.QueryRowContext(ctx, q+` ORDER BY id ASC LIMIT 1`).Scan(&imEnabled)
+		return sdk.SearchOne(ctx, "core.company", map[string]interface{}{"id": companyID})
 	}
-	if err != nil {
-		if strings.Contains(strings.ToLower(err.Error()), "im_enabled") {
-			return false, false
-		}
-		return true, true
+	rows, err := sdk.SearchPage(ctx, "core.company", nil, 1, 0, "id ASC")
+	if err != nil || 0 == len(rows) {
+		return nil, err
 	}
-	if imEnabled.Valid {
-		return imEnabled.Bool, true
-	}
-	return true, true
-}
-
-func readLegacyChatterColumn(ctx context.Context, companyID int) (enabled bool, ok bool) {
-	tn := orm.MustQuotedTableName("core.company")
-	q := `SELECT mail_chatter_enabled FROM ` + tn
-	var legacy sql.NullBool
-	var err error
-	if companyID > 0 {
-		err = orm.DB.QueryRowContext(ctx, q+` WHERE id = $1`, companyID).Scan(&legacy)
-	} else {
-		err = orm.DB.QueryRowContext(ctx, q+` ORDER BY id ASC LIMIT 1`).Scan(&legacy)
-	}
-	if err != nil {
-		return true, true
-	}
-	if legacy.Valid {
-		return legacy.Bool, true
-	}
-	return true, true
+	return rows[0], nil
 }

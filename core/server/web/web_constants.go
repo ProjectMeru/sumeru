@@ -247,6 +247,7 @@ const (
 const (
 	sysActionWindowModel   = "sys.action.window"
 	sysActionURLModel      = "sys.action.url"
+	sysReportActionModel   = "sys.report.action"
 	resConfigSettingsModel = "res.config.settings"
 	workspaceViewOpenOp    = "view_open"
 )

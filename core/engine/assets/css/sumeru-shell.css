@@ -1268,3 +1268,8 @@
 .sum-home-hub-app {
   position: relative;
 }
+
+.sum-body--fullscreen .sum-sidebar,
+.sum-body--fullscreen .sum-sidebar-reveal {
+  display: none;
+}

@@ -18,6 +18,7 @@ type SWCPageInput struct {
 	TemplatesDir string
 	RecData      *ViewRecordData
 	SelectedMode string
+	ActionTarget string
 }
 
 // RenderSWCWorkspace builds the shell HTML page with an empty SWC mount point.
@@ -42,6 +43,10 @@ func RenderSWCWorkspace(ctx context.Context, in SWCPageInput) string {
 		actCtxID = int64(recData.RecordID)
 	}
 
+	crumbMenuID := activeMenuID
+	if in.ActionTarget == "main" {
+		crumbMenuID = ""
+	}
 	pageData := PageData{
 		Title:                   fmt.Sprintf("%s · %s", view.Model, selectedMode),
 		ViewBreadcrumb:          viewBC,
@@ -59,7 +64,7 @@ func RenderSWCWorkspace(ctx context.Context, in SWCPageInput) string {
 		ActivityContextRecordID: actCtxID,
 		SettingsNavActive:       IsMenuUnderSettingsRoot(ctx, activeMenuID),
 		BreadcrumbItems: BuildWorkspaceBreadcrumbs(ctx, BreadcrumbInput{
-			ActiveMenuID:  activeMenuID,
+			ActiveMenuID:  crumbMenuID,
 			ResModel:      view.Model,
 			ViewType:      selectedMode,
 			FormBaseQuery: recData.FormBaseQuery,
@@ -68,6 +73,9 @@ func RenderSWCWorkspace(ctx context.Context, in SWCPageInput) string {
 		}),
 		CSRFToken:  recData.CSRFToken,
 		SWCEnabled: true,
+	}
+	if in.ActionTarget == "fullscreen" {
+		pageData.ExtraBodyClasses = " sum-body--fullscreen"
 	}
 	inlineFlashes, toastFlashes := splitFlashMessages(recData.FlashMessages)
 	pageData.FlashMessages = inlineFlashes

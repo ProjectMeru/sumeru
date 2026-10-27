@@ -14,8 +14,7 @@
                         <field name="sequence" string="Display Order"/>
                     </group>
                     <group string="Hierarchy">
-                        <separator string="Implication"/>
-                        <label string="Higher levels include lower ones (Manager implies User). Assign levels on the user Access Rights tab."/>
+                        <field name="implied_ids" widget="many2many_tags" string="Implied Groups"/>
                     </group>
                 </group>
             </sheet>

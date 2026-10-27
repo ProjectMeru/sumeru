@@ -3,9 +3,11 @@ package web
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"sumeru/core/engine/render"
+	"sumeru/core/errcode"
 	"sumeru/core/orm"
 )
 
@@ -44,20 +46,16 @@ func moduleEntryHandler(w http.ResponseWriter, r *http.Request, moduleName strin
 	}
 	menuID := render.RootMenuIDForModule(ctx, moduleName)
 	if 0 >= menuID {
-		http.Redirect(w, r, homeRoute, http.StatusFound)
+		redirectModuleEntryHome(w, r, moduleName, "no_root_menu", 0)
 		return
 	}
 	uid := orm.SecurityUID(ctx)
 	actionID, leafMenuID := orm.MenuEntryActionForUser(ctx, uid, menuID)
 	if actionID == 0 {
-		http.Redirect(w, r, homeRoute, http.StatusFound)
+		redirectModuleEntryHome(w, r, moduleName, "no_accessible_action", menuID)
 		return
 	}
 	loc := render.WorkspaceURLFromMenuAction(ctx, actionID, menuID, leafMenuID)
-	if loc == render.HomeWebURL() {
-		http.Redirect(w, r, homeRoute, http.StatusFound)
-		return
-	}
 	debugEnabled := shellDebugEnabled(r)
 	loc = render.WorkspaceURLWithDebug(loc, debugEnabled)
 	http.Redirect(w, r, loc, http.StatusFound)
@@ -89,6 +87,25 @@ func redirectDebugModuleEntry(w http.ResponseWriter, r *http.Request, moduleName
 		http.Redirect(w, r, href, http.StatusFound)
 		return
 	}
+	http.Redirect(w, r, homeRoute, http.StatusFound)
+}
+
+func redirectModuleEntryHome(w http.ResponseWriter, r *http.Request, moduleName, reason string, menuID int) {
+	fields := map[string]interface{}{
+		"module": moduleName,
+		"reason": reason,
+	}
+	if menuID > 0 {
+		fields["menu_id"] = strconv.Itoa(menuID)
+	}
+	WebLogEvent(r.Context(), WebLogInput{
+		Route:         r.URL.Path,
+		Message:       "module entry redirect home",
+		Code:          errcode.NotFound,
+		Operation:     "module_entry",
+		Status:        logStatusFailure,
+		ContextFields: fields,
+	})
 	http.Redirect(w, r, homeRoute, http.StatusFound)
 }
 

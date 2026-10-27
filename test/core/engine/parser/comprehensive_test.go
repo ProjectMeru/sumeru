@@ -80,6 +80,7 @@ func TestActionToRecord_domainAndViewID(t *testing.T) {
 		ID: "act_x", Model: "sale.order", Name: "Orders", ViewMode: "list,form",
 		Domain: `[("state","=","draft")]`, ViewID: "view_sale_list",
 		Context: `{"default_type":"opportunity"}`,
+		Target:  "new", ResID: "12", Limit: "80", Groups: "base.group_user",
 	}
 	rec := a.ToRecord()
 	if rec.Model != "sys.action.window" || rec.ID != "act_x" {
@@ -89,7 +90,10 @@ func TestActionToRecord_domainAndViewID(t *testing.T) {
 	if !strings.Contains(m["domain"], "draft") {
 		t.Fatalf("domain: %q", m["domain"])
 	}
-	if !strings.Contains(m["context"], "view_id") || !strings.Contains(m["context"], "default_type") {
+	if m["view_id"] != "view_sale_list" || m["target"] != "new" || m["res_id"] != "12" || m["limit"] != "80" || m["groups"] != "base.group_user" {
+		t.Fatalf("action fields: %+v", m)
+	}
+	if !strings.Contains(m["context"], "default_type") || strings.Contains(m["context"], "view_id") {
 		t.Fatalf("context: %q", m["context"])
 	}
 }
@@ -112,10 +116,10 @@ func TestMergeMenuListData_noUpdate(t *testing.T) {
 func TestParseViewFromArch_allRoots(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
-		name    string
-		arch    string
+		name     string
+		arch     string
 		typeWant string
-		check   func(t *testing.T, v *parser.View)
+		check    func(t *testing.T, v *parser.View)
 	}{
 		{
 			name: "graph", arch: `<graph chart="pie"><field name="amount"/></graph>`,
@@ -249,4 +253,3 @@ func TestParseViewList_invalidRoot(t *testing.T) {
 		t.Fatal("expected error for non-sumeru root")
 	}
 }
-

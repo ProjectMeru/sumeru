@@ -23,18 +23,13 @@ func MenuWorkspaceEntryURL(ctx context.Context, menuID int) string {
 	if 0 >= menuID {
 		return HomeWebURL()
 	}
-	actionID, leafMenuID := orm.MenuEntryAction(ctx, menuID)
-	if 0 == actionID {
-		return HomeWebURL()
+	var actionID, leafMenuID int
+	if uid := orm.SecurityUID(ctx); uid > 0 {
+		actionID, leafMenuID = orm.MenuEntryActionForUser(ctx, uid, menuID)
+	} else {
+		actionID, leafMenuID = orm.MenuEntryAction(ctx, menuID)
 	}
-	menuIDStr := strconv.Itoa(menuID)
-	if leafMenuID > 0 {
-		menuIDStr = strconv.Itoa(leafMenuID)
-	}
-	if href := urlActionHref(ctx, actionID); href != "" {
-		return href
-	}
-	return WorkspaceURL(WorkspaceQuery{ActionID: actionID, MenuID: menuIDStr})
+	return WorkspaceURLFromMenuAction(ctx, actionID, menuID, leafMenuID)
 }
 
 // WorkspaceURLFromMenuAction builds the internal workspace URL from a resolved menu entry action.
