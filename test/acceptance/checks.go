@@ -2,20 +2,41 @@ package acceptance
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"sumeru/core/engine/eval"
 	"sumeru/core/engine/parser"
+	"sumeru/core/engine/render"
 	"sumeru/core/engine/viewinherit"
 	"sumeru/core/modelmeta"
+	"sumeru/core/module"
 	"sumeru/core/orm"
 	"sumeru/core/report"
 	"sumeru/core/server/config"
 )
 
-func swcViewTypesRegistered() bool {
-	types := []string{"list", "form", "kanban", "graph", "pivot", "map", "calendar", "gantt"}
-	return len(types) >= 8
+func swcViewTypesRegistered() error {
+	arches := []struct {
+		arch string
+		want string
+	}{
+		{"<list/>", render.ViewModeList},
+		{"<form/>", render.ViewModeForm},
+		{"<kanban/>", render.ViewModeKanban},
+		{"<graph/>", render.ViewModeGraph},
+		{"<pivot/>", render.ViewModePivot},
+		{"<map/>", render.ViewModeMap},
+		{"<calendar/>", render.ViewModeCalendar},
+		{"<gantt/>", render.ViewModeGantt},
+	}
+	for _, item := range arches {
+		got := module.InferSysViewTypeFromArch(item.arch)
+		if got != item.want {
+			return fmt.Errorf("arch %s: got %q, want %q", item.arch, got, item.want)
+		}
+	}
+	return nil
 }
 
 func sumTemplateCompiles() bool {
@@ -41,12 +62,17 @@ func recordRuleDomainCompiles() bool {
 	return orm.RecordMatchesDomain("", map[string]interface{}{"active": true}, [][]interface{}{{"active", "=", true}})
 }
 
-func fieldAccessModelRegistered() bool {
-	return orm.ModelRegistered("sys.field.access")
-}
-
-func graphViewUsesReadGroup() bool {
-	return orm.ModelRegistered("core.partner")
+func graphMeasureName() (string, error) {
+	view, err := parser.ParseViewFromArch(`<graph type="bar"><field name="kind" type="row"/><field name="amount" type="measure"/></graph>`)
+	if err != nil {
+		return "", err
+	}
+	for _, field := range view.Field {
+		if field.PivotType == "measure" {
+			return field.Name, nil
+		}
+	}
+	return "", fmt.Errorf("graph arch has no measure field")
 }
 
 func mapViewHasEmbeddedMap() bool {
@@ -80,14 +106,6 @@ func xpathHasClassSupported() bool {
 func domainOperatorsSupported() bool {
 	domain := [][]interface{}{{"id", "in", []interface{}{1, 2, 3}}}
 	return orm.RecordMatchesDomain("", map[string]interface{}{"id": 2}, domain)
-}
-
-func savedSearchModelExists() bool {
-	return orm.ModelRegistered("swc.saved.search")
-}
-
-func readGroupAggregates() bool {
-	return orm.ModelRegistered("core.partner")
 }
 
 func modelInheritTagSupported() bool {

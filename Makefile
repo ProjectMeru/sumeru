@@ -3,11 +3,11 @@
 	check-sql check-logs test test-go swc-test swc-check swc-build swc-deps swc assets \
 	setup run dev build build-check generate \
 	test-modules test-modules-static test-modules-unit test-modules-addon \
-	test-integration test-db \
+	test-integration test-suite \
 	bp css db-check i18n-export i18n-import module shell
 
 EXTRA_RUN_FLAGS ?=
-TEST_DSN ?= host=localhost port=5433 user=postgres password=postgres dbname=sumeru_test sslmode=disable
+TEST_DSN ?=
 GO_TEST_FLAGS ?= -count=1 -timeout 15m
 GO_COVERAGE_MIN ?= 42
 GOLANGCI := go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
@@ -80,12 +80,16 @@ test-modules-addon:
 
 test-modules: test-modules-static test-modules-unit test-modules-addon
 
-test-db:
-	docker compose -f docker-compose.test.yml up -d --wait
+test-integration:
+	SUMERU_TEST_DSN='$(TEST_DSN)' go test -tags=integration ./test/integration/... ./test/module/integration/... $(GO_TEST_FLAGS)
 
-test-integration: test-db
-	SUMERU_TEST_DSN='$(TEST_DSN)' go test -tags=integration \
-		./test/integration/... ./test/module/integration/... $(GO_TEST_FLAGS)
+test-suite:
+	@echo "unit: go"
+	go test ./test/... -count=1
+	@echo "unit: typescript"
+	$(MAKE) swc-test
+	@echo "integration"
+	$(MAKE) test-integration
 
 # =============================================================================
 # SWC & client assets
@@ -189,8 +193,8 @@ help:
 	@echo "  make test-modules-static   addon convention validation only"
 	@echo "  make test-modules-unit     module unit tier only"
 	@echo "  make test-modules-addon    addon tests tier only"
-	@echo "  make test-integration      PostgreSQL tests (-tags=integration; needs Docker)"
-	@echo "  make test-db               start docker-compose.test.yml postgres"
+	@echo "  make test-suite        unit: go, unit: typescript, then integration"
+	@echo "  make test-integration      go test -tags=integration (skips when TEST_DSN is empty)"
 	@echo ""
 	@echo "SWC & ASSETS"
 	@echo "  make swc-check       TypeScript typecheck (core/swc)"

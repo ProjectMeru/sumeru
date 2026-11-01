@@ -19,6 +19,9 @@ func TestIntegrationModuleRegistrySearchable(t *testing.T) {
 	}
 	orm.InitDB(dsn)
 	_ = modelreg.ActivateAll(nil)
+	if err := orm.SyncRegistrySchemaForNames([]string{"sys.module"}); err != nil {
+		t.Fatalf("schema sync: %v", err)
+	}
 	ctx := orm.ContextWithBypass(context.Background(), true)
 	if _, err := orm.SearchLimit(ctx, "sys.module", nil, 5); err != nil {
 		t.Fatalf("search sys.module: %v", err)
