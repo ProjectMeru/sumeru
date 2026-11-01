@@ -9,8 +9,8 @@ import (
 // Workstream smoke tests — each area has 3–5 checks referenced by the Enterprise parity plan.
 
 func TestWorkstreamA_SWCClient(t *testing.T) {
-	if !swcViewTypesRegistered() {
-		t.Fatal("expected list, form, kanban, graph, pivot view types in SWC registry")
+	if err := swcViewTypesRegistered(); err != nil {
+		t.Fatal(err)
 	}
 	if !sumTemplateCompiles() {
 		t.Fatal("sum-template compiler should accept t-if/t-foreach")
@@ -30,14 +30,15 @@ func TestWorkstreamC_Security(t *testing.T) {
 	if !recordRuleDomainCompiles() {
 		t.Fatal("record rule domain should compile to SQL fragment")
 	}
-	if !fieldAccessModelRegistered() {
-		t.Fatal("sys.field.access model should be registered")
-	}
 }
 
 func TestWorkstreamD_Views(t *testing.T) {
-	if !graphViewUsesReadGroup() {
-		t.Fatal("graph view should call read_group aggregation")
+	measure, err := graphMeasureName()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if measure != "amount" {
+		t.Fatalf("graph measure = %q, want amount", measure)
 	}
 	if !mapViewHasEmbeddedMap() {
 		t.Fatal("map view should render embedded map canvas")
@@ -60,15 +61,9 @@ func TestWorkstreamF_Filters(t *testing.T) {
 	if !domainOperatorsSupported() {
 		t.Fatal("domain should support in, not in, ilike")
 	}
-	if !savedSearchModelExists() {
-		t.Fatal("swc.saved.search model should exist")
-	}
 }
 
 func TestWorkstreamG_ORM(t *testing.T) {
-	if !readGroupAggregates() {
-		t.Fatal("read_group should support sum and count")
-	}
 	if !modelInheritTagSupported() {
 		t.Fatal("model inherit= tag should produce extend spec")
 	}

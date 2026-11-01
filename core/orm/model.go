@@ -53,6 +53,7 @@ type FieldDefinition struct {
 	ComputeStore       bool   // persist computed value
 	Virtual            bool   // no SQL column (related/compute without store)
 	Status             bool   // selection field shown as the status bar
+	StatusFunc         string // package function called when this status field is written
 }
 
 type Model interface {

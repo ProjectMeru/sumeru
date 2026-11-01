@@ -27,9 +27,10 @@ type scannedModel struct {
 }
 
 type computeBind struct {
-	Model string
-	Field string
-	Func  string
+	Model  string
+	Field  string
+	Func   string
+	Status bool
 }
 
 func structEmbedsModel(st *ast.StructType) bool {
@@ -146,18 +147,23 @@ func computeBindsFromStruct(st *ast.StructType, modelName string) ([]computeBind
 		if err != nil {
 			return nil, fmt.Errorf("model %s: %w", modelName, err)
 		}
-		if tags.Compute == "" {
-			continue
-		}
-		if !validComputeFunc(tags.Compute) {
-			return nil, fmt.Errorf("model %s field %s: compute %q is not a function name", modelName, field.Names[0].Name, tags.Compute)
-		}
 		for _, name := range field.Names {
 			fieldName := modelmeta.FieldNameFromGo(name.Name)
 			if tags.Column != "" {
 				fieldName = tags.Column
 			}
-			out = append(out, computeBind{Model: modelName, Field: fieldName, Func: tags.Compute})
+			if tags.Compute != "" {
+				if !validComputeFunc(tags.Compute) {
+					return nil, fmt.Errorf("model %s field %s: compute %q is not a function name", modelName, name.Name, tags.Compute)
+				}
+				out = append(out, computeBind{Model: modelName, Field: fieldName, Func: tags.Compute})
+			}
+			if tags.StatusFunc != "" {
+				if !validComputeFunc(tags.StatusFunc) {
+					return nil, fmt.Errorf("model %s field %s: status %q is not a function name", modelName, name.Name, tags.StatusFunc)
+				}
+				out = append(out, computeBind{Model: modelName, Field: fieldName, Func: tags.StatusFunc, Status: true})
+			}
 		}
 	}
 	return out, nil

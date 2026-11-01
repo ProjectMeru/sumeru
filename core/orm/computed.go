@@ -17,8 +17,9 @@ type computeSpec struct {
 }
 
 var (
-	computeMu sync.RWMutex
-	computes  = map[string]map[string]computeSpec{} // model -> field -> spec
+	computeMu   sync.RWMutex
+	computes    = map[string]map[string]computeSpec{} // model -> field -> spec
+	statusFuncs = map[string]map[string]ComputeFunc{} // model -> field -> status function
 )
 
 // RegisterCompute registers a computed field for model.
@@ -35,6 +36,52 @@ func RegisterCompute(model, field string, deps []string, fn ComputeFunc) {
 		computes[model] = map[string]computeSpec{}
 	}
 	computes[model][field] = computeSpec{deps: append([]string(nil), deps...), fn: fn}
+}
+
+// RegisterStatus registers fn for a status field. fn runs on write, not on read.
+func RegisterStatus(model, field string, fn ComputeFunc) {
+	model = strings.TrimSpace(model)
+	field = strings.TrimSpace(field)
+	if model == "" || field == "" || fn == nil {
+		return
+	}
+	computeMu.Lock()
+	defer computeMu.Unlock()
+	if statusFuncs[model] == nil {
+		statusFuncs[model] = map[string]ComputeFunc{}
+	}
+	statusFuncs[model][field] = fn
+}
+
+// ApplyStatus runs the status function for field, when one is bound, and stores its result on rec.
+func ApplyStatus(ctx context.Context, model, field string, rec map[string]interface{}) error {
+	if rec == nil {
+		return nil
+	}
+	fn := statusFunc(model, field)
+	if fn == nil {
+		return nil
+	}
+	return runStatus(ctx, model, field, fn, rec)
+}
+
+func statusFunc(model, field string) ComputeFunc {
+	computeMu.RLock()
+	defer computeMu.RUnlock()
+	return statusFuncs[model][field]
+}
+
+func runStatus(ctx context.Context, model, field string, fn ComputeFunc, rec map[string]interface{}) error {
+	val, err := fn(ctx, rec)
+	if err != nil {
+		return fmt.Errorf("status %s.%s: %w", model, field, err)
+	}
+	coerced, err := coerceComputeResult(model, field, val)
+	if err != nil {
+		return fmt.Errorf("status %s.%s: value %v: %w", model, field, val, err)
+	}
+	rec[field] = coerced
+	return nil
 }
 
 // ApplyComputes fills registered computed fields on rec (in place).

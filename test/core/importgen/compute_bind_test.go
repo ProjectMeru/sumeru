@@ -44,3 +44,23 @@ func TestRenderPackageModelsRejectsFormula(t *testing.T) {
 		t.Fatalf("got %v", err)
 	}
 }
+
+func TestRenderPackageModelsBindsStatus(t *testing.T) {
+	dir := t.TempDir()
+	src := "package models\n\n" +
+		"type EngagementMilestone struct {\n" +
+		"\tsdk.Model `sumeru:\"model=engagement.milestone\"`\n" +
+		"\tState sdk.Selection `sumeru:\"status=mark_done,string=Status\"`\n" +
+		"}\n"
+	if err := os.WriteFile(filepath.Join(dir, "milestone.go"), []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	body, err := importgen.RenderPackageModelsForTest(dir, "engagement_cookbook", "models")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `sdk.BindStatus("engagement.milestone", "state", mark_done)`
+	if !strings.Contains(body, want) {
+		t.Fatalf("missing bind:\n%s", body)
+	}
+}

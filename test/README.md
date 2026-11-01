@@ -34,11 +34,20 @@ test/
 ```bash
 make                       # full standard: lint + SWC + Go tests + coverage gate + build
 make check                 # same as make
+make test-suite            # unit: go, unit: typescript, then integration
 make test-modules          # Module suite tiers 0–2 (static + unit + addon)
 make test-modules-static   # Convention validation for all discovered addons
-make test-integration      # PostgreSQL integration (requires Docker)
+make test-integration      # go test -tags=integration; skips when TEST_DSN is empty
 make test-go               # Full repo coverage profile + gate
 ```
+
+`make test-suite` is the sanity command. The log names each layer:
+
+1. `unit: go` — `go test ./test/...` with no database
+2. `unit: typescript` — Vitest under `core/swc/tests/`
+3. `integration` — `make test-integration`
+
+`make test-integration` runs `go test -tags=integration` for `test/integration` and `test/module/integration`. It does not start a database. A missing `SUMERU_TEST_DSN` skips an integration case. A wrong row or status fails it. Set `TEST_DSN` to a Postgres DSN when those cases should run.
 
 ## Module test suite tiers
 
@@ -47,7 +56,7 @@ make test-go               # Full repo coverage profile + gate
 | 0 Static | `test/module/static/` | `test-modules-static` |
 | 1 Unit | `test/module/unit/` | `test-modules-unit` |
 | 2 Addon | `test/module/addons/`, `test/addons/` | `test-modules-addon` |
-| 3 Integration | `test/module/integration/`, `test/integration/` | `test-modules-integration` |
+| 3 Integration | `test/module/integration/`, `test/integration/` | `test-integration` |
 
 ## Coverage policy
 
