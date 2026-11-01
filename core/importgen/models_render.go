@@ -48,7 +48,11 @@ func buildPackageModelsGo(module string, types []string, packageName string, bin
 	}
 	b.WriteString("\t)\n")
 	for _, bind := range binds {
-		fmt.Fprintf(&b, "\tsdk.BindCompute(%q, %q, %s)\n", bind.Model, bind.Field, bind.Func)
+		call := "sdk.BindCompute"
+		if bind.Status {
+			call = "sdk.BindStatus"
+		}
+		fmt.Fprintf(&b, "\t%s(%q, %q, %s)\n", call, bind.Model, bind.Field, bind.Func)
 	}
 	b.WriteString("}\n")
 	return b.String()

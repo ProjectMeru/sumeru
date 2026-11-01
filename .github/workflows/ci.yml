@@ -32,12 +32,6 @@ jobs:
       - name: Build all packages
         run: go build ./...
 
-      - name: Job summary
-        if: always()
-        run: |
-          echo "## Go build" >> "$GITHUB_STEP_SUMMARY"
-          echo "Command: \`go build ./...\`" >> "$GITHUB_STEP_SUMMARY"
-
   go-test:
     name: Go test
     runs-on: ubuntu-latest
@@ -49,63 +43,30 @@ jobs:
           go-version: "1.27.3"
           cache: true
 
-      - name: Module static tests
+      - name: Unit tests and coverage gate
         env:
           GOFLAGS: -mod=readonly
-        run: make test-modules-static
-
-      - name: Run unit tests
-        env:
-          GOFLAGS: -mod=readonly
-        run: go test ./test/... -count=1 -timeout 15m
-
-      - name: Coverage gate
-        env:
-          GOFLAGS: -mod=readonly
-          GO_COVERAGE_MIN: "42"
-        run: |
-          go test ./test/... -coverpkg=./... -coverprofile=coverage.out -count=1 -timeout 15m
-          bash scripts/check_go_coverage.sh coverage.out
-
-      - name: Job summary
-        if: always()
-        run: |
-          echo "## Go test" >> "$GITHUB_STEP_SUMMARY"
-          echo "Commands: \`make test-modules-static\`, \`go test ./test/...\`, coverage gate ${GO_COVERAGE_MIN:-42}%" >> "$GITHUB_STEP_SUMMARY"
+        run: make test-go
 
   go-lint:
     name: Go lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-        with:
-          # Needed for golangci-lint only-new-issues on pull_request.
-          fetch-depth: 0
 
       - uses: actions/setup-go@v7
         with:
           go-version: "1.27.3"
           cache: true
 
-      - name: Security bypass lint
-        run: bash scripts/check_security_bypass.sh
-
-      - name: go vet
-        run: go vet ./...
+      - name: Standards
+        run: make standards
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
-          # Need a v2.x build that supports analyzing Go 1.26 modules.
           version: latest
           args: --timeout=10m
-          only-new-issues: ${{ github.event_name == 'pull_request' }}
-
-      - name: Job summary
-        if: always()
-        run: |
-          echo "## Go lint" >> "$GITHUB_STEP_SUMMARY"
-          echo "Commands: \`go vet ./...\`, \`golangci-lint run\`" >> "$GITHUB_STEP_SUMMARY"
 
   go-vuln:
     name: Go vulnerabilities
@@ -120,12 +81,6 @@ jobs:
 
       - name: govulncheck
         run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
-
-      - name: Job summary
-        if: always()
-        run: |
-          echo "## Go vulnerabilities" >> "$GITHUB_STEP_SUMMARY"
-          echo "Command: \`govulncheck ./...\`" >> "$GITHUB_STEP_SUMMARY"
 
   swc:
     name: SWC check and test
@@ -151,12 +106,6 @@ jobs:
       - name: Vitest with coverage
         run: npm run test:coverage
 
-      - name: Job summary
-        if: always()
-        run: |
-          echo "## SWC" >> "$GITHUB_STEP_SUMMARY"
-          echo "Commands: \`npm run check\`, \`npm run test\` (core/swc)" >> "$GITHUB_STEP_SUMMARY"
-
   generate:
     name: Generate drift check
     runs-on: ubuntu-latest
@@ -173,54 +122,3 @@ jobs:
 
       - name: Fail on uncommitted generated imports
         run: git diff --exit-code cmd/sumeru/zimports.go
-
-      - name: Job summary
-        if: always()
-        run: |
-          echo "## Generate" >> "$GITHUB_STEP_SUMMARY"
-          echo "Command: \`make generate\` — \`cmd/sumeru/zimports.go\` must match committed output." >> "$GITHUB_STEP_SUMMARY"
-
-  # integration:
-  #   name: Integration (PostgreSQL)
-  #   if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
-  #   needs:
-  #     - go-test
-  #     - swc
-  #   runs-on: ubuntu-latest
-  #   services:
-  #     postgres:
-  #       image: postgres:18-alpine
-  #       env:
-  #         POSTGRES_USER: postgres
-  #         POSTGRES_PASSWORD: postgres
-  #         POSTGRES_DB: sumeru_test
-  #       ports:
-  #         - 5432:5432
-  #       options: >-
-  #         --health-cmd "pg_isready -U postgres -d sumeru_test"
-  #         --health-interval 5s
-  #         --health-timeout 5s
-  #         --health-retries 10
-  #   steps:
-  #     - uses: actions/checkout@v7
-
-  #     - uses: actions/setup-go@v7
-  #       with:
-  #         go-version: "1.27.3"
-  #         cache: true
-
-  #     - name: Bootstrap kernel schema
-  #       run: |
-  #         make generate
-  #         go run ./cmd/sumeru -- -c sumeru.conf.ci -i base --stop-after-init
-
-  #     - name: Run integration tests
-  #       env:
-  #         SUMERU_TEST_DSN: host=localhost port=5432 user=postgres password=postgres dbname=sumeru_test sslmode=disable
-  #       run: go test -tags=integration ./test/integration/... -count=1 -v
-
-  #     - name: Job summary
-  #       if: always()
-  #       run: |
-  #         echo "## Integration" >> "$GITHUB_STEP_SUMMARY"
-  #         echo "PostgreSQL 16 — install \`base\`, then \`go test -tags=integration ./test/integration/...\`." >> "$GITHUB_STEP_SUMMARY"

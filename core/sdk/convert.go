@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"strconv"
-	"strings"
 	"time"
 
 	"sumeru/core/orm"
@@ -62,7 +60,7 @@ func currencyRate(ctx context.Context, currencyID int, date time.Time) (float64,
 			best = row
 		}
 	}
-	rate, ok := asFloat(best["rate"])
+	rate, ok := orm.CoerceFloat64(best["rate"])
 	if !ok {
 		return 0, fmt.Errorf("sdk: non-numeric rate %v on core.currency.rate row %v", best["rate"], best["id"])
 	}
@@ -75,8 +73,8 @@ func currencyRate(ctx context.Context, currencyID int, date time.Time) (float64,
 // rowKey orders rate rows by (date_from, id) so ties on date_from resolve to
 // the newest row.
 func rowKey(row map[string]interface{}) string {
-	id, _ := asInt(row["id"])
-	return fmt.Sprintf("%s|%020d", dateString(row["date_from"]), id)
+	id64, _ := orm.CoerceInt64(row["id"])
+	return fmt.Sprintf("%s|%020d", dateString(row["date_from"]), int(id64))
 }
 
 // ConvertUom converts a quantity from fromUomID into toUomID. Both units must
@@ -92,7 +90,8 @@ func ConvertUom(ctx context.Context, amount float64, fromUomID, toUomID int) (fl
 	}
 	var from, to map[string]interface{}
 	for _, row := range rows {
-		id, _ := asInt(row["id"])
+		id64, _ := orm.CoerceInt64(row["id"])
+		id := int(id64)
 		switch id {
 		case fromUomID:
 			from = row
@@ -103,21 +102,22 @@ func ConvertUom(ctx context.Context, amount float64, fromUomID, toUomID int) (fl
 	if from == nil || to == nil {
 		return 0, fmt.Errorf("sdk: uom not found (from=%d to=%d)", fromUomID, toUomID)
 	}
-	fromCat, _ := asInt(from["category_id"])
-	toCat, _ := asInt(to["category_id"])
+	fromCat64, _ := orm.CoerceInt64(from["category_id"])
+	toCat64, _ := orm.CoerceInt64(to["category_id"])
+	fromCat, toCat := int(fromCat64), int(toCat64)
 	if fromCat != toCat {
 		return 0, fmt.Errorf("sdk: cannot convert uom %d (category %d) to uom %d (category %d)",
 			fromUomID, fromCat, toUomID, toCat)
 	}
-	factorFrom, ok := asFloat(from["factor"])
+	factorFrom, ok := orm.CoerceFloat64(from["factor"])
 	if !ok || 0 >= factorFrom {
 		return 0, fmt.Errorf("sdk: invalid factor on uom %d", fromUomID)
 	}
-	factorTo, ok := asFloat(to["factor"])
+	factorTo, ok := orm.CoerceFloat64(to["factor"])
 	if !ok || 0 >= factorTo {
 		return 0, fmt.Errorf("sdk: invalid factor on uom %d", toUomID)
 	}
-	rounding, _ := asFloat(to["rounding"])
+	rounding, _ := orm.CoerceFloat64(to["rounding"])
 	return ConvertUomByFactor(amount, factorFrom, factorTo, rounding), nil
 }
 
@@ -157,11 +157,12 @@ func ConvertMoneyField(ctx context.Context, modelName, fieldName string, rec map
 	if def.Currency == "" {
 		return 0, fmt.Errorf("sdk: field %s.%s is not tagged currency=", modelName, fieldName)
 	}
-	fromID, ok := asInt(rec[def.Currency])
+	from64, ok := orm.CoerceInt64(rec[def.Currency])
+	fromID := int(from64)
 	if !ok || 0 == fromID {
 		return 0, fmt.Errorf("sdk: record has no %q value for %s.%s", def.Currency, modelName, fieldName)
 	}
-	amount, ok := asFloat(rec[fieldName])
+	amount, ok := orm.CoerceFloat64(rec[fieldName])
 	if !ok {
 		return 0, fmt.Errorf("sdk: record has no numeric value for %s.%s", modelName, fieldName)
 	}
@@ -180,45 +181,5 @@ func dateString(v interface{}) string {
 		return string(t)
 	default:
 		return ""
-	}
-}
-
-func asInt(v interface{}) (int, bool) {
-	switch n := v.(type) {
-	case int:
-		return n, true
-	case int64:
-		return int(n), true
-	case float64:
-		return int(n), true
-	case string:
-		i, err := strconv.Atoi(strings.TrimSpace(n))
-		return i, err == nil
-	case []byte:
-		i, err := strconv.Atoi(strings.TrimSpace(string(n)))
-		return i, err == nil
-	default:
-		return 0, false
-	}
-}
-
-func asFloat(v interface{}) (float64, bool) {
-	switch n := v.(type) {
-	case float64:
-		return n, true
-	case float32:
-		return float64(n), true
-	case int:
-		return float64(n), true
-	case int64:
-		return float64(n), true
-	case string:
-		f, err := strconv.ParseFloat(strings.TrimSpace(n), 64)
-		return f, err == nil
-	case []byte:
-		f, err := strconv.ParseFloat(strings.TrimSpace(string(n)), 64)
-		return f, err == nil
-	default:
-		return 0, false
 	}
 }

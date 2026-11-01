@@ -47,11 +47,13 @@ describe("activity board actions", () => {
   });
 
   it("uses the calendar day key when the arch sets date_start", () => {
+    const now = new Date();
+    const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-12`;
     const view = new ActivityView(
       {
         payload: viewPayload(
           { type: "activity", calendar: { dateStart: "date_deadline" }, fields: [{ name: "summary" }] },
-          [{ id: 1, summary: "Meet", date_deadline: "2026-10-12", model: "crm.lead", res_id: 2 }],
+          [{ id: 1, summary: "Meet", date_deadline: day, model: "crm.lead", res_id: 2 }],
         ),
       },
       collectionEnv(),
@@ -59,7 +61,7 @@ describe("activity board actions", () => {
     view.callSetup();
     const el = view.render();
     expect(el.querySelector(".sum-calendar-title")).toBeTruthy();
-    expect(el.querySelector('[data-day="2026-10-12"]')?.textContent).toContain("Meet");
+    expect(el.querySelector(`[data-day="${day}"]`)?.textContent).toContain("Meet");
     view.destroy();
   });
 

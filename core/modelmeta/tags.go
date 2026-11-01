@@ -2,6 +2,7 @@ package modelmeta
 
 import (
 	"fmt"
+	"go/token"
 	"strconv"
 	"strings"
 )
@@ -44,6 +45,7 @@ type FieldTags struct {
 	Related    string
 	Compute    string
 	Status     bool   // status: selection field shown as the status bar
+	StatusFunc string // status=<name>: package function called on write
 	Company    string // model tag: company=shared skips auto multi-company isolation
 	MailThread bool   // model tag: mail_thread — chatter auto-subscribe hooks
 }
@@ -244,10 +246,14 @@ func setTagOption(tags *FieldTags, key, value string) error {
 	case "compute":
 		tags.Compute = value
 	case "status":
-		if value != "" {
-			return fmt.Errorf("status does not take a value")
-		}
 		tags.Status = true
+		if value == "" {
+			break
+		}
+		if !token.IsIdentifier(value) || token.IsKeyword(value) {
+			return fmt.Errorf("status %q is not a function name", value)
+		}
+		tags.StatusFunc = value
 	case "mail_thread":
 		tags.MailThread = true
 	default:

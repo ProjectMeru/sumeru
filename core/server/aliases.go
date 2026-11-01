@@ -21,12 +21,12 @@ func AbsPaths() error {
 
 // InitDB opens the database pool.
 func InitDB(databaseConnectionString string) {
-	sdk.InitDB(sdk.InitDBInput{DSN: databaseConnectionString})
+	sdk.InitDB(databaseConnectionString)
 }
 
 // SyncModels syncs registered models to the database.
 func SyncModels() error {
-	return sdk.SyncModels(sdk.SyncModelsInput{})
+	return sdk.SyncModels()
 }
 
 // LoadAddonPaths discovers and loads addons from the given roots.

@@ -74,6 +74,9 @@ func AsBool(v interface{}) bool { return orm.AsBool(v) }
 // CoerceInt64 reads a cell as an integer.
 func CoerceInt64(v interface{}) (int64, bool) { return orm.CoerceInt64(v) }
 
+// CoerceFloat64 reads a cell as a float.
+func CoerceFloat64(v interface{}) (float64, bool) { return orm.CoerceFloat64(v) }
+
 func idDomain(ids []int) [][]interface{} {
 	list := make([]interface{}, len(ids))
 	for i, id := range ids {
