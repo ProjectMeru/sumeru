@@ -36,6 +36,9 @@ func TestStatusTagRegistersStatusbar(t *testing.T) {
 	if !state.Status {
 		t.Fatal("status flag")
 	}
+	if state.StatusFunc != "" {
+		t.Fatalf("status func %q", state.StatusFunc)
+	}
 	if state.Widget != "statusbar" {
 		t.Fatalf("widget %q", state.Widget)
 	}
@@ -64,8 +67,30 @@ func TestStatusTagRejectsNonSelection(t *testing.T) {
 	modelreg.MustRegister("test", &testreg.BadStatusModel{})
 }
 
+func TestStatusTagStoresFunctionName(t *testing.T) {
+	modelreg.ResetActivationForTest()
+	orm.Registry = map[string]orm.Model{}
+	modelreg.MustRegister("test", &testreg.StatusNamedModel{})
+	if err := modelreg.ActivateAll(nil); err != nil {
+		t.Fatal(err)
+	}
+	m := orm.Registry["test.status.named"]
+	if m == nil {
+		t.Fatal("missing model")
+	}
+	var state orm.FieldDefinition
+	for _, field := range m.Fields() {
+		if field.Name == "state" {
+			state = field
+		}
+	}
+	if !state.Status || state.StatusFunc != "mark_done" || state.Widget != "statusbar" {
+		t.Fatalf("status field %+v", state)
+	}
+}
+
 func TestStatusTagRejectsValue(t *testing.T) {
-	_, err := modelmeta.ParseFieldTag("status=draft")
+	_, err := modelmeta.ParseFieldTag("status=not a name")
 	if err == nil || !strings.Contains(err.Error(), "status") {
 		t.Fatal(err)
 	}

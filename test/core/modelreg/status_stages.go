@@ -19,3 +19,8 @@ type BadStatusModel struct {
 	modelmeta.ModelMeta `sumeru:"model=test.status.bad"`
 	Name                modelmeta.String `sumeru:"status"`
 }
+
+type StatusNamedModel struct {
+	modelmeta.ModelMeta `sumeru:"model=test.status.named"`
+	State               modelmeta.Selection[StatusStage] `sumeru:"status=mark_done,string=Status"`
+}

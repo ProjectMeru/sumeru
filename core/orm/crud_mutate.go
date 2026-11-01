@@ -378,6 +378,15 @@ func checkStatusTransition(ctx context.Context, modelName string, uid int, befor
 		if newState == oldState {
 			continue
 		}
+		merged := mergeRecordMap(before, prepared)
+		if err := ApplyStatus(ctx, modelName, name, merged); err != nil {
+			return err
+		}
+		prepared[name] = merged[name]
+		newState = AsString(prepared[name])
+		if newState == oldState {
+			continue
+		}
 		rid, _ := CoerceInt64(before["id"])
 		if err := CanWorkflowTransition(ctx, WorkflowTransitionInput{
 			Model: modelName, RecordID: int(rid), FromState: oldState, ToState: newState, UID: uid,
