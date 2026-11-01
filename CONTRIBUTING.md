@@ -90,8 +90,8 @@ GitHub Actions runs on every pull request and push to `main` / `dev`:
 | Job          | What it checks                                            | Local equivalent                                        |
 | ------------ | --------------------------------------------------------- | ------------------------------------------------------- |
 | **Go build** | `go build ./...`                                          | `go build ./...`                                        |
-| **Go test**  | `go test ./... -count=1`                                  | `go test ./test/...` or `make check`                    |
-| **Go lint**  | `go vet` + golangci-lint                                  | `make lint` (includes SWC typecheck)                    |
+| **Go test**  | `make test-go` (unit tests and coverage gate)             | `make test-go`                                          |
+| **Go lint**  | `make standards` + golangci-lint (includes `go vet`)      | `make lint`                                             |
 | **Go vuln**  | `govulncheck ./...`                                       | `go run golang.org/x/vuln/cmd/govulncheck@latest ./...` |
 | **SWC**      | `npm run check` + coverage tests in `core/swc`            | `make swc-check` / `make swc-test`                      |
 | **Generate** | `make generate` — `cmd/sumeru/zimports.go` must not drift | `make generate` then review diff                        |
