@@ -47,7 +47,7 @@ make test-go               # Full repo coverage profile + gate
 2. `unit: typescript` — Vitest under `core/swc/tests/`
 3. `integration` — `make test-integration`
 
-`make test-integration` runs `go test -tags=integration` for `test/integration` and `test/module/integration`. It does not start a database. A missing `SUMERU_TEST_DSN` skips an integration case. A wrong row or status fails it. Set `TEST_DSN` to a Postgres DSN when those cases should run.
+`make test-integration` runs `go test -tags=integration` for `test/integration` and `test/module/integration`. It does not start a database. A missing `SUMERU_TEST_DSN` skips an integration case. A wrong row or status fails it. Set `TEST_DSN` to a Postgres DSN when those cases should run (e.g. after `go run ./cmd/sumeru -- -c sumeru.conf.ci -i base --stop-after-init`). On push to `main`/`dev`, CI runs the same with a Postgres service.
 
 ## Module test suite tiers
 

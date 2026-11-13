@@ -24,6 +24,9 @@ func ExportCSV(ctx context.Context, in ExportCSVInput) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := checkExportFieldAccess(ctx, in.Model, fields); err != nil {
+		return nil, err
+	}
 	rows, err := FetchRows(ctx, in.Model, in.Domain, in.RecordID)
 	if err != nil {
 		return nil, err
@@ -48,6 +51,9 @@ func ExportCSVUnlimitedForTest(ctx context.Context, in ExportCSVInput) ([]byte, 
 func ExportCSVUnlimited(ctx context.Context, in ExportCSVInput) ([]byte, error) {
 	fields, err := ValidateFields(in.Model, in.Fields)
 	if err != nil {
+		return nil, err
+	}
+	if err := checkExportFieldAccess(ctx, in.Model, fields); err != nil {
 		return nil, err
 	}
 	rows, err := FetchRowsUnlimited(ctx, in.Model, in.Domain, in.RecordID)

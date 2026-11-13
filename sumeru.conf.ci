@@ -1,5 +1,4 @@
-# CI and local integration bootstrap (no secrets). Used by .github/workflows/ci.yml.
-# For docker-compose.test.yml (port 5433), override db_port in the shell or a copy.
+# CI and local integration bootstrap (no secrets). Used by .github/workflows/ci.yml integration job (Postgres on port 5432).
 
 [options]
 

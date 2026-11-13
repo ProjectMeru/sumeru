@@ -17,6 +17,7 @@ import (
 	_ "github.com/lib/pq"
 
 	"sumeru/core/orm"
+	"sumeru/core/sdk"
 	"sumeru/core/server/config"
 	"sumeru/core/server/web"
 )
@@ -65,7 +66,7 @@ func TestRPCAuthLogin_successAndBearerRPC(t *testing.T) {
 		t.Fatalf("create user: %v", err)
 	}
 	t.Cleanup(func() {
-		_, _ = orm.Unlink(ctx, userModel, []int{userID})
+		_, _ = sdk.Unlink(ctx, "core.user", []int{userID})
 	})
 	if err := orm.SetUserPasswordHash(ctx, userID, rpcAuthTestPasswordHash); err != nil {
 		t.Fatalf("SetUserPasswordHash: %v", err)
@@ -129,7 +130,7 @@ func TestAuthenticateLocalUser_integration(t *testing.T) {
 		t.Fatalf("create user: %v", err)
 	}
 	t.Cleanup(func() {
-		_, _ = orm.Unlink(ctx, userModel, []int{userID})
+		_, _ = sdk.Unlink(ctx, "core.user", []int{userID})
 	})
 	if err := orm.SetUserPasswordHash(ctx, userID, rpcAuthTestPasswordHash); err != nil {
 		t.Fatalf("SetUserPasswordHash: %v", err)
@@ -141,5 +142,65 @@ func TestAuthenticateLocalUser_integration(t *testing.T) {
 	_, _, _, err = orm.AuthenticateLocalUser(ctx, login, "wrong")
 	if err == nil {
 		t.Fatal("expected error for wrong password")
+	}
+}
+
+func TestPortalRPCDeniedOnCoreUser(t *testing.T) {
+	ctx := rpcAuthIntegrationDB(t)
+	userModel := orm.Registry["core.user"]
+	portalGrp, err := orm.SearchOne(ctx, "core.group", map[string]interface{}{"xml_id": "base.group_portal"})
+	if err != nil {
+		t.Fatalf("portal group: %v", err)
+	}
+	portalGID64, _ := sdk.CoerceInt64(portalGrp["id"])
+	portalGID := int(portalGID64)
+	login := fmt.Sprintf("portal_%d@test.local", time.Now().UnixNano())
+	uid, err := orm.Create(ctx, userModel, map[string]interface{}{
+		"login": login, "name": "Portal", "user_type": "portal",
+	})
+	if err != nil {
+		t.Fatalf("create portal user: %v", err)
+	}
+	t.Cleanup(func() { _, _ = sdk.Unlink(ctx, "core.user", []int{uid}) })
+	if err := orm.SetUserPasswordHash(ctx, uid, rpcAuthTestPasswordHash); err != nil {
+		t.Fatalf("password: %v", err)
+	}
+	rel := orm.MustQuotedTableName("core_group_user_rel")
+	if _, err := orm.DB.Exec(`INSERT INTO `+rel+` (user_id, group_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, uid, portalGID); err != nil {
+		t.Fatalf("link portal group: %v", err)
+	}
+	web.ResetLoginLockoutForTest()
+	t.Cleanup(web.ResetLoginLockoutForTest)
+	loginBody := fmt.Sprintf(`{"login":%q,"password":"password"}`, login)
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, web.TestAuthLoginURLForTest(), strings.NewReader(loginBody))
+	req.Header.Set("Content-Type", "application/json")
+	web.ApplyDefaultRPCHeadersForTest(req)
+	web.RPCJSONHandler(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("login status = %d", rr.Code)
+	}
+	var env struct {
+		Success bool `json:"success"`
+		Data    struct {
+			APIKey string `json:"api_key"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &env); err != nil || !env.Success || env.Data.APIKey == "" {
+		t.Fatalf("login payload: %s", rr.Body.String())
+	}
+
+	rpcRR := httptest.NewRecorder()
+	rpcReq := httptest.NewRequest(http.MethodPost, web.TestRPCURLForTest("core.user", "search"), strings.NewReader(`{"domain":[],"fields":["login"],"limit":1}`))
+	rpcReq.Header.Set("Content-Type", "application/json")
+	rpcReq.Header.Set("Authorization", "Bearer "+env.Data.APIKey)
+	web.ApplyDefaultRPCHeadersForTest(rpcReq)
+	web.RPCJSONHandler(rpcRR, rpcReq)
+	if rpcRR.Code != http.StatusForbidden && rpcRR.Code != http.StatusOK {
+		t.Fatalf("RPC status = %d body = %s", rpcRR.Code, rpcRR.Body.String())
+	}
+	rpcEnv := decodeRPCEnvelope(t, rpcRR)
+	if rpcEnv.Success {
+		t.Fatal("portal user must not search core.user via RPC")
 	}
 }

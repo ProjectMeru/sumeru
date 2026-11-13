@@ -61,6 +61,9 @@ func ExportPDF(ctx context.Context, in ExportPDFInput) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := checkExportFieldAccess(ctx, in.Model, fields); err != nil {
+		return nil, err
+	}
 	rows, err := FetchRows(ctx, in.Model, in.Domain, in.RecordID)
 	if err != nil {
 		return nil, err
