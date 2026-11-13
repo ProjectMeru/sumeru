@@ -66,3 +66,4 @@ go.work.sum
 
 # Cursor (local agent state)
 .cursor/
+docs/architecture-audit
