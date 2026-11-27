@@ -19,6 +19,6 @@
     "vitest": "^5.0.5"
   },
   "dependencies": {
-    "chart.js": "^4.6.1"
+    "chart.js": "^4.6.2"
   }
 }
